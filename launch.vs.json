@@ -1,0 +1,16 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "VulKan.exe",
+      "name": "VulKan.exe",
+      "cwd": "${fileDirname}",
+      "env": {
+        //"PATH": "PATH};${fileDirname}\\Environment\\Visual_Leak_Detector\\bin\\Win64;"
+      }
+    }
+  ]
+}

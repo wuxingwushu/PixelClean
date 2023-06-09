@@ -1,0 +1,101 @@
+#version 450
+
+//layout(local_size_x_id = 0) in;             // workgroup size set with specialization constant
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+//#define Color_ -460365120
+#define PI 1.570796326795
+layout(std430, binding = 0) buffer buf
+{
+   int arr_xy[];
+};
+
+layout(std430, binding = 1) buffer ObjectUniform 
+{
+   uint size;
+   int x;
+   int y;
+   uint y_size;
+   float angel;
+   int Color;
+} params;
+
+int pz_x, pz_y,color = 0;
+
+bool dianshe(uint xx, uint yy){
+    uint sx,zy,lxx,lyy;
+    lxx = xx * params.y_size + yy;//当前点
+    sx = (xx + pz_x) * params.y_size + yy;
+    zy = xx * params.y_size + (yy + pz_y);
+    lyy = (xx + pz_x) * params.y_size + (yy + pz_y);
+    if((arr_xy[lxx] == -436207616) || (arr_xy[lxx] == params.Color)){
+        arr_xy[lxx] = color;
+        if(((arr_xy[sx] == -419430400) || (arr_xy[sx] == -419365120)) && ((arr_xy[zy] == -419430400) || (arr_xy[zy] == -419365120))){
+            arr_xy[sx] = -419365120;
+            arr_xy[zy] = -419365120;
+            arr_xy[lyy] = -419365120;
+            return true;
+        }
+        //arr_xy[sx] = color;
+        //arr_xy[zy] = color;
+        return false;
+    }else if(arr_xy[lxx] != 0){
+        arr_xy[lxx] = -419365120;
+        return true;
+    }
+    return false;
+}
+
+void bresenham_line(int x0, int y0, int x1, int y1) {
+    int dx = abs(x1 - x0);
+    int dy = abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy;
+    int e2;
+    while (true) {
+        if(dianshe(x0,y0)) break;
+        if (x0 == x1 && y0 == y1) break; // 线条绘制完毕
+        e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x0 += sx;
+        }
+        if (x0 == x1 && y0 == y1) {
+            dianshe(x0,y0);
+            break;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y0 += sy;
+        }
+    }
+}
+
+void main(){
+    //const uint id_x = 0;
+    const uint id_x = gl_GlobalInvocationID.x; // current offset
+    //const uint id_y = gl_GlobalInvocationID.z;
+    if(params.size <= (id_x)){                   // drop threads outside the buffer
+       return;
+    }
+    uint shexian = params.size/2;
+    if((id_x <= shexian+5) && (id_x >= shexian-5)){
+        color = params.Color;
+    }
+    float du = params.angel + (float(PI / params.size) * id_x);
+    int x = int(cos(du) * 400);
+    if(x > 0){
+        pz_x = 1;
+    }else{
+        pz_x = -1;
+    }
+    int y = int(sin(du) * 400);
+    if(y > 0){
+        pz_y = 1;
+    }else{
+        pz_y = -1;
+    }
+    bresenham_line(params.x,params.y,params.x+x,params.y+y);
+    return;
+}

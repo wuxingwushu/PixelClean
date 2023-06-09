@@ -1,0 +1,153 @@
+#include "window.h"
+#include "../application.h"
+#include "../Camera.h"
+
+namespace GAME::VulKan {
+
+	//获取窗口大小是否改变
+	static void windowResized(GLFWwindow* window, int width, int height) {
+		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mWindowResized = true;
+	}
+
+	//用来绑定Camera鼠标事件
+	static void cursorPosCallBack(GLFWwindow* window, double xpos, double ypos) {
+		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->onMouseMove(xpos, ypos);
+	}
+
+
+	Window::Window(const int& width, const int& height, bool MouseBool, bool FullScreen) {
+		mWidth = width;
+		mHeight = height;
+		MouseDisabled = MouseBool;
+
+		glfwInit();
+
+		//设置环境，关掉opengl API 并且禁止窗口改变大小
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);//关掉opengl API
+		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);//是否禁止窗口改变大小
+		GLFWmonitor* pMonitor = FullScreen ? glfwGetPrimaryMonitor() : NULL;
+		mWindow = glfwCreateWindow(mWidth, mHeight, "Game_Demo - VulKan", pMonitor, nullptr);//创建一个窗口
+		if (!mWindow) {//判断窗口是否创建成功
+			std::cerr << "Error: failed to create window" << std::endl;
+		}
+		//glfwSetWindowAttrib(mWindow, GLFW_FLOATING, GLFW_TRUE);//窗口置顶
+		//glfwSetWindowOpacity(mWindow, 1.0f);//窗口透明度
+		glfwSetWindowUserPointer(mWindow, this);
+		glfwSetFramebufferSizeCallback(mWindow, windowResized);//绑定窗口大小改变事件
+		//glfwSetCursorPosCallback(mWindow, cursorPosCallBack);//绑定鼠标事件
+
+		//GLFW_CURSOR_DISABLED 禁用鼠标
+		if (MouseDisabled) {
+			glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		}
+		else {
+			glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+	}
+
+	//销毁Window
+	Window::~Window() {
+		glfwDestroyWindow(mWindow);//回收GLFW的API
+		glfwTerminate();
+	}
+
+	void Window::WindowClose() {
+		mApp->StorageConfigure();
+		exit(0);//用这个退出是直接关闭整个程序，所以要提前储存配置信息
+	}
+
+	//判断窗口是否被关闭
+	bool Window::shouldClose() {
+		return glfwWindowShouldClose(mWindow);
+	}
+
+	//窗口获取事件
+	void Window::pollEvents() {
+		glfwPollEvents();
+	}
+
+	void Window::ImGuiKeyBoardEvent() {
+		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+			while (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+			{
+				glfwPollEvents();
+			}
+			mApp->InterFace->SetInterFaceBool();
+		}
+	}
+
+	//键盘事件
+	void Window::processEvent() {
+		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+			while (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+			{
+				glfwPollEvents();
+			}
+			mApp->InterFace->SetInterFaceBool();
+		}
+
+		//控制鼠标显示和禁用
+		if (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS) {
+			while (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS)
+			{
+				glfwPollEvents();
+			}
+			if (MouseDisabled) {
+				glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+				MouseDisabled = false;
+			}
+			else {
+				glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+				MouseDisabled = true;
+			}
+		}
+
+		if (glfwGetKey(mWindow, GLFW_KEY_W) == GLFW_PRESS) {
+			//设置摄像机移动速度
+			if (mApp->PlayerSpeedY >= 300.0f) {
+				mApp->PlayerSpeedY = 300.0f;
+			}
+			else {
+				mApp->PlayerSpeedY += TOOL::FPStime * 600.0f;
+			}
+			mApp->PlayerKeyBoolY = false;
+			//mApp->onKeyDown(CAMERA_MOVE::MOVE_FRONT);
+		}
+
+		if (glfwGetKey(mWindow, GLFW_KEY_S) == GLFW_PRESS) {
+			//设置摄像机移动速度
+			if (mApp->PlayerSpeedY <= -300.0f) {
+				mApp->PlayerSpeedY = -300.0f;
+			}
+			else {
+				mApp->PlayerSpeedY -= TOOL::FPStime * 600.0f;
+			}
+			mApp->PlayerKeyBoolY = false;
+			//mApp->onKeyDown(CAMERA_MOVE::MOVE_BACK);
+		}
+
+		if (glfwGetKey(mWindow, GLFW_KEY_A) == GLFW_PRESS) {
+			//设置摄像机移动速度
+			if (mApp->PlayerSpeedX <= -300.0f) {
+				mApp->PlayerSpeedX = -300.0f;
+			}
+			else {
+				mApp->PlayerSpeedX -= TOOL::FPStime * 600.0f;
+			}
+			mApp->PlayerKeyBoolX = false;
+			//mApp->onKeyDown(CAMERA_MOVE::MOVE_LEFT);
+		}
+
+		if (glfwGetKey(mWindow, GLFW_KEY_D) == GLFW_PRESS) {
+			//设置摄像机移动速度
+			if (mApp->PlayerSpeedX >= 300.0f) {
+				mApp->PlayerSpeedX = 300.0f;
+			}
+			else {
+				mApp->PlayerSpeedX += TOOL::FPStime * 600.0f;
+			}
+			mApp->PlayerKeyBoolX = false;
+			//mApp->onKeyDown(CAMERA_MOVE::MOVE_RIGHT);
+		}
+	}
+}

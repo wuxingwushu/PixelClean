@@ -104,50 +104,50 @@ namespace GAME::VulKan {
 
 		if (glfwGetKey(mWindow, GLFW_KEY_W) == GLFW_PRESS) {
 			//设置摄像机移动速度
-			if (mApp->PlayerSpeedY >= 300.0f) {
+			/*if (mApp->PlayerSpeedY >= 300.0f) {
 				mApp->PlayerSpeedY = 300.0f;
 			}
 			else {
 				mApp->PlayerSpeedY += TOOL::FPStime * 600.0f;
 			}
-			mApp->PlayerKeyBoolY = false;
-			//mApp->onKeyDown(CAMERA_MOVE::MOVE_FRONT);
+			mApp->PlayerKeyBoolY = false;*/
+			mApp->onKeyDown(CAMERA_MOVE::MOVE_FRONT);
 		}
 
 		if (glfwGetKey(mWindow, GLFW_KEY_S) == GLFW_PRESS) {
 			//设置摄像机移动速度
-			if (mApp->PlayerSpeedY <= -300.0f) {
+			/*if (mApp->PlayerSpeedY <= -300.0f) {
 				mApp->PlayerSpeedY = -300.0f;
 			}
 			else {
 				mApp->PlayerSpeedY -= TOOL::FPStime * 600.0f;
 			}
-			mApp->PlayerKeyBoolY = false;
-			//mApp->onKeyDown(CAMERA_MOVE::MOVE_BACK);
+			mApp->PlayerKeyBoolY = false;*/
+			mApp->onKeyDown(CAMERA_MOVE::MOVE_BACK);
 		}
 
 		if (glfwGetKey(mWindow, GLFW_KEY_A) == GLFW_PRESS) {
 			//设置摄像机移动速度
-			if (mApp->PlayerSpeedX <= -300.0f) {
+			/*if (mApp->PlayerSpeedX <= -300.0f) {
 				mApp->PlayerSpeedX = -300.0f;
 			}
 			else {
 				mApp->PlayerSpeedX -= TOOL::FPStime * 600.0f;
 			}
-			mApp->PlayerKeyBoolX = false;
-			//mApp->onKeyDown(CAMERA_MOVE::MOVE_LEFT);
+			mApp->PlayerKeyBoolX = false;*/
+			mApp->onKeyDown(CAMERA_MOVE::MOVE_LEFT);
 		}
 
 		if (glfwGetKey(mWindow, GLFW_KEY_D) == GLFW_PRESS) {
 			//设置摄像机移动速度
-			if (mApp->PlayerSpeedX >= 300.0f) {
+			/*if (mApp->PlayerSpeedX >= 300.0f) {
 				mApp->PlayerSpeedX = 300.0f;
 			}
 			else {
 				mApp->PlayerSpeedX += TOOL::FPStime * 600.0f;
 			}
-			mApp->PlayerKeyBoolX = false;
-			//mApp->onKeyDown(CAMERA_MOVE::MOVE_RIGHT);
+			mApp->PlayerKeyBoolX = false;*/
+			mApp->onKeyDown(CAMERA_MOVE::MOVE_RIGHT);
 		}
 	}
 }

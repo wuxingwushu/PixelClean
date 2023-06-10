@@ -9,6 +9,19 @@ namespace GAME {
 		mRenderPass = renderPass;
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(X, Y, 0.0f));//位移矩阵
 
+		mObjectCollision = new SquarePhysics::ObjectCollision(16, 16, 1);
+		for (size_t x = 0; x < 16; x++)
+		{
+			for (size_t y = 0; y < 16; y++)
+			{
+				mObjectCollision->GetPixelAttribute()[x][y].Collision = true;
+			}
+		}
+		mObjectCollision->OutlineCalculate();
+		mObjectCollision->SetOrigin(8, 8);
+		mObjectCollision->SetPos({ X, Y });
+		mObjectCollision->SetFrictionCoefficient(10.0f);
+
 		std::vector<float> mPositions = {
 			-8.0f, -8.0f, 0.0f,
 			8.0f, -8.0f, 0.0f,

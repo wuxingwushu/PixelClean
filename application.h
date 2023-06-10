@@ -165,7 +165,7 @@ namespace GAME {
 		std::vector<VulKan::Fence*> mFences{};//控制管线工作，比如（下一个管线需要上一个管线的图片，那就等上一个管线图片输入进来才开始工作）
 
 
-
+		glm::vec2 PlayerSpeed{};
 		GamePlayer* mGamePlayer{ nullptr };//玩家
 		double CursorPosX, CursorPosY;
 	public:

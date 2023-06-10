@@ -52,6 +52,31 @@ namespace GAME {
 
 	//相机的键盘事件
 	void Application::onKeyDown(CAMERA_MOVE moveDirection) {
+		int lidaxiao = 100;
+		switch (moveDirection)
+		{
+		case CAMERA_MOVE::MOVE_LEFT:
+			PlayerSpeed.x -= lidaxiao;
+			break;
+		case CAMERA_MOVE::MOVE_RIGHT:
+			PlayerSpeed.x += lidaxiao;
+			break;
+		case CAMERA_MOVE::MOVE_FRONT:
+			PlayerSpeed.y += lidaxiao;
+			break;
+		case CAMERA_MOVE::MOVE_BACK:
+			PlayerSpeed.y -= lidaxiao;
+			break;
+		default:
+			break;
+		}
+		//mGamePlayer->mObjectCollision->SetForce(LI);
+
+		mGamePlayer->mObjectCollision->SetSpeed(m_angle + 1.57f, PlayerSpeed);
+
+		//mGamePlayer->mObjectCollision->SetSpeed(LI)
+		//mGamePlayer->mObjectCollision->SetAngle(m_angle);
+		//mGamePlayer->mObjectCollision->SetForce(LI);
 		//PlayerMoveBool = true;
 		//mCamera.setSpeedX(PlayerSpeedX * TOOL::FPStime);//获取速度，不受帧数影响
 		//mCamera.setSpeedY(PlayerSpeedY * TOOL::FPStime);//获取速度，不受帧数影响
@@ -78,7 +103,7 @@ namespace GAME {
 		//mWindow = new VulKan::Window(mWidth, mHeight, false, false);
 		//mWindow->setApp(shared_from_this());//把 application 本体指针传给 Window ，便于调用 Camera
 		//设置摄像机   位置，朝向（后面两个 vec3 来决定）
-		mCamera.lookAt(glm::vec3(0.0f, 0.0f, 500.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mCamera.lookAt(glm::vec3(0.0f, 20.0f, 500.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		//设置Perpective
 		mCamera.setPerpective(45.0f, (float)mWidth / (float)mHeight, 0.1f, 1000.0f);
 		//设置摄像机移动速度
@@ -220,7 +245,7 @@ namespace GAME {
 		mSquarePhysics = new SquarePhysics::SquarePhysics(400, 400);
 		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);
 		mArms->SetSquarePhysics(mSquarePhysics);
-		//mSquarePhysics->AddPixelCollision(mGamePlayer->mPixelCollision);
+		mSquarePhysics->AddObjectCollision(mGamePlayer->mObjectCollision);
 	}
 
 
@@ -665,6 +690,7 @@ namespace GAME {
 		}
 
 		while (!mWindow->shouldClose()) {//窗口被关闭结束循环
+			PlayerSpeed = { 0,0 };
 			mWindow->pollEvents();
 			
 			if (InterFace->GetInterFaceBool()) {
@@ -796,63 +822,65 @@ namespace GAME {
 	}
 
 	void Application::GameLoop() {
-		if ((PlayerSpeedX != 0.0f) && PlayerKeyBoolX) {
-			if (PlayerSpeedX > 0) {
-				PlayerMoveBoolX = true;
-				PlayerSpeedX -= TOOL::FPStime * 300.0f;
-			}
-			else {
-				PlayerMoveBoolX = false;
-				PlayerSpeedX += TOOL::FPStime * 300.0f;
-			}
+		//if ((PlayerSpeedX != 0.0f) && PlayerKeyBoolX) {
+		//	if (PlayerSpeedX > 0) {
+		//		PlayerMoveBoolX = true;
+		//		PlayerSpeedX -= TOOL::FPStime * 300.0f;
+		//	}
+		//	else {
+		//		PlayerMoveBoolX = false;
+		//		PlayerSpeedX += TOOL::FPStime * 300.0f;
+		//	}
 
-			if (PlayerMoveBoolX) {
-				if (PlayerSpeedX < 0) {
-					PlayerSpeedX = 0;
-				}
-			}
-			else if (PlayerSpeedX > 0) {
-				PlayerSpeedX = 0;
-			}
-		}
+		//	if (PlayerMoveBoolX) {
+		//		if (PlayerSpeedX < 0) {
+		//			PlayerSpeedX = 0;
+		//		}
+		//	}
+		//	else if (PlayerSpeedX > 0) {
+		//		PlayerSpeedX = 0;
+		//	}
+		//}
 
-		if ((PlayerSpeedY != 0.0f) && PlayerKeyBoolY) {
-			if (PlayerSpeedY > 0) {
-				PlayerMoveBoolY = true;
-				PlayerSpeedY -= TOOL::FPStime * 300.0f;
-			}
-			else {
-				PlayerMoveBoolY = false;
-				PlayerSpeedY += TOOL::FPStime * 300.0f;
-			}
+		//if ((PlayerSpeedY != 0.0f) && PlayerKeyBoolY) {
+		//	if (PlayerSpeedY > 0) {
+		//		PlayerMoveBoolY = true;
+		//		PlayerSpeedY -= TOOL::FPStime * 300.0f;
+		//	}
+		//	else {
+		//		PlayerMoveBoolY = false;
+		//		PlayerSpeedY += TOOL::FPStime * 300.0f;
+		//	}
 
-			if (PlayerMoveBoolY) {
-				if (PlayerSpeedY < 0) {
-					PlayerSpeedY = 0;
-				}
-			}
-			else if (PlayerSpeedY > 0) {
-				PlayerSpeedY = 0;
-			}
-		}
-
-		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);
-
-		if (1) {//坐标轴移动
-			mCamera.setSpeedX(PlayerSpeedX * TOOL::FPStime);
-			mCamera.setSpeedY(PlayerSpeedY * TOOL::FPStime);
-		}
-		else {//以玩家朝向为坐标轴移动
-			glm::vec2 WSSpeedXY = SquarePhysics::vec2angle(glm::vec2((PlayerSpeedX * TOOL::FPStime), 0), m_angle);
-			glm::vec2 ADSpeedXY = SquarePhysics::vec2angle(glm::vec2(0, (PlayerSpeedY * TOOL::FPStime)), m_angle);
-			mCamera.setSpeedX(WSSpeedXY.x + ADSpeedXY.x);
-			mCamera.setSpeedY(WSSpeedXY.y + ADSpeedXY.y);
-		}
-		mCamera.moveXY();
-
-		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
+		//	if (PlayerMoveBoolY) {
+		//		if (PlayerSpeedY < 0) {
+		//			PlayerSpeedY = 0;
+		//		}
+		//	}
+		//	else if (PlayerSpeedY > 0) {
+		//		PlayerSpeedY = 0;
+		//	}
+		//}
 
 		
+		//if (1) {//坐标轴移动
+		//	mCamera.setSpeedX(PlayerSpeedX * TOOL::FPStime);
+		//	mCamera.setSpeedY(PlayerSpeedY * TOOL::FPStime);
+		//}
+		//else {//以玩家朝向为坐标轴移动
+		//	glm::vec2 WSSpeedXY = SquarePhysics::vec2angle(glm::vec2((PlayerSpeedX * TOOL::FPStime), 0), m_angle);
+		//	glm::vec2 ADSpeedXY = SquarePhysics::vec2angle(glm::vec2(0, (PlayerSpeedY * TOOL::FPStime)), m_angle);
+		//	mCamera.setSpeedX(WSSpeedXY.x + ADSpeedXY.x);
+		//	mCamera.setSpeedY(WSSpeedXY.y + ADSpeedXY.y);
+		//}
+		//mCamera.moveXY();
+		
+		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);
+		mGamePlayer->mObjectCollision->SetAngle(m_angle + 1.57f);
+		mGamePlayer->mObjectCollision->SetPos({ mCamera.getCameraPos().x, mCamera.getCameraPos().y });
+		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
+		mGamePlayer->mObjectCollision->SetSpeed(0);
+		mCamera.setCameraPos(mGamePlayer->mObjectCollision->GetPos());
 
 		mVPMatrices.mViewMatrix = mCamera.getViewMatrix();//获取ViewMatrix数据
 		mVPMatrices.mProjectionMatrix = mCamera.getProjectMatrix();//获取ProjectionMatrix数据

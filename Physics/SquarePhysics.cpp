@@ -18,16 +18,18 @@ namespace SquarePhysics {
 	}
 
 	void SquarePhysics::PhysicsSimulation(float TimeStep) {
-		//ObjectCollision** ObjectNumberS = mObjectCollisionS->Data();
+		ObjectCollision** ObjectNumberS = mObjectCollisionS->Data();
 		PixelCollision** PixelCollisionS = mPixelCollisionS->Data();
 		PixelCollision* LPixel;
-		glm::vec2 pos;
-		TimeStep = TimeStep / 60.0f;
+		ObjectCollision* LObject;
+		glm::dvec2 pos,dianpos,dian;
+		unsigned int monicishu = 60;
+		TimeStep = TimeStep / monicishu;
 		int XX, YY;
 		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); i++)
 		{
 			LPixel = PixelCollisionS[i];
-			for (size_t iFF = 0; iFF < 60; iFF++)
+			for (size_t iFF = 0; iFF < monicishu; iFF++)
 			{
 				pos = LPixel->GetPos();
 				XX = pos.x;
@@ -45,6 +47,52 @@ namespace SquarePhysics {
 					mFixedSizeTerrain->CollisionCallback(XX, YY);
 					mFixedSizeTerrain->SetFixedCollisionBool(XX, YY);
 					break;
+				}
+			}
+		}
+		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
+		{
+			LObject = ObjectNumberS[i];
+			for (size_t iFF = 0; iFF < monicishu; iFF++)
+			{
+				pos = LObject->GetPos();
+				LObject->SetPos(glm::vec2(pos) + LObject->GetSpeed() * TimeStep);
+				XX = pos.x;
+				YY = pos.y;
+				//LObject->FrameTimeStep(TimeStep, mFixedSizeTerrain->GetFixedFrictionCoefficient(XX, YY));
+				for (size_t iDD = 0; iDD < LObject->GetOutlinePointSize(); iDD++)
+				{
+					dian = vec2angle(LObject->GetOutlinePointSet(iDD), LObject->GetAngle());
+					dianpos = pos + dian;
+					XX = dianpos.x;
+					YY = dianpos.y;
+					if (XX < 0)
+					{
+						XX--;
+					}
+					if (YY < 0)
+					{
+						YY--;
+					}
+					if (mFixedSizeTerrain->GetFixedCollisionBool(XX, YY)) {
+						//LObject->SetSpeed(0);
+						//LObject->SetForce({0,0});
+						/*if (dianpos.x > 0)
+						{
+							dianpos.x - 0.5f;
+						}
+						else {
+							dianpos.x + 0.5f;
+						}
+						if (dianpos.y > 0)
+						{
+							dianpos.y - 0.5f;
+						}
+						else {
+							dianpos.y + 0.5f;
+						}*/
+						LObject->SetPos(SquareToDrop(-0.5f, 0.5f, -0.5f, 0.5f, { (dianpos.x - 0.5f) - XX, (dianpos.y - 0.5f) - YY }, { -dian.x,-dian.y }) + pos);
+					}
 				}
 			}
 			
@@ -77,8 +125,8 @@ namespace SquarePhysics {
 	}
 
 	//vec2旋转
-	glm::dvec2 vec2angle(glm::dvec2 pos, double CosAngle, double SinAngle) {
-		return glm::dvec2((pos.x * CosAngle) - (pos.y * SinAngle), (pos.x * SinAngle) + (pos.y * CosAngle));
+	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle) {
+		return glm::dvec2((pos.x * angle.x) - (pos.y * angle.y), (pos.x * angle.y) + (pos.y * angle.x));
 	}
 
 	//正方形和正方形的碰撞检测（A为静态刚体，B为动态刚体）
@@ -112,13 +160,13 @@ namespace SquarePhysics {
 		double Bsinangle = sin(angleB);
 
 		glm::dvec2 QPYpos{ 0.0f,0.0f };//补偿距离
-		glm::dvec2 QPos = vec2angle(Pos, Acosangle, -Asinangle);//以 A 为坐标系，B 正方形的四个点进行判断是否在内
-		QPYpos += SquareToDrop(A1, A2, B1, B2, (QPos + QPYpos + vec2angle(glm::vec2(-rB, -rB), cosangle, sinangle)), QPos);
-		QPYpos += SquareToDrop(A1, A2, B1, B2, (QPos + QPYpos + vec2angle(glm::vec2(+rB, -rB), cosangle, sinangle)), QPos);
-		QPYpos += SquareToDrop(A1, A2, B1, B2, (QPos + QPYpos + vec2angle(glm::vec2(-rB, +rB), cosangle, sinangle)), QPos);
-		QPYpos += SquareToDrop(A1, A2, B1, B2, (QPos + QPYpos + vec2angle(glm::vec2(+rB, +rB), cosangle, sinangle)), QPos);
+		glm::dvec2 QPos = vec2angle(Pos, { Acosangle, -Asinangle });//以 A 为坐标系，B 正方形的四个点进行判断是否在内
+		QPYpos += SquareToDrop(A1, A2, B1, B2, (QPos + QPYpos + vec2angle(glm::vec2(-rB, -rB), {cosangle, sinangle})), QPos);
+		QPYpos += SquareToDrop(A1, A2, B1, B2, (QPos + QPYpos + vec2angle(glm::vec2(+rB, -rB), {cosangle, sinangle})), QPos);
+		QPYpos += SquareToDrop(A1, A2, B1, B2, (QPos + QPYpos + vec2angle(glm::vec2(-rB, +rB), {cosangle, sinangle})), QPos);
+		QPYpos += SquareToDrop(A1, A2, B1, B2, (QPos + QPYpos + vec2angle(glm::vec2(+rB, +rB), {cosangle, sinangle})), QPos);
 
-		QPYpos = vec2angle(QPYpos, Acosangle, Asinangle);
+		QPYpos = vec2angle(QPYpos, { Acosangle, Asinangle });
 
 		A1 = - rB;
 		A2 = + rB;
@@ -127,13 +175,13 @@ namespace SquarePhysics {
 		sinangle = -sinangle;
 
 		glm::dvec2 HPYpos{ 0.0f,0.0f };//补偿距离
-		glm::dvec2 HPos = vec2angle(-(QPYpos + Pos), Bcosangle, -Bsinangle);//以 B 为坐标系，A 正方形的四个点进行判断是否在内
-		HPYpos -= SquareToDrop(A1, A2, B1, B2, (HPos + HPYpos + vec2angle(glm::vec2(-rA, -rA), cosangle, sinangle)), HPos);
-		HPYpos -= SquareToDrop(A1, A2, B1, B2, (HPos + HPYpos + vec2angle(glm::vec2(+rA, -rA), cosangle, sinangle)), HPos);
-		HPYpos -= SquareToDrop(A1, A2, B1, B2, (HPos + HPYpos + vec2angle(glm::vec2(-rA, +rA), cosangle, sinangle)), HPos);
-		HPYpos -= SquareToDrop(A1, A2, B1, B2, (HPos + HPYpos + vec2angle(glm::vec2(+rA, +rA), cosangle, sinangle)), HPos);
+		glm::dvec2 HPos = vec2angle(-(QPYpos + Pos), { Bcosangle, -Bsinangle });//以 B 为坐标系，A 正方形的四个点进行判断是否在内
+		HPYpos -= SquareToDrop(A1, A2, B1, B2, (HPos + HPYpos + vec2angle(glm::vec2(-rA, -rA), {cosangle, sinangle})), HPos);
+		HPYpos -= SquareToDrop(A1, A2, B1, B2, (HPos + HPYpos + vec2angle(glm::vec2(+rA, -rA), {cosangle, sinangle})), HPos);
+		HPYpos -= SquareToDrop(A1, A2, B1, B2, (HPos + HPYpos + vec2angle(glm::vec2(-rA, +rA), {cosangle, sinangle})), HPos);
+		HPYpos -= SquareToDrop(A1, A2, B1, B2, (HPos + HPYpos + vec2angle(glm::vec2(+rA, +rA), {cosangle, sinangle})), HPos);
 
-		return QPYpos + vec2angle(HPYpos, Bcosangle, Bsinangle);//返回需要矫正的距离
+		return QPYpos + vec2angle(HPYpos, { Bcosangle, Bsinangle });//返回需要矫正的距离
 	}
 
 	//正方形和点的碰撞检测

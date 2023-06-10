@@ -7,10 +7,9 @@ aux_source_directory(. DIRSRCS)
 
 
 # add_custom_command(
-#     OUTPUT my_generated_file.h
-#     COMMAND my_script.py input_file.txt my_generated_file.h
-#     DEPENDS input_file.txt my_script.py
-#     COMMENT "Generating my_generated_file.h"
+#     OUTPUT ./GeneralCalculationGPU/WarfareMist.spv
+#     COMMAND ./GeneralCalculationGPU/compile.bat
+#     DEPENDS ./glslangValidator.exe
 # )
 
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
@@ -67,9 +66,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURC
 endif()
 
 
-#execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/GeneralCalculationGPU/comp.spv ${CMAKE_CURRENT_BINARY_DIR})
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/GeneralCalculationGPU/WarfareMist.spv ${CMAKE_CURRENT_BINARY_DIR})
-#execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/GeneralCalculationGPU/saxpy.spv ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Info.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs.json ${PROJECT_SOURCE_DIR}/.vs)# 设置的DLL文件路径
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders) # 拷贝shaders
@@ -183,3 +180,5 @@ else()
 		vuh.lib
 	)
 endif()
+
+

@@ -47,7 +47,7 @@ namespace SquarePhysics {
 	//vec2旋转(基于原点的旋转)
 	glm::dvec2 vec2angle(glm::dvec2 pos, double angle);
 	//vec2旋转(基于原点的旋转)
-	glm::dvec2 vec2angle(glm::dvec2 pos, double CosAngle, double SinAngle);
+	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle);
 
 
 	//正方形和正方形的碰撞检测

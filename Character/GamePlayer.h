@@ -83,6 +83,6 @@ namespace GAME {
 		VulKan::RenderPass* mRenderPass;
 
 	public://物理
-		SquarePhysics::PixelCollision* mPixelCollision = nullptr;
+		SquarePhysics::ObjectCollision* mObjectCollision = nullptr;
 	};
 }

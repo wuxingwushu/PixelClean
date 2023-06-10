@@ -95,6 +95,14 @@ namespace SquarePhysics {
 			UpDataSpeedBack();
 		}
 
+		void SetSpeed(float angle, glm::vec2 speed) {
+			SetAngle(angle);
+			SetSpeed(speed);
+			//angle -= 1.57f;
+			//SetSpeed({ speed .x * cos(angle) - speed.y * sin(angle), speed.x * sin(angle) + speed.y * cos(angle)});
+			UpDataSpeedBack();
+		}
+
 		void SetSpeed(glm::vec2 angle, float speed) {
 			SetAngle(angle);
 			SetSpeed(speed);

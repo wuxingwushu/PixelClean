@@ -69,6 +69,12 @@ namespace GAME {
 		//键盘事件
 		void onKeyDown(CAMERA_MOVE moveDirection);
 
+		//鼠标滚轮事件
+		void SetCameraZ(int z) {
+			m_position.z += z * 10;
+			mCamera.update();
+		}
+
 		//读取配置信息
 		void ReadConfigure();
 		//储存配置信息

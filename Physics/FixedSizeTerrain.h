@@ -119,7 +119,7 @@ namespace SquarePhysics {
 			return false;
 		}
 
-		
+		[[nodiscard]] glm::ivec2 RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
 
 	private:
 		void* mClass = nullptr;

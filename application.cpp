@@ -103,7 +103,7 @@ namespace GAME {
 		//mWindow = new VulKan::Window(mWidth, mHeight, false, false);
 		//mWindow->setApp(shared_from_this());//把 application 本体指针传给 Window ，便于调用 Camera
 		//设置摄像机   位置，朝向（后面两个 vec3 来决定）
-		mCamera.lookAt(glm::vec3(0.0f, 20.0f, 500.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mCamera.lookAt(glm::vec3(0.0f, 20.0f, 100.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		//设置Perpective
 		mCamera.setPerpective(45.0f, (float)mWidth / (float)mHeight, 0.1f, 1000.0f);
 		//设置摄像机移动速度
@@ -235,7 +235,7 @@ namespace GAME {
 			mDevice,
 			mCommandPool,
 			mSwapChain->getImageCount(),
-			mPixelTextureS->getPixelTexture(2),
+			mPixelTextureS->getPixelTexture(10),
 			mPipeline->DescriptorSetLayout,
 			mCameraVPMatricesBuffer,
 			mSampler
@@ -902,7 +902,7 @@ namespace GAME {
 		if ((Lzuojian == GLFW_PRESS) && zuojian != Lzuojian)
 		{
 			unsigned char color[4] = { 0,255,0,125 };
-			mArms->ShootBullets(mCamera.getCameraPos().x, mCamera.getCameraPos().y, color, m_angle + 1.57f, 50);
+			mArms->ShootBullets(mCamera.getCameraPos().x, mCamera.getCameraPos().y, color, m_angle + 1.57f, 500);
 			client_Fire = true;
 		}
 		zuojian = Lzuojian;
@@ -914,7 +914,7 @@ namespace GAME {
 				if (dataVec[i].Fire) {
 					dataVec[i].Fire = false;
 					unsigned char color[4] = { 0,255,0,125 };
-					mArms->ShootBullets(dataVec[i].X, dataVec[i].Y, color, dataVec[i].ang / 180.0f * 3.14159265359f, 5000);
+					mArms->ShootBullets(dataVec[i].X, dataVec[i].Y, color, dataVec[i].ang / 180.0f * 3.14159265359f, 500);
 				}
 			}
 		}

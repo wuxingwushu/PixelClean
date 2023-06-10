@@ -14,6 +14,12 @@ namespace GAME::VulKan {
 		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->onMouseMove(xpos, ypos);
 	}
 
+	static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+	{
+		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->SetCameraZ(-yoffset);
+		//printf("Mouse wheel scrolled: xoffset = %lf, yoffset = %lf\n", xoffset, yoffset);
+	}
+
 
 	Window::Window(const int& width, const int& height, bool MouseBool, bool FullScreen) {
 		mWidth = width;
@@ -35,6 +41,9 @@ namespace GAME::VulKan {
 		glfwSetWindowUserPointer(mWindow, this);
 		glfwSetFramebufferSizeCallback(mWindow, windowResized);//绑定窗口大小改变事件
 		//glfwSetCursorPosCallback(mWindow, cursorPosCallBack);//绑定鼠标事件
+
+		// 注册鼠标滚轮回调函数
+		glfwSetScrollCallback(mWindow, scroll_callback);
 
 		//GLFW_CURSOR_DISABLED 禁用鼠标
 		if (MouseDisabled) {

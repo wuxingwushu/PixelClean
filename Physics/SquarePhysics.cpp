@@ -23,13 +23,32 @@ namespace SquarePhysics {
 		PixelCollision* LPixel;
 		ObjectCollision* LObject;
 		glm::dvec2 pos,dianpos,dian;
-		unsigned int monicishu = 60;
-		TimeStep = TimeStep / monicishu;
+		glm::dvec2 dianji[256], posL, pian;
+		glm::ivec2 chapos;
 		int XX, YY;
 		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); i++)
 		{
 			LPixel = PixelCollisionS[i];
-			for (size_t iFF = 0; iFF < monicishu; iFF++)
+			pos = LPixel->GetPos();
+			LPixel->FrameTimeStep(TimeStep, 0);
+			dian = LPixel->GetPos();
+			dianpos = mFixedSizeTerrain->RadialCollisionDetection(pos, dian);
+			XX = dianpos.x;
+			YY = dianpos.y;
+			if (mFixedSizeTerrain->CrossingTheBoundary(XX, YY))
+			{
+				LPixel->CollisionCallback(LPixel);
+				mPixelCollisionS->Delete(i);
+				break;
+			}
+			if (mFixedSizeTerrain->GetFixedCollisionBool(XX, YY)) {
+				LPixel->CollisionCallback(LPixel);
+				mPixelCollisionS->Delete(i);
+				mFixedSizeTerrain->CollisionCallback(XX, YY);
+				mFixedSizeTerrain->SetFixedCollisionBool(XX, YY);
+				break;
+			}
+			/*for (size_t iFF = 0; iFF < monicishu; iFF++)
 			{
 				pos = LPixel->GetPos();
 				XX = pos.x;
@@ -48,10 +67,40 @@ namespace SquarePhysics {
 					mFixedSizeTerrain->SetFixedCollisionBool(XX, YY);
 					break;
 				}
-			}
+			}*/
 		}
+
+
+		unsigned int monicishu = 60;
+		TimeStep = TimeStep / monicishu;
 		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
 		{
+			/*LObject = ObjectNumberS[i];
+			pos = LObject->GetPos();
+			XX = pos.x;	
+			YY = pos.y;
+			for (size_t iDD = 0; iDD < LObject->GetOutlinePointSize(); iDD++) {
+				dianji[iDD] = vec2angle(LObject->GetOutlinePointSet(iDD), LObject->GetAngle());
+			}
+			LObject->FrameTimeStep(TimeStep, mFixedSizeTerrain->GetFixedFrictionCoefficient(XX, YY));
+			posL = glm::dvec2(LObject->GetPos());
+			pian = posL - pos;
+			for (size_t iDD = 0; iDD < LObject->GetOutlinePointSize(); iDD++) {
+				dianpos = mFixedSizeTerrain->RadialCollisionDetection(dianji[iDD], vec2angle(LObject->GetOutlinePointSet(iDD), LObject->GetAngle()));
+				dian = dianpos - dianji[iDD];
+				chapos = glm::ivec2(dian);
+				if (chapos != glm::ivec2(pian)) {
+					if (fabs(XX) < abs(chapos.x))
+					{
+						XX = chapos.x;
+					}
+					if (fabs(YY) < abs(chapos.y))
+					{
+						YY = chapos.y;
+					}
+				}
+			}*/
+
 			LObject = ObjectNumberS[i];
 			for (size_t iFF = 0; iFF < monicishu; iFF++)
 			{
@@ -77,21 +126,7 @@ namespace SquarePhysics {
 					if (mFixedSizeTerrain->GetFixedCollisionBool(XX, YY)) {
 						//LObject->SetSpeed(0);
 						//LObject->SetForce({0,0});
-						/*if (dianpos.x > 0)
-						{
-							dianpos.x - 0.5f;
-						}
-						else {
-							dianpos.x + 0.5f;
-						}
-						if (dianpos.y > 0)
-						{
-							dianpos.y - 0.5f;
-						}
-						else {
-							dianpos.y + 0.5f;
-						}*/
-						LObject->SetPos(SquareToDrop(-0.5f, 0.5f, -0.5f, 0.5f, { (dianpos.x - 0.5f) - XX, (dianpos.y - 0.5f) - YY }, { -dian.x,-dian.y }) + pos);
+						LObject->SetPos(SquareToDrop(-0.001f, 1.001f, -0.001f, 1.001f, { (dianpos.x - 0.0f) - XX, (dianpos.y - 0.0f) - YY }, { -dian.x,-dian.y }) + pos);
 					}
 				}
 			}

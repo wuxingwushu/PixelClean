@@ -24,7 +24,7 @@ namespace GAME {
 		Particle* Ppppx = mBullet->New(LPixelCollision);
 		*Ppppx = *mParticleSystem->mParticle->pop();
 		LPixelCollision->SetPos({ x,y });
-		LPixelCollision->SetSpeed(angle, speed);
+		LPixelCollision->SetSpeed(speed, angle);
 		LPixelCollision->SetCollisionCallback(Arms_DeleteBullet,this);
 		LPixelCollision->SetFrictionCoefficient(0.0f);
 		Ppppx->Pixel->ModifyImage(4, colour);

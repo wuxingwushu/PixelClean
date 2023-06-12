@@ -10,6 +10,8 @@
 
 #include "../Physics/SquarePhysics.h"
 
+#include "../BlockS/PixelS.h"
+
 namespace GAME {
 	class GamePlayer
 	{
@@ -22,7 +24,7 @@ namespace GAME {
 			VulKan::Device* device, //设备
 			const VulKan::CommandPool* commandPool, //指令池
 			int frameCount, //GPU画布的数量
-			PixelTexture* texturepath, //贴图
+			int textureID, //贴图ID
 			const VkDescriptorSetLayout mDescriptorSetLayout,//渲染管线要的提交内容
 			std::vector<VulKan::Buffer*> VPMstdBuffer,//玩家相机的变化矩阵 
 			VulKan::Sampler* sampler//图片采样器
@@ -33,6 +35,8 @@ namespace GAME {
 		void SetKey(unsigned int key) {
 			Key = key;
 		}
+
+		void DestroyPixel(glm::ivec2 pixel);
 
 
 		//更新描述符，模型位置
@@ -67,6 +71,8 @@ namespace GAME {
 		VulKan::Buffer* mUVBuffer{ nullptr };
 		VulKan::Buffer* mIndexBuffer{ nullptr };
 		size_t mIndexDatasSize;
+
+		PixelTexture* mPixelTexture = nullptr; //贴图
 
 	private://描述模型   位置   贴图
 		std::vector<VulKan::UniformParameter*> mUniformParams;

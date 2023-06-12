@@ -2,6 +2,11 @@
 
 namespace GAME {
 
+	void GamePlayerDestroyPixel(int x, int y, void* mclass) {
+		GamePlayer* Class = (GamePlayer*)mclass;
+		Class->DestroyPixel({x,y});
+	}
+
 	GamePlayer::GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, float X, float Y)
 	{
 		mPipeline = pipeline;
@@ -21,6 +26,7 @@ namespace GAME {
 		mObjectCollision->SetOrigin(8, 8);
 		mObjectCollision->SetPos({ X, Y });
 		mObjectCollision->SetFrictionCoefficient(10.0f);
+		mObjectCollision->SetCollisionCallback(GamePlayerDestroyPixel, this);
 
 		std::vector<float> mPositions = {
 			-8.0f, -8.0f, 0.0f,
@@ -30,10 +36,11 @@ namespace GAME {
 		};
 
 		std::vector<float> mUVs = {
-			1.0f,0.0f,
 			0.0f,0.0f,
 			0.0f,1.0f,
 			1.0f,1.0f,
+			1.0f,0.0f,
+			
 		};
 
 		std::vector<unsigned int> mIndexDatas = {
@@ -122,12 +129,15 @@ namespace GAME {
 	void GamePlayer::initUniformManager(
 		VulKan::Device* device,
 		const VulKan::CommandPool* commandPool,
-		int frameCount, PixelTexture* texturepath,
+		int frameCount, 
+		int textureID,
 		const VkDescriptorSetLayout mDescriptorSetLayout,
 		std::vector<VulKan::Buffer*> VPMstdBuffer,
 		VulKan::Sampler* sampler
 	)
 	{
+		mPixelTexture = new PixelTexture(device, commandPool, pixelS[16],16,16,4, sampler);
+
 		VulKan::UniformParameter* vpParam = new VulKan::UniformParameter();
 		vpParam->mBinding = 0;
 		vpParam->mCount = 1;
@@ -163,7 +173,7 @@ namespace GAME {
 		textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		textureParam->mStage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		//textureParam->mTexture = new Texture(device, commandPool, texturepath);
-		textureParam->mPixelTexture = texturepath;
+		textureParam->mPixelTexture = mPixelTexture;
 
 		mUniformParams.push_back(textureParam);
 
@@ -198,5 +208,12 @@ namespace GAME {
 
 			mBufferCopyCommandBuffer[i]->end();
 		}
+	}
+
+	void GamePlayer::DestroyPixel(glm::ivec2 pixel) {
+		unsigned char* TexturePointer = (unsigned char*)mPixelTexture->getHOSTImagePointer();
+		memset(&TexturePointer[(pixel.x * 16 + pixel.y) * 4], 0, 4);
+		mPixelTexture->endHOSTImagePointer();
+		mPixelTexture->UpDataImage();
 	}
 }

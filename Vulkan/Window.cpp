@@ -14,6 +14,7 @@ namespace GAME::VulKan {
 		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->onMouseMove(xpos, ypos);
 	}
 
+	//绑定鼠标滚轮事件
 	static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	{
 		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->SetCameraZ(-yoffset);
@@ -83,6 +84,19 @@ namespace GAME::VulKan {
 			}
 			mApp->InterFace->SetInterFaceBool();
 		}
+
+		//控制鼠标显示和禁用
+		if (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_P) != KeysRisingEdgeTrigger) {
+			if (MouseDisabled) {
+				glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+				MouseDisabled = false;
+			}
+			else {
+				glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+				MouseDisabled = true;
+			}
+		}
+		KeysRisingEdgeTrigger = glfwGetKey(mWindow, GLFW_KEY_P);
 	}
 
 	//键盘事件
@@ -96,11 +110,7 @@ namespace GAME::VulKan {
 		}
 
 		//控制鼠标显示和禁用
-		if (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS) {
-			while (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS)
-			{
-				glfwPollEvents();
-			}
+		if (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_P) != KeysRisingEdgeTrigger) {
 			if (MouseDisabled) {
 				glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 				MouseDisabled = false;
@@ -110,6 +120,7 @@ namespace GAME::VulKan {
 				MouseDisabled = true;
 			}
 		}
+		KeysRisingEdgeTrigger = glfwGetKey(mWindow, GLFW_KEY_P);
 
 		if (glfwGetKey(mWindow, GLFW_KEY_W) == GLFW_PRESS) {
 			//设置摄像机移动速度

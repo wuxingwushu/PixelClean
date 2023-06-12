@@ -36,13 +36,18 @@ namespace GAME::VulKan {
 		void processEvent();
 
 	public:
-		bool mWindowResized{ false };
+		bool mWindowResized{ false };//窗口大小是否发生改变
 		Application* mApp;
 
 	private:
-		bool MouseDisabled = false;
+		bool MouseDisabled = false;//是否显示鼠标光标
 		int mWidth{ 0 };//储存窗口宽度
 		int mHeight{ 0 };//储存窗口高度
 		GLFWwindow* mWindow{ NULL };//储存窗口指针
+
+	private:
+		//按键上升沿触发（储存上一时刻的值）
+		bool KeysRisingEdgeTrigger = false;
+
 	};
 }

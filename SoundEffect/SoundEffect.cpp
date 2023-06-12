@@ -8,7 +8,7 @@ namespace GAME::SoundEffect {
 	{
 		// initialize SoLoud.
 		soloud.init();
-		MidiFont.load(SoundFont_sf2);
+		MidiFont.load(GM2_sf2);
 		//soloud.setGlobalVolume(1.0);
 		//soloud.setPostClipScaler(10);
 	}

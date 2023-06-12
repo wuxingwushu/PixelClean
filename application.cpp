@@ -70,9 +70,8 @@ namespace GAME {
 		default:
 			break;
 		}
-		//mGamePlayer->mObjectCollision->SetForce(LI);
-
-		mGamePlayer->mObjectCollision->SetSpeed(m_angle + 1.57f, PlayerSpeed);
+		mGamePlayer->mObjectCollision->SetForce(PlayerSpeed);
+		//mGamePlayer->mObjectCollision->SetSpeed(PlayerSpeed);
 
 		//mGamePlayer->mObjectCollision->SetSpeed(LI)
 		//mGamePlayer->mObjectCollision->SetAngle(m_angle);
@@ -103,7 +102,7 @@ namespace GAME {
 		//mWindow = new VulKan::Window(mWidth, mHeight, false, false);
 		//mWindow->setApp(shared_from_this());//把 application 本体指针传给 Window ，便于调用 Camera
 		//设置摄像机   位置，朝向（后面两个 vec3 来决定）
-		mCamera.lookAt(glm::vec3(0.0f, 20.0f, 100.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mCamera.lookAt(glm::vec3(20.0f, 20.0f, 400.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		//设置Perpective
 		mCamera.setPerpective(45.0f, (float)mWidth / (float)mHeight, 0.1f, 1000.0f);
 		//设置摄像机移动速度
@@ -199,7 +198,7 @@ namespace GAME {
 			mPipeline,
 			mSwapChain
 		);*/
-		mLabyrinth = new Labyrinth(mDevice, 41, 41);
+		mLabyrinth = new Labyrinth(mDevice, 21, 21);
 		mLabyrinth->initUniformManager(
 			mDevice,
 			mCommandPool,
@@ -235,12 +234,18 @@ namespace GAME {
 			mDevice,
 			mCommandPool,
 			mSwapChain->getImageCount(),
-			mPixelTextureS->getPixelTexture(10),
+			10,
 			mPipeline->DescriptorSetLayout,
 			mCameraVPMatricesBuffer,
 			mSampler
 		);
 		mGamePlayer->InitCommandBuffer();
+
+		ServerPos* CS = server.New(6);
+		CS->X = 20;
+		CS->Y = 50;
+		CS->Key = 6;
+		CS->ang = 0.78f;
 
 		mSquarePhysics = new SquarePhysics::SquarePhysics(400, 400);
 		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);
@@ -659,21 +664,32 @@ namespace GAME {
 			ImGui::NewFrame();
 
 			ImGui::Begin(u8"启动模式");
-			if (ImGui::Button(u8"服务器"))
+
+			if (ImGui::Button(u8"开启游戏（开发中...40%）"))
 			{
 				ServerToClient = true;
+				//InterFace->SetInterFaceBool();
 				ImGui::End();
 
 				ImGui::Render();
 				break;
 			}
-			if (ImGui::Button(u8"客户端"))
+
+			if (ImGui::Button(u8"服务器（开发中...20%）"))
+			{
+				ServerToClient = true;
+				ImGui::End();
+
+				ImGui::Render();
+				//break;
+			}
+			if (ImGui::Button(u8"客户端（开发中...20%）"))
 			{
 				ServerToClient = false;
 				ImGui::End();
 
 				ImGui::Render();
-				break;
+				//break;
 			}
 			ImGui::End();
 
@@ -743,12 +759,22 @@ namespace GAME {
 								mDevice,
 								mCommandPool,
 								mSwapChain->getImageCount(),
-								mPixelTextureS->getPixelTexture(sposs[i].Key % TextureNumber),
+								(sposs[i].Key % TextureNumber),
 								mPipeline->DescriptorSetLayout,
 								mCameraVPMatricesBuffer,
 								mSampler
 							);
 							(*Players)->InitCommandBuffer();
+							mSquarePhysics->AddObjectCollision((*Players)->mObjectCollision);
+							(*Players)->setGamePlayerMatrix(
+								glm::rotate(
+									glm::translate(glm::mat4(1.0f), glm::vec3(sposs[i].X, sposs[i].Y, 0.0f)),
+									glm::radians(sposs[i].ang * 180.f / 3.14f),
+									glm::vec3(0.0f, 0.0f, 1.0f)
+								),
+								mCurrentFrame
+							);
+							(*Players)->mObjectCollision->SetAngle(sposs[i].ang);
 						}
 					}
 				}
@@ -761,7 +787,7 @@ namespace GAME {
 							(*Players)->setGamePlayerMatrix(
 								glm::rotate(
 									glm::translate(glm::mat4(1.0f), glm::vec3(sposs[i].X, sposs[i].Y, 0.0f)),
-									glm::radians(float(sposs[i].ang)),
+									glm::radians(float(sposs[i].ang) * 180.f / 3.14f),
 									glm::vec3(0.0f, 0.0f, 1.0f)
 								),
 								mCurrentFrame
@@ -788,7 +814,7 @@ namespace GAME {
 								mDevice,
 								mCommandPool,
 								mSwapChain->getImageCount(),
-								mPixelTextureS->getPixelTexture(sposs[i].Key % TextureNumber),
+								(sposs[i].Key % TextureNumber),
 								mPipeline->DescriptorSetLayout,
 								mCameraVPMatricesBuffer,
 								mSampler
@@ -822,64 +848,11 @@ namespace GAME {
 	}
 
 	void Application::GameLoop() {
-		//if ((PlayerSpeedX != 0.0f) && PlayerKeyBoolX) {
-		//	if (PlayerSpeedX > 0) {
-		//		PlayerMoveBoolX = true;
-		//		PlayerSpeedX -= TOOL::FPStime * 300.0f;
-		//	}
-		//	else {
-		//		PlayerMoveBoolX = false;
-		//		PlayerSpeedX += TOOL::FPStime * 300.0f;
-		//	}
-
-		//	if (PlayerMoveBoolX) {
-		//		if (PlayerSpeedX < 0) {
-		//			PlayerSpeedX = 0;
-		//		}
-		//	}
-		//	else if (PlayerSpeedX > 0) {
-		//		PlayerSpeedX = 0;
-		//	}
-		//}
-
-		//if ((PlayerSpeedY != 0.0f) && PlayerKeyBoolY) {
-		//	if (PlayerSpeedY > 0) {
-		//		PlayerMoveBoolY = true;
-		//		PlayerSpeedY -= TOOL::FPStime * 300.0f;
-		//	}
-		//	else {
-		//		PlayerMoveBoolY = false;
-		//		PlayerSpeedY += TOOL::FPStime * 300.0f;
-		//	}
-
-		//	if (PlayerMoveBoolY) {
-		//		if (PlayerSpeedY < 0) {
-		//			PlayerSpeedY = 0;
-		//		}
-		//	}
-		//	else if (PlayerSpeedY > 0) {
-		//		PlayerSpeedY = 0;
-		//	}
-		//}
-
-		
-		//if (1) {//坐标轴移动
-		//	mCamera.setSpeedX(PlayerSpeedX * TOOL::FPStime);
-		//	mCamera.setSpeedY(PlayerSpeedY * TOOL::FPStime);
-		//}
-		//else {//以玩家朝向为坐标轴移动
-		//	glm::vec2 WSSpeedXY = SquarePhysics::vec2angle(glm::vec2((PlayerSpeedX * TOOL::FPStime), 0), m_angle);
-		//	glm::vec2 ADSpeedXY = SquarePhysics::vec2angle(glm::vec2(0, (PlayerSpeedY * TOOL::FPStime)), m_angle);
-		//	mCamera.setSpeedX(WSSpeedXY.x + ADSpeedXY.x);
-		//	mCamera.setSpeedY(WSSpeedXY.y + ADSpeedXY.y);
-		//}
-		//mCamera.moveXY();
 		
 		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);
-		mGamePlayer->mObjectCollision->SetAngle(m_angle + 1.57f);
-		mGamePlayer->mObjectCollision->SetPos({ mCamera.getCameraPos().x, mCamera.getCameraPos().y });
+		mGamePlayer->mObjectCollision->SetAngle(m_angle);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
-		mGamePlayer->mObjectCollision->SetSpeed(0);
+		mGamePlayer->mObjectCollision->SetForce({0,0});
 		mCamera.setCameraPos(mGamePlayer->mObjectCollision->GetPos());
 
 		mVPMatrices.mViewMatrix = mCamera.getViewMatrix();//获取ViewMatrix数据
@@ -891,18 +864,21 @@ namespace GAME {
 		mGamePlayer->setGamePlayerMatrix(
 			glm::rotate(
 				glm::translate(glm::mat4(1.0f), glm::vec3(mCamera.getCameraPos().x, mCamera.getCameraPos().y, 0.0f)),
-				glm::radians(float(m_angle * 180 / M_PI)),
+				glm::radians(float(m_angle * 180.0f / M_PI)),
 				glm::vec3(0.0f, 0.0f, 1.0f)
 			),
 			mCurrentFrame
 		);
 
-
+		static double ArmsContinuityFire = 0;
+		ArmsContinuityFire += TOOL::FPStime;
 		int Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-		if ((Lzuojian == GLFW_PRESS) && zuojian != Lzuojian)
+		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.1f)))
 		{
+			ArmsContinuityFire = 0;
 			unsigned char color[4] = { 0,255,0,125 };
-			mArms->ShootBullets(mCamera.getCameraPos().x, mCamera.getCameraPos().y, color, m_angle + 1.57f, 500);
+			glm::dvec2 Armsdain =  SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle + 1.57f);
+			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, color, m_angle + 1.57f, 500);
 			client_Fire = true;
 		}
 		zuojian = Lzuojian;
@@ -983,7 +959,7 @@ namespace GAME {
 				}
 			}
 		}
-		MapPlayerS->TimeoutDetection();
+		//MapPlayerS->TimeoutDetection();
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}
 

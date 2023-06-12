@@ -1,18 +1,20 @@
 #pragma once
 #include <glm/glm.hpp>
+#include "PhysicsCalculate.h"
 
 namespace SquarePhysics {
 
 	class ObjectDecorator //装饰器模式
 	{
 	public:
-
 		
-
-
 		void SetQuality(float quality) { mQuality = quality; }
 
 		[[nodiscard]] float GetQuality() { return mQuality; }
+
+		void SetFrictionCoefficient(float frictionCoefficient) { mFrictionCoefficient = frictionCoefficient; }
+
+		[[nodiscard]] float GetFrictionCoefficient() { return mFrictionCoefficient; }
 
 
 
@@ -31,31 +33,9 @@ namespace SquarePhysics {
 
 
 
-
-		void SetForceX(float x) { mForce.x = x; }
-
-		void SetForceY(float y) { mForce.y = y; }
-
-		void SetForce(glm::vec2 force) { mForce = force; }
-
-		[[nodiscard]] float GetForceX() { return mForce.x; }
-
-		[[nodiscard]] float GetForceY() { return mForce.y; }
-
-		[[nodiscard]] glm::vec2 GetForce() { return mForce; }
-
-
-
-
-		void SetAngleX(float x) { mAngle.x = x; }
-
-		void SetAngleY(float y) { mAngle.y = y; }
-
-		void SetAngle(glm::vec2 angle) { mAngle = angle; }
-
-		void SetAngle(float angle) { 
+		void SetAngle(float angle) {
 			mAngleFloat = angle;
-			mAngle = { cos(angle),sin(angle) }; 
+			mAngle = AngleFloatToAngleVec(angle);
 		}
 
 		[[nodiscard]] float GetAngleX() { return mAngle.x; }
@@ -69,65 +49,89 @@ namespace SquarePhysics {
 
 
 
-		void SetSpeedX(float x) { 
-			mSpeed.x = x;
-			mSpeedBack[0] = (mSpeed.x > 0.0f);
+
+
+
+
+
+		void SetForce(glm::vec2 force) { 
+			mForce = force;
+			mForceFloat = Modulus(force);
+			mForceAngleFloat = EdgeVecToCosAngleFloat(force);
+			mForceAngle = AngleFloatToAngleVec(mForceAngleFloat);
 		}
 
-		void SetSpeedY(float y) { 
-			mSpeed.y = y;
-			mSpeedBack[1] = (mSpeed.y > 0.0f);
+		void SetForce(float angle, float Force) {
+			mForceFloat = Force;
+			mForceAngleFloat = angle;
+			mForceAngle = AngleFloatToAngleVec(angle);
+			mForce = mForceFloat * mForceAngle;
 		}
+
+		[[nodiscard]] float GetForceX() { return mForce.x; }
+
+		[[nodiscard]] float GetForceY() { return mForce.y; }
+
+		[[nodiscard]] float GetForceAngleX() { return mForceAngle.x; }
+
+		[[nodiscard]] float GetForceAngleY() { return mForceAngle.y; }
+
+		[[nodiscard]] glm::vec2 GetForce() { return mForce; }
+
+		[[nodiscard]] float GetForceFloat() { return mForceFloat; }
+
+		[[nodiscard]] float GetForceAngleFloat() { return mForceAngleFloat; }
+
+		[[nodiscard]] glm::vec2 GetForceAngle() { return mForceAngle; }
+
+
+
+
+		
+
 
 		void SetSpeed(glm::vec2 speed) { 
 			mSpeed = speed;
+			mSpeedFloat = Modulus(mSpeed);
+			mSpeedAngleFloat = EdgeVecToCosAngleFloat(mSpeed);
+			mSpeedAngle = AngleFloatToAngleVec(mSpeedAngleFloat);
 			UpDataSpeedBack();
 		}
 
-		void SetSpeed(float speed) { 
-			mSpeed = { speed * mAngle.x, speed * mAngle.y };
+		void SetSpeed(float speed, float angle) { 
+			mSpeedFloat = speed;
+			mSpeedAngleFloat = angle;
+			mSpeedAngle = AngleFloatToAngleVec(mSpeedAngleFloat);
+			mSpeed = mSpeedAngle * mSpeedFloat;
 			UpDataSpeedBack();
 		}
 
-		void SetSpeed(float angle, float speed) { 
-			SetAngle(angle);
-			SetSpeed(speed);
-			UpDataSpeedBack();
-		}
-
-		void SetSpeed(float angle, glm::vec2 speed) {
-			SetAngle(angle);
-			SetSpeed(speed);
-			//angle -= 1.57f;
-			//SetSpeed({ speed .x * cos(angle) - speed.y * sin(angle), speed.x * sin(angle) + speed.y * cos(angle)});
-			UpDataSpeedBack();
-		}
-
-		void SetSpeed(glm::vec2 angle, float speed) {
-			SetAngle(angle);
-			SetSpeed(speed);
-			UpDataSpeedBack();
-		}
 
 		[[nodiscard]] float GetSpeedX() { return mSpeed.x; }
 
 		[[nodiscard]] float GetSpeedY() { return mSpeed.y; }
 
+		[[nodiscard]] float GetSpeedAngleX() { return mSpeedAngle.x; }
+
+		[[nodiscard]] float GetSpeedAngleY() { return mSpeedAngle.y; }
+
 		[[nodiscard]] glm::vec2 GetSpeed() { return mSpeed; }
 
+		[[nodiscard]] float GetSpeedFloat() { return mSpeedFloat; }
 
-		void SetFrictionCoefficient(float frictionCoefficient) { mFrictionCoefficient = frictionCoefficient; }
+		[[nodiscard]] float GetSpeedAngleFloat() { return mSpeedAngleFloat; }
 
-		[[nodiscard]] float GetFrictionCoefficient() { return mFrictionCoefficient; }
+		[[nodiscard]] glm::vec2 GetSpeedAngle() { return mSpeedAngle; }
+
 
 
 
 		//帧时间步长模拟
 		void FrameTimeStep(float TimeStep, float FrictionCoefficient){
-			glm::vec2 Resistance = mAngle * (mQuality * 9.8f * FrictionCoefficient * mFrictionCoefficient);
+			glm::vec2 Resistance = mSpeedAngle * (mQuality * 9.8f * FrictionCoefficient * mFrictionCoefficient);
 			if ((mForce.x != 0.0f) || (mForce.y != 0.0f)) {
 				if ((mSpeed.x != 0.0f) || (mSpeed.y != 0.0f)) {
-					mSpeed += ((mForce - Resistance) / mQuality) * TimeStep;
+					SetSpeed(mSpeed + (((mForce - Resistance) / mQuality) * TimeStep));
 					mPos += mSpeed * TimeStep;
 					SpeedReversalJudge();
 				}
@@ -135,7 +139,7 @@ namespace SquarePhysics {
 				{
 					if (ModulusLength(Resistance) < ModulusLength(mForce))
 					{
-						mSpeed += ((mForce - Resistance) / mQuality) * TimeStep;
+						SetSpeed(mSpeed + (((mForce - Resistance) / mQuality) * TimeStep));
 						mPos += mSpeed * TimeStep;
 						SpeedReversalJudge();
 					}
@@ -147,7 +151,7 @@ namespace SquarePhysics {
 			}
 			else {
 				if ((mSpeed.x != 0.0f) || (mSpeed.y != 0.0f)) {
-					mSpeed -= (Resistance / mQuality) * TimeStep;
+					SetSpeed(mSpeed - ((Resistance / mQuality) * TimeStep));
 					mPos += mSpeed * TimeStep;
 					SpeedReversalJudge();
 				}
@@ -158,10 +162,7 @@ namespace SquarePhysics {
 			}
 		}
 
-		//获取模的长度
-		float ModulusLength(glm::vec2 Modulus) {
-			return ((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
-		}
+		
 
 		//和上一时刻速度的Bool进行对比，判断速度是否要取反。
 		void SpeedReversalJudge() {
@@ -170,14 +171,15 @@ namespace SquarePhysics {
 			if (SpeedX != mSpeedBack[0])
 			{
 				mSpeed.x = 0.0f;
-				mAngle.x = 0.0f;
+				mSpeedAngle.x = 0.0f;
 			}
 
 			if (SpeedY != mSpeedBack[1])
 			{
 				mSpeed.y = 0.0f;
-				mAngle.y = 0.0f;
+				mSpeedAngle.y = 0.0f;
 			}
+			SetSpeed(mSpeed);
 			mSpeedBack[0] = SpeedX;
 			mSpeedBack[1] = SpeedY;
 		}
@@ -188,15 +190,24 @@ namespace SquarePhysics {
 			mSpeedBack[1] = (mSpeed.y > 0.0f);
 		}
 
-	private:
+	
 		float		mQuality = 1.0f;				//质量（KG）
 		float		mFrictionCoefficient = 0.6f;	//摩檫力系数
-		float		mAngleFloat = 0.0f;				//朝向角度
-		glm::vec2	mAngle{};						//朝向角度
-		glm::vec2	mPos{};							//位置
-		glm::vec2	mSpeed{};						//速度
+		
+		glm::vec2	mPos{ 0.0f, 0.0f };				//位置
+		glm::vec2	mAngle{ 0.0f, 0.0f };			//朝向角度
+		float		mAngleFloat = 0.0f;				//朝向角度Float
+		
+		glm::vec2	mForce{ 0.0f, 0.0f };			//受力
+		float		mForceFloat = 0.0f;				//受力Float
+		glm::vec2	mForceAngle{ 0.0f, 0.0f };		//受力角度
+		float		mForceAngleFloat = 0.0f;		//受力角度Float
+
+		glm::vec2	mSpeed{ 0.0f, 0.0f };			//速度
+		float		mSpeedFloat = 0.0f;				//速度Float
+		glm::vec2	mSpeedAngle{ 0.0f, 0.0f };		//速度角度
+		float		mSpeedAngleFloat = 0.0f;		//速度角度Float
 		bool		mSpeedBack[2];					//用于判断速度方向反转
-		glm::vec2	mForce{};						//受力
 	};
 
 }

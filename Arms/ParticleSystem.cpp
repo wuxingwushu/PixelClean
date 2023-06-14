@@ -5,13 +5,7 @@ namespace GAME {
 		mNumber = Number;
 		mParticle = new PileUp<Particle>(mNumber);
 
-		ThreadS = (TOOL::mThreadCount / 3) * 3;
-		mThreadCommandPoolS = new VulKan::CommandPool * [ThreadS];
-		mThreadCommandBufferS = new VulKan::CommandBuffer * [ThreadS];
-		for (int i = 0; i < (ThreadS); i++) {
-			mThreadCommandPoolS[i] = new VulKan::CommandPool(device);
-			mThreadCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
-		}
+		
 
 		mUniformParams = new std::vector<VulKan::UniformParameter*>[mNumber];
 		mDescriptorSet = new VulKan::DescriptorSet*[mNumber];
@@ -48,6 +42,42 @@ namespace GAME {
 
 	ParticleSystem::~ParticleSystem()
 	{
+		delete mParticle;
+
+		for (size_t i = 0; i < mNumber; i++)
+		{
+			for (size_t iu = 0; iu < mUniformParams[i].size(); iu++)
+			{
+				if (iu == 1)
+				{
+					for (size_t ib = 0; ib < ThreadS; ib++)
+					{
+						delete mUniformParams[i][iu]->mBuffers[ib];
+					}
+				}
+				delete mUniformParams[i][iu];
+			}
+			delete mDescriptorSet[i];
+			delete PixelTextureS[i];
+		}
+
+		delete mDescriptorPool;
+
+		delete mUniformParams;
+		delete mDescriptorSet;
+		delete PixelTextureS;
+
+		delete mPositionBuffer;
+		delete mUVBuffer;
+		delete mIndexBuffer;
+
+		for (size_t i = 0; i < ThreadS; i++)
+		{
+			delete mThreadCommandBufferS[i];
+			delete mThreadCommandPoolS[i];
+		}
+		delete mThreadCommandBufferS;
+		delete mThreadCommandPoolS;
 	}
 
 	void ParticleSystem::initUniformManager(
@@ -59,6 +89,14 @@ namespace GAME {
 		VulKan::Sampler* sampler
 	)
 	{
+		ThreadS = frameCount;
+		mThreadCommandPoolS = new VulKan::CommandPool * [ThreadS];
+		mThreadCommandBufferS = new VulKan::CommandBuffer * [ThreadS];
+		for (int i = 0; i < (ThreadS); i++) {
+			mThreadCommandPoolS[i] = new VulKan::CommandPool(device);
+			mThreadCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
+		}
+
 		ObjectUniform mUniform;
 		for (int x = 0; x < mNumber; x++)
 		{

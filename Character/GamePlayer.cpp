@@ -107,6 +107,7 @@ namespace GAME {
 			delete mBufferCopyCommandPool;
 		}
 		
+		delete mObjectCollision;
 	}
 
 	void GamePlayer::setGamePlayerMatrix(glm::mat4 Matrix, const int& frameCount, bool mode)

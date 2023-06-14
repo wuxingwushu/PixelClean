@@ -7,6 +7,7 @@ int main(int argc, char** argv) {
 	TOOL::InitThreadPool();
 	TOOL::InitPerlinNoise();
 	TOOL::InitSpdLog();
+	TOOL::InitTimer();
 	//TOOL::InitLog();
 
 

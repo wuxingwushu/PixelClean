@@ -52,11 +52,11 @@ namespace SquarePhysics {
 		[[nodiscard]] bool GetFixedCollisionBool(int x, int y) { 
 			x += OriginX;
 			y += OriginY;
-			if (x > mNumberX || x < 0)
+			if (x >= mNumberX || x < 0)
 			{
 				return false;
 			}
-			if (y > mNumberY || y < 0)
+			if (y >= mNumberY || y < 0)
 			{
 				return false;
 			}
@@ -66,11 +66,11 @@ namespace SquarePhysics {
 		void SetFixedCollisionBool(int x, int y) {
 			x += OriginX;
 			y += OriginY;
-			if (x > mNumberX || x < 0)
+			if (x >= mNumberX || x < 0)
 			{
 				return;
 			}
-			if (y > mNumberY || y < 0)
+			if (y >= mNumberY || y < 0)
 			{
 				return;
 			}
@@ -80,11 +80,11 @@ namespace SquarePhysics {
 		[[nodiscard]] float GetFixedFrictionCoefficient(int x, int y) {
 			x += OriginX;
 			y += OriginY;
-			if (x > mNumberX || x < 0)
+			if (x >= mNumberX || x < 0)
 			{
 				return 1.0f;
 			}
-			if (y > mNumberY || y < 0)
+			if (y >= mNumberY || y < 0)
 			{
 				return 1.0f;
 			}

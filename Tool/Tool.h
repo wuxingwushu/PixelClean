@@ -1,5 +1,6 @@
 #pragma once
 #include "ContinuousData.h"
+#include "Timer.h"
 
 #define TOOL_MemoryPool		// 开启  内存池		(https://github.com/cacay/MemoryPool)//这个就根据自己的需求进行使用（线程不安全，建议为每一个线程申请一个内存池）
 #define TOOL_MPMCQueue		// 开启  MPMC队列	(https://github.com/rigtorp/MPMCQueue)//线程安全的队列，先进先出
@@ -10,7 +11,7 @@
 #define TOOL_ContinuousMap	// 开启  连续映射
 #define TOOL_Convert		// 开启  类型转换
 #define TOOL_FPS			// 开启  FPS检测
-#define TOOL_Timing			// 开启  耗时检测
+//#define TOOL_Timing			// 开启  耗时检测
 
 
 #ifdef TOOL_MemoryPool
@@ -57,6 +58,10 @@
 
 
 namespace TOOL {
+	extern Timer* mTimer;
+	void InitTimer();
+
+
 #ifdef TOOL_ThreadPool
 	extern ThreadPool* mThreadPool;//声明全局类（唯一）
 	extern unsigned int mThreadCount;

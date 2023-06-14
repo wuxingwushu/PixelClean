@@ -16,6 +16,10 @@ namespace GAME {
 
 	Arms::~Arms()
 	{
+		for (size_t i = 0; i < mBullet->GetDataSize(); i++)
+		{
+			delete mBullet->GetIndexKey(i);
+		}
 		delete mBullet;
 	}
 

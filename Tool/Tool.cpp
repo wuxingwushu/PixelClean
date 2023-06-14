@@ -3,6 +3,16 @@
 
 
 namespace TOOL {
+	Timer* mTimer = nullptr;
+	void InitTimer() {
+		if (mTimer == nullptr)
+		{
+			mTimer = new Timer(100);
+		}
+	}
+
+
+
 #ifdef TOOL_ThreadPool
 	ThreadPool* mThreadPool = nullptr;//声明全局类（唯一）
 	unsigned int mThreadCount;

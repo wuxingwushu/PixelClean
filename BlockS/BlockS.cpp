@@ -175,11 +175,9 @@ namespace GAME {
 
 	void BlockS::CameraMoveEvent(float CameraX, float CameraY)
 	{
-		static int kx = NULL;
 		if (mGenerate) {//等待生成结束才可以再一次判断
 			int cameraPosx = mCameraBlockX - int(CameraX / mPixel);
 			if ((cameraPosx != 0)) {
-				TOOL::MomentTiming(u8"生成", &kx);
 				TransverseToUpdate(cameraPosx);
 				mGenerate = false;
 				for (int i = 0; i < (mFrameCount * ThreadCommandBufferNumber); i++)
@@ -187,12 +185,10 @@ namespace GAME {
 					mThreadBool[i] = false;
 				}
 				ThreadDistribution();
-				TOOL::MomentEnd();
 				return;
 			}
 			int cameraPosy = mCameraBlockY - int(CameraY / mPixel);
 			if ((cameraPosy != 0)) {
-				TOOL::MomentTiming(u8"生成", &kx);
 				LongitudinalToUpdate(cameraPosy);
 				mGenerate = false;
 				for (int i = 0; i < (mFrameCount * ThreadCommandBufferNumber); i++)
@@ -200,7 +196,6 @@ namespace GAME {
 					mThreadBool[i] = false;
 				}
 				ThreadDistribution();
-				TOOL::MomentEnd();
 				return;
 			}
 		}

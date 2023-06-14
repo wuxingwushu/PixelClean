@@ -15,6 +15,8 @@
 
 #include "../Physics/SquarePhysics.h"
 
+#include "../Tool/PerlinNoise.h"
+
 
 struct miwustruct {
 	unsigned int size;
@@ -61,15 +63,15 @@ namespace GAME {
 		}
 
 		void GetCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
-			for (size_t i = 0; i < (ThreadS / 3); i++)
+			for (size_t i = 0; i < (mFrameCount / 3); i++)
 			{
-				Vector->push_back(mThreadCommandBufferS[(F * (ThreadS / 3)) + i]->getCommandBuffer());
+				Vector->push_back(mThreadCommandBufferS[(F * (mFrameCount / 3)) + i]->getCommandBuffer());
 			}
 		};
 
-		void penzhang(unsigned int x, unsigned int y, unsigned int ID);
-		void SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy, unsigned int ID);
-		void SetPixel(unsigned int x, unsigned int y, unsigned int ID);
+		void penzhang(unsigned int x, unsigned int y);
+		void SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy);
+		void SetPixel(unsigned int x, unsigned int y);
 		void UpDateMaps();
 
 		void ThreadUpdateCommandBuffer();
@@ -85,8 +87,8 @@ namespace GAME {
 
 		int numberX;//Block 横排多少个
 		int numberY;//Block 纵排多少个
-		bool** BlockS = nullptr;
-		unsigned char* mMistS = nullptr;
+		bool** BlockS = nullptr;//是否是墙壁
+		unsigned int** BlockTypeS = nullptr;//地面类型
 	private:
 		VulKan::Device* mDevice = nullptr;
 		
@@ -100,8 +102,7 @@ namespace GAME {
 		VulKan::DescriptorSet* mDescriptorSet{ nullptr };//位置 贴图 的数据
 
 		
-		PixelTexture* WarfareMist{ nullptr };//每块的贴图
-		VulKan::DescriptorSet* mMistDescriptorSet{ nullptr };//位置 贴图 的数据
+		
 		
 
 		VulKan::Buffer* mPositionBuffer{ nullptr };//点坐标
@@ -109,10 +110,7 @@ namespace GAME {
 		VulKan::Buffer* mIndexBuffer{ nullptr };//点排序
 		size_t mIndexDatasSize;//点的数量
 
-		bool** BlockSBool = nullptr;//是否是墙壁
-		unsigned int** BlockTypeS = nullptr;//类型
-
-		unsigned int ThreadS;
+		unsigned int mFrameCount;
 		VulKan::CommandPool** mThreadCommandPoolS = nullptr;
 		VulKan::CommandBuffer** mThreadCommandBufferS = nullptr;
 
@@ -121,6 +119,10 @@ namespace GAME {
 		VulKan::SwapChain* mSwapChain = nullptr;
 
 	private://战争迷雾
+		unsigned char* mMistS = nullptr;
+		PixelTexture* WarfareMist{ nullptr };//每块的贴图
+		VulKan::DescriptorSet* mMistDescriptorSet{ nullptr };//位置 贴图 的数据
+
 		miwustruct wymiwustruct{};
 		VulKan::Buffer* jihsuanTP{ nullptr };
 		VulKan::Buffer* information{ nullptr };

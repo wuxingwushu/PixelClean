@@ -20,26 +20,21 @@ namespace GAME {
 
 	//总初始化
 	void Application::run(VulKan::Window* w) {
-		static int initW = NULL;
-		static int initV = NULL;
-		static int initI = NULL;
-		static int initG = NULL;
-		static int initZ = NULL;
 		mWindow = w;
-		TOOL::MomentTiming(u8"总初始化", &initZ);
-		TOOL::MomentTiming(u8"初始化窗口", &initW);
+		TOOL::mTimer->MomentTiming(u8"总初始化");
+		TOOL::mTimer->MomentTiming(u8"初始化窗口");
 		initWindow();//初始化窗口
-		TOOL::MomentEnd();
-		TOOL::MomentTiming(u8"初始化Vulkan", &initV);
+		TOOL::mTimer->MomentEnd();
+		TOOL::mTimer->MomentTiming(u8"初始化Vulkan");
 		initVulkan();//初始化Vulkan
-		TOOL::MomentEnd();
-		TOOL::MomentTiming(u8"初始化ImGui", &initI);
+		TOOL::mTimer->MomentEnd();
+		TOOL::mTimer->MomentTiming(u8"初始化ImGui");
 		initImGui();//初始化ImGui
-		TOOL::MomentEnd();
-		TOOL::MomentTiming(u8"初始化游戏", &initG);
+		TOOL::mTimer->MomentEnd();
+		TOOL::mTimer->MomentTiming(u8"初始化游戏");
 		initGame();//初始化游戏
-		TOOL::MomentEnd();
-		TOOL::MomentEnd();
+		TOOL::mTimer->MomentEnd();
+		TOOL::mTimer->MomentEnd();
 		mainLoop();//开启主循环main
 		StorageConfigure();//储存配置
 		cleanUp();//回收资源
@@ -70,16 +65,7 @@ namespace GAME {
 		default:
 			break;
 		}
-		mGamePlayer->mObjectCollision->SetForce(PlayerSpeed);
-		//mGamePlayer->mObjectCollision->SetSpeed(PlayerSpeed);
-
-		//mGamePlayer->mObjectCollision->SetSpeed(LI)
-		//mGamePlayer->mObjectCollision->SetAngle(m_angle);
-		//mGamePlayer->mObjectCollision->SetForce(LI);
-		//PlayerMoveBool = true;
-		//mCamera.setSpeedX(PlayerSpeedX * TOOL::FPStime);//获取速度，不受帧数影响
-		//mCamera.setSpeedY(PlayerSpeedY * TOOL::FPStime);//获取速度，不受帧数影响
-		//mCamera.move(moveDirection);
+		mGamePlayer->mObjectCollision->SetForce(PlayerSpeed);//设置玩家受力
 	}
 
 	//读取配置信息
@@ -184,20 +170,7 @@ namespace GAME {
 			mCameraVPMatricesBuffer[i] = VulKan::Buffer::createUniformBuffer(mDevice, sizeof(VPMatrices), nullptr);
 		}
 
-		/*mBlockS = new BlockS(
-			mDevice,
-			mCommandPool,
-			mSwapChain->getImageCount(),
-			mPipeline->DescriptorSetLayout,
-			mCameraVPMatricesBuffer,
-			mCamera.getCameraPos(),
-			mWidth,
-			mHeight,
-			mSampler,
-			mRenderPass->getRenderPass(),
-			mPipeline,
-			mSwapChain
-		);*/
+		//生成迷宫
 		mLabyrinth = new Labyrinth(mDevice, 21, 21);
 		mLabyrinth->initUniformManager(
 			mDevice,
@@ -209,8 +182,8 @@ namespace GAME {
 		);
 		mLabyrinth->RecordingCommandBuffer(mRenderPass->getRenderPass(), mSwapChain, mPipeline);
 
-
-		mParticleSystem = new ParticleSystem(mDevice, 400);
+		//创建粒子系统
+		mParticleSystem = new ParticleSystem(mDevice, 1000);
 		mParticleSystem->initUniformManager(
 			mDevice,
 			mCommandPool,
@@ -221,14 +194,15 @@ namespace GAME {
 		);
 		mParticleSystem->RecordingCommandBuffer(mRenderPass->getRenderPass(), mSwapChain, mPipeline);
 
-		mArms = new Arms(mParticleSystem, 400);
+		//创建武器系统
+		mArms = new Arms(mParticleSystem, 1000);
 
-		mPixelTextureS = new PixelTextureS(mDevice,mCommandPool, mSampler);
-
+		//创建多人玩家
 		MapPlayerS = new ContinuousMap<evutil_socket_t, GamePlayer*>(100);
 		MapPlayerS->SetDeleteCallback(DeletePlayer);
 		MapPlayerS->SetTimeoutCallback(TimeoutPlayer);
 
+		//创建玩家
 		mGamePlayer = new GamePlayer(mDevice, mPipeline, mSwapChain, mRenderPass, mCamera.getCameraPos().x, mCamera.getCameraPos().y);
 		mGamePlayer->initUniformManager(
 			mDevice,
@@ -247,10 +221,11 @@ namespace GAME {
 		CS->Key = 6;
 		CS->ang = 0.78f;
 
+		//创建物理系统
 		mSquarePhysics = new SquarePhysics::SquarePhysics(400, 400);
-		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);
-		mArms->SetSquarePhysics(mSquarePhysics);
-		mSquarePhysics->AddObjectCollision(mGamePlayer->mObjectCollision);
+		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);//添加地图碰撞
+		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
+		mSquarePhysics->AddObjectCollision(mGamePlayer->mObjectCollision);//添加玩家碰撞
 	}
 
 
@@ -719,20 +694,20 @@ namespace GAME {
 			else {
 				S->Play();
 
-				TOOL::StartTiming(u8"游戏逻辑", true);
+				TOOL::mTimer->StartTiming(u8"游戏逻辑", true);
 				PlayerKeyBoolY = true;
 				PlayerKeyBoolX = true;
 				mWindow->processEvent();//监听键盘
 				GameLoop();
-				TOOL::StartEnd();
+				TOOL::mTimer->StartEnd();
 
-				TOOL::StartTiming(u8"画面渲染");
+				TOOL::mTimer->StartTiming(u8"画面渲染");
 				Render();//根据录制的主指令缓存显示画面
-				TOOL::StartEnd();
+				TOOL::mTimer->StartEnd();
 
 				TOOL::FPS();//刷新帧数
 
-				TOOL::RefreshTiming();
+				TOOL::mTimer->RefreshTiming();
 			}
 
 			if (ServerToClient) {
@@ -849,10 +824,10 @@ namespace GAME {
 
 	void Application::GameLoop() {
 		
-		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);
-		mGamePlayer->mObjectCollision->SetAngle(m_angle);
+		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);//获取角度
+		mGamePlayer->mObjectCollision->SetAngle(m_angle);//设置玩家物理角度
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
-		mGamePlayer->mObjectCollision->SetForce({0,0});
+		mGamePlayer->mObjectCollision->SetForce({0,0});//设置玩家力
 		mCamera.setCameraPos(mGamePlayer->mObjectCollision->GetPos());
 
 		mVPMatrices.mViewMatrix = mCamera.getViewMatrix();//获取ViewMatrix数据
@@ -873,7 +848,7 @@ namespace GAME {
 		static double ArmsContinuityFire = 0;
 		ArmsContinuityFire += TOOL::FPStime;
 		int Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.1f)))
+		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.01f)))
 		{
 			ArmsContinuityFire = 0;
 			unsigned char color[4] = { 0,255,0,125 };
@@ -905,9 +880,9 @@ namespace GAME {
 		mLabyrinth->UpDateMaps();
 
 		//战争迷雾
-		TOOL::StartTiming(u8"战争迷雾耗时", true);
+		TOOL::mTimer->StartTiming(u8"战争迷雾耗时", true);
 		mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f);
-		TOOL::StartEnd();
+		TOOL::mTimer->StartEnd();
 
 		//ImGui显示录制
 		ImGui_ImplVulkan_NewFrame();
@@ -989,9 +964,9 @@ namespace GAME {
 		}
 
 		//重新录制指令
-		TOOL::StartTiming(u8"录制指令");
+		TOOL::mTimer->StartTiming(u8"录制指令");
 		createCommandBuffers(imageIndex);
-		TOOL::StartEnd();
+		TOOL::mTimer->StartEnd();
 
 		//构建提交信息
 		VkSubmitInfo submitInfo{};
@@ -1018,12 +993,12 @@ namespace GAME {
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		mFences[mCurrentFrame]->resetFence();
-		TOOL::StartTiming(u8"等待渲染完成");
+		TOOL::mTimer->StartTiming(u8"等待渲染完成");
 		if (vkQueueSubmit(mDevice->getGraphicQueue(), 1, &submitInfo, mFences[mCurrentFrame]->getFence()) != VK_SUCCESS) {
 			throw std::runtime_error("Error:failed to submit renderCommand");
 		}
 		mImGuuiCommandBuffers->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
-		TOOL::StartEnd();
+		TOOL::mTimer->StartEnd();
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1038,9 +1013,9 @@ namespace GAME {
 		presentInfo.pImageIndices = &imageIndex;
 
 		//如果开了帧数限制，GPU会在这里等待，让当前循环符合GPU设置的帧数
-		TOOL::StartTiming(u8"垂直同步");
+		TOOL::mTimer->StartTiming(u8"垂直同步");
 		result = vkQueuePresentKHR(mDevice->getPresentQueue(), &presentInfo);//开始渲染
-		TOOL::StartEnd();
+		TOOL::mTimer->StartEnd();
 
 		//由于驱动程序不一定精准，所以我们还需要用自己的标志位判断
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || mWindow->mWindowResized) {

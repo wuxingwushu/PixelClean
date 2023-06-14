@@ -8,7 +8,7 @@ namespace GAME {
 
 	void Labyrinth_SetPixel(int x, int y, void* mclass) {
 		Labyrinth* mClass = (Labyrinth*)mclass;
-		mClass->SetPixel(x, y, 16);
+		mClass->SetPixel(x, y);
 	}
 
 
@@ -19,24 +19,15 @@ namespace GAME {
 		numberX = ((X / 2) * 4) + 1;
 		numberY = ((Y / 2) * 4) + 1;
 
+		PerlinNoise* P = new PerlinNoise();
 
-		
-
-		ThreadS = 3;
-		mThreadCommandPoolS = new VulKan::CommandPool * [ThreadS];
-		mThreadCommandBufferS = new VulKan::CommandBuffer * [ThreadS];
-		for (int i = 0; i < (ThreadS); i++) {
-			mThreadCommandPoolS[i] = new VulKan::CommandPool(device);
-			mThreadCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
-		}
-		
 
 		BlockS = new bool* [numberX];
 		BlockTypeS = new unsigned int* [numberX];
 		for (size_t i = 0; i < numberX; i++)
 		{
 			BlockS[i] = new bool[numberY];
-			BlockTypeS[i] = new unsigned int[numberY];
+			BlockTypeS[i] = new unsigned int[numberX];
 		}
 
 		bool** lblockS = new bool* [X];
@@ -59,57 +50,20 @@ namespace GAME {
 					NY++;
 				}
 				BlockS[x][y] = lblockS[NX][NY];
+				BlockTypeS[x][y] = P->noise(x * 0.01f, y * 0.01f, 0.5f) * TextureNumber;
 			}
 		}
-
-		
 		
 
-		mPixelS = new unsigned char[numberX * 16 * numberY * 16 * 4];
-		mMistS = new unsigned char[numberX * 16 * numberY * 16 * 4];
-
-		unsigned char Mist[4] = { 0,0,0,230 };
-		//std::cout << *((int*)Mist) << std::endl;
-		for (size_t i = 0; i < (numberX * 16 * numberY * 16); i++)
+		for (size_t i = 0; i < X; i++)
 		{
-			memcpy(&mMistS[i * 4], Mist, 4);
+			delete lblockS[i];
 		}
-
-		//Mist[3] = 231;
-		//std::cout << *((int*)Mist) << std::endl;
+		delete lblockS;
+		
 
 		mFixedSizeTerrain = new SquarePhysics::FixedSizeTerrain(numberX * 16, numberY * 16, 1);
 		mFixedSizeTerrain->SetCollisionCallback(Labyrinth_SetPixel, this);
-		SquarePhysics::PixelAttribute** LPixelAttribute = mFixedSizeTerrain->GetPixelAttributeData();
-
-
-		for (size_t x = 0; x < numberX; x++)
-		{
-			for (size_t y = 0; y < numberY; y++)
-			{
-				if (BlockS[x][y]) {
-					for (size_t i = 0; i < 16; i++)
-					{
-						memcpy(&mPixelS[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4)], &pixelS[2][(16 * 4 * i)], 16 * 4);
-						for (size_t idd = 0; idd < 16; idd++)
-						{
-							LPixelAttribute[x * 16 + idd][y * 16 + i].Collision = true;
-							mMistS[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4) + (idd * 4) + 3] = 231;
-						}
-					}
-				}
-				else {
-					for (size_t i = 0; i < 16; i++)
-					{
-						memcpy(&mPixelS[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4)], &pixelS[1][(16 * 4 * i)], 16 * 4);
-					}
-				}
-			}
-		}
-
-
-		
-
 
 
 		int Ax = -((numberX / 2) * 16);
@@ -151,6 +105,9 @@ namespace GAME {
 
 		InitMist();
 
+
+		unsigned char Mist[4] = { 0,0,0,230 };
+		//std::cout << *((int*)Mist) << std::endl;
 		wymiwustruct.size = 1800;
 		wymiwustruct.y_size = numberY * 16;
 		Mist[3] = 255;
@@ -161,6 +118,53 @@ namespace GAME {
 
 	Labyrinth::~Labyrinth()
 	{
+		//销毁指令缓存 指令池
+		for (int i = 0; i < (mFrameCount); i++) {
+			delete mThreadCommandBufferS[i];
+			delete mThreadCommandPoolS[i];
+		}
+		delete mThreadCommandBufferS;
+		delete mThreadCommandPoolS;
+
+		//销毁是否是墙壁
+		for (size_t i = 0; i < numberX; i++)
+		{
+			delete BlockS[i];
+			delete BlockTypeS[i];
+		}	
+		delete BlockS;
+		delete BlockTypeS;
+
+		//销毁地面碰撞系统
+		delete mFixedSizeTerrain;
+
+		//销毁 网格 UV 点索引
+		delete mPositionBuffer;
+		delete mUVBuffer;
+		delete mIndexBuffer;
+
+		//销毁贴图
+		delete PixelTextureS;
+		delete WarfareMist;
+
+		//销毁描述符等
+		delete mDescriptorSet;
+		delete mMistDescriptorSet;
+		delete mDescriptorPool;
+
+		for (size_t i = 0; i < mUniformParams.size(); i++)
+		{
+			if (i == 1) {
+				for (size_t ib = 0; ib < mUniformParams[i]->mBuffers.size(); ib++)
+				{
+					delete mUniformParams[i]->mBuffers[ib];
+				}
+			}
+			delete mUniformParams[i];
+		}
+
+		//销毁迷雾
+		DeleteMist();
 	}
 
 
@@ -174,10 +178,56 @@ namespace GAME {
 	)
 	{
 
+		mFrameCount = frameCount;
+		mThreadCommandPoolS = new VulKan::CommandPool * [mFrameCount];
+		mThreadCommandBufferS = new VulKan::CommandBuffer * [mFrameCount];
+		for (int i = 0; i < (mFrameCount); i++) {
+			mThreadCommandPoolS[i] = new VulKan::CommandPool(device);
+			mThreadCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
+		}
+
+		mPixelS = new unsigned char[numberX * 16 * numberY * 16 * 4];
+		mMistS = new unsigned char[numberX * 16 * numberY * 16 * 4];
+
+		unsigned char Mist[4] = { 0,0,0,230 };
+		//std::cout << *((int*)Mist) << std::endl;
+		for (size_t i = 0; i < (numberX * 16 * numberY * 16); i++)
+		{
+			memcpy(&mMistS[i * 4], Mist, 4);
+		}
+
+		SquarePhysics::PixelAttribute** LPixelAttribute = mFixedSizeTerrain->GetPixelAttributeData();
+
+		for (size_t x = 0; x < numberX; x++)
+		{
+			for (size_t y = 0; y < numberY; y++)
+			{
+				if (BlockS[x][y]) {
+					for (size_t i = 0; i < 16; i++)
+					{
+						memcpy(&mPixelS[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4)], &pixelS[2][(16 * 4 * i)], 16 * 4);
+						for (size_t idd = 0; idd < 16; idd++)
+						{
+							LPixelAttribute[x * 16 + idd][y * 16 + i].Collision = true;
+							mMistS[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4) + (idd * 4) + 3] = 231;
+						}
+					}
+				}
+				else {
+					for (size_t i = 0; i < 16; i++)
+					{
+						memcpy(&mPixelS[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * i)], 16 * 4);
+					}
+				}
+			}
+		}
+
 		PixelTextureS = new PixelTexture(device, mThreadCommandPoolS[0], mPixelS, numberX * 16, numberY * 16, 4, sampler);
 		
 		WarfareMist = new PixelTexture(device, mThreadCommandPoolS[0], mMistS, numberX * 16, numberY * 16, 4, sampler);
-		static int asdad = NULL;
+
+		delete mPixelS;
+		delete mMistS;
 
 		ObjectUniform mUniform;
 		
@@ -232,24 +282,24 @@ namespace GAME {
 
 	void Labyrinth::ThreadUpdateCommandBuffer() {
 		std::vector<std::future<void>> pool;
-		int UpdateNumber = (numberX * numberY) / (ThreadS / 3);
-		int UpdateNumber_yu = (numberX * numberY) % (ThreadS / 3);
+		int UpdateNumber = (numberX * numberY) / (mFrameCount / 3);
+		int UpdateNumber_yu = (numberX * numberY) % (mFrameCount / 3);
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < UpdateNumber_yu; j++) {
 				pool.push_back(TOOL::mThreadPool->enqueue(&Labyrinth::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + j), (UpdateNumber + 1)));
 			}
-			for (int j = UpdateNumber_yu; j < (ThreadS / 3); j++) {
+			for (int j = UpdateNumber_yu; j < (mFrameCount / 3); j++) {
 				pool.push_back(TOOL::mThreadPool->enqueue(&Labyrinth::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + UpdateNumber_yu), UpdateNumber));
 			}
 		}
-		for (int i = 0; i < (ThreadS); i++) {
+		for (int i = 0; i < (mFrameCount); i++) {
 			pool[i].wait();
 		}
 	}
 
 	void Labyrinth::ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count)
 	{
-		unsigned int mFrameBufferCount = ((ThreadS / 3) * FrameCount) + BufferCount;
+		unsigned int mFrameBufferCount = ((mFrameCount / 3) * FrameCount) + BufferCount;
 		VulKan::CommandBuffer* commandbuffer = mThreadCommandBufferS[mFrameBufferCount];
 
 		VkCommandBufferInheritanceInfo InheritanceInfo{};
@@ -270,13 +320,13 @@ namespace GAME {
 		commandbuffer->end();
 	}
 	//左下坐标，图片ID
-	void Labyrinth::penzhang(unsigned int x, unsigned int y, unsigned int ID) {
+	void Labyrinth::penzhang(unsigned int x, unsigned int y) {
 		BlockS[x][y] = 0;
 		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
 		for (size_t i = 0; i < 16; i++)
 		{
-			memcpy(&TexturePointer[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4)], &pixelS[ID][(16 * 4 * i)], 16 * 4);
+			memcpy(&TexturePointer[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * i)], 16 * 4);
 			for (size_t idd = 0; idd < 16; idd++)
 			{
 				TextureMist[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4) + (idd * 4) + 3] = 230;
@@ -288,23 +338,21 @@ namespace GAME {
 	}
 
 	//左下坐标，左下坐标，图片ID
-	void Labyrinth::SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy, unsigned int ID) {
+	void Labyrinth::SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy) {
 		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
-		memcpy(&TexturePointer[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)], &pixelS[ID][(16 * 4 * Dx) + (Dy * 4)], 4);
+		memcpy(&TexturePointer[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * Dx) + (Dy * 4)], 4);
 		TextureMist[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4) + 3] = 230;
-		mMistS[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4) + 3] = 230;
 		PixelTextureS->endHOSTImagePointer();
 		WarfareMist->endHOSTImagePointer();
 		UpDateMapsSwitch = true;
 	}
 
-	void Labyrinth::SetPixel(unsigned int x, unsigned int y, unsigned int ID) {
+	void Labyrinth::SetPixel(unsigned int x, unsigned int y) {
 		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
-		memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[ID][(((y % 16) * 16) + (x % 16)) * 4], 4);
+		memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[BlockTypeS[x / 16][y / 16]][(((x % 16) * 16) + (y % 16)) * 4], 4);
 		TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
-		mMistS[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
 		PixelTextureS->endHOSTImagePointer();
 		WarfareMist->endHOSTImagePointer();
 		UpDateMapsSwitch = true;

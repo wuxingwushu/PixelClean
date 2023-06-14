@@ -15,6 +15,16 @@ namespace SquarePhysics {
 
 	SquarePhysics::~SquarePhysics()
 	{
+		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
+		{
+			delete mObjectCollisionS->GetData(i);
+		}
+		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); i++)
+		{
+			delete mPixelCollisionS->GetData(i);
+		}
+		delete mObjectCollisionS;
+		delete mPixelCollisionS;
 	}
 
 	ObjectCollision* SquarePhysics::ObjectS_PixelCollision(glm::ivec2 pos) {

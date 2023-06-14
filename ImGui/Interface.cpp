@@ -213,7 +213,7 @@ namespace GAME {
 		static int values_offset = 0;
 		static char overlay[32];
 		sprintf(overlay, u8"平均: %f", TOOL::Mean_values);
-		ImGui::PlotLines("FPS", TOOL::values, IM_ARRAYSIZE(TOOL::values), values_offset, overlay, TOOL::Min_values - 10, TOOL::Max_values + 10, ImVec2(0, 100.0f));
+		ImGui::PlotLines("FPS", TOOL::values, IM_ARRAYSIZE(TOOL::values), 0, overlay, TOOL::Min_values - 10, TOOL::Max_values + 10, ImVec2(0, 100.0f));
 	}
 
 	void ImGuiInterFace::ImGuiShowTiming() {
@@ -233,40 +233,37 @@ namespace GAME {
 			ImGui::TableNextColumn();
 			ImGui::Text(u8"帧时间");
 			ImGui::TableNextColumn();
-			ImGui::Text(u8"%f", (1.0f / TOOL::FPStime));
-			for (int i = 0; i < TOOL::Quantity; i++)
+			ImGui::Text(u8"%f", TOOL::FPStime);
+			for (int i = 0; i < TOOL::mTimer->Count; i++)
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
-				ImGui::Text(TOOL::Consume_name[i]);
+				ImGui::Text(TOOL::mTimer->mNameS[i]);
 				ImGui::TableNextColumn();
-				if (TOOL::SecondVectorBool[i]) {
+				if (TOOL::mTimer->mHeapBoolS[i]) {
 					ImGui::PlotLines("",
-						TOOL::Consume_SecondVector[i],
-						TOOL::SecondVectorNumber,
-						TOOL::SecondVectorIndex[i],
+						TOOL::mTimer->mTimeHeapS[i],
+						TOOL::mTimer->mHeapNumber,
+						TOOL::mTimer->mTimeHeapIndexS,
 						nullptr,
-						TOOL::Min_Secondvalues[i],
-						TOOL::Max_Secondvalues[i],
+						TOOL::mTimer->mTimeMax[i],
+						TOOL::mTimer->mTimeMin[i],
 						ImVec2(0, 25.0f)
 					);
 				}
 				else {
-					ImGui::Text(u8"%1.6f 秒", TOOL::Consume_Second[i]);
+					ImGui::Text(u8"%1.6f 秒", TOOL::mTimer->mTimerS[i]);
 				}
-				if (i < TOOL::ConsumeNumber) {
-					ImGui::TableNextColumn();
-					ImGui::Text("%3.3f %%", TOOL::Consume_time[i]);
-				}
-
+				ImGui::TableNextColumn();
+				ImGui::Text("%3.3f %%", TOOL::mTimer->mTimerPercentageS[i]);
 			}
-			for (int i = 1; i < TOOL::MomentQuantity; i++)
+			for (int i = 0; i < TOOL::mTimer->MomentCount; i++)
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
-				ImGui::Text(TOOL::MomentConsume_name[i]);
+				ImGui::Text(TOOL::mTimer->mMomentNameS[i]);
 				ImGui::TableNextColumn();
-				ImGui::Text(u8"%1.6f 秒", TOOL::MomentConsume_Second[i]);
+				ImGui::Text(u8"%d", TOOL::mTimer->mMomentTimerS[i]);
 			}
 			ImGui::EndTable();
 		}

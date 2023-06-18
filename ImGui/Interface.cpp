@@ -151,6 +151,9 @@ namespace GAME {
 		case 1:
 			ViceInterface();
 			break;
+		case 2:
+			MultiplePeopleInterface();
+			break;
 		}
 		ImGui::Render();
 	}
@@ -174,6 +177,9 @@ namespace GAME {
 		if (ImGui::Button(u8"开始游戏")) {
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
+		}
+		if (ImGui::Button(u8"多人游戏")) {
+			InterfaceIndexes = 2;
 		}
 		if (ImGui::Button(u8"游戏设置")) {
 
@@ -204,6 +210,31 @@ namespace GAME {
 		}
 		if (ImGui::Button(u8"退出游戏")) {
 			mWindown->WindowClose();
+		}
+		ImGui::End();
+	}
+
+	void ImGuiInterFace::MultiplePeopleInterface() {
+		ImGui::Begin(u8"游戏ESC界面", NULL,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove
+		);
+		ImGui::SetWindowPos(ImVec2(0, 0));
+		ImGui::SetWindowSize(ImVec2(1920, 1080));
+		if (ImGui::Button(u8"服务器")) {
+			InterFaceBool = false;
+			InterfaceIndexes = 1;
+			StartMultiPlayerGames = true;
+			ServerToClient = true;
+			server_init(25565);
+		}
+		if (ImGui::Button(u8"客户端")) {
+			InterFaceBool = false;
+			InterfaceIndexes = 1;
+			StartMultiPlayerGames = true;
+			ServerToClient = false;
+			client_init("127.0.0.1", 25565);
 		}
 		ImGui::End();
 	}

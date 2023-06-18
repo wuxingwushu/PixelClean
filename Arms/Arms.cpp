@@ -50,6 +50,10 @@ namespace GAME {
 	}
 
 	void Arms::DeleteBullet(SquarePhysics::PixelCollision* index) {
+		unsigned char color[4] = { 0, 0, 255, 125 };
+		mParticlesSpecialEffect->GenerateSpecialEffects(index->GetPosX(), index->GetPosY(), color, index->GetSpeedAngleFloat() - 3.14f, 1.0f);
+		//std::cout << index->GetSpeedAngleFloat() << std::endl;
+
 		mParticleSystem->mParticle->add(
 			Particle{
 				mBullet->Get(index)->Pixel,

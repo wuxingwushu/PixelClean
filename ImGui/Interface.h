@@ -5,9 +5,12 @@
 #include "../Vulkan/commandPool.h"
 #include "../Vulkan/commandBuffer.h"
 
+#include "../NetworkTCP/Server.h"
+#include "../NetworkTCP/Client.h"
+
 namespace GAME {
 	class ImGuiInterFace
-	{
+	{	
 	public:
 		ImGuiInterFace(
 			VulKan::Device* device, 
@@ -35,6 +38,9 @@ namespace GAME {
 
 		VkCommandBuffer GetCommandBuffer(int i, VkCommandBufferInheritanceInfo info);
 
+		bool GetMultiplePeople() { return StartMultiPlayerGames; }
+		bool GetServerToClient() { return ServerToClient; }
+
 	private:
 		VkDescriptorPool			g_DescriptorPool = VK_NULL_HANDLE;//给 ImGui 创建的 DescriptorPool 记得销毁
 		int							g_MinImageCount = 3;
@@ -43,7 +49,7 @@ namespace GAME {
 		VulKan::Device* mDevice{ nullptr };
 
 		int InterfaceIndexes = 0;
-		bool InterFaceBool = false;
+		bool InterFaceBool = true;
 
 		VulKan::CommandPool** ImGuiCommandPoolS;
 		VulKan::CommandBuffer** ImGuiCommandBufferS;
@@ -53,9 +59,11 @@ namespace GAME {
 		}
 
 		void MainInterface();
-
+		
 		void ViceInterface();
 
-		
+		bool StartMultiPlayerGames = false;
+		bool ServerToClient;
+		void MultiplePeopleInterface();
 	};
 }

@@ -58,6 +58,11 @@ public:
 	}
 
 	~Timer() {
+		delete mMomentTimerS;
+		delete mMomentNameS;
+		delete mMomentTimeStack;
+		delete mMomentLabelStack;
+		
 		delete mTimerPercentageS;
 		delete mNameS;
 		delete mTimeS;

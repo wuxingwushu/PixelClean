@@ -174,13 +174,7 @@ namespace GAME {
 		glm::vec2 PlayerSpeed{};
 		GamePlayer* mGamePlayer{ nullptr };//玩家
 		double CursorPosX, CursorPosY;
-	public:
-		double PlayerSpeedX = 0;//玩家速度
-		double PlayerSpeedY = 0;//玩家速度
-		bool PlayerKeyBoolX = false;//玩家是否移动
-		bool PlayerKeyBoolY = false;//玩家是否移动
-		bool PlayerMoveBoolX = false;//玩家是否移动
-		bool PlayerMoveBoolY = false;//玩家是否移动
+
 	private:
 
 		//BlockS* mBlockS = nullptr;
@@ -199,11 +193,11 @@ namespace GAME {
 		ImGuiInterFace* InterFace = nullptr; // ImGui 游戏界面都写这里面
 		PixelTextureS* mPixelTextureS = nullptr;
 
-		bool ServerToClient;
+		
 
 		ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS;
 
-
+		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;
 		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;
 	};
 }

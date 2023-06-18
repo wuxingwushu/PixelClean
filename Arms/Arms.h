@@ -1,19 +1,11 @@
 #pragma once
 #include "ParticleSystem.h"
 #include "../Tool/ContinuousData.h"
-
+#include "ParticlesSpecialEffect.h"
 #include "../Physics/SquarePhysics.h"
 
 
 namespace GAME {
-	struct Bullet {
-		float X;
-		float Y;
-		float Angle;
-		float Speed;
-		SquarePhysics::PixelCollision* mPixelCollision;
-		Particle Particle;
-	};
 
 	class Arms
 	{
@@ -25,6 +17,10 @@ namespace GAME {
 			mSquarePhysics = SquarePhysics;
 		}
 
+		void SetSpecialEffect(ParticlesSpecialEffect* particlesSpecialEffect) {
+			mParticlesSpecialEffect = particlesSpecialEffect;
+		}
+
 		void ShootBullets(float x, float y, unsigned char* colour, float angle, float speed);
 
 		//void BulletsEvent(float Stepping, SquarePhysics::SquarePhysics* LSquarePhysics);
@@ -33,11 +29,10 @@ namespace GAME {
 
 		void DeleteBullet(SquarePhysics::PixelCollision* index);
 
-		//ContinuousData<Bullet>* mBullet;
 		ContinuousMap<SquarePhysics::PixelCollision*, Particle>* mBullet;
 	private:
-		ParticleSystem* mParticleSystem;
-
+		ParticleSystem* mParticleSystem = nullptr;
+		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;
 		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;
 	};
 }

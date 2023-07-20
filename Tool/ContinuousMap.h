@@ -194,27 +194,27 @@ public:
     }
 
     //获取除 Key 以外 Data 数量
-    unsigned int GetKeyNumber() {
+    unsigned int GetKeyNumber() const noexcept {
         return (Number - 1) > Max ? 0 : (Number - 1);
     }
 
     //获取除 Key 以外 Data 数量的数据一共多少字节
-    unsigned int GetKeyDataSize() {
+    unsigned int GetKeyDataSize() const noexcept {
         return GetKeyNumber() * sizeof(TData);
     }
 
     //获取所有 Data
-    TData* GetData(){
+    constexpr TData* GetData() const noexcept {
         return DataS;
     }
 
     //获取所有 Data 数量
-    unsigned int GetNumber(){
+    unsigned int GetNumber() const noexcept {
         return Number;
     }
 
     //获取 Data 数量的数据一共多少字节
-    unsigned int GetDataSize(){
+    unsigned int GetDataSize() const noexcept {
         return Number * sizeof(TData);
     }
 };

@@ -32,7 +32,7 @@ namespace GAME {
 	class Labyrinth
 	{
 	public:
-		Labyrinth(VulKan::Device* device, int X, int Y);
+		Labyrinth(VulKan::Device* device, int X, int Y, bool** LlblockS = nullptr);
 
 		//初始化描述符
 		void initUniformManager(
@@ -55,6 +55,7 @@ namespace GAME {
 		//获得 索引数量
 		[[nodiscard]] size_t getIndexCount() const { return mIndexDatasSize; }
 
+		
 		void RecordingCommandBuffer(VkRenderPass R, VulKan::SwapChain* S, VulKan::Pipeline* P) {
 			mRenderPass = R;
 			mSwapChain = S;
@@ -62,32 +63,40 @@ namespace GAME {
 			ThreadUpdateCommandBuffer();
 		}
 
+		//获取地图
 		void GetCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
-			for (size_t i = 0; i < (mFrameCount / 3); i++)
-			{
-				Vector->push_back(mThreadCommandBufferS[(F * (mFrameCount / 3)) + i]->getCommandBuffer());
-			}
+			Vector->push_back(mThreadCommandBufferS[F]->getCommandBuffer());
 		};
 
-		void penzhang(unsigned int x, unsigned int y);
+		//获取迷雾
+		void GetMistCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
+			Vector->push_back(mMistCommandBufferS[F]->getCommandBuffer());
+		};
+
+		//void penzhang(unsigned int x, unsigned int y);
 		void SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy);
 		void SetPixel(unsigned int x, unsigned int y);
 		void UpDateMaps();
 
+		//录制缓存指令
 		void ThreadUpdateCommandBuffer();
 		void ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count);
 
 		//void MIWU(int wjx, int wjy, float ang);
 
+		//初始化战争迷雾
 		void InitMist();
+		//计算可视范围
 		void UpdataMist(int wjx, int wjy, float ang);
+		//销毁战争迷雾
 		void DeleteMist();
 		
 		~Labyrinth();
 
 		int numberX;//Block 横排多少个
 		int numberY;//Block 纵排多少个
-		bool** BlockS = nullptr;//是否是墙壁
+		bool** BlockS = nullptr;//是否是墙壁 16 * 16 
+		int* BlockPixelS = nullptr;//像素点是否是墙壁
 		unsigned int** BlockTypeS = nullptr;//地面类型
 	private:
 		VulKan::Device* mDevice = nullptr;
@@ -97,7 +106,7 @@ namespace GAME {
 		VulKan::DescriptorPool* mDescriptorPool{ nullptr };//描述符池
 		std::vector<VulKan::UniformParameter*> mUniformParams;
 		
-		unsigned char* mPixelS;
+		unsigned char* mPixelS;//地图
 		PixelTexture* PixelTextureS{ nullptr };//每块的贴图
 		VulKan::DescriptorSet* mDescriptorSet{ nullptr };//位置 贴图 的数据
 
@@ -112,20 +121,29 @@ namespace GAME {
 
 		unsigned int mFrameCount;
 		VulKan::CommandPool** mThreadCommandPoolS = nullptr;
-		VulKan::CommandBuffer** mThreadCommandBufferS = nullptr;
+		VulKan::CommandBuffer** mThreadCommandBufferS = nullptr;//地图
 
+		VulKan::CommandPool** mMistCommandPoolS = nullptr;
+		VulKan::CommandBuffer** mMistCommandBufferS = nullptr;//地图
+		
+		//储存信息
 		VkRenderPass mRenderPass;
 		VulKan::Pipeline* mPipeline = nullptr;
 		VulKan::SwapChain* mSwapChain = nullptr;
 
+
+
+
+
 	private://战争迷雾
 		unsigned char* mMistS = nullptr;
 		PixelTexture* WarfareMist{ nullptr };//每块的贴图
-		VulKan::DescriptorSet* mMistDescriptorSet{ nullptr };//位置 贴图 的数据
+		VulKan::DescriptorSet* mMistDescriptorSet{ nullptr };//位置 角度  射线颜色 的数据
 
 		miwustruct wymiwustruct{};
-		VulKan::Buffer* jihsuanTP{ nullptr };
-		VulKan::Buffer* information{ nullptr };
+		VulKan::Buffer* jihsuanTP{ nullptr };//储存计算结果的缓存
+		VulKan::Buffer* information{ nullptr };//储存原数据的缓存(图片纹理)
+		VulKan::Buffer* WallBool{ nullptr };//储存碰撞(是否是墙壁)
 
 		VkDescriptorSetLayout descriptorSetLayout;
 		VkDescriptorPool descriptorPool;
@@ -135,8 +153,8 @@ namespace GAME {
 		VkPipelineLayout pipelineLayout;
 		VkShaderModule computeShaderModule;
 
-		VulKan::CommandPool* mMistCommandPoolS = nullptr;
-		VulKan::CommandBuffer* mMistCommandBufferS = nullptr;
+		VulKan::CommandPool* mMistCalculateCommandPoolS = nullptr;
+		VulKan::CommandBuffer* mMistCalculate = nullptr;
 
 	public://物理
 		SquarePhysics::FixedSizeTerrain* mFixedSizeTerrain = nullptr;

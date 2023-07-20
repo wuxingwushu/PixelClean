@@ -104,7 +104,6 @@ namespace GAME {
 
 		//渲染一帧画面
 		void Render();
-		void RenderInterFace();
 
 		//回收资源
 		void cleanUp();

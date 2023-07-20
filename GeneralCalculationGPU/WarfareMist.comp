@@ -5,45 +5,33 @@ layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 //#define Color_ -460365120
 #define PI 1.570796326795
-layout(std430, binding = 0) buffer buf
+layout(std430, binding = 0) buffer buf//画布
 {
    int arr_xy[];
 };
 
-layout(std430, binding = 1) buffer ObjectUniform 
+layout(std430, binding = 1) buffer ObjectUniform //描述符
 {
-   uint size;
-   int x;
+   uint size;//射线的数量
+   int x;//玩家位置
    int y;
-   uint y_size;
-   float angel;
-   int Color;
+   uint y_size;//图像大小的Y轴像素数量    
+   float angel;//角度
+   int Color;//颜色
 } params;
 
-int pz_x, pz_y,color = 0;
+layout(std430, binding = 2) buffer wall//墙壁
+{
+   int wall_xy[];
+};
+
+int color = 0;//射线默认颜色
 
 bool dianshe(uint xx, uint yy){
-    uint sx,zy,lxx,lyy;
-    lxx = xx * params.y_size + yy;//当前点
-    sx = (xx + pz_x) * params.y_size + yy;
-    zy = xx * params.y_size + (yy + pz_y);
-    lyy = (xx + pz_x) * params.y_size + (yy + pz_y);
-    if((arr_xy[lxx] == -436207616) || (arr_xy[lxx] == params.Color)){
-        arr_xy[lxx] = color;
-        if(((arr_xy[sx] == -419430400) || (arr_xy[sx] == -419365120)) && ((arr_xy[zy] == -419430400) || (arr_xy[zy] == -419365120))){
-            arr_xy[sx] = -419365120;
-            arr_xy[zy] = -419365120;
-            arr_xy[lyy] = -419365120;
-            return true;
-        }
-        //arr_xy[sx] = color;
-        //arr_xy[zy] = color;
-        return false;
-    }else if(arr_xy[lxx] != 0){
-        arr_xy[lxx] = -419365120;
-        return true;
-    }
-    return false;
+     uint lxx = xx * params.y_size + yy;//当前点
+     arr_xy[lxx] = color;
+     return wall_xy[lxx] == 1 ? true : false;
+     //return wall_xy[lxx];
 }
 
 void bresenham_line(int x0, int y0, int x1, int y1) {
@@ -80,22 +68,12 @@ void main(){
        return;
     }
     uint shexian = params.size/2;
-    if((id_x <= shexian+5) && (id_x >= shexian-5)){
+    if((id_x <= shexian+3) && (id_x >= shexian-3)){//中间几根射线更换颜色
         color = params.Color;
     }
-    float du = params.angel + (float(PI / params.size) * id_x);
+    float du = params.angel + (float(PI / params.size) * id_x);//获取角度
     int x = int(cos(du) * 400);
-    if(x > 0){
-        pz_x = 1;
-    }else{
-        pz_x = -1;
-    }
     int y = int(sin(du) * 400);
-    if(y > 0){
-        pz_y = 1;
-    }else{
-        pz_y = -1;
-    }
-    bresenham_line(params.x,params.y,params.x+x,params.y+y);
+    bresenham_line(params.x,params.y,params.x+x,params.y+y);//射线检测
     return;
 }

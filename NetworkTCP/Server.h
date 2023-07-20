@@ -4,6 +4,8 @@
 #include "event2/event.h"
 #include "event2/listener.h"
 #include "event2/bufferevent.h"
+#include "event2/buffer.h"
+#include "zlib/zlib.h"
 //#ifdef _WIN32
 //#undef socklen_t
 //#define _WINSOCKAPI_
@@ -44,7 +46,26 @@ void server_write_cb(bufferevent* be, void* arg);
 //链接事件
 void server_listen_cb(evconnlistener* ev, evutil_socket_t s, sockaddr* sin, int slen, void* arg);
 
-
+//服务器初始化
 void server_init(unsigned int Duan);
 
+//销毁服务器
 void server_delete();
+
+//输入过滤器
+bufferevent_filter_result server_filter_in(
+	evbuffer* s,
+	evbuffer* d,
+	ev_ssize_t limit,
+	bufferevent_flush_mode mode,
+	void* arg
+);
+
+//输出过滤器
+bufferevent_filter_result server_filter_out(
+	evbuffer* s,
+	evbuffer* d,
+	ev_ssize_t limit,
+	bufferevent_flush_mode mode,
+	void* arg
+);

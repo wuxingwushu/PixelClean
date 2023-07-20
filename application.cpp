@@ -218,11 +218,11 @@ namespace GAME {
 		);
 		mGamePlayer->InitCommandBuffer();
 
-		ServerPos* CS = server.New(6);
+		/*ServerPos* CS = server.New(6);
 		CS->X = 20;
 		CS->Y = 50;
 		CS->Key = 6;
-		CS->ang = 0.78f;
+		CS->ang = 0.78f;*/
 
 		//创建物理系统
 		mSquarePhysics = new SquarePhysics::SquarePhysics(400, 400);
@@ -771,7 +771,7 @@ namespace GAME {
 						}
 					}
 
-					event_base_loop(client_base, EVLOOP_ONCE);
+					event_base_loop(client_base, EVLOOP_NONBLOCK);
 				}
 			}
 		}
@@ -902,6 +902,7 @@ namespace GAME {
 				}
 			}
 		}
+		mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
 		//MapPlayerS->TimeoutDetection();
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}
@@ -999,91 +1000,6 @@ namespace GAME {
 
 		mCurrentFrame = (mCurrentFrame + 1) % mSwapChain->getImageCount();
 	}
-
-	void Application::RenderInterFace() {
-		//等待当前要提交的CommandBuffer执行完毕
-		mFences[mCurrentFrame]->block();
-
-		//获取交换链当中的下一帧
-		uint32_t imageIndex{ 0 };
-		VkResult result = vkAcquireNextImageKHR(
-			mDevice->getDevice(),
-			mSwapChain->getSwapChain(),
-			UINT64_MAX,
-			mImageAvailableSemaphores[mCurrentFrame]->getSemaphore(),
-			VK_NULL_HANDLE,
-			&imageIndex);
-
-
-		//窗体发生了尺寸变化 （窗口大小改变了话，指令要全部重新录制）
-		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-			recreateSwapChain();
-			mWindow->mWindowResized = false;
-		}//VK_SUBOPTIMAL_KHR得到了一张认为可用的图像，但是表面格式不一定匹配
-		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-			throw std::runtime_error("Error: failed to acquire next image");
-		}
-
-		//重新录制指令
-		createCommandBuffers(imageIndex);
-
-		//构建提交信息
-		VkSubmitInfo submitInfo{};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-
-		//同步信息，渲染对于显示图像的依赖，显示完毕后，才能输出颜色
-		VkSemaphore waitSemaphores[] = { mImageAvailableSemaphores[mCurrentFrame]->getSemaphore() };//获取储存信号量类
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };//管线颜色输出阶段，等待信号量
-		
-		submitInfo.waitSemaphoreCount = 1;//等待多少个信号量
-		submitInfo.pWaitSemaphores = waitSemaphores;//储存到那个信号量
-		submitInfo.pWaitDstStageMask = waitStages;//那个阶段等待信号量
-
-
-		VkCommandBuffer commandBuffers[1];
-		//指定提交哪些命令
-		commandBuffers[0] = { mCommandBuffers[imageIndex]->getCommandBuffer() };
-		submitInfo.commandBufferCount = (uint32_t)1;
-		submitInfo.pCommandBuffers = commandBuffers;
-
-		VkSemaphore signalSemaphores[] = { mRenderFinishedSemaphores[mCurrentFrame]->getSemaphore() };
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		mFences[mCurrentFrame]->resetFence();
-		if (vkQueueSubmit(mDevice->getGraphicQueue(), 1, &submitInfo, mFences[mCurrentFrame]->getFence()) != VK_SUCCESS) {
-			throw std::runtime_error("Error:failed to submit renderCommand");
-		}
-
-
-		VkPresentInfoKHR presentInfo{};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
-
-		VkSwapchainKHR swapChains[] = { mSwapChain->getSwapChain() };
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = swapChains;
-
-		presentInfo.pImageIndices = &imageIndex;
-
-		//如果开了帧数限制，GPU会在这里等待，让当前循环符合GPU设置的帧数
-		result = vkQueuePresentKHR(mDevice->getPresentQueue(), &presentInfo);//开始渲染
-
-		//由于驱动程序不一定精准，所以我们还需要用自己的标志位判断
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || mWindow->mWindowResized) {
-			recreateSwapChain();
-			mWindow->mWindowResized = false;
-		}
-		else if (result != VK_SUCCESS) {
-			throw std::runtime_error("Error: failed to present");
-		}
-
-		mCurrentFrame = (mCurrentFrame + 1) % mSwapChain->getImageCount();
-	}
-
 
 	//回收资源
 	void Application::cleanUp() {

@@ -32,6 +32,7 @@ include_directories(
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/libevent/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/SpdLog/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/VUH/include
+	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/zlib/include
 )
 
 # 设置 lib 的文件路径（区分 Debug / Release）
@@ -43,6 +44,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/libevent/debug/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/SpdLog/lib/Debug
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/VUH/lib/Debug
+		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/zlib/lib/Debug
 	)
 else()
 	link_directories(
@@ -52,6 +54,7 @@ else()
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/libevent/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/SpdLog/lib/Release
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/VUH/lib/Release
+		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/zlib/lib/Release
 	)
 endif()
 
@@ -60,9 +63,11 @@ endif()
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./Environment/Soloud/bin/Debug ${CMAKE_CURRENT_BINARY_DIR})
 	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./Environment/libevent/debug/bin ${CMAKE_CURRENT_BINARY_DIR})
+	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./Environment/zlib/bin/Debug ${CMAKE_CURRENT_BINARY_DIR})
 else()
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./Environment/Soloud/bin/Release ${CMAKE_CURRENT_BINARY_DIR})
+	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./Environment/Soloud/bin/Release ${CMAKE_CURRENT_BINARY_DIR})
 	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./Environment/libevent/bin ${CMAKE_CURRENT_BINARY_DIR})
+	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./Environment/zlib/bin/Release ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 
@@ -134,6 +139,9 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 
 		# gpu计算
 		vuh.lib
+
+		# zlib 数据压缩
+		zlibd.lib
 	)
 else()
 	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")#关闭控制台
@@ -178,6 +186,9 @@ else()
 
 		# gpu计算
 		vuh.lib
+
+		# zlib 数据压缩
+		zlib.lib
 	)
 endif()
 

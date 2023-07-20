@@ -12,7 +12,7 @@ namespace GAME {
 	}
 
 
-	Labyrinth::Labyrinth(VulKan::Device* device, int X, int Y)
+	Labyrinth::Labyrinth(VulKan::Device* device, int X, int Y, bool** LlblockS)
 	{
 		mDevice = device;
 
@@ -23,6 +23,7 @@ namespace GAME {
 
 
 		BlockS = new bool* [numberX];
+		BlockPixelS = new int [numberX * 16 * numberY * 16]{false};
 		BlockTypeS = new unsigned int* [numberX];
 		for (size_t i = 0; i < numberX; i++)
 		{
@@ -30,12 +31,18 @@ namespace GAME {
 			BlockTypeS[i] = new unsigned int[numberX];
 		}
 
-		bool** lblockS = new bool* [X];
-		for (size_t i = 0; i < X; i++)
-		{
-			lblockS[i] = new bool[Y];
+		bool** lblockS = nullptr;
+		if (LlblockS == nullptr) {
+			lblockS = new bool* [X];
+			for (size_t i = 0; i < X; i++)
+			{
+				lblockS[i] = new bool[Y];
+			}
+			GenerateMaze(lblockS, X, Y);
 		}
-		GenerateMaze(lblockS, X, Y);
+		else {
+			lblockS = LlblockS;
+		}
 		int NX, NY;
 		for (size_t x = 0; x < numberX; x++)
 		{
@@ -50,6 +57,13 @@ namespace GAME {
 					NY++;
 				}
 				BlockS[x][y] = lblockS[NX][NY];
+				for (size_t ix = 0; ix < 16; ix++)
+				{
+					for (size_t iy = 0; iy < 16; iy++)
+					{
+						BlockPixelS[((x * 16 + ix) * (numberY * 16)) + (y * 16) + iy] = BlockS[x][y];
+					}
+				}
 				BlockTypeS[x][y] = P->noise(x * 0.01f, y * 0.01f, 0.5f) * TextureNumber;
 			}
 		}
@@ -133,6 +147,7 @@ namespace GAME {
 			delete BlockTypeS[i];
 		}	
 		delete BlockS;
+		delete BlockPixelS;
 		delete BlockTypeS;
 
 		//销毁地面碰撞系统
@@ -181,9 +196,13 @@ namespace GAME {
 		mFrameCount = frameCount;
 		mThreadCommandPoolS = new VulKan::CommandPool * [mFrameCount];
 		mThreadCommandBufferS = new VulKan::CommandBuffer * [mFrameCount];
+		mMistCommandPoolS = new VulKan::CommandPool * [mFrameCount];
+		mMistCommandBufferS = new VulKan::CommandBuffer * [mFrameCount];
 		for (int i = 0; i < (mFrameCount); i++) {
 			mThreadCommandPoolS[i] = new VulKan::CommandPool(device);
 			mThreadCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
+			mMistCommandPoolS[i] = new VulKan::CommandPool(device);
+			mMistCommandBufferS[i] = new VulKan::CommandBuffer(device, mMistCommandPoolS[i], true);
 		}
 
 		mPixelS = new unsigned char[numberX * 16 * numberY * 16 * 4];
@@ -315,12 +334,20 @@ namespace GAME {
 		commandbuffer->bindIndexBuffer(getIndexBuffer()->getBuffer());//获得顶点索引
 		commandbuffer->bindDescriptorSet(mPipeline->getLayout(), mDescriptorSet->getDescriptorSet(FrameCount));//获得 模型位置数据， 贴图数据，……
 		commandbuffer->drawIndex(getIndexCount());//获取绘画物体的顶点个数
+		commandbuffer->end();
+
+		commandbuffer = mMistCommandBufferS[mFrameBufferCount];
+
+		commandbuffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);//开始录制二级指令
+		commandbuffer->bindGraphicPipeline(mPipeline->getPipeline());//获得渲染管线
+		commandbuffer->bindVertexBuffer(getVertexBuffers());//获取顶点数据，UV值
+		commandbuffer->bindIndexBuffer(getIndexBuffer()->getBuffer());//获得顶点索引
 		commandbuffer->bindDescriptorSet(mPipeline->getLayout(), mMistDescriptorSet->getDescriptorSet(FrameCount));//获得 模型位置数据， 贴图数据，……
 		commandbuffer->drawIndex(getIndexCount());//获取绘画物体的顶点个数
 		commandbuffer->end();
 	}
 	//左下坐标，图片ID
-	void Labyrinth::penzhang(unsigned int x, unsigned int y) {
+	/*void Labyrinth::penzhang(unsigned int x, unsigned int y) {
 		BlockS[x][y] = 0;
 		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
@@ -335,14 +362,17 @@ namespace GAME {
 		PixelTextureS->endHOSTImagePointer();
 		WarfareMist->endHOSTImagePointer();
 		UpDateMapsSwitch = true;
-	}
+	}*/
 
 	//左下坐标，左下坐标，图片ID
 	void Labyrinth::SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy) {
 		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
+		unsigned char* Mistwall = (unsigned char*)WallBool->getupdateBufferByMap();
 		memcpy(&TexturePointer[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * Dx) + (Dy * 4)], 4);
 		TextureMist[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4) + 3] = 230;
+		memset(&Mistwall[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)], 0, 4);
+		WallBool->endupdateBufferByMap();
 		PixelTextureS->endHOSTImagePointer();
 		WarfareMist->endHOSTImagePointer();
 		UpDateMapsSwitch = true;
@@ -351,8 +381,11 @@ namespace GAME {
 	void Labyrinth::SetPixel(unsigned int x, unsigned int y) {
 		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
+		unsigned char* Mistwall = (unsigned char*)WallBool->getupdateBufferByMap();
 		memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[BlockTypeS[x / 16][y / 16]][(((x % 16) * 16) + (y % 16)) * 4], 4);
 		TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
+		memset(&Mistwall[(x * numberY * 16 * 4) + (y * 4)], 0, 4);
+		WallBool->endupdateBufferByMap();
 		PixelTextureS->endHOSTImagePointer();
 		WarfareMist->endHOSTImagePointer();
 		UpDateMapsSwitch = true;
@@ -387,75 +420,88 @@ namespace GAME {
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			region,
-			mMistCommandPoolS
+			mMistCalculateCommandPoolS
 		);
 
 		VkBufferCopy copyInfo{};
 		copyInfo.size = (numberX * numberY * 16 * 16 * 4);
-		mMistCommandBufferS->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-		mMistCommandBufferS->copyBufferToBuffer(WarfareMist->getHOSTImageBuffer(), jihsuanTP->getBuffer(), 1, { copyInfo });
-		mMistCommandBufferS->bindGraphicPipeline(pipeline, VK_PIPELINE_BIND_POINT_COMPUTE);
-		mMistCommandBufferS->bindDescriptorSet(pipelineLayout, descriptorSet, VK_PIPELINE_BIND_POINT_COMPUTE);
-		vkCmdDispatch(mMistCommandBufferS->getCommandBuffer(), (uint32_t)ceil((wymiwustruct.size) / float(64)), 1, 1);
-		mMistCommandBufferS->copyBufferToImage(
+		mMistCalculate->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+		mMistCalculate->copyBufferToBuffer(WarfareMist->getHOSTImageBuffer(), jihsuanTP->getBuffer(), 1, { copyInfo });//获取原数据
+		mMistCalculate->bindGraphicPipeline(pipeline, VK_PIPELINE_BIND_POINT_COMPUTE);//设置计算管线
+		mMistCalculate->bindDescriptorSet(pipelineLayout, descriptorSet, VK_PIPELINE_BIND_POINT_COMPUTE);//获取描述符
+		vkCmdDispatch(mMistCalculate->getCommandBuffer(), (uint32_t)ceil((wymiwustruct.size) / float(64)), 1, 1);//分配计算单元开始计算
+		mMistCalculate->copyBufferToImage(//将计算的迷雾结果更新到图片上
 			jihsuanTP->getBuffer(),
 			WarfareMist->getImage()->getImage(),
 			WarfareMist->getImage()->getLayout(),
 			WarfareMist->getImage()->getWidth(),
 			WarfareMist->getImage()->getHeight()
 		);
-		mMistCommandBufferS->end();
-		mMistCommandBufferS->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
+		mMistCalculate->end();
+		mMistCalculate->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
 
 		WarfareMist->getImage()->setImageLayout(
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			region,
-			mMistCommandPoolS
+			mMistCalculateCommandPoolS
 		);
 	}
 
 
 	void Labyrinth::InitMist() {
+		//创建迷雾计算结果储存的缓存
 		jihsuanTP = new GAME::VulKan::Buffer(mDevice, (numberX * numberY * 16 * 16 * 4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_SHARING_MODE_EXCLUSIVE);
-
+		//创建迷雾原数据缓存
 		information = new GAME::VulKan::Buffer(mDevice, sizeof(miwustruct), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_SHARING_MODE_EXCLUSIVE);
+		//创建墙壁数据缓存
+		WallBool = new GAME::VulKan::Buffer(mDevice, (numberX * numberY * 16 * 16 * 4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_SHARING_MODE_EXCLUSIVE);
 
-		mMistCommandPoolS = new VulKan::CommandPool(mDevice);
-		mMistCommandBufferS = new VulKan::CommandBuffer(mDevice, mMistCommandPoolS);
+		WallBool->updateBufferByMap(BlockPixelS, (numberX * numberY * 16 * 16 * 4));
 
-		VkDescriptorSetLayoutBinding descriptorSetLayoutBinding[2] = {};
-		descriptorSetLayoutBinding[0].binding = 0; // binding = 0
+		mMistCalculateCommandPoolS = new VulKan::CommandPool(mDevice);
+		mMistCalculate = new VulKan::CommandBuffer(mDevice, mMistCalculateCommandPoolS);
+
+		VkDescriptorSetLayoutBinding descriptorSetLayoutBinding[3] = {};
+		descriptorSetLayoutBinding[0].binding = 0; // binding = 0  迷雾计算结果
 		descriptorSetLayoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		descriptorSetLayoutBinding[0].descriptorCount = 1;
 		descriptorSetLayoutBinding[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-		descriptorSetLayoutBinding[1].binding = 1; // binding = 0
+		descriptorSetLayoutBinding[1].binding = 1; // binding = 0  描述符
 		descriptorSetLayoutBinding[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		descriptorSetLayoutBinding[1].descriptorCount = 1;
 		descriptorSetLayoutBinding[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
+		descriptorSetLayoutBinding[2].binding = 2; // binding = 0  墙壁
+		descriptorSetLayoutBinding[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		descriptorSetLayoutBinding[2].descriptorCount = 1;
+		descriptorSetLayoutBinding[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
 		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
 		descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		descriptorSetLayoutCreateInfo.bindingCount = 2; // only a single binding in this descriptor set layout. //*******************************************
+		descriptorSetLayoutCreateInfo.bindingCount = 3; // only a single binding in this descriptor set layout. //*******************************************
 		descriptorSetLayoutCreateInfo.pBindings = descriptorSetLayoutBinding;                                   //*******************************************
 
 		// Create the descriptor set layout. 
 		vkCreateDescriptorSetLayout(mDevice->getDevice(), &descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout);
 
-		VkDescriptorPoolSize descriptorPoolSize[2] = {};                                                        //*******************************************
+		VkDescriptorPoolSize descriptorPoolSize[3] = {};                                                        //*******************************************
 		descriptorPoolSize[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		descriptorPoolSize[0].descriptorCount = 1;
 
 		descriptorPoolSize[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;                                         //*******************************************
 		descriptorPoolSize[1].descriptorCount = 1;                                                              //*******************************************
 
+		descriptorPoolSize[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;                                         //*******************************************
+		descriptorPoolSize[2].descriptorCount = 1;                                                              //*******************************************
+
 
 		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
 		descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		descriptorPoolCreateInfo.maxSets = 1; // we only need to allocate one descriptor set from the pool.
-		descriptorPoolCreateInfo.poolSizeCount = 2;                                                             //*******************************************
+		descriptorPoolCreateInfo.poolSizeCount = 3;                                                             //*******************************************
 		descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSize;
 
 		// create descriptor pool.
@@ -480,7 +526,7 @@ namespace GAME {
 
 		// Specify the buffer to bind to the descriptor.
 
-		VkWriteDescriptorSet writeDescriptorSet[2] = {};                                                //*******************************************
+		VkWriteDescriptorSet writeDescriptorSet[3] = {};                                                //*******************************************
 		writeDescriptorSet[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeDescriptorSet[0].dstSet = descriptorSet; // write to this descriptor set.
 		writeDescriptorSet[0].dstBinding = 0; // write to the first, and only binding.
@@ -495,9 +541,16 @@ namespace GAME {
 		writeDescriptorSet[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // storage buffer.
 		writeDescriptorSet[1].pBufferInfo = &information->getBufferInfo();
 
+		writeDescriptorSet[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeDescriptorSet[2].dstSet = descriptorSet; // write to this descriptor set.
+		writeDescriptorSet[2].dstBinding = 2; // write to the first, and only binding.
+		writeDescriptorSet[2].descriptorCount = 1; // update a single descriptor.
+		writeDescriptorSet[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // storage buffer.
+		writeDescriptorSet[2].pBufferInfo = &WallBool->getBufferInfo();
+
 
 		// perform the update of the descriptor set.
-		vkUpdateDescriptorSets(mDevice->getDevice(), 2, writeDescriptorSet, 0, NULL);                                //*******************************************
+		vkUpdateDescriptorSets(mDevice->getDevice(), 3, writeDescriptorSet, 0, NULL);                                //*******************************************
 
 		uint32_t filelength;
 		// the code in comp.spv was created by running the command:
@@ -549,7 +602,7 @@ namespace GAME {
 		vkDestroyDescriptorPool(mDevice->getDevice(), descriptorPool, nullptr);
 		delete jihsuanTP;
 		delete information;
-		delete mMistCommandBufferS;
+		delete mMistCalculate;
 		delete mMistCommandPoolS;
 	}
 }

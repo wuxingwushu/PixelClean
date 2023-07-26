@@ -28,7 +28,7 @@ public:
         TailIndex = Max(TailIndex + 1);
     };
 
-    T pop() {
+    [[nodiscard]] T pop() {
         if (TailIndex == HeadIndex)
         {
             std::cout << "空" << std::endl;

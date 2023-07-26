@@ -36,15 +36,15 @@ public:
 		//mData[mNumber] = dadd;
 	}
 
-	TData* Data() {
+	[[nodiscard]] constexpr TData* Data() const noexcept {
 		return mData;
 	}
 
-	TData* GetData(unsigned int index) {
+	[[nodiscard]] TData* GetData(unsigned int index) {
 		return &mData[index];
 	}
 
-	unsigned int GetNumber() {
+	[[nodiscard]] unsigned int GetNumber() const noexcept {
 		return mNumber;
 	}
 };

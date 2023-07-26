@@ -26,7 +26,7 @@ namespace GAME::VulKan {
 		//窗口获取事件
 		void pollEvents();
 
-		[[nodiscard]] GLFWwindow* getWindow() const { return mWindow; }
+		[[nodiscard]] GLFWwindow* getWindow() const noexcept { return mWindow; }
 
 		void setApp(Application* app) { mApp = app; }
 

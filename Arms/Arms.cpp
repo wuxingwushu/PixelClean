@@ -38,7 +38,7 @@ namespace GAME {
 		//mUniform.mModelMatrix = glm::scale(mUniform.mModelMatrix, glm::vec3(1.30, 1.30, 1.30));//缩放矩阵
 		for (size_t i = 0; i < (*Ppppx->Buffer).size(); i++)
 		{
-			(*Ppppx->Buffer)[i]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));
+			(*Ppppx->Buffer)[i]->updateBufferByMap(&mUniform, sizeof(ObjectUniform));
 		}
 		mSquarePhysics->AddPixelCollision(LPixelCollision);
 		/*if (Ppppx == nullptr)
@@ -46,7 +46,6 @@ namespace GAME {
 			std::cout << "子弹耗光" << std::endl;
 			return;
 		}*/
-		
 	}
 
 	void Arms::DeleteBullet(SquarePhysics::PixelCollision* index) {
@@ -81,7 +80,7 @@ namespace GAME {
 			mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(ppPixelCollision->GetAngleFloat() * 180 / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
 			for (size_t idd = 0; idd < (*mParticledd->Buffer).size(); idd++)
 			{
-				(*mParticledd[i].Buffer)[idd]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));
+				(*mParticledd[i].Buffer)[idd]->updateBufferByMap(&mUniform, sizeof(ObjectUniform));
 			}
 		}
 	}

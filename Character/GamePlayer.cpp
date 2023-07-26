@@ -112,16 +112,13 @@ namespace GAME {
 
 	void GamePlayer::setGamePlayerMatrix(glm::mat4 Matrix, const int& frameCount, bool mode)
 	{
+		mUniform.mModelMatrix = Matrix;
 		if (mode) {
-			mUniform.mModelMatrix = Matrix;
 			for (int i = 0; i < frameCount; i++) {
-				//update object Matrix
 				mUniformParams[1]->mBuffers[i]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));
 			}
 		}
 		else {
-			mUniform.mModelMatrix = Matrix;
-			//update object Matrix
 			mUniformParams[1]->mBuffers[frameCount]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));
 		}
 	}

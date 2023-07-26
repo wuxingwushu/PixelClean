@@ -38,8 +38,8 @@ namespace GAME::VulKan {
 		VkPipelineLayoutCreateInfo mLayoutState{};//创建管线布局
 
 	public:
-		[[nodiscard]] auto getPipeline() const { return mPipeline; }
-		[[nodiscard]] auto getLayout() const { return mLayout; }
+		[[nodiscard]] auto getPipeline() const noexcept { return mPipeline; }
+		[[nodiscard]] auto getLayout() const noexcept { return mLayout; }
 
 		VkDescriptorSetLayout DescriptorSetLayout{ VK_NULL_HANDLE };
 		VkDescriptorSetLayout DescriptorSetLayout2{ VK_NULL_HANDLE };

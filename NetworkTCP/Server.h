@@ -20,6 +20,9 @@
 
 #include "../Camera.h"
 
+#include "../Character/Crowd.h"
+#include "../Arms/Arms.h"
+
 struct ServerPos {
 	float X;
 	float Y;
@@ -28,11 +31,6 @@ struct ServerPos {
 	evutil_socket_t Key;
 };
 
-extern event_base* server_base;
-extern evconnlistener* server_ev;
-
-
-extern ContinuousMap<evutil_socket_t, ServerPos> server;
 
 //错误，超时 （连接断开会进入）
 void server_event_cb(bufferevent* be, short events, void* arg);
@@ -45,12 +43,6 @@ void server_write_cb(bufferevent* be, void* arg);
 
 //链接事件
 void server_listen_cb(evconnlistener* ev, evutil_socket_t s, sockaddr* sin, int slen, void* arg);
-
-//服务器初始化
-void server_init(unsigned int Duan);
-
-//销毁服务器
-void server_delete();
 
 //输入过滤器
 bufferevent_filter_result server_filter_in(
@@ -69,3 +61,67 @@ bufferevent_filter_result server_filter_out(
 	bufferevent_flush_mode mode,
 	void* arg
 );
+
+
+class server
+{
+public:
+	//单列模式
+	static server* GetServer() {
+		if (mServer == nullptr) {
+			std::cout << "创建server" << std::endl;
+			mServer = new server(25565);//端口号
+		}
+		return mServer;
+	}
+
+	~server();
+
+	[[nodiscard]] ContinuousMap<evutil_socket_t, ServerPos>* GetServerData() const noexcept {
+		return mServerData;
+	}
+
+	[[nodiscard]] event_base* GetEvent_Base() const noexcept {
+		return server_base;
+	}
+
+	[[nodiscard]] evconnlistener* GetEvconnlistener() const noexcept {
+		return server_ev;
+	}
+
+	[[nodiscard]] bool GetFire() const noexcept {
+		return server_Fire;
+	}
+
+	void SetFire(bool Fire) noexcept {
+		server_Fire = Fire;
+	}
+
+	void SetArms(GAME::Arms* Arms) {
+		mArms = Arms;
+	}
+
+	void SetCrowd(GAME::Crowd* Crowd) {
+		mCrowd = Crowd;
+	}
+
+	GAME::Arms* GetArms() {
+		return mArms;
+	}
+
+	GAME::Crowd* GetCrowd() {
+		return mCrowd;
+	}
+
+private:
+	static server* mServer;
+	server(unsigned int Duan);
+
+	bool server_Fire = false;
+	event_base* server_base;
+	evconnlistener* server_ev;
+	ContinuousMap<evutil_socket_t, ServerPos>* mServerData;
+
+	GAME::Arms* mArms = nullptr;
+	GAME::Crowd* mCrowd = nullptr;
+};

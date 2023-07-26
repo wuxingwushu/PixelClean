@@ -28,7 +28,7 @@ public:
         Index++;
     };
 
-    T* pop() {
+    [[nodiscard]] T* pop() {
         if (Index == 0)
         {
             std::cout << "空" << std::endl;
@@ -38,19 +38,20 @@ public:
         return &mPileUp[Index];
     }
 
-    unsigned int GetNumber() {
+    [[nodiscard]] unsigned int GetNumber() const noexcept {
         return Index;
     }
 
-    T GetEnd() {
+    [[nodiscard]] T GetEnd() {
         return mPileUp[Index - 1];
     }
 
-    void pop__() {
+    [[nodiscard]] void pop__() {
+        if (Index == 0)return;
         Index--;
     }
 
-    T GetIndex(unsigned int I) {
+    [[nodiscard]] T GetIndex(unsigned int I) {
         return mPileUp[I];
     }
 };

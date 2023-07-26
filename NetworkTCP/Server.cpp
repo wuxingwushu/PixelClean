@@ -1,11 +1,23 @@
 #include "Server.h"
 
-event_base* server_base;
-evconnlistener* server_ev;
+server* server::mServer = nullptr;
+
 
 struct Zip {
 	z_stream* y;
 	z_stream* j;
+
+	Zip() {
+		y = new z_stream();
+		deflateInit(y, Z_DEFAULT_COMPRESSION);
+		j = new z_stream();
+		inflateInit(j);
+	}
+
+	~Zip() {
+		delete y;
+		delete j;
+	}
 };
 
 struct DataHeader
@@ -14,7 +26,6 @@ struct DataHeader
 	unsigned int Size;
 };
 
-ContinuousMap<evutil_socket_t, ServerPos> server(100);
 
 //错误，超时 （连接断开会进入）
 void server_event_cb(bufferevent* be, short events, void* arg)
@@ -25,14 +36,14 @@ void server_event_cb(bufferevent* be, short events, void* arg)
 	{
 		std::cout << "BEV_EVENT_READING BEV_EVENT_TIMEOUT" << std::endl;
 		evutil_socket_t fd = bufferevent_getfd(be);
-		server.Delete(fd);
+		server::GetServer()->GetServerData()->Delete(fd);
 		bufferevent_free(be);
 	}
 	else if (events & BEV_EVENT_ERROR)
 	{
 		std::cout << "BEV_EVENT_ERROR" << std::endl;
 		evutil_socket_t fd = bufferevent_getfd(be);
-		server.Delete(fd);
+		server::GetServer()->GetServerData()->Delete(fd);
 		bufferevent_free(be);
 	}
 	else
@@ -78,19 +89,33 @@ void server_read_cb(bufferevent* be, void* arg)
 			len = bufferevent_read(be, lenData, sizeof(lenData));
 
 			evutil_socket_t fd = bufferevent_getfd(be);
-			ServerPos* px = server.Get(fd);
-			px = server.Get(fd);
+			//std::cout << "fd: " << fd << std::endl;
+			ServerPos* px = server::GetServer()->GetServerData()->Get(fd);
+			px = server::GetServer()->GetServerData()->Get(fd);
 			px->X = server_read_data.X;
 			px->Y = server_read_data.Y;
 			px->ang = server_read_data.ang;
 			px->Key = fd;
 			px->Fire = boolFireS;
 
+			GAME::GamePlayer* LPlayer = server::GetServer()->GetCrowd()->GetGamePlayer(px->Key);
+			LPlayer->setGamePlayerMatrix(glm::rotate(
+				glm::translate(glm::mat4(1.0f), glm::vec3(px->X, px->Y, 0.0f)),
+				glm::radians(px->ang * 180.f / 3.14f),
+				glm::vec3(0.0f, 0.0f, 1.0f)
+				),
+				3,
+				true
+			);
+			LPlayer->mObjectCollision->SetAngle(px->ang * 180.f / 3.14f);
+			LPlayer->mObjectCollision->SetPos({ px->X, px->Y });
+
+
 			DataHeader DH;
 			DH.Key = 1;
-			DH.Size = server.GetKeyDataSize();
+			DH.Size = server::GetServer()->GetServerData()->GetKeyDataSize();
 			bufferevent_write(be, &DH, sizeof(DataHeader));//发送数据头
-			bufferevent_write(be, server.GetKeyData(fd), server.GetKeyDataSize());//发送数据
+			bufferevent_write(be, server::GetServer()->GetServerData()->GetKeyData(fd), DH.Size);//发送数据
 		}
 	}
 	//std::cout << "ServerPos server: " << px->Key << " X: " << px->X << " Y: " << px->Y << std::endl;
@@ -100,7 +125,7 @@ void server_listen_cb(evconnlistener* ev, evutil_socket_t s, sockaddr* sin, int 
 {
 	std::cout << "新连接接入:" << s << std::endl;
 	
-	ServerPos* pos = server.New(s);
+	ServerPos* pos = server::GetServer()->GetServerData()->New(s);
 	pos->Key = s;
 	pos->X = 0;
 	pos->Y = 0;
@@ -112,10 +137,7 @@ void server_listen_cb(evconnlistener* ev, evutil_socket_t s, sockaddr* sin, int 
 	bufferevent* bev = bufferevent_socket_new(base, s, BEV_OPT_CLOSE_ON_FREE);
 
 	Zip* zip = new Zip();
-	zip->y = new z_stream();
-	deflateInit(zip->y, Z_DEFAULT_COMPRESSION);
-	zip->j = new z_stream();
-	inflateInit(zip->j);
+
 
 	//2 添加过滤 并设置输入回调
 	bufferevent* bev_filter = bufferevent_filter_new(bev,
@@ -150,7 +172,7 @@ void server_listen_cb(evconnlistener* ev, evutil_socket_t s, sockaddr* sin, int 
 }
 
 
-void server_init(unsigned int Duan) {
+server::server(unsigned int Duan) {
 #ifdef _WIN32 
 	//初始化socket库
 	WSADATA wsa;
@@ -174,19 +196,22 @@ void server_init(unsigned int Duan) {
 		server_listen_cb,		//回调函数
 		server_base,			//回调函数的参数arg
 		LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE,
-		10,				//listen back
+		10,						//listen back
 		(sockaddr*)&sin,
 		sizeof(sin)
 	);
 
-	ServerPos* pos = server.New(0);
+	mServerData = new ContinuousMap<evutil_socket_t, ServerPos>(100);
+
+	//ServerPos* pos = server::GetServer()->GetServerData()->New(0); // BUG递归 在创建 server 调用了 GetServer()
+	ServerPos* pos = mServerData->New(0);
 	pos->Key = 0;
 	pos->ang = 0;
 	pos->X = 0;
 	pos->Y = 0;
 }
 
-void server_delete() {
+server::~server() {
 	evconnlistener_free(server_ev);
 	event_base_free(server_base);
 

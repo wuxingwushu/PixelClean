@@ -77,15 +77,15 @@ namespace GAME::VulKan {
 
 		void updateBufferByMap(void* data, size_t size);
 
-		[[nodiscard]] auto getImage() const { return mImage; }
+		[[nodiscard]] auto getImage() const noexcept { return mImage; }
 
-		[[nodiscard]] auto getLayout() const { return mLayout; }
+		[[nodiscard]] auto getLayout() const noexcept { return mLayout; }
 
-		[[nodiscard]] auto getWidth() const { return mWidth; }
+		[[nodiscard]] auto getWidth() const noexcept { return mWidth; }
 
-		[[nodiscard]] auto getHeight() const { return mHeight; }
+		[[nodiscard]] auto getHeight() const noexcept { return mHeight; }
 
-		[[nodiscard]] auto getImageView() const { return mImageView; }
+		[[nodiscard]] auto getImageView() const noexcept { return mImageView; }
 
 		//[[nodiscard]] auto getImageBuffer() const { return fillstageBuffer; }
 

@@ -227,14 +227,14 @@ namespace GAME {
 			InterfaceIndexes = 1;
 			StartMultiPlayerGames = true;
 			ServerToClient = true;
-			server_init(25565);
+			server::GetServer();
 		}
 		if (ImGui::Button(u8"客户端")) {
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 			StartMultiPlayerGames = true;
 			ServerToClient = false;
-			client_init("127.0.0.1", 25565);
+			client::GetClient();
 		}
 		ImGui::End();
 	}

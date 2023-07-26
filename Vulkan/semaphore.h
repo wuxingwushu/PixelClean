@@ -14,7 +14,7 @@ namespace GAME::VulKan {
 
 		~Semaphore();
 
-		[[nodiscard]] auto getSemaphore() const { return mSemaphore; }
+		[[nodiscard]] auto getSemaphore() const noexcept { return mSemaphore; }
 	private:
 		VkSemaphore mSemaphore{ VK_NULL_HANDLE };
 		Device* mDevice{ nullptr };

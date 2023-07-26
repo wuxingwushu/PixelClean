@@ -20,6 +20,9 @@
 
 #include "../Camera.h"
 
+#include "../Character/Crowd.h"
+#include "../Arms/Arms.h"
+
 struct ClientPos {
 	float X;
 	float Y;
@@ -28,12 +31,6 @@ struct ClientPos {
 	evutil_socket_t Key;
 };
 
-extern bool client_Fire;
-
-extern event_base* client_base;
-extern bufferevent* client_bev;
-
-extern ContinuousMap<evutil_socket_t, ClientPos> client;
 
 //错误，超时 （连接断开会进入）
 void client_event_cb(bufferevent* be, short events, void* arg);
@@ -43,12 +40,6 @@ void client_write_cb(bufferevent* be, void* arg);
 
 //读事件
 void client_read_cb(bufferevent* be, void* arg);
-
-//客户端初始化
-void client_init(std::string IPV, unsigned int Duan);
-
-//销毁客户端
-void client_delete();
 
 //输入过滤器
 bufferevent_filter_result client_filter_in(
@@ -67,6 +58,68 @@ bufferevent_filter_result client_filter_out(
 	bufferevent_flush_mode mode,
 	void* arg
 );
+
+class client
+{
+public:
+	static client* GetClient() {
+		if (mClient == nullptr) {
+			std::cout << "创建Client" << std::endl;
+			mClient = new client("127.0.0.1", 25565);
+		}
+		return mClient;
+	}
+	
+	~client();
+
+	[[nodiscard]] ContinuousMap<evutil_socket_t, ClientPos>* GetClientData() const noexcept {
+		return mClientData;
+	}
+
+	[[nodiscard]] event_base* GetEvent_Base() const noexcept {
+		return client_base;
+	}
+
+	[[nodiscard]] bufferevent* GetBufferEvent() const noexcept {
+		return client_bev;
+	}
+
+	[[nodiscard]] bool GetFire() const noexcept {
+		return client_Fire;
+	}
+
+	void SetFire(bool Fire) noexcept {
+		client_Fire = Fire;
+	}
+
+	void SetArms(GAME::Arms* Arms) {
+		mArms = Arms;
+	}
+
+	void SetCrowd(GAME::Crowd* Crowd) {
+		mCrowd = Crowd;
+	}
+
+	GAME::Arms* GetArms() {
+		return mArms;
+	}
+
+	GAME::Crowd* GetCrowd() {
+		return mCrowd;
+	}
+
+private:
+	static client* mClient;
+	client(std::string IPV, unsigned int Duan);
+
+	bool client_Fire = false;
+	event_base* client_base;
+	bufferevent* client_bev = nullptr;
+	ContinuousMap<evutil_socket_t, ClientPos>* mClientData;
+
+	GAME::Arms* mArms = nullptr;
+	GAME::Crowd* mCrowd = nullptr;
+};
 
 //进入事件帧循环
 //event_base_loop(client_base, EVLOOP_ONCE);

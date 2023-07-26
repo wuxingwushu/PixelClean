@@ -23,9 +23,9 @@ namespace GAME::VulKan {
 		~Buffer();
 
 		//获取 Buffer
-		[[nodiscard]] auto getBuffer() const { return mBuffer; }
+		[[nodiscard]] VkBuffer getBuffer() const noexcept { return mBuffer; }
 
-		[[nodiscard]] VkDescriptorBufferInfo& getBufferInfo() { return mBufferInfo; }
+		[[nodiscard]] VkDescriptorBufferInfo& getBufferInfo() noexcept { return mBufferInfo; }
 		
 		//创建顶点缓存
 		static Buffer* createVertexBuffer(Device* device, VkDeviceSize size, void * pData, bool ThreadBool = false);

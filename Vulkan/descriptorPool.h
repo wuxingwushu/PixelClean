@@ -14,7 +14,7 @@ namespace GAME::VulKan {
 
 		void build(std::vector<UniformParameter*>& params, const int &frameCount, unsigned int shuliang = 1);
 
-		[[nodiscard]] VkDescriptorPool getPool() const { return mPool; }
+		[[nodiscard]] VkDescriptorPool getPool() const noexcept { return mPool; }
 
 	private:
 		//需要知道，每一种uniform都有多少个，才能为其预留分配空间，所谓空间并不是uniformbuffer的大小

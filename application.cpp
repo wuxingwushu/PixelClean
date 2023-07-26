@@ -152,15 +152,7 @@ namespace GAME {
 		mImGuuiCommandBuffers = new VulKan::CommandBuffer(mDevice, mImGuuiCommandPool);
 	}
 
-	void DeletePlayer(GamePlayer* x) {
-		std::cout << "Delete Player, 释放 玩家" << std::endl;
-		delete x;
-	}
-
-	bool TimeoutPlayer(GamePlayer* x) {
-		std::cout << "Timeout Player, 超时 玩家" << std::endl;
-		return 1;
-	}
+	
 
 	//初始化游戏
 	void Application::initGame() {
@@ -196,14 +188,18 @@ namespace GAME {
 
 		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleSystem, 1000);
 
+
+		//创建物理系统
+		mSquarePhysics = new SquarePhysics::SquarePhysics(400, 400);
+
 		//创建武器系统
 		mArms = new Arms(mParticleSystem, 1000);
 		mArms->SetSpecialEffect(mParticlesSpecialEffect);
+		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
 
 		//创建多人玩家
-		MapPlayerS = new ContinuousMap<evutil_socket_t, GamePlayer*>(100);
-		MapPlayerS->SetDeleteCallback(DeletePlayer);
-		MapPlayerS->SetTimeoutCallback(TimeoutPlayer);
+		mCrowd = new Crowd(100, mDevice, mPipeline, mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer);
+		mCrowd->SteSquarePhysics(mSquarePhysics);
 
 		//创建玩家
 		mGamePlayer = new GamePlayer(mDevice, mPipeline, mSwapChain, mRenderPass, mCamera.getCameraPos().x, mCamera.getCameraPos().y);
@@ -218,17 +214,15 @@ namespace GAME {
 		);
 		mGamePlayer->InitCommandBuffer();
 
-		/*ServerPos* CS = server.New(6);
-		CS->X = 20;
-		CS->Y = 50;
-		CS->Key = 6;
-		CS->ang = 0.78f;*/
-
-		//创建物理系统
-		mSquarePhysics = new SquarePhysics::SquarePhysics(400, 400);
+		//武器系统添加
 		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);//添加地图碰撞
-		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
 		mSquarePhysics->AddObjectCollision(mGamePlayer->mObjectCollision);//添加玩家碰撞
+
+		//测试
+		mGifPipeline = new GifPipeline(mHeight, mWidth, mDevice, mRenderPass);
+		mGIF = new GIF(mDevice, mGifPipeline, mSwapChain, mRenderPass, 44);
+		mGIF->initUniformManager("002.png", mCameraVPMatricesBuffer, mSampler);
+		mGIF->UpDataCommandBuffer();
 	}
 
 
@@ -618,14 +612,14 @@ namespace GAME {
 	}
 
 	void Application::cleanupSwapChain() {
-		delete mSwapChain;
-		delete mPipeline;
 		//mRenderPass->~RenderPass();
 		for (int i = 0; i < mSwapChain->getImageCount(); ++i) {
 			delete mImageAvailableSemaphores[i];
 			delete mRenderFinishedSemaphores[i];
 			delete mFences[i];
 		}
+		delete mSwapChain;
+		delete mPipeline;
 		mImageAvailableSemaphores.clear();
 		mRenderFinishedSemaphores.clear();
 		mFences.clear();
@@ -645,6 +639,17 @@ namespace GAME {
 				mWindow->ImGuiKeyBoardEvent();//监听键盘
 				InterFace->InterFace();
 				//S->Pause();
+				if (InterFace->GetMultiplePeople())
+				{
+					if (InterFace->GetServerToClient()) {
+						server::GetServer()->SetArms(mArms);
+						server::GetServer()->SetCrowd(mCrowd);
+					}
+					else {
+						client::GetClient()->SetArms(mArms);
+						client::GetClient()->SetCrowd(mCrowd);
+					}
+				}
 			}
 			else {
 				S->Play();
@@ -668,110 +673,18 @@ namespace GAME {
 			if (InterFace->GetMultiplePeople())
 			{
 				if (InterFace->GetServerToClient()) {
-					ServerPos* pos = server.Get(0);
+					ServerPos* pos = server::GetServer()->GetServerData()->Get(0);
 					if (pos != nullptr) {
 						pos->X = m_position.x;
 						pos->Y = m_position.y;
 						pos->ang = m_angle * 180 / M_PI;
 					}
 
-
-					if (server.GetKeyNumber() != MapPlayerS->GetNumber())
-					{
-						ServerPos* sposs = server.GetKeyData(0);
-						for (size_t i = 0; i < server.GetKeyNumber(); i++)
-						{
-							GamePlayer** Players = MapPlayerS->Get(sposs[i].Key);
-							if (Players == nullptr)
-							{
-								std::cout << "Players - fd: " << sposs[i].Key << " X: " << sposs[i].X << " Y: " << sposs[i].Y << std::endl;
-								Players = MapPlayerS->New(sposs[i].Key);
-								(*Players) = new GamePlayer(mDevice, mPipeline, mSwapChain, mRenderPass, sposs[i].X, sposs[i].Y);
-								(*Players)->initUniformManager(
-									mDevice,
-									mCommandPool,
-									mSwapChain->getImageCount(),
-									(sposs[i].Key % TextureNumber),
-									mPipeline->DescriptorSetLayout,
-									mCameraVPMatricesBuffer,
-									mSampler
-								);
-								(*Players)->InitCommandBuffer();
-								mSquarePhysics->AddObjectCollision((*Players)->mObjectCollision);
-								(*Players)->setGamePlayerMatrix(
-									glm::rotate(
-										glm::translate(glm::mat4(1.0f), glm::vec3(sposs[i].X, sposs[i].Y, 0.0f)),
-										glm::radians(sposs[i].ang * 180.f / 3.14f),
-										glm::vec3(0.0f, 0.0f, 1.0f)
-									),
-									mCurrentFrame
-								);
-								(*Players)->mObjectCollision->SetAngle(sposs[i].ang);
-							}
-						}
-					}
-					else {
-						ServerPos* sposs = server.GetKeyData(0);
-						for (size_t i = 0; i < server.GetKeyNumber(); i++)
-						{
-							GamePlayer** Players = MapPlayerS->Get(sposs[i].Key);
-							if (Players != nullptr) {
-								(*Players)->setGamePlayerMatrix(
-									glm::rotate(
-										glm::translate(glm::mat4(1.0f), glm::vec3(sposs[i].X, sposs[i].Y, 0.0f)),
-										glm::radians(float(sposs[i].ang) * 180.f / 3.14f),
-										glm::vec3(0.0f, 0.0f, 1.0f)
-									),
-									mCurrentFrame
-								);
-							}
-						}
-					}
-
-					event_base_loop(server_base, EVLOOP_NONBLOCK);
+					event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
 				}
 				else {
 
-					if (client.GetNumber() > (MapPlayerS->GetNumber()))
-					{
-						ClientPos* sposs = client.GetData();
-						for (size_t i = 0; i < client.GetNumber(); i++)
-						{
-							GamePlayer** Players = MapPlayerS->Get(sposs[i].Key);
-							if (Players == nullptr)
-							{
-								Players = MapPlayerS->New(sposs[i].Key);
-								(*Players) = new GamePlayer(mDevice, mPipeline, mSwapChain, mRenderPass, sposs[i].X, sposs[i].Y);
-								(*Players)->initUniformManager(
-									mDevice,
-									mCommandPool,
-									mSwapChain->getImageCount(),
-									(sposs[i].Key % TextureNumber),
-									mPipeline->DescriptorSetLayout,
-									mCameraVPMatricesBuffer,
-									mSampler
-								);
-								(*Players)->InitCommandBuffer();
-							}
-						}
-					}
-					else {
-						ClientPos* sposs = client.GetData();
-						for (size_t i = 0; i < client.GetNumber(); i++)
-						{
-							GamePlayer** Players = MapPlayerS->Get(sposs[i].Key);
-							(*Players)->setGamePlayerMatrix(
-								glm::rotate(
-									glm::translate(glm::mat4(1.0f), glm::vec3(sposs[i].X, sposs[i].Y, 0.0f)),
-									glm::radians(float(sposs[i].ang)),
-									glm::vec3(0.0f, 0.0f, 1.0f)
-								),
-								mCurrentFrame
-							);
-						}
-					}
-
-					event_base_loop(client_base, EVLOOP_NONBLOCK);
+					event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
 				}
 			}
 		}
@@ -781,6 +694,19 @@ namespace GAME {
 	}
 
 	void Application::GameLoop() {
+
+		/*++++++++++++++++++*/
+		static clock_t GIFtime = 0;
+		static unsigned int GIFzheng = 0;
+		if ((clock() - GIFtime) > 66) {
+			GIFtime = clock();
+			GIFzheng++;
+			if (GIFzheng >= 44) {
+				GIFzheng = 0;
+			}
+			mGIF->SetFrame(GIFzheng, 3);
+		}
+		/*++++++++++++++++++*/
 		
 		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);//获取角度
 		mGamePlayer->mObjectCollision->SetAngle(m_angle);//设置玩家物理角度
@@ -814,7 +740,12 @@ namespace GAME {
 			unsigned char color[4] = { 0,255,0,125 };
 			glm::dvec2 Armsdain =  SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle + 1.57f);
 			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, color, m_angle + 1.57f, 500);
-			client_Fire = true;
+			if (InterFace->GetServerToClient()) {
+				server::GetServer()->SetFire(true);
+			}
+			else {
+				client::GetClient()->SetFire(true);
+			}
 		}
 		zuojian = Lzuojian;
 
@@ -822,8 +753,8 @@ namespace GAME {
 		if (InterFace->GetMultiplePeople())
 		{
 			if (InterFace->GetServerToClient()) {
-				ServerPos* dataVec = server.GetKeyData(0);
-				for (size_t i = 0; i < server.GetKeyNumber(); i++)
+				ServerPos* dataVec = server::GetServer()->GetServerData()->GetKeyData(0);
+				for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
 				{
 					if (dataVec[i].Fire) {
 						dataVec[i].Fire = false;
@@ -861,7 +792,12 @@ namespace GAME {
 		ImGui::Text(u8"鼠标角度：%10.3f", m_angle * 180 / M_PI);
 		ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->mObjectCollision->GetSpeed().x, mGamePlayer->mObjectCollision->GetSpeed().y);
 		ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
-		ImGui::Text(u8"S C M：%d  |  %d  |  %d", server.GetNumber(), client.GetNumber(), MapPlayerS->GetNumber());
+		if (InterFace->GetServerToClient()) {
+			ImGui::Text(u8"S M：%d  |  %d", server::GetServer()->GetServerData()->GetNumber(), mCrowd->GetNumber());
+		}
+		else {
+			ImGui::Text(u8"C M：%d  |  %d", client::GetClient()->GetClientData()->GetNumber(), mCrowd->GetNumber());
+		}
 		InterFace->ImGuiShowFPS();
 		InterFace->ImGuiShowTiming();
 		ImGui::End();
@@ -873,37 +809,18 @@ namespace GAME {
 
 	void Application::GameCommandBuffers(unsigned int Format_i, VkCommandBufferInheritanceInfo info) {
 		
-		//加到显示数组中
-		/*for (int i = 0; i < mBlockS->ThreadCommandBufferNumber; i++)
-		{
-			ThreadCommandBufferS.push_back(mBlockS->getDoubleCommandBuffer(Format_i, i));
-		}*/
+
 		mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
+
+		ThreadCommandBufferS.push_back(mGIF->getCommandBuffer(Format_i));
+
 		mParticleSystem->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 		//加到显示数组中
-		if (InterFace->GetMultiplePeople())
-		{
-			if (InterFace->GetServerToClient()) {
-				ServerPos* Serpos = server.GetKeyData(0);
-				for (size_t i = 0; i < server.GetKeyNumber(); i++)
-				{
-					if (MapPlayerS->Get(Serpos[i].Key) != nullptr) {
-						ThreadCommandBufferS.push_back((*MapPlayerS->Get(Serpos[i].Key))->getCommandBuffer(Format_i));
-					}
-				}
-			}
-			else {
-				ClientPos* Serpos = client.GetData();
-				for (size_t i = 0; i < client.GetNumber(); i++)
-				{
-					if (MapPlayerS->Get(Serpos[i].Key) != nullptr) {
-						ThreadCommandBufferS.push_back((*MapPlayerS->Get(Serpos[i].Key))->getCommandBuffer(Format_i));
-					}
-				}
-			}
-		}
+		mCrowd->TimeoutDetection();
+		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
+
 		mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
-		//MapPlayerS->TimeoutDetection();
+
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}
 
@@ -1007,11 +924,7 @@ namespace GAME {
 
 		delete mGamePlayer;
 
-		GamePlayer** Pr = MapPlayerS->GetData();
-		for (size_t i = 0; i < MapPlayerS->GetNumber(); i++)
-		{
-			delete Pr[i];
-		}
+		delete mCrowd;
 
 
 		for (int i = 0; i < mSwapChain->getImageCount(); ++i) {

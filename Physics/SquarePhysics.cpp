@@ -74,6 +74,7 @@ namespace SquarePhysics {
 				{
 					LPixel->CollisionCallback(LPixel);
 					mPixelCollisionS->Delete(i);
+					i--;
 					break;
 				}
 				e2 = 2 * err;
@@ -89,6 +90,7 @@ namespace SquarePhysics {
 				{
 					LPixel->CollisionCallback(LPixel);
 					mPixelCollisionS->Delete(i);
+					i--;
 					break;
 				}
 				if (e2 < dx) {
@@ -108,11 +110,13 @@ namespace SquarePhysics {
 			{
 				LPixel->CollisionCallback(LPixel);
 				mPixelCollisionS->Delete(i);
+				i--;
 				break;
 			}
 			if (mFixedSizeTerrain->GetFixedCollisionBool(XX, YY)) {
 				LPixel->CollisionCallback(LPixel);
 				mPixelCollisionS->Delete(i);
+				i--;
 				mFixedSizeTerrain->CollisionCallback(XX, YY);
 				mFixedSizeTerrain->SetFixedCollisionBool(XX, YY);
 				break;

@@ -43,7 +43,7 @@ namespace GAME::VulKan {
 		//创建pool
 		VkDescriptorPoolCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		//createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; //这个标志的作用就是指示VkDescriptorPool可以释放包含VkDescriptorSet的内存。
+		createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; //这个标志的作用就是指示VkDescriptorPool可以释放包含VkDescriptorSet的内存。
 		createInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		createInfo.pPoolSizes = poolSizes.data();
 		createInfo.maxSets = static_cast<uint32_t>(frameCount * shuliang);

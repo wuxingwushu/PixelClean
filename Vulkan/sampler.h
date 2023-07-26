@@ -11,7 +11,7 @@ namespace GAME::VulKan {
 
 		~Sampler();
 
-		[[nodiscard]] auto getSampler() const { return mSampler; }
+		[[nodiscard]] auto getSampler() const noexcept { return mSampler; }
 
 	private:
 		Device* mDevice{ nullptr };

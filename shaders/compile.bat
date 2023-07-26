@@ -1,5 +1,13 @@
-.\..\glslangValidator.exe  -V lessionShader.vert -o vs.spv
+mkdir Spv
 
-.\..\glslangValidator.exe  -V lessionShader.frag -o fs.spv
+.\..\glslangValidator.exe  -V lessionShader.vert -o Spv/vs.spv
+
+.\..\glslangValidator.exe  -V lessionShader.frag -o Spv/fs.spv
+
+.\..\glslangValidator.exe  -V GifFragShader.vert -o Spv/GifFragShaderV.spv
+
+.\..\glslangValidator.exe  -V GifFragShader.frag -o Spv/GifFragShaderF.spv
+
+.\..\glslangValidator.exe  -V WarfareMist.comp -o Spv/WarfareMist.spv
 
 pause

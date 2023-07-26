@@ -1,3 +1,4 @@
+#pragma once
 #include "GUI.h"
 #include "../Vulkan/Window.h"
 #include "../Vulkan/device.h"

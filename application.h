@@ -51,6 +51,11 @@
 #include "Physics/SquarePhysics.h"
 
 
+#include "Arms/GIF.h";
+
+#include "Character/Crowd.h"
+
+
 
 namespace GAME {
 	class Application{
@@ -179,7 +184,7 @@ namespace GAME {
 		//BlockS* mBlockS = nullptr;
 		Labyrinth* mLabyrinth = nullptr;
 		ParticleSystem* mParticleSystem = nullptr;
-		Arms* mArms = nullptr;
+		
 		
 		VPMatrices	mVPMatrices;//玩家变换矩阵（位置 角度）
 		Camera      mCamera;//定义的相机
@@ -193,10 +198,16 @@ namespace GAME {
 		PixelTextureS* mPixelTextureS = nullptr;
 
 		
-
-		ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS;
+		Arms* mArms = nullptr;
+		//ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS;
+		Crowd* mCrowd = nullptr;
 
 		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;
 		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;
+
+
+		//测试
+		GifPipeline* mGifPipeline = nullptr;
+		GIF* mGIF = nullptr;
 	};
 }

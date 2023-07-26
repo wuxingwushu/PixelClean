@@ -68,8 +68,8 @@ void through(PileUp<Pos>* PUp) {
 		int BIndexea = rand() % mPos1.GetNumber();
 		Pos B1 = mPos1.GetIndex(BIndexea);
 		Pos B2 = mPos2.GetIndex(BIndexea);
-		block[B1.X][B1.Y] = 0;
-		block[B2.X][B2.Y] = 0;
+		block[B1.X][B1.Y] = false;
+		block[B2.X][B2.Y] = false;
 		PUp->add(B2);
 	}
 }

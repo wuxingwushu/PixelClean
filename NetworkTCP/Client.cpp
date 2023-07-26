@@ -1,8 +1,18 @@
 #include "Client.h"
 
+client* client::mClient = nullptr;
+
 struct Zip {
 	z_stream* y;
 	z_stream* j;
+
+	Zip() {
+		y = new z_stream();
+		deflateInit(y, Z_DEFAULT_COMPRESSION);
+		j = new z_stream();
+		inflateInit(j);
+	}
+
 	~Zip() {
 		delete y;
 		delete j;
@@ -14,11 +24,6 @@ struct DataHeader
 	unsigned int Key;
 	unsigned int Size;
 };
-
-bool client_Fire = false;
-event_base* client_base;
-bufferevent* client_bev;
-ContinuousMap<evutil_socket_t, ClientPos> client(100);
 
 //错误，超时 （连接断开会进入）
 void client_event_cb(bufferevent* be, short events, void* arg)
@@ -48,10 +53,7 @@ void client_event_cb(bufferevent* be, short events, void* arg)
 		std::cout << "BEV_EVENT_CONNECTED" << std::endl;
 		//触发write
 		Zip* zip = new Zip();
-		zip->y = new z_stream();
-		deflateInit(zip->y, Z_DEFAULT_COMPRESSION);
-		zip->j = new z_stream();
-		inflateInit(zip->j);
+		
 
 		//创建输出过滤
 		bufferevent* bev_filter = bufferevent_filter_new(be,
@@ -71,6 +73,12 @@ void client_event_cb(bufferevent* be, short events, void* arg)
 	}
 
 }
+
+struct writestruct {
+	DataHeader mDH;//发送数据头
+	ClientPos mClientPos;
+};
+
 void client_write_cb(bufferevent* be, void* arg)
 {
 	//写入buffer
@@ -78,16 +86,17 @@ void client_write_cb(bufferevent* be, void* arg)
 	wanpos.X = m_position.x;
 	wanpos.Y = m_position.y;
 	wanpos.ang = m_angle * 180.0f / 3.14159265359f;
-	wanpos.Fire = client_Fire;
-	client_Fire = false;
+	wanpos.Fire = client::GetClient()->GetFire();
+	client::GetClient()->SetFire(false);
 
-	DataHeader DH;
-	DH.Key = 1;
-	DH.Size = sizeof(ClientPos);
-	bufferevent_write(be, &DH, sizeof(DataHeader));//发送数据头
-	bufferevent_write(be, &wanpos, sizeof(ClientPos));
-	Sleep(10);
-	event_base_loopbreak(client_base);//跳出循环
+	writestruct mDC;
+	mDC.mDH.Key = 1;
+	mDC.mDH.Size = sizeof(ClientPos);
+	mDC.mClientPos = wanpos;
+	bufferevent_write(be, &mDC, sizeof(writestruct));
+	//Sleep(10);
+	//bufferevent_disable(be);
+	event_base_loopbreak(client::GetClient()->GetEvent_Base());//跳出循环
 }
 
 int client_size;
@@ -124,22 +133,34 @@ void client_read_cb(bufferevent* be, void* arg)
 			for (size_t i = 0; i < client_size; i++)
 			{
 				//std::cout << "Key: " << data[i].Key << " X: " << data[i].X << " Y: " << data[i].Y << std::endl;
-				px = client.Get(client_read_data[i].Key);
+				px = client::GetClient()->GetClientData()->Get(client_read_data[i].Key);
 				if (px == nullptr)
 				{
-					px = client.New(client_read_data[i].Key);
+					px = client::GetClient()->GetClientData()->New(client_read_data[i].Key);
 				}
 				px->X = client_read_data[i].X;
 				px->Y = client_read_data[i].Y;
 				px->ang = client_read_data[i].ang;
 				px->Key = client_read_data[i].Key;
+
+				GAME::GamePlayer* LPlayer = client::GetClient()->GetCrowd()->GetGamePlayer(px->Key);
+				LPlayer->setGamePlayerMatrix(glm::rotate(
+					glm::translate(glm::mat4(1.0f), glm::vec3(px->X, px->Y, 0.0f)),
+					glm::radians(px->ang * 180.f / 3.14f),
+					glm::vec3(0.0f, 0.0f, 1.0f)
+				),
+					3,
+					true
+				);
+				LPlayer->mObjectCollision->SetAngle(px->ang * 180.f / 3.14f);
+				LPlayer->mObjectCollision->SetPos({ px->X, px->Y });
 			}
-			client.TimeoutDetection();
+			client::GetClient()->GetClientData()->TimeoutDetection();
 		}
 	}
 }
 
-void client_init(std::string IPV, unsigned int Duan) {
+client::client(std::string IPV, unsigned int Duan) {
 #ifdef _WIN32 
 	//初始化socket库
 	WSADATA wsa;
@@ -168,9 +189,11 @@ void client_init(std::string IPV, unsigned int Duan) {
 	{
 		std::cout << "connected" << std::endl;
 	}
+
+	mClientData = new ContinuousMap<evutil_socket_t, ClientPos>(100);
 }
 
-void client_delete() {
+client::~client() {
 	event_base_free(client_base);
 #ifdef _WIN32 
 	WSACleanup();

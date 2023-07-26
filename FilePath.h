@@ -18,4 +18,6 @@
 //shaders 路径
 #define	vs_spv					"./shaders/vs.spv"
 #define	fs_spv					"./shaders/fs.spv"
-#define	WarfareMist_spv			"WarfareMist.spv"
+#define	WarfareMist_spv			"./shaders/WarfareMist.spv"
+#define GifFrag					"./shaders/GifFragShaderF.spv"
+#define GifVert					"./shaders/GifFragShaderV.spv"

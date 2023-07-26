@@ -82,7 +82,7 @@ namespace GAME::VulKan {
 		void submitSync(VkQueue queue, VkFence fence = VK_NULL_HANDLE);//上传指令只可以再主线程运行
 		
 		// 获取录制好的 CommandBuffer
-		[[nodiscard]] VkCommandBuffer getCommandBuffer() const { return mCommandBuffer; }
+		[[nodiscard]] VkCommandBuffer getCommandBuffer() const noexcept { return mCommandBuffer; }
 	private:
 		VkCommandBuffer mCommandBuffer{ VK_NULL_HANDLE };
 		Device* mDevice{ nullptr };

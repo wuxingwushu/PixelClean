@@ -5,7 +5,6 @@
 #include "event2/listener.h"
 #include "event2/bufferevent.h"
 #include "event2/buffer.h"
-#include "zlib/zlib.h"
 //#ifdef _WIN32
 //#undef socklen_t
 //#define _WINSOCKAPI_
@@ -20,8 +19,9 @@
 
 #include "../Camera.h"
 
-#include "../Character/Crowd.h"
-#include "../Arms/Arms.h"
+#include "ServerSynchronizeEvents.h"
+
+#include "StructTCP.h"
 
 struct ServerPos {
 	float X;
@@ -62,8 +62,7 @@ bufferevent_filter_result server_filter_out(
 	void* arg
 );
 
-
-class server
+class server :public SynchronizeClass
 {
 public:
 	//单列模式
@@ -97,21 +96,12 @@ public:
 		server_Fire = Fire;
 	}
 
-	void SetArms(GAME::Arms* Arms) {
-		mArms = Arms;
+	[[nodiscard]] ServerPos* GetServerPos() noexcept {
+		return &mLS_ServerPos;
 	}
 
-	void SetCrowd(GAME::Crowd* Crowd) {
-		mCrowd = Crowd;
-	}
+	void InitSynchronizeMap();
 
-	GAME::Arms* GetArms() {
-		return mArms;
-	}
-
-	GAME::Crowd* GetCrowd() {
-		return mCrowd;
-	}
 
 private:
 	static server* mServer;
@@ -122,6 +112,6 @@ private:
 	evconnlistener* server_ev;
 	ContinuousMap<evutil_socket_t, ServerPos>* mServerData;
 
-	GAME::Arms* mArms = nullptr;
-	GAME::Crowd* mCrowd = nullptr;
+	//储存数据
+	ServerPos mLS_ServerPos;
 };

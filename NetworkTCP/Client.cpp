@@ -2,28 +2,6 @@
 
 client* client::mClient = nullptr;
 
-struct Zip {
-	z_stream* y;
-	z_stream* j;
-
-	Zip() {
-		y = new z_stream();
-		deflateInit(y, Z_DEFAULT_COMPRESSION);
-		j = new z_stream();
-		inflateInit(j);
-	}
-
-	~Zip() {
-		delete y;
-		delete j;
-	}
-};
-
-struct DataHeader
-{
-	unsigned int Key;
-	unsigned int Size;
-};
 
 //错误，超时 （连接断开会进入）
 void client_event_cb(bufferevent* be, short events, void* arg)
@@ -99,9 +77,11 @@ void client_write_cb(bufferevent* be, void* arg)
 	event_base_loopbreak(client::GetClient()->GetEvent_Base());//跳出循环
 }
 
-int client_size;
-ClientPos client_read_data[100];
-DataHeader client_RDH;
+
+unsigned client_read_data_daxiao = 0;
+DataHeader client_RDH = { 0 };
+_Synchronize Client_mSynchronize;
+SynchronizeData Sdata;
 
 void client_read_cb(bufferevent* be, void* arg)
 {
@@ -116,46 +96,21 @@ void client_read_cb(bufferevent* be, void* arg)
 			}
 			else {
 				//std::cerr << "[Server Data OK!]" << std::endl;
+				Sdata.Size = client_RDH.Size / sizeof(ClientPos);
+				client_read_data_daxiao = 0;
+				Client_mSynchronize = client::GetClient()->GetSynchronizeMap(client_RDH.Key);
+				Sdata.Pointer = Client_mSynchronize.mPointer;
 			}
-			client_size = client_RDH.Size / sizeof(ClientPos);
 		}
 
-		char* Pointer = nullptr;
-		Pointer = (char*)client_read_data;
-		Pointer += sizeof(ClientPos) - client_RDH.Size;
 		////读取输入缓冲数据
-		int len = bufferevent_read(be, Pointer, client_RDH.Size);
+		int len = bufferevent_read(be, Client_mSynchronize.mPointer, client_RDH.Size);
 		if (len <= 0)return;
+		Client_mSynchronize.mPointer = (char*)Client_mSynchronize.mPointer + len;
 		client_RDH.Size -= len;
 
 		if (client_RDH.Size == 0) {
-			ClientPos* px;
-			for (size_t i = 0; i < client_size; i++)
-			{
-				//std::cout << "Key: " << data[i].Key << " X: " << data[i].X << " Y: " << data[i].Y << std::endl;
-				px = client::GetClient()->GetClientData()->Get(client_read_data[i].Key);
-				if (px == nullptr)
-				{
-					px = client::GetClient()->GetClientData()->New(client_read_data[i].Key);
-				}
-				px->X = client_read_data[i].X;
-				px->Y = client_read_data[i].Y;
-				px->ang = client_read_data[i].ang;
-				px->Key = client_read_data[i].Key;
-
-				GAME::GamePlayer* LPlayer = client::GetClient()->GetCrowd()->GetGamePlayer(px->Key);
-				LPlayer->setGamePlayerMatrix(glm::rotate(
-					glm::translate(glm::mat4(1.0f), glm::vec3(px->X, px->Y, 0.0f)),
-					glm::radians(px->ang * 180.f / 3.14f),
-					glm::vec3(0.0f, 0.0f, 1.0f)
-				),
-					3,
-					true
-				);
-				LPlayer->mObjectCollision->SetAngle(px->ang * 180.f / 3.14f);
-				LPlayer->mObjectCollision->SetPos({ px->X, px->Y });
-			}
-			client::GetClient()->GetClientData()->TimeoutDetection();
+			Client_mSynchronize.mSynchronizeCallback(be, &Sdata);
 		}
 	}
 }
@@ -191,6 +146,12 @@ client::client(std::string IPV, unsigned int Duan) {
 	}
 
 	mClientData = new ContinuousMap<evutil_socket_t, ClientPos>(100);
+
+	InitSynchronizeMap();
+}
+
+void client::InitSynchronizeMap() {
+	AddSynchronizeMap(1, { new ClientPos[100], CGamePlayerSynchronize});
 }
 
 client::~client() {

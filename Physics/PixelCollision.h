@@ -13,22 +13,27 @@ namespace SquarePhysics {
 		PixelCollision(unsigned int SideLength);
 		~PixelCollision();
 
-		void SetCollisionCallback(_PixelCollisionCallback CollisionCallback, void* mclass) {
+		//设置回调
+		void SetCollisionCallback(_PixelCollisionCallback CollisionCallback, void* Data) {
 			mCollisionCallback = CollisionCallback;
-			mClass = mclass;
+			mData = Data;
 		}
 
+		//调用回调
 		void CollisionCallback(PixelCollision* PPixelCollision) {
-			mCollisionCallback(PPixelCollision, mClass);
+			mCollisionCallback(PPixelCollision, mData);
 		}
 
 		_PixelCollisionCallback mCollisionCallback = nullptr; //碰撞事件的回调函数
 
+		//获取边长
+		unsigned int GetSideLength() {
+			return mSideLength;
+		}
 
 	private:
-		void* mClass = nullptr;
-		unsigned int mSideLength;
-		//PixelAttribute mPixelAttribute;
+		void* mData = nullptr;//回调数据
+		unsigned int mSideLength;//边长
 	};
 
 }

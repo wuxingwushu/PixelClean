@@ -3,30 +3,6 @@
 server* server::mServer = nullptr;
 
 
-struct Zip {
-	z_stream* y;
-	z_stream* j;
-
-	Zip() {
-		y = new z_stream();
-		deflateInit(y, Z_DEFAULT_COMPRESSION);
-		j = new z_stream();
-		inflateInit(j);
-	}
-
-	~Zip() {
-		delete y;
-		delete j;
-	}
-};
-
-struct DataHeader
-{
-	unsigned int Key;
-	unsigned int Size;
-};
-
-
 //错误，超时 （连接断开会进入）
 void server_event_cb(bufferevent* be, short events, void* arg)
 {
@@ -56,14 +32,14 @@ void server_write_cb(bufferevent* be, void* arg)
 	//std::cout << "[W]" << std::flush;	
 }
 
-ServerPos server_read_data;
-DataHeader server_RDH;
+DataHeader server_RDH = { 0 };
+_Synchronize Server_mSynchronize;
 
 void server_read_cb(bufferevent* be, void* arg)
 {
 	while (evbuffer_get_length(bufferevent_get_input(be)) > 0)//判断输入缓存是否读完了
 	{
-		bool boolFireS = false;
+		//没有数据了，获取下一个数据的标签和大小
 		if (server_RDH.Size == 0) {
 			int len = bufferevent_read(be, &server_RDH, sizeof(DataHeader));
 			if (len != 8)
@@ -72,53 +48,22 @@ void server_read_cb(bufferevent* be, void* arg)
 				return;
 			}
 			else {
+				Server_mSynchronize = server::GetServer()->GetSynchronizeMap(server_RDH.Key);
 				//std::cerr << "[Client Data OK!]" << std::endl;
 			}
 		}
 
-		char* Pointer = nullptr;
-		Pointer = (char*)&server_read_data;
-		Pointer += sizeof(ServerPos) - server_RDH.Size;
 		////读取输入缓冲数据
-		int len = bufferevent_read(be, Pointer, server_RDH.Size);
+		int len = bufferevent_read(be, Server_mSynchronize.mPointer, server_RDH.Size);
 		if (len <= 0)return;
+		Server_mSynchronize.mPointer = (char*)Server_mSynchronize.mPointer + len;
 		server_RDH.Size -= len;
 
+		//当前标签数据读完了，处理数据
 		if (server_RDH.Size == 0) {
-			int lenData[1000];
-			len = bufferevent_read(be, lenData, sizeof(lenData));
-
-			evutil_socket_t fd = bufferevent_getfd(be);
-			//std::cout << "fd: " << fd << std::endl;
-			ServerPos* px = server::GetServer()->GetServerData()->Get(fd);
-			px = server::GetServer()->GetServerData()->Get(fd);
-			px->X = server_read_data.X;
-			px->Y = server_read_data.Y;
-			px->ang = server_read_data.ang;
-			px->Key = fd;
-			px->Fire = boolFireS;
-
-			GAME::GamePlayer* LPlayer = server::GetServer()->GetCrowd()->GetGamePlayer(px->Key);
-			LPlayer->setGamePlayerMatrix(glm::rotate(
-				glm::translate(glm::mat4(1.0f), glm::vec3(px->X, px->Y, 0.0f)),
-				glm::radians(px->ang * 180.f / 3.14f),
-				glm::vec3(0.0f, 0.0f, 1.0f)
-				),
-				3,
-				true
-			);
-			LPlayer->mObjectCollision->SetAngle(px->ang * 180.f / 3.14f);
-			LPlayer->mObjectCollision->SetPos({ px->X, px->Y });
-
-
-			DataHeader DH;
-			DH.Key = 1;
-			DH.Size = server::GetServer()->GetServerData()->GetKeyDataSize();
-			bufferevent_write(be, &DH, sizeof(DataHeader));//发送数据头
-			bufferevent_write(be, server::GetServer()->GetServerData()->GetKeyData(fd), DH.Size);//发送数据
+			Server_mSynchronize.mSynchronizeCallback(be, nullptr);
 		}
 	}
-	//std::cout << "ServerPos server: " << px->Key << " X: " << px->X << " Y: " << px->Y << std::endl;
 }
 
 void server_listen_cb(evconnlistener* ev, evutil_socket_t s, sockaddr* sin, int slen, void* arg)
@@ -203,15 +148,26 @@ server::server(unsigned int Duan) {
 
 	mServerData = new ContinuousMap<evutil_socket_t, ServerPos>(100);
 
-	//ServerPos* pos = server::GetServer()->GetServerData()->New(0); // BUG递归 在创建 server 调用了 GetServer()
+	//ServerPos* pos = server::GetServer()->GetServerData()->New(0); // 递归BUG 在创建 server 调用了 GetServer() 导致 mServer 一直为 nullptr
 	ServerPos* pos = mServerData->New(0);
 	pos->Key = 0;
 	pos->ang = 0;
 	pos->X = 0;
 	pos->Y = 0;
+
+	InitSynchronizeMap();
+}
+
+void server::InitSynchronizeMap() {
+	AddSynchronizeMap(
+		1,
+		_Synchronize{ GetServerPos(), SGamePlayerSynchronize }
+	);
 }
 
 server::~server() {
+	delete mServerData;
+
 	evconnlistener_free(server_ev);
 	event_base_free(server_base);
 

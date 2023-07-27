@@ -34,6 +34,7 @@ namespace SquarePhysics {
 			mCollisionCallback(x, y, mClass);
 		}
 
+		//设置原点
 		void SetOrigin(int x, int y) {
 			OriginX = x;
 			OriginY = y;
@@ -149,16 +150,18 @@ namespace SquarePhysics {
 
 
 	private:
-		void* mClass = nullptr;
+		void* mClass = nullptr;//回调数据
+		//原点
 		int OriginX = 0;
 		int OriginY = 0;
+		//地图大小
 		unsigned int mNumberX;
 		unsigned int mNumberY;
-		unsigned int mSideLength;
-		PixelAttribute** mPixelAttributeS;
+		unsigned int mSideLength;//边长
+		PixelAttribute** mPixelAttributeS;//点数据
 
-		unsigned int OutlinePointSize = 0;
-		glm::vec2 mOutlinePointSet[256];
+		unsigned int OutlinePointSize = 0;//点集的数量
+		glm::vec2 mOutlinePointSet[256];//外包裹点集
 	};
 
 }

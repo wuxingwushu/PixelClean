@@ -141,11 +141,7 @@ namespace GAME {
 
 	//多线程录制二级指令
 	private:
-		//unsigned int ThreadS = std::thread::hardware_concurrency() / 2;//获取线程数
 		std::vector<VkCommandBuffer>		ThreadCommandBufferS;//把录制好的二级指令存放在数组中统一绑定在主指令缓存中
-		//std::vector<VulKan::CommandPool*>	ThreadCommandPoolS;//录制二级指令给每个CommandBuffer分配单独的CommandPool
-		//std::vector<VulKan::CommandBuffer*> ThreadVulKanCommandBufferS;//用于录制二级指令
-
 
 	private:
 		int mCurrentFrame{ 0 };//当前是渲染哪一张GPU画布
@@ -160,6 +156,7 @@ namespace GAME {
 		VulKan::Sampler* mSampler{ nullptr };//图片采样器
 		std::vector<VulKan::CommandBuffer*> mCommandBuffers{};//主录入渲染指令
 
+		//ImGui
 		VulKan::CommandPool* mImGuuiCommandPool;
 		VulKan::CommandBuffer* mImGuuiCommandBuffers;
 		VulKan::RenderPass* mImGuuiRenderPass;
@@ -182,8 +179,8 @@ namespace GAME {
 	private:
 
 		//BlockS* mBlockS = nullptr;
-		Labyrinth* mLabyrinth = nullptr;
-		ParticleSystem* mParticleSystem = nullptr;
+		Labyrinth* mLabyrinth = nullptr;//迷宫
+		ParticleSystem* mParticleSystem = nullptr;//粒子系统
 		
 		
 		VPMatrices	mVPMatrices;//玩家变换矩阵（位置 角度）
@@ -195,19 +192,17 @@ namespace GAME {
 
 	public:
 		ImGuiInterFace* InterFace = nullptr; // ImGui 游戏界面都写这里面
-		PixelTextureS* mPixelTextureS = nullptr;
 
 		
-		Arms* mArms = nullptr;
-		//ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS;
-		Crowd* mCrowd = nullptr;
+		Arms* mArms = nullptr;//武器
+		Crowd* mCrowd = nullptr;//玩家群系统
 
-		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;
-		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;
+		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;//粒子特效
+		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理系统
 
 
 		//测试
-		GifPipeline* mGifPipeline = nullptr;
-		GIF* mGIF = nullptr;
+		GifPipeline* mGifPipeline = nullptr;//GIF渲染管线
+		GIF* mGIF = nullptr;//GIF
 	};
 }

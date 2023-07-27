@@ -20,8 +20,9 @@
 
 #include "../Camera.h"
 
-#include "../Character/Crowd.h"
-#include "../Arms/Arms.h"
+#include "ClientSynchronizeEvents.h"
+
+#include "StructTCP.h"
 
 struct ClientPos {
 	float X;
@@ -59,7 +60,7 @@ bufferevent_filter_result client_filter_out(
 	void* arg
 );
 
-class client
+class client :public SynchronizeClass
 {
 public:
 	static client* GetClient() {
@@ -92,21 +93,7 @@ public:
 		client_Fire = Fire;
 	}
 
-	void SetArms(GAME::Arms* Arms) {
-		mArms = Arms;
-	}
-
-	void SetCrowd(GAME::Crowd* Crowd) {
-		mCrowd = Crowd;
-	}
-
-	GAME::Arms* GetArms() {
-		return mArms;
-	}
-
-	GAME::Crowd* GetCrowd() {
-		return mCrowd;
-	}
+	void InitSynchronizeMap();
 
 private:
 	static client* mClient;
@@ -116,9 +103,6 @@ private:
 	event_base* client_base;
 	bufferevent* client_bev = nullptr;
 	ContinuousMap<evutil_socket_t, ClientPos>* mClientData;
-
-	GAME::Arms* mArms = nullptr;
-	GAME::Crowd* mCrowd = nullptr;
 };
 
 //进入事件帧循环

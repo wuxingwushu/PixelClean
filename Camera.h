@@ -13,7 +13,7 @@ enum class CAMERA_MOVE
 };
 
 extern glm::vec3	m_position;//位置
-extern float		m_angle;
+extern float		m_angle;//角度
 
 class Camera
 {

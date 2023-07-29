@@ -12,6 +12,7 @@ void server_event_cb(bufferevent* be, short events, void* arg)
 	{
 		std::cout << "BEV_EVENT_READING BEV_EVENT_TIMEOUT" << std::endl;
 		evutil_socket_t fd = bufferevent_getfd(be);
+		delete server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData;
 		server::GetServer()->GetServerData()->Delete(fd);
 		bufferevent_free(be);
 	}
@@ -19,6 +20,7 @@ void server_event_cb(bufferevent* be, short events, void* arg)
 	{
 		std::cout << "BEV_EVENT_ERROR" << std::endl;
 		evutil_socket_t fd = bufferevent_getfd(be);
+		delete server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData;
 		server::GetServer()->GetServerData()->Delete(fd);
 		bufferevent_free(be);
 	}
@@ -34,6 +36,7 @@ void server_write_cb(bufferevent* be, void* arg)
 
 DataHeader server_RDH = { 0 };
 _Synchronize Server_mSynchronize;
+SynchronizeData Sdata;
 
 void server_read_cb(bufferevent* be, void* arg)
 {
@@ -49,6 +52,8 @@ void server_read_cb(bufferevent* be, void* arg)
 			}
 			else {
 				Server_mSynchronize = server::GetServer()->GetSynchronizeMap(server_RDH.Key);
+				Sdata.Size = server_RDH.Size / Server_mSynchronize.Size;
+				Sdata.Pointer = Server_mSynchronize.mPointer;
 				//std::cerr << "[Client Data OK!]" << std::endl;
 			}
 		}
@@ -61,7 +66,7 @@ void server_read_cb(bufferevent* be, void* arg)
 
 		//当前标签数据读完了，处理数据
 		if (server_RDH.Size == 0) {
-			Server_mSynchronize.mSynchronizeCallback(be, nullptr);
+			Server_mSynchronize.mSynchronizeCallback(be, &Sdata);
 		}
 	}
 }
@@ -70,11 +75,14 @@ void server_listen_cb(evconnlistener* ev, evutil_socket_t s, sockaddr* sin, int 
 {
 	std::cout << "新连接接入:" << s << std::endl;
 	
-	ServerPos* pos = server::GetServer()->GetServerData()->New(s);
+	PlayerPos* pos = server::GetServer()->GetServerData()->New(s);
 	pos->Key = s;
 	pos->X = 0;
 	pos->Y = 0;
 	pos->ang = 0;
+	pos->mBufferEventSingleData = new BufferEventSingleData(100);
+	GAME::GamePlayer* LPlayer = server::GetServer()->GetCrowd()->GetGamePlayer(s);
+	pos->mBufferEventSingleData->mBrokenData = LPlayer->GetBrokenData();
 
 	event_base* base = (event_base*)arg;
 
@@ -146,23 +154,25 @@ server::server(unsigned int Duan) {
 		sizeof(sin)
 	);
 
-	mServerData = new ContinuousMap<evutil_socket_t, ServerPos>(100);
+	mServerData = new ContinuousMap<evutil_socket_t, PlayerPos>(100);
 
 	//ServerPos* pos = server::GetServer()->GetServerData()->New(0); // 递归BUG 在创建 server 调用了 GetServer() 导致 mServer 一直为 nullptr
-	ServerPos* pos = mServerData->New(0);
+	PlayerPos* pos = mServerData->New(0);
 	pos->Key = 0;
 	pos->ang = 0;
 	pos->X = 0;
 	pos->Y = 0;
-
+	pos->mBufferEventSingleData = new BufferEventSingleData(100);
+	//pos->mBufferEventSingleData->mBrokenData = GetGamePlayer()->GetBrokenData();
 	InitSynchronizeMap();
 }
 
 void server::InitSynchronizeMap() {
-	AddSynchronizeMap(
-		1,
-		_Synchronize{ GetServerPos(), SGamePlayerSynchronize }
-	);
+	char* DataBuffer = new char[100000000];
+	AddSynchronizeMap(1, { DataBuffer, sizeof(PlayerPos), SGamePlayerSynchronize });
+	AddSynchronizeMap(2, { DataBuffer, sizeof(SynchronizeBullet), SArmsSynchronize });
+	AddSynchronizeMap(3, { DataBuffer, sizeof(int), SGamePlayerBroken });
+	AddSynchronizeMap(4, { DataBuffer, sizeof(int), SPlayerInformation });
 }
 
 server::~server() {

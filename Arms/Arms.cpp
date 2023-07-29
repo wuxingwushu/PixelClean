@@ -18,12 +18,13 @@ namespace GAME {
 	{
 		for (size_t i = 0; i < mBullet->GetDataSize(); i++)
 		{
-			delete mBullet->GetIndexKey(i);
+			delete mBullet->GetIndexKey(i);//销毁生成的物理模型
 		}
 		delete mBullet;
 	}
 
 	void Arms::ShootBullets(float x, float y, unsigned char* colour, float angle, float speed) {
+		//std::cout << "X: " << x << "Y: " << y << "angle: " << angle << std::endl;
 		SquarePhysics::PixelCollision* LPixelCollision = new SquarePhysics::PixelCollision(1);//生成子弹物理模型
 		Particle* Ppppx = mBullet->New(LPixelCollision);//生成子弹
 		if (Ppppx == nullptr) {//达到上线

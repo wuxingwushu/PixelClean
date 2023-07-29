@@ -1,7 +1,7 @@
 #include "Client.h"
 
 client* client::mClient = nullptr;
-
+clock_t Ctime = 0;
 
 //错误，超时 （连接断开会进入）
 void client_event_cb(bufferevent* be, short events, void* arg)
@@ -54,24 +54,53 @@ void client_event_cb(bufferevent* be, short events, void* arg)
 
 struct writestruct {
 	DataHeader mDH;//发送数据头
-	ClientPos mClientPos;
+	PlayerPos mClientPos;
 };
+
+bool InitbuffereventFD = true;
 
 void client_write_cb(bufferevent* be, void* arg)
 {
+	if (InitbuffereventFD) {
+		DataHeader DHArms;
+		DHArms.Key = 4;
+		DHArms.Size = sizeof(int);
+		bufferevent_write(be, &DHArms, sizeof(DataHeader));
+		bufferevent_write(be, &DHArms.Key, DHArms.Size);
+		InitbuffereventFD = false;
+		return;
+	}
+
 	//写入buffer
-	ClientPos wanpos;
+	PlayerPos wanpos;
 	wanpos.X = m_position.x;
 	wanpos.Y = m_position.y;
 	wanpos.ang = m_angle * 180.0f / 3.14159265359f;
-	wanpos.Fire = client::GetClient()->GetFire();
-	client::GetClient()->SetFire(false);
 
 	writestruct mDC;
 	mDC.mDH.Key = 1;
-	mDC.mDH.Size = sizeof(ClientPos);
+	mDC.mDH.Size = sizeof(PlayerPos);
 	mDC.mClientPos = wanpos;
-	bufferevent_write(be, &mDC, sizeof(writestruct));
+	bufferevent_write(be, &mDC, sizeof(writestruct));//发送玩家数据
+
+	if (client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->GetNumber() != 0) {
+		DataHeader DHArms;
+		DHArms.Key = 2;
+		DHArms.Size = sizeof(SynchronizeBullet) * client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->GetNumber();
+		bufferevent_write(be, &DHArms, sizeof(DataHeader));
+		bufferevent_write(be, client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->GetData(), DHArms.Size);//发送客户端发射的子弹
+		client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->ClearAll();//客户端清空发射
+	}
+
+	if ((clock() - Ctime) >= 1000) {
+		Ctime = clock();
+		DataHeader DHArms;
+		DHArms.Key = 3;
+		DHArms.Size = sizeof(unsigned int);
+		bufferevent_write(be, &DHArms, sizeof(DataHeader));
+		bufferevent_write(be, &DHArms.Key, DHArms.Size);
+	}
+
 	//Sleep(10);
 	//bufferevent_disable(be);
 	event_base_loopbreak(client::GetClient()->GetEvent_Base());//跳出循环
@@ -81,7 +110,7 @@ void client_write_cb(bufferevent* be, void* arg)
 unsigned client_read_data_daxiao = 0;
 DataHeader client_RDH = { 0 };
 _Synchronize Client_mSynchronize;
-SynchronizeData Sdata;
+SynchronizeData Cdata;
 
 void client_read_cb(bufferevent* be, void* arg)
 {
@@ -96,10 +125,10 @@ void client_read_cb(bufferevent* be, void* arg)
 			}
 			else {
 				//std::cerr << "[Server Data OK!]" << std::endl;
-				Sdata.Size = client_RDH.Size / sizeof(ClientPos);
-				client_read_data_daxiao = 0;
 				Client_mSynchronize = client::GetClient()->GetSynchronizeMap(client_RDH.Key);
-				Sdata.Pointer = Client_mSynchronize.mPointer;
+				Cdata.Size = client_RDH.Size / Client_mSynchronize.Size;
+				Cdata.Pointer = Client_mSynchronize.mPointer;
+				client_read_data_daxiao = 0;
 			}
 		}
 
@@ -110,7 +139,7 @@ void client_read_cb(bufferevent* be, void* arg)
 		client_RDH.Size -= len;
 
 		if (client_RDH.Size == 0) {
-			Client_mSynchronize.mSynchronizeCallback(be, &Sdata);
+			Client_mSynchronize.mSynchronizeCallback(be, &Cdata);
 		}
 	}
 }
@@ -145,16 +174,23 @@ client::client(std::string IPV, unsigned int Duan) {
 		std::cout << "connected" << std::endl;
 	}
 
-	mClientData = new ContinuousMap<evutil_socket_t, ClientPos>(100);
+	mClientData = new ContinuousMap<evutil_socket_t, PlayerPos>(100);
+	InitBufferEventSingleData(100);
 
 	InitSynchronizeMap();
 }
 
 void client::InitSynchronizeMap() {
-	AddSynchronizeMap(1, { new ClientPos[100], CGamePlayerSynchronize});
+	char* DataBuffer = new char[100000000];
+	AddSynchronizeMap(1, { DataBuffer, sizeof(PlayerPos), CGamePlayerSynchronize});
+	AddSynchronizeMap(2, { DataBuffer, sizeof(SynchronizeBullet), CArmsSynchronize });
+	AddSynchronizeMap(3, { DataBuffer, sizeof(PlayerBroken), CGamePlayerBroken });
+	AddSynchronizeMap(4, { DataBuffer, sizeof(evutil_socket_t), CPlayerInformation });
 }
 
 client::~client() {
+	delete mClientData;
+
 	event_base_free(client_base);
 #ifdef _WIN32 
 	WSACleanup();

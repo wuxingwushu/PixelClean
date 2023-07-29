@@ -62,9 +62,14 @@ namespace GAME {
 
 		[[nodiscard]] unsigned int GetKey() { return Key; }
 
+		[[nodiscard]] bool* GetBrokenData(){ return mBrokenData; }
+
+		void UpDataBroken(bool* Broken);
+
 	private://模型变换矩阵
 		unsigned int Key;
 		ObjectUniform mUniform;
+		bool* mBrokenData;
 
 	private://模型   顶点，UV，顶点索引
 		VulKan::Buffer* mPositionBuffer{ nullptr };

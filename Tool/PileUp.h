@@ -42,6 +42,10 @@ public:
         return Index;
     }
 
+    [[nodiscard]] T* GetData() const noexcept {
+        return mPileUp;
+    }
+
     [[nodiscard]] T GetEnd() {
         return mPileUp[Index - 1];
     }
@@ -53,5 +57,9 @@ public:
 
     [[nodiscard]] T GetIndex(unsigned int I) {
         return mPileUp[I];
+    }
+
+    void ClearAll() {
+        Index = 0;
     }
 };

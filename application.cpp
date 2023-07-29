@@ -100,7 +100,7 @@ namespace GAME {
 	//初始化Vulkan
 	//1 rendePass 加入pipeline 2 生成FrameBuffer
 	void Application::initVulkan() {
-		mInstance = new VulKan::Instance(true);//实列化需要的VulKan功能APi
+		mInstance = new VulKan::Instance(false);//实列化需要的VulKan功能APi
 		mWindowSurface = new VulKan::WindowSurface(mInstance, mWindow);//获取你在什么平台运行调用不同的API（比如：Window，Android）
 		mDevice = new VulKan::Device(mInstance, mWindowSurface);//获取电脑的硬件设备，vma内存分配器 也在这里被创建了
 		mCommandPool = new VulKan::CommandPool(mDevice);//创建指令池，给CommandBuffer用的
@@ -644,10 +644,13 @@ namespace GAME {
 					if (InterFace->GetServerToClient()) {
 						server::GetServer()->SetArms(mArms);
 						server::GetServer()->SetCrowd(mCrowd);
+						server::GetServer()->SetGamePlayer(mGamePlayer);
+						server::GetServer()->GetServerData()->Get(0)->mBufferEventSingleData->mBrokenData = mGamePlayer->GetBrokenData();//玩家受损状态指针
 					}
 					else {
 						client::GetClient()->SetArms(mArms);
 						client::GetClient()->SetCrowd(mCrowd);
+						client::GetClient()->SetGamePlayer(mGamePlayer);
 					}
 				}
 			}
@@ -673,7 +676,7 @@ namespace GAME {
 			if (InterFace->GetMultiplePeople())
 			{
 				if (InterFace->GetServerToClient()) {
-					ServerPos* pos = server::GetServer()->GetServerData()->Get(0);
+					PlayerPos* pos = server::GetServer()->GetServerData()->Get(0);
 					if (pos != nullptr) {
 						pos->X = m_position.x;
 						pos->Y = m_position.y;
@@ -734,41 +737,28 @@ namespace GAME {
 		static double ArmsContinuityFire = 0;
 		ArmsContinuityFire += TOOL::FPStime;
 		int Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.01f)))
+		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.1f)))
 		{
 			ArmsContinuityFire = 0;
 			unsigned char color[4] = { 0,255,0,125 };
 			glm::dvec2 Armsdain =  SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle + 1.57f);
 			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, color, m_angle + 1.57f, 500);
-			if (InterFace->GetServerToClient()) {
-				server::GetServer()->SetFire(true);
-			}
-			else {
-				client::GetClient()->SetFire(true);
+			if (InterFace->GetMultiplePeople()) {//是否为多人模式
+				if (InterFace->GetServerToClient()) {//服务器还是客户端
+					PlayerPos* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
+					BufferEventSingleData* LBufferEventSingleData;
+					for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
+					{
+						LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
+						LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f });
+					}
+				}
+				else {
+					client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f });
+				}
 			}
 		}
 		zuojian = Lzuojian;
-
-
-		if (InterFace->GetMultiplePeople())
-		{
-			if (InterFace->GetServerToClient()) {
-				ServerPos* dataVec = server::GetServer()->GetServerData()->GetKeyData(0);
-				for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
-				{
-					if (dataVec[i].Fire) {
-						dataVec[i].Fire = false;
-						unsigned char color[4] = { 0,255,0,125 };
-						mArms->ShootBullets(dataVec[i].X, dataVec[i].Y, color, dataVec[i].ang / 180.0f * 3.14159265359f, 500);
-					}
-				}
-			}
-			else {
-
-			}
-		}
-		
-
 
 		mArms->BulletsEvent();
 		
@@ -792,11 +782,13 @@ namespace GAME {
 		ImGui::Text(u8"鼠标角度：%10.3f", m_angle * 180 / M_PI);
 		ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->mObjectCollision->GetSpeed().x, mGamePlayer->mObjectCollision->GetSpeed().y);
 		ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
-		if (InterFace->GetServerToClient()) {
-			ImGui::Text(u8"S M：%d  |  %d", server::GetServer()->GetServerData()->GetNumber(), mCrowd->GetNumber());
-		}
-		else {
-			ImGui::Text(u8"C M：%d  |  %d", client::GetClient()->GetClientData()->GetNumber(), mCrowd->GetNumber());
+		if (InterFace->GetMultiplePeople()) {
+			if (InterFace->GetServerToClient()) {
+				ImGui::Text(u8"S M：%d  |  %d", server::GetServer()->GetServerData()->GetNumber(), mCrowd->GetNumber());
+			}
+			else {
+				ImGui::Text(u8"C M：%d  |  %d", client::GetClient()->GetClientData()->GetNumber(), mCrowd->GetNumber());
+			}
 		}
 		InterFace->ImGuiShowFPS();
 		InterFace->ImGuiShowTiming();

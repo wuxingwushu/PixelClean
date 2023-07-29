@@ -15,18 +15,20 @@ namespace GAME {
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(X, Y, 0.0f));//位移矩阵
 
 		mObjectCollision = new SquarePhysics::ObjectCollision(16, 16, 1);
+		mBrokenData = new bool[16 * 16];
 		for (size_t x = 0; x < 16; x++)
 		{
 			for (size_t y = 0; y < 16; y++)
 			{
 				mObjectCollision->GetPixelAttribute()[x][y].Collision = true;
+				mBrokenData[x * 16 + y] = true;
 			}
 		}
-		mObjectCollision->OutlineCalculate();
-		mObjectCollision->SetOrigin(8, 8);
-		mObjectCollision->SetPos({ X, Y });
-		mObjectCollision->SetFrictionCoefficient(10.0f);
-		mObjectCollision->SetCollisionCallback(GamePlayerDestroyPixel, this);
+		mObjectCollision->OutlineCalculate();//计算外骨架
+		mObjectCollision->SetOrigin(8, 8);//设置原点
+		mObjectCollision->SetPos({ X, Y });//设置位置
+		mObjectCollision->SetFrictionCoefficient(10.0f);//设置摩擦系数
+		mObjectCollision->SetCollisionCallback(GamePlayerDestroyPixel, this);//设置回调函数
 
 		std::vector<float> mPositions = {
 			-8.0f, -8.0f, 0.0f,
@@ -123,6 +125,23 @@ namespace GAME {
 		}
 	}
 
+	void GamePlayer::UpDataBroken(bool* Broken) {
+		unsigned char* TexturePointer = (unsigned char*)mPixelTexture->getHOSTImagePointer();
+		for (size_t x = 0; x < 16; x++)
+		{
+			for (size_t y = 0; y < 16; y++)
+			{
+				if (Broken[x * 16 + y]) {
+					memset(&TexturePointer[(x * 16 + y) * 4 + 3], 255, 1);
+				}
+				else {
+					memset(&TexturePointer[(x * 16 + y) * 4 + 3], 0, 1);
+				}
+			}
+		}
+		mPixelTexture->endHOSTImagePointer();
+		mPixelTexture->UpDataImage();
+	}
 
 	void GamePlayer::initUniformManager(
 		VulKan::Device* device,
@@ -210,7 +229,8 @@ namespace GAME {
 
 	void GamePlayer::DestroyPixel(glm::ivec2 pixel) {
 		unsigned char* TexturePointer = (unsigned char*)mPixelTexture->getHOSTImagePointer();
-		memset(&TexturePointer[(pixel.x * 16 + pixel.y) * 4], 0, 4);
+		memset(&TexturePointer[(pixel.x * 16 + pixel.y) * 4 + 3], 0, 1);
+		mBrokenData[pixel.x * 16 + pixel.y] = false;
 		mPixelTexture->endHOSTImagePointer();
 		mPixelTexture->UpDataImage();
 	}

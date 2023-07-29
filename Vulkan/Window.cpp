@@ -43,6 +43,8 @@ namespace GAME::VulKan {
 		glfwSetFramebufferSizeCallback(mWindow, windowResized);//绑定窗口大小改变事件
 		//glfwSetCursorPosCallback(mWindow, cursorPosCallBack);//绑定鼠标事件
 
+		//glfwSetWindowMonitor(mWindow, glfwGetPrimaryMonitor(), 0, 0, mWidth, mHeight, GLFW_DONT_CARE);//全屏
+
 		// 注册鼠标滚轮回调函数
 		glfwSetScrollCallback(mWindow, scroll_callback);
 

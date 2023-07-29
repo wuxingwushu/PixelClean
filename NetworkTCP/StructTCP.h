@@ -27,16 +27,52 @@ struct DataHeader//数据头
 };
 
 
-typedef void (*_SynchronizeCallback)(bufferevent* be, void* Data);
+typedef void (*_SynchronizeCallback)(bufferevent* be, void* Data);//函数结构
+//数据
 struct SynchronizeData {
-	void* Pointer;
-	unsigned int Size;
+	void* Pointer;//数据指针
+	unsigned int Size;//数据数量
 };
 
+//标签事件结构体
 struct _Synchronize
 {
-	void* mPointer = nullptr;
-	_SynchronizeCallback mSynchronizeCallback = nullptr;
+	void* mPointer = nullptr;//数据指针
+	unsigned int Size;//单个数据大小
+	_SynchronizeCallback mSynchronizeCallback = nullptr;//函数
+};
+
+struct BufferEventSingleData
+{
+	PileUp<SynchronizeBullet>* mSubmitBullet;//子弹一次性数据
+
+	bool* mBrokenData;//破碎状态
+
+	BufferEventSingleData(unsigned int size) {
+		mSubmitBullet = new PileUp<SynchronizeBullet>(size);
+	}
+
+	~BufferEventSingleData() {
+		delete mSubmitBullet;
+	}
+};
+
+//玩家同步数据结构
+struct PlayerPos {
+	//位置
+	float X;
+	float Y;
+	//角度
+	float ang;
+	//一次性同步数据
+	BufferEventSingleData* mBufferEventSingleData = nullptr;
+	//钥匙
+	evutil_socket_t Key;
+};
+
+struct PlayerBroken {
+	evutil_socket_t Key;
+	bool Broken[16 * 16];
 };
 
 
@@ -51,12 +87,20 @@ public:
 		mCrowd = Crowd;
 	}
 
+	void SetGamePlayer(GAME::GamePlayer* GamePlayer) {
+		mGamePlayer = GamePlayer;
+	}
+
 	[[nodiscard]] constexpr GAME::Arms* GetArms() const noexcept {
 		return mArms;
 	}
 
 	[[nodiscard]] constexpr GAME::Crowd* GetCrowd() const noexcept {
 		return mCrowd;
+	}
+
+	[[nodiscard]] constexpr GAME::GamePlayer* GetGamePlayer() const noexcept {
+		return mGamePlayer;
 	}
 
 	void AddSynchronizeMap(unsigned int I, _Synchronize synchronize) {
@@ -71,8 +115,9 @@ public:
 	}
 
 private:
-	GAME::Arms* mArms = nullptr;
-	GAME::Crowd* mCrowd = nullptr;
+	GAME::Arms* mArms = nullptr;//武器
+	GAME::Crowd* mCrowd = nullptr;//玩家群
+	GAME::GamePlayer* mGamePlayer = nullptr;//玩家
 
 	//标签事件储存入口数据
 	std::map<unsigned int, _Synchronize> mSynchronizeMap = {};

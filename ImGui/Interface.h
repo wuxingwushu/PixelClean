@@ -24,16 +24,16 @@ namespace GAME {
 
 		~ImGuiInterFace();
 
-		void InterFace();
+		void InterFace();//显示
 
-		void ImGuiShowFPS();
+		void ImGuiShowFPS();//显示
 		void ImGuiShowTiming();
 
-		bool GetInterFaceBool() {
+		bool GetInterFaceBool() {//获取显示状态
 			return InterFaceBool;
 		}
 
-		void SetInterFaceBool() {
+		void SetInterFaceBool() {//显示状态取反
 			InterFaceBool = !InterFaceBool;
 		}
 
@@ -49,22 +49,22 @@ namespace GAME {
 		VulKan::Window* mWindown{ nullptr };
 		VulKan::Device* mDevice{ nullptr };
 
-		int InterfaceIndexes = 0;
-		bool InterFaceBool = true;
+		int InterfaceIndexes = 0;//显示那个界面
+		bool InterFaceBool = true;//是否显示界面
 
 		VulKan::CommandPool** ImGuiCommandPoolS;
 		VulKan::CommandBuffer** ImGuiCommandBufferS;
 
-		void SetInterFace(int fi) {
+		void SetInterFace(int fi) {//设置显示界面
 			InterfaceIndexes = fi;
 		}
 
-		void MainInterface();
+		void MainInterface();//游戏主界面
 		
-		void ViceInterface();
+		void ViceInterface();//游戏时的界面
 
-		bool StartMultiPlayerGames = false;
-		bool ServerToClient;
-		void MultiplePeopleInterface();
+		bool StartMultiPlayerGames = false;//是否为多人模式
+		bool ServerToClient;//是服务器还是客户端
+		void MultiplePeopleInterface();//多人界面
 	};
 }

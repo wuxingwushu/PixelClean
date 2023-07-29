@@ -44,7 +44,7 @@ namespace GAME {
 
 	GamePlayer* Crowd::GetGamePlayer(evutil_socket_t key) {
 		GamePlayer** LGamePlayer = MapPlayerS->Get(key);
-		if (LGamePlayer == nullptr) {
+		if (LGamePlayer == nullptr) {//不存在玩家是创建玩家
 			LGamePlayer = MapPlayerS->New(key);
 			(*LGamePlayer) = new GamePlayer(mDevice, mPipeline, mSwapChain, mRenderPass, 0, 0);
 			(*LGamePlayer)->initUniformManager(

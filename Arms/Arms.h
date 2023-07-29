@@ -4,6 +4,13 @@
 #include "ParticlesSpecialEffect.h"
 #include "../Physics/SquarePhysics.h"
 
+//子弹同步数据结构
+struct SynchronizeBullet {
+	float X;
+	float Y;
+	float angle;
+};
+
 
 namespace GAME {
 
@@ -22,6 +29,10 @@ namespace GAME {
 		//获取粒子特效
 		void SetSpecialEffect(ParticlesSpecialEffect* particlesSpecialEffect) {
 			mParticlesSpecialEffect = particlesSpecialEffect;
+		}
+
+		SquarePhysics::SquarePhysics* GetSquarePhysics() {
+			return mSquarePhysics;
 		}
 
 		//生成子弹

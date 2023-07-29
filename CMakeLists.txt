@@ -31,7 +31,6 @@ include_directories(
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/Soloud/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/libevent/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/SpdLog/include
-	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/VUH/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/zlib/include
 )
 
@@ -43,7 +42,6 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/Soloud/lib/Debug
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/libevent/debug/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/SpdLog/lib/Debug
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/VUH/lib/Debug
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/zlib/lib/Debug
 	)
 else()
@@ -53,7 +51,6 @@ else()
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/Soloud/lib/Release
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/libevent/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/SpdLog/lib/Release
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/VUH/lib/Release
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./Environment/zlib/lib/Release
 	)
 endif()
@@ -135,9 +132,6 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		event_core.lib
 		event_extra.lib
 
-		# gpu计算
-		vuh.lib
-
 		# zlib 数据压缩
 		zlibd.lib
 	)
@@ -181,9 +175,6 @@ else()
 		event.lib
 		event_core.lib
 		event_extra.lib
-
-		# gpu计算
-		vuh.lib
 
 		# zlib 数据压缩
 		zlib.lib

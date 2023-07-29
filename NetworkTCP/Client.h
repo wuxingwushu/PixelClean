@@ -24,13 +24,7 @@
 
 #include "StructTCP.h"
 
-struct ClientPos {
-	float X;
-	float Y;
-	float ang;
-	bool Fire = false;
-	evutil_socket_t Key;
-};
+#include "../ini.h"
 
 
 //错误，超时 （连接断开会进入）
@@ -65,15 +59,18 @@ class client :public SynchronizeClass
 public:
 	static client* GetClient() {
 		if (mClient == nullptr) {
-			std::cout << "创建Client" << std::endl;
-			mClient = new client("127.0.0.1", 25565);
+			inih::INIReader Ini{ IniPath };
+			int Port = Ini.Get<int>("ClientTCP", "Port");
+			std::string IP = Ini.Get<std::string>("ClientTCP", "IP");
+			std::cout << "创建Client  IP: " << IP << "   Port: " << Port << std::endl;
+			mClient = new client(IP, Port);
 		}
 		return mClient;
 	}
 	
 	~client();
 
-	[[nodiscard]] ContinuousMap<evutil_socket_t, ClientPos>* GetClientData() const noexcept {
+	[[nodiscard]] ContinuousMap<evutil_socket_t, PlayerPos>* GetClientData() const noexcept {
 		return mClientData;
 	}
 
@@ -85,24 +82,27 @@ public:
 		return client_bev;
 	}
 
-	[[nodiscard]] bool GetFire() const noexcept {
-		return client_Fire;
+	void InitBufferEventSingleData(unsigned	int size) {
+		mBufferEventSingleData = new BufferEventSingleData(size);
 	}
 
-	void SetFire(bool Fire) noexcept {
-		client_Fire = Fire;
+	BufferEventSingleData* GetBufferEventSingleData() {
+		return mBufferEventSingleData;
 	}
 
 	void InitSynchronizeMap();
 
+	
+	evutil_socket_t fd;
 private:
 	static client* mClient;
 	client(std::string IPV, unsigned int Duan);
 
-	bool client_Fire = false;
 	event_base* client_base;
 	bufferevent* client_bev = nullptr;
-	ContinuousMap<evutil_socket_t, ClientPos>* mClientData;
+	ContinuousMap<evutil_socket_t, PlayerPos>* mClientData;
+
+	BufferEventSingleData* mBufferEventSingleData;
 };
 
 //进入事件帧循环

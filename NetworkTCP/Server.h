@@ -23,14 +23,7 @@
 
 #include "StructTCP.h"
 
-struct ServerPos {
-	float X;
-	float Y;
-	float ang;
-	bool Fire = false;
-	evutil_socket_t Key;
-};
-
+#include "../ini.h"
 
 //错误，超时 （连接断开会进入）
 void server_event_cb(bufferevent* be, short events, void* arg);
@@ -68,15 +61,17 @@ public:
 	//单列模式
 	static server* GetServer() {
 		if (mServer == nullptr) {
-			std::cout << "创建server" << std::endl;
-			mServer = new server(25565);//端口号
+			inih::INIReader Ini{ IniPath };
+			int Port = Ini.Get<int>("ServerTCP", "Port");
+			std::cout << "创建server  Port: " << Port << std::endl;
+			mServer = new server(Port);//端口号
 		}
 		return mServer;
 	}
 
 	~server();
 
-	[[nodiscard]] ContinuousMap<evutil_socket_t, ServerPos>* GetServerData() const noexcept {
+	[[nodiscard]] ContinuousMap<evutil_socket_t, PlayerPos>* GetServerData() const noexcept {
 		return mServerData;
 	}
 
@@ -88,18 +83,6 @@ public:
 		return server_ev;
 	}
 
-	[[nodiscard]] bool GetFire() const noexcept {
-		return server_Fire;
-	}
-
-	void SetFire(bool Fire) noexcept {
-		server_Fire = Fire;
-	}
-
-	[[nodiscard]] ServerPos* GetServerPos() noexcept {
-		return &mLS_ServerPos;
-	}
-
 	void InitSynchronizeMap();
 
 
@@ -107,11 +90,7 @@ private:
 	static server* mServer;
 	server(unsigned int Duan);
 
-	bool server_Fire = false;
 	event_base* server_base;
 	evconnlistener* server_ev;
-	ContinuousMap<evutil_socket_t, ServerPos>* mServerData;
-
-	//储存数据
-	ServerPos mLS_ServerPos;
+	ContinuousMap<evutil_socket_t, PlayerPos>* mServerData;
 };

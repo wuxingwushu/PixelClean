@@ -3,8 +3,8 @@
 #include <event2/util.h>
 
 namespace GAME {
-	void DeleteCrowd(GamePlayer* Player, void* Data);
-	bool TimeoutCrowd(GamePlayer* x, void* data);
+	void DeleteCrowd(GamePlayer* Player, void* Data);//销毁玩家
+	bool TimeoutCrowd(GamePlayer* x, void* data);//超时事件
 
 	class Crowd
 	{
@@ -23,21 +23,26 @@ namespace GAME {
 
 		GamePlayer* GetGamePlayer(evutil_socket_t key);
 
+		//超时销毁
 		void TimeoutDetection();
 
+		//获取所有玩家CommandBuffer
 		void GetCommandBufferS(std::vector<VkCommandBuffer>* CommandBufferVector, unsigned int Format);
 
+		//获取玩家数量（客户端是不包括自己的）
 		unsigned int GetNumber() {
 			return MapPlayerS->GetNumber();
 		}
 
+		//设置物理
 		void SteSquarePhysics(SquarePhysics::SquarePhysics* SquarePhysics) {
 			mSquarePhysics = SquarePhysics;
-			MapPlayerS->SetDeleteCallback(DeleteCrowd, mSquarePhysics);
+			MapPlayerS->SetDeleteCallback(DeleteCrowd, mSquarePhysics);//销毁时，随便把物理模拟中的也一并销毁
 			MapPlayerS->SetTimeoutCallback(TimeoutCrowd, nullptr);
 		}
 
 	private:
+		//储存用来生成玩家
 		unsigned int mSize = 0;
 		VulKan::Device* mDevice = nullptr;
 		VulKan::CommandPool* mCommandPool = nullptr;
@@ -47,8 +52,8 @@ namespace GAME {
 		VulKan::Sampler* mSampler = nullptr;
 		std::vector<VulKan::Buffer*> mCameraVPMatricesBuffer = {};
 
-		ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS;
+		ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS;//玩家映射
 
-		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;
+		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理
 	};
 }

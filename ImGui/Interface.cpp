@@ -192,7 +192,7 @@ namespace GAME {
 
 	void ImGuiInterFace::ViceInterface()
 	{
-		ImGui::Begin(u8"游戏ESC界面", NULL,
+		ImGui::Begin(u8"游戏时界面", NULL,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove
@@ -215,7 +215,7 @@ namespace GAME {
 	}
 
 	void ImGuiInterFace::MultiplePeopleInterface() {
-		ImGui::Begin(u8"游戏ESC界面", NULL,
+		ImGui::Begin(u8"多人界面", NULL,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove

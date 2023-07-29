@@ -1,5 +1,6 @@
 #include "Labyrinth.h"
-
+#include "../NetworkTCP/Server.h"
+#include "../NetworkTCP/Client.h"
 
 
 
@@ -9,10 +10,72 @@ namespace GAME {
 	void Labyrinth_SetPixel(int x, int y, void* mclass) {
 		Labyrinth* mClass = (Labyrinth*)mclass;
 		mClass->SetPixel(x, y);
+		if (Global::MultiplePeopleMode) {
+			if (Global::ServerOrClient) {
+				PlayerPos* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
+				BufferEventSingleData* LBufferEventSingleData;
+				for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
+				{
+					LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
+					LBufferEventSingleData->mLabyrinthPixel->add({ x,y,false });
+				}
+			}
+			else {
+				client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->add({ x,y,false });
+			}
+		}
+	}
+
+	Labyrinth::Labyrinth() {
+
+	}
+
+	void Labyrinth::AgainGenerateLabyrinth(int X, int Y) {
+		this->~Labyrinth();
+		InitLabyrinth(mDevice, X, Y);
+		initUniformManager(
+			mDevice,
+			mSwapChain->getImageCount(),
+			mPipeline->DescriptorSetLayout,
+			mVPMstdBuffer,
+			mSampler
+		);
+		RecordingCommandBuffer(mRenderPass, mSwapChain, mPipeline);
+	}
+
+	void Labyrinth::LoadLabyrinth(int X, int Y, int* PixelData, unsigned int* BlockTypeData) {
+		std::cout << "加载地图" << std::endl;
+		this->~Labyrinth();
+		numberX = X;
+		numberY = Y;
+
+		BlockPixelS = new int [numberX * 16 * numberY * 16] {false};
+		BlockTypeS = new unsigned int* [numberX];
+		for (size_t i = 0; i < numberX; i++)
+		{
+			BlockTypeS[i] = new unsigned int[numberY];
+		}
+
+		memcpy(BlockPixelS, PixelData, (numberX * numberY * 16 * 16 * sizeof(int)));
+		char* PBlockTypeData = (char*)BlockTypeData;
+		for (size_t i = 0; i < numberX; i++)
+		{
+			memcpy(BlockTypeS[i], PBlockTypeData, (numberY * sizeof(unsigned int)));
+			PBlockTypeData = PBlockTypeData + (numberY * sizeof(unsigned int));
+		}
+		LabyrinthBuffer();
+		initUniformManager(
+			mDevice,
+			mSwapChain->getImageCount(),
+			mPipeline->DescriptorSetLayout,
+			mVPMstdBuffer,
+			mSampler
+		);
+		RecordingCommandBuffer(mRenderPass, mSwapChain, mPipeline);
 	}
 
 
-	Labyrinth::Labyrinth(VulKan::Device* device, int X, int Y, bool** LlblockS)
+	void Labyrinth::InitLabyrinth(VulKan::Device* device, int X, int Y, bool** LlblockS)
 	{
 		mDevice = device;
 
@@ -49,7 +112,7 @@ namespace GAME {
 			for (size_t y = 0; y < numberY; y++)
 			{
 				NX = (x / 4) * 2;
-				if ((x%4) != 0) {
+				if ((x % 4) != 0) {
 					NX++;
 				}
 				NY = (y / 4) * 2;
@@ -67,15 +130,20 @@ namespace GAME {
 				BlockTypeS[x][y] = P->noise(x * 0.01f, y * 0.01f, 0.5f) * TextureNumber;
 			}
 		}
+
+		delete P;
 		
 
 		for (size_t i = 0; i < X; i++)
 		{
-			delete lblockS[i];
+			delete[] lblockS[i];
 		}
-		delete lblockS;
-		
+		delete[] lblockS;
 
+		LabyrinthBuffer();
+	}
+
+	void Labyrinth::LabyrinthBuffer() {
 		mFixedSizeTerrain = new SquarePhysics::FixedSizeTerrain(numberX * 16, numberY * 16, 1);
 		mFixedSizeTerrain->SetCollisionCallback(Labyrinth_SetPixel, this);
 
@@ -109,11 +177,11 @@ namespace GAME {
 			2,3,0,
 		};
 
-		mPositionBuffer = VulKan::Buffer::createVertexBuffer(device, 12 * sizeof(float), mPositions);
+		mPositionBuffer = VulKan::Buffer::createVertexBuffer(mDevice, 12 * sizeof(float), mPositions);
 
-		mUVBuffer = VulKan::Buffer::createVertexBuffer(device, 8 * sizeof(float), mUVs);
+		mUVBuffer = VulKan::Buffer::createVertexBuffer(mDevice, 8 * sizeof(float), mUVs);
 
-		mIndexBuffer = VulKan::Buffer::createIndexBuffer(device, 6 * sizeof(float), mIndexDatas);
+		mIndexBuffer = VulKan::Buffer::createIndexBuffer(mDevice, 6 * sizeof(float), mIndexDatas);
 
 		mIndexDatasSize = 6;
 
@@ -132,23 +200,15 @@ namespace GAME {
 
 	Labyrinth::~Labyrinth()
 	{
-		//销毁指令缓存 指令池
-		for (int i = 0; i < (mFrameCount); i++) {
-			delete mThreadCommandBufferS[i];
-			delete mThreadCommandPoolS[i];
-		}
-		delete mThreadCommandBufferS;
-		delete mThreadCommandPoolS;
-
 		//销毁是否是墙壁
 		for (size_t i = 0; i < numberX; i++)
 		{
-			delete BlockS[i];
-			delete BlockTypeS[i];
+			delete[] BlockS[i];
+			delete[] BlockTypeS[i];
 		}	
-		delete BlockS;
-		delete BlockPixelS;
-		delete BlockTypeS;
+		delete[] BlockS;
+		delete[] BlockPixelS;
+		delete[] BlockTypeS;
 
 		//销毁地面碰撞系统
 		delete mFixedSizeTerrain;
@@ -167,46 +227,58 @@ namespace GAME {
 		delete mMistDescriptorSet;
 		delete mDescriptorPool;
 
-		for (size_t i = 0; i < mUniformParams.size(); i++)
+		for (size_t i = 0; i < mUniformParams->size(); i++)
 		{
 			if (i == 1) {
-				for (size_t ib = 0; ib < mUniformParams[i]->mBuffers.size(); ib++)
+				for (size_t ib = 0; ib < (*mUniformParams)[i]->mBuffers.size(); ib++)
 				{
-					delete mUniformParams[i]->mBuffers[ib];
+					delete (*mUniformParams)[i]->mBuffers[ib];
 				}
 			}
-			delete mUniformParams[i];
+			delete (*mUniformParams)[i];
 		}
+		mUniformParams->clear();
+		delete mUniformParams;
 
 		//销毁迷雾
 		DeleteMist();
+
+		//销毁指令缓存 指令池
+		for (int i = 0; i < mFrameCount; i++) {
+			delete mThreadCommandBufferS[i];
+			delete mMistCommandBufferS[i];
+			delete mThreadCommandPoolS[i];
+		}
+		delete[] mThreadCommandBufferS;
+		delete[] mMistCommandBufferS;
+		delete[] mThreadCommandPoolS;
 	}
 
 
 	void Labyrinth::initUniformManager(
 		VulKan::Device* device,
-		const VulKan::CommandPool* commandPool,
 		int frameCount,
-		const VkDescriptorSetLayout mDescriptorSetLayout,
-		std::vector<VulKan::Buffer*> VPMstdBuffer,
+		const VkDescriptorSetLayout DescriptorSetLayout,
+		std::vector<VulKan::Buffer*>* VPMstdBuffer,
 		VulKan::Sampler* sampler
 	)
 	{
-
+		mSampler = sampler;
 		mFrameCount = frameCount;
+		mVPMstdBuffer = VPMstdBuffer;
+		mDescriptorSetLayout = DescriptorSetLayout;
+
 		mThreadCommandPoolS = new VulKan::CommandPool * [mFrameCount];
 		mThreadCommandBufferS = new VulKan::CommandBuffer * [mFrameCount];
-		mMistCommandPoolS = new VulKan::CommandPool * [mFrameCount];
 		mMistCommandBufferS = new VulKan::CommandBuffer * [mFrameCount];
 		for (int i = 0; i < (mFrameCount); i++) {
 			mThreadCommandPoolS[i] = new VulKan::CommandPool(device);
 			mThreadCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
-			mMistCommandPoolS[i] = new VulKan::CommandPool(device);
-			mMistCommandBufferS[i] = new VulKan::CommandBuffer(device, mMistCommandPoolS[i], true);
+			mMistCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
 		}
 
-		mPixelS = new unsigned char[numberX * 16 * numberY * 16 * 4];
-		mMistS = new unsigned char[numberX * 16 * numberY * 16 * 4];
+		unsigned char* mPixelS = new unsigned char[numberX * 16 * numberY * 16 * 4];
+		unsigned char* mMistS = new unsigned char[numberX * 16 * numberY * 16 * 4];
 
 		unsigned char Mist[4] = { 0,0,0,230 };
 		//std::cout << *((int*)Mist) << std::endl;
@@ -221,21 +293,20 @@ namespace GAME {
 		{
 			for (size_t y = 0; y < numberY; y++)
 			{
-				if (BlockS[x][y]) {
-					for (size_t i = 0; i < 16; i++)
+				for (size_t pX = 0; pX < 16; pX++)
+				{
+					for (size_t pY = 0; pY < 16; pY++)
 					{
-						memcpy(&mPixelS[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4)], &pixelS[2][(16 * 4 * i)], 16 * 4);
-						for (size_t idd = 0; idd < 16; idd++)
-						{
-							LPixelAttribute[x * 16 + idd][y * 16 + i].Collision = true;
-							mMistS[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4) + (idd * 4) + 3] = 231;
+						if (BlockPixelS[(((x * 16) + pX) * (numberY * 16)) + ((y * 16) + pY)] == 1) {
+							memcpy(&mPixelS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))], 4);
+							LPixelAttribute[x * 16 + pX][y * 16 + pY].Collision = true;
+						}else{
+							/*if (BlockTypeS[x][y] >= TextureNumber) {
+								std::cout << "Error: BlockTypeS > " << TextureNumber << "。  BlockTypeS = " << BlockTypeS[x][y] << std::endl;
+							}*/
+							memcpy(&mPixelS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))], 4);
+							LPixelAttribute[x * 16 + pX][y * 16 + pY].Collision = false;
 						}
-					}
-				}
-				else {
-					for (size_t i = 0; i < 16; i++)
-					{
-						memcpy(&mPixelS[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * i)], 16 * 4);
 					}
 				}
 			}
@@ -245,10 +316,11 @@ namespace GAME {
 		
 		WarfareMist = new PixelTexture(device, mThreadCommandPoolS[0], mMistS, numberX * 16, numberY * 16, 4, sampler);
 
-		delete mPixelS;
-		delete mMistS;
+		delete[] mPixelS;
+		delete[] mMistS;
 
 		ObjectUniform mUniform;
+		mUniformParams = new std::vector<VulKan::UniformParameter*>;
 		
 		VulKan::UniformParameter* vpParam = new VulKan::UniformParameter();
 		vpParam->mBinding = 0;
@@ -256,9 +328,9 @@ namespace GAME {
 		vpParam->mDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		vpParam->mSize = sizeof(VPMatrices);
 		vpParam->mStage = VK_SHADER_STAGE_VERTEX_BIT;
-		vpParam->mBuffers = VPMstdBuffer;
+		vpParam->mBuffers = *mVPMstdBuffer;
 
-		mUniformParams.push_back(vpParam);
+		mUniformParams->push_back(vpParam);
 
 		VulKan::UniformParameter* objectParam = new VulKan::UniformParameter();
 		objectParam->mBinding = 1;
@@ -275,7 +347,7 @@ namespace GAME {
 			buffer->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));
 		}
 
-		mUniformParams.push_back(objectParam);
+		mUniformParams->push_back(objectParam);
 
 		VulKan::UniformParameter* textureParam = new VulKan::UniformParameter();
 		textureParam->mBinding = 2;
@@ -284,19 +356,15 @@ namespace GAME {
 		textureParam->mStage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		textureParam->mPixelTexture = PixelTextureS;
 
-		mUniformParams.push_back(textureParam);
+		mUniformParams->push_back(textureParam);
 
 		//各种类型申请多少个
 		mDescriptorPool = new VulKan::DescriptorPool(device);
-		mDescriptorPool->build(mUniformParams, frameCount,2);
+		mDescriptorPool->build(*mUniformParams, frameCount, 2);
 		//将申请的各种类型按照Layout绑定起来
-		mDescriptorSet = new VulKan::DescriptorSet(device, mUniformParams, mDescriptorSetLayout, mDescriptorPool, frameCount);
-		mUniformParams.clear();
-		mUniformParams.push_back(vpParam);
-		mUniformParams.push_back(objectParam);
-		textureParam->mPixelTexture = WarfareMist;
-		mUniformParams.push_back(textureParam);
-		mMistDescriptorSet = new VulKan::DescriptorSet(device, mUniformParams, mDescriptorSetLayout, mDescriptorPool, frameCount);
+		mDescriptorSet = new VulKan::DescriptorSet(device, *mUniformParams, mDescriptorSetLayout, mDescriptorPool, frameCount);
+		(*mUniformParams)[2]->mPixelTexture = WarfareMist;
+		mMistDescriptorSet = new VulKan::DescriptorSet(device, *mUniformParams, mDescriptorSetLayout, mDescriptorPool, frameCount);
 	}
 
 	void Labyrinth::ThreadUpdateCommandBuffer() {
@@ -379,16 +447,35 @@ namespace GAME {
 	}
 
 	void Labyrinth::SetPixel(unsigned int x, unsigned int y) {
+		BlockPixelS[(x * numberY * 16) + y] = 0;
 		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
-		unsigned char* Mistwall = (unsigned char*)WallBool->getupdateBufferByMap();
+		int* Mistwall = (int*)WallBool->getupdateBufferByMap();
 		memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[BlockTypeS[x / 16][y / 16]][(((x % 16) * 16) + (y % 16)) * 4], 4);
 		TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
-		memset(&Mistwall[(x * numberY * 16 * 4) + (y * 4)], 0, 4);
+		Mistwall[(x * numberY * 16) + y] = 0;
 		WallBool->endupdateBufferByMap();
 		PixelTextureS->endHOSTImagePointer();
 		WarfareMist->endHOSTImagePointer();
 		UpDateMapsSwitch = true;
+	}
+
+	void Labyrinth::AddPixel(unsigned int x, unsigned int y) {
+		BlockPixelS[(x * numberY * 16) + y] = 1;
+		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
+		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
+		int* Mistwall = (int*)WallBool->getupdateBufferByMap();
+		memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[2][(((x % 16) * 16) + (y % 16)) * 4], 4);
+		TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
+		Mistwall[(x * numberY * 16) + y] = 1;
+		WallBool->endupdateBufferByMap();
+		PixelTextureS->endHOSTImagePointer();
+		WarfareMist->endHOSTImagePointer();
+		UpDateMapsSwitch = true;
+	}
+
+	bool Labyrinth::GetPixel(unsigned int x, unsigned int y) {
+		return BlockPixelS[(x * numberY * 16) + y] == 0 ? 0 : 1;
 	}
 
 	void Labyrinth::UpDateMaps() {
@@ -500,6 +587,7 @@ namespace GAME {
 
 		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
 		descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; //这个标志的作用就是指示VkDescriptorPool可以释放包含VkDescriptorSet的内存。
 		descriptorPoolCreateInfo.maxSets = 1; // we only need to allocate one descriptor set from the pool.
 		descriptorPoolCreateInfo.poolSizeCount = 3;                                                             //*******************************************
 		descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSize;
@@ -597,12 +685,13 @@ namespace GAME {
 		vkDestroyPipelineLayout(mDevice->getDevice(), pipelineLayout, nullptr);
 		vkDestroyPipeline(mDevice->getDevice(), pipeline, nullptr);
 		vkDestroyShaderModule(mDevice->getDevice(), computeShaderModule, nullptr);
-		//vkFreeDescriptorSets(mDevice, descriptorPool, 1, &descriptorSet);
+		vkFreeDescriptorSets(mDevice->getDevice(), descriptorPool, 1, &descriptorSet);
 		vkDestroyDescriptorSetLayout(mDevice->getDevice(), descriptorSetLayout, nullptr);
 		vkDestroyDescriptorPool(mDevice->getDevice(), descriptorPool, nullptr);
 		delete jihsuanTP;
 		delete information;
+		delete WallBool;
 		delete mMistCalculate;
-		delete mMistCommandPoolS;
+		delete mMistCalculateCommandPoolS;
 	}
 }

@@ -204,17 +204,12 @@ namespace GAME::VulKan {
 	}
 
 	void Buffer::copyImage(const VkBuffer& srcBuffer, const VkImage& dstImage, VkImageLayout dstImageLayout, uint32_t width, uint32_t height) {
-		if (BuffercommandBuffer != VK_NULL_HANDLE) {
-			delete BuffercommandBuffer;
-			BuffercommandBuffer = VK_NULL_HANDLE;
+		if (BuffercommandPool == VK_NULL_HANDLE) {
+			BuffercommandPool = new CommandPool(mDevice);
 		}
-		if (BuffercommandPool != VK_NULL_HANDLE) {
-			delete BuffercommandPool;
-			BuffercommandPool = VK_NULL_HANDLE;
+		if (BuffercommandBuffer == VK_NULL_HANDLE) {
+			BuffercommandBuffer = new CommandBuffer(mDevice, BuffercommandPool);
 		}
-
-		BuffercommandPool = new CommandPool(mDevice);
-		BuffercommandBuffer = new CommandBuffer(mDevice, BuffercommandPool);
 
 		BuffercommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);//这个命令只提交一次
 
@@ -223,15 +218,6 @@ namespace GAME::VulKan {
 		BuffercommandBuffer->end();
 
 		BuffercommandBuffer->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
-
-		if (BuffercommandBuffer != VK_NULL_HANDLE) {
-			delete BuffercommandBuffer;
-			BuffercommandBuffer = VK_NULL_HANDLE;
-		}
-		if (BuffercommandPool != VK_NULL_HANDLE) {
-			delete BuffercommandPool;
-			BuffercommandPool = VK_NULL_HANDLE;
-		}
 	}
 
 	void Buffer::updateBufferByStage(void* data, size_t size) {
@@ -253,17 +239,12 @@ namespace GAME::VulKan {
 	}
 
 	void Buffer::copyBuffer(const VkBuffer& srcBuffer, const VkBuffer& dstBuffer, VkDeviceSize size) {
-		if (BuffercommandBuffer != VK_NULL_HANDLE) {
-			delete BuffercommandBuffer;
-			BuffercommandBuffer = VK_NULL_HANDLE;
+		if (BuffercommandPool == VK_NULL_HANDLE) {
+			BuffercommandPool = new CommandPool(mDevice);
 		}
-		if (BuffercommandPool != VK_NULL_HANDLE) {
-			delete BuffercommandPool;
-			BuffercommandPool = VK_NULL_HANDLE;
+		if (BuffercommandBuffer == VK_NULL_HANDLE) {
+			BuffercommandBuffer = new CommandBuffer(mDevice, BuffercommandPool);
 		}
-
-		BuffercommandPool = new CommandPool(mDevice);
-		BuffercommandBuffer = new CommandBuffer(mDevice, BuffercommandPool);
 
 		BuffercommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);//这个命令只提交一次
 
@@ -275,15 +256,6 @@ namespace GAME::VulKan {
 		BuffercommandBuffer->end();
 
 		BuffercommandBuffer->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
-
-		if (BuffercommandBuffer != VK_NULL_HANDLE) {
-			delete BuffercommandBuffer;
-			BuffercommandBuffer = VK_NULL_HANDLE;
-		}
-		if (BuffercommandPool != VK_NULL_HANDLE) {
-			delete BuffercommandPool;
-			BuffercommandPool = VK_NULL_HANDLE;
-		}
 	}
 
 

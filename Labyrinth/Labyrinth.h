@@ -18,6 +18,8 @@
 #include "../Tool/PerlinNoise.h"
 
 
+#include "../GlobalVariable.h"
+
 struct miwustruct {
 	unsigned int size;
 	int x;
@@ -32,15 +34,22 @@ namespace GAME {
 	class Labyrinth
 	{
 	public:
-		Labyrinth(VulKan::Device* device, int X, int Y, bool** LlblockS = nullptr);
+		Labyrinth();
+
+		void AgainGenerateLabyrinth(int X, int Y);
+
+		void LoadLabyrinth(int X, int Y, int* PixelData, unsigned int* BlockTypeData);
+
+		void InitLabyrinth(VulKan::Device* device, int X, int Y, bool** LlblockS = nullptr);
+
+		void LabyrinthBuffer();
 
 		//初始化描述符
 		void initUniformManager(
 			VulKan::Device* device, //设备
-			const VulKan::CommandPool* commandPool, //指令池
 			int frameCount, //GPU画布的数量
-			const VkDescriptorSetLayout mDescriptorSetLayout,//渲染管线要的提交内容
-			std::vector<VulKan::Buffer*> VPMstdBuffer,//玩家相机的变化矩阵 
+			const VkDescriptorSetLayout DescriptorSetLayout,//渲染管线要的提交内容
+			std::vector<VulKan::Buffer*>* VPMstdBuffer,//玩家相机的变化矩阵 
 			VulKan::Sampler* sampler//图片采样器
 		);
 
@@ -76,6 +85,8 @@ namespace GAME {
 		//void penzhang(unsigned int x, unsigned int y);
 		void SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy);
 		void SetPixel(unsigned int x, unsigned int y);
+		void AddPixel(unsigned int x, unsigned int y);
+		bool GetPixel(unsigned int x, unsigned int y);
 		void UpDateMaps();
 
 		//录制缓存指令
@@ -99,14 +110,11 @@ namespace GAME {
 		int* BlockPixelS = nullptr;//像素点是否是墙壁
 		unsigned int** BlockTypeS = nullptr;//地面类型
 	private:
-		VulKan::Device* mDevice = nullptr;
-		
 		bool UpDateMapsSwitch = false;//地图是否修改
 
 		VulKan::DescriptorPool* mDescriptorPool{ nullptr };//描述符池
-		std::vector<VulKan::UniformParameter*> mUniformParams;
+		std::vector<VulKan::UniformParameter*>* mUniformParams;
 		
-		unsigned char* mPixelS;//地图
 		PixelTexture* PixelTextureS{ nullptr };//每块的贴图
 		VulKan::DescriptorSet* mDescriptorSet{ nullptr };//位置 贴图 的数据
 
@@ -122,21 +130,24 @@ namespace GAME {
 		unsigned int mFrameCount;
 		VulKan::CommandPool** mThreadCommandPoolS = nullptr;
 		VulKan::CommandBuffer** mThreadCommandBufferS = nullptr;//地图
+		VulKan::CommandBuffer** mMistCommandBufferS = nullptr;//迷雾
 
-		VulKan::CommandPool** mMistCommandPoolS = nullptr;
-		VulKan::CommandBuffer** mMistCommandBufferS = nullptr;//地图
+
+
 		
-		//储存信息
+	private://储存信息
+		VulKan::Device* mDevice = nullptr;
 		VkRenderPass mRenderPass;
+		VkDescriptorSetLayout mDescriptorSetLayout;
 		VulKan::Pipeline* mPipeline = nullptr;
 		VulKan::SwapChain* mSwapChain = nullptr;
-
+		VulKan::Sampler* mSampler = nullptr;
+		std::vector<VulKan::Buffer*>* mVPMstdBuffer;
 
 
 
 
 	private://战争迷雾
-		unsigned char* mMistS = nullptr;
 		PixelTexture* WarfareMist{ nullptr };//每块的贴图
 		VulKan::DescriptorSet* mMistDescriptorSet{ nullptr };//位置 角度  射线颜色 的数据
 

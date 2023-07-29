@@ -2,6 +2,7 @@
 #include "zlib/zlib.h"
 #include "../Character/Crowd.h"
 #include "../Arms/Arms.h"
+#include "../Labyrinth/Labyrinth.h"
 
 struct Zip {
 	z_stream* y;
@@ -42,18 +43,28 @@ struct _Synchronize
 	_SynchronizeCallback mSynchronizeCallback = nullptr;//函数
 };
 
+//地图点事件数据结构
+struct PixelSynchronize {
+	int X;
+	int Y;
+	bool State;
+};
+
 struct BufferEventSingleData
 {
 	PileUp<SynchronizeBullet>* mSubmitBullet;//子弹一次性数据
+	PileUp<PixelSynchronize>* mLabyrinthPixel;//地图点事件
 
 	bool* mBrokenData;//破碎状态
 
 	BufferEventSingleData(unsigned int size) {
 		mSubmitBullet = new PileUp<SynchronizeBullet>(size);
+		mLabyrinthPixel = new PileUp<PixelSynchronize>(size);
 	}
 
 	~BufferEventSingleData() {
 		delete mSubmitBullet;
+		delete mLabyrinthPixel;
 	}
 };
 
@@ -70,9 +81,10 @@ struct PlayerPos {
 	evutil_socket_t Key;
 };
 
+//玩家破碎状态
 struct PlayerBroken {
-	evutil_socket_t Key;
-	bool Broken[16 * 16];
+	evutil_socket_t Key;	//玩家 Key
+	bool Broken[16 * 16];	//破碎状态
 };
 
 
@@ -91,6 +103,10 @@ public:
 		mGamePlayer = GamePlayer;
 	}
 
+	void SetLabyrinth(GAME::Labyrinth* Labyrinth) {
+		mLabyrinth = Labyrinth;
+	}
+
 	[[nodiscard]] constexpr GAME::Arms* GetArms() const noexcept {
 		return mArms;
 	}
@@ -101,6 +117,10 @@ public:
 
 	[[nodiscard]] constexpr GAME::GamePlayer* GetGamePlayer() const noexcept {
 		return mGamePlayer;
+	}
+
+	[[nodiscard]] constexpr GAME::Labyrinth* GetLabyrinth() const noexcept {
+		return mLabyrinth;
 	}
 
 	void AddSynchronizeMap(unsigned int I, _Synchronize synchronize) {
@@ -118,6 +138,7 @@ private:
 	GAME::Arms* mArms = nullptr;//武器
 	GAME::Crowd* mCrowd = nullptr;//玩家群
 	GAME::GamePlayer* mGamePlayer = nullptr;//玩家
+	GAME::Labyrinth* mLabyrinth = nullptr;//迷宫
 
 	//标签事件储存入口数据
 	std::map<unsigned int, _Synchronize> mSynchronizeMap = {};

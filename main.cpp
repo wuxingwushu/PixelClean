@@ -4,6 +4,7 @@
 
 
 int main(int argc, char** argv) {
+	Global::Read();
 	TOOL::InitThreadPool();
 	TOOL::InitPerlinNoise();
 	TOOL::InitSpdLog();
@@ -13,7 +14,7 @@ int main(int argc, char** argv) {
 
 	GAME::Application* app = new GAME::Application();
 
-	GAME::VulKan::Window* mWin = new GAME::VulKan::Window(app->mWidth, app->mHeight, 0, 0);
+	GAME::VulKan::Window* mWin = new GAME::VulKan::Window(Global::mWidth, Global::mHeight, 0, 0);
 
 	mWin->setApp(app);
 

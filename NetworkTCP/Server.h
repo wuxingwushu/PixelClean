@@ -23,7 +23,7 @@
 
 #include "StructTCP.h"
 
-#include "../ini.h"
+#include "../GlobalVariable.h"
 
 //错误，超时 （连接断开会进入）
 void server_event_cb(bufferevent* be, short events, void* arg);
@@ -61,10 +61,8 @@ public:
 	//单列模式
 	static server* GetServer() {
 		if (mServer == nullptr) {
-			inih::INIReader Ini{ IniPath };
-			int Port = Ini.Get<int>("ServerTCP", "Port");
-			std::cout << "创建server  Port: " << Port << std::endl;
-			mServer = new server(Port);//端口号
+			std::cout << "创建server  Port: " << Global::ServerPort << std::endl;
+			mServer = new server(Global::ServerPort);//端口号
 		}
 		return mServer;
 	}

@@ -67,6 +67,10 @@ void client_write_cb(bufferevent* be, void* arg)
 		DHArms.Size = sizeof(int);
 		bufferevent_write(be, &DHArms, sizeof(DataHeader));
 		bufferevent_write(be, &DHArms.Key, DHArms.Size);
+		DHArms.Key = 5;
+		DHArms.Size = sizeof(int);
+		bufferevent_write(be, &DHArms, sizeof(DataHeader));
+		bufferevent_write(be, &DHArms.Key, DHArms.Size);
 		InitbuffereventFD = false;
 		return;
 	}
@@ -99,6 +103,15 @@ void client_write_cb(bufferevent* be, void* arg)
 		DHArms.Size = sizeof(unsigned int);
 		bufferevent_write(be, &DHArms, sizeof(DataHeader));
 		bufferevent_write(be, &DHArms.Key, DHArms.Size);
+	}
+
+	if (client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetNumber() != 0) {
+		DataHeader DHArms;
+		DHArms.Key = 6;
+		DHArms.Size = sizeof(PixelSynchronize) * client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetNumber();
+		bufferevent_write(be, &DHArms, sizeof(DataHeader));
+		bufferevent_write(be, client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetData(), DHArms.Size);//发送客户端发射的子弹
+		client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->ClearAll();//客户端清空发射
 	}
 
 	//Sleep(10);
@@ -182,10 +195,12 @@ client::client(std::string IPV, unsigned int Duan) {
 
 void client::InitSynchronizeMap() {
 	char* DataBuffer = new char[100000000];
-	AddSynchronizeMap(1, { DataBuffer, sizeof(PlayerPos), CGamePlayerSynchronize});
-	AddSynchronizeMap(2, { DataBuffer, sizeof(SynchronizeBullet), CArmsSynchronize });
-	AddSynchronizeMap(3, { DataBuffer, sizeof(PlayerBroken), CGamePlayerBroken });
-	AddSynchronizeMap(4, { DataBuffer, sizeof(evutil_socket_t), CPlayerInformation });
+	AddSynchronizeMap(1, { DataBuffer, sizeof(PlayerPos), CGamePlayerSynchronize});		//位置同步
+	AddSynchronizeMap(2, { DataBuffer, sizeof(SynchronizeBullet), CArmsSynchronize });	//子弹同步
+	AddSynchronizeMap(3, { DataBuffer, sizeof(PlayerBroken), CGamePlayerBroken });		//玩家损伤成度同步
+	AddSynchronizeMap(4, { DataBuffer, sizeof(evutil_socket_t), CPlayerInformation });	//返回玩家的初始信息
+	AddSynchronizeMap(5, { DataBuffer, sizeof(char), CInitLabyrinth });					//地图初始化同步
+	AddSynchronizeMap(6, { DataBuffer, sizeof(PixelSynchronize), CLabyrinthPixel });	//地图破坏同步
 }
 
 client::~client() {

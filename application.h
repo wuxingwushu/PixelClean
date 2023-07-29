@@ -15,18 +15,6 @@
 #include "VulKan/fence.h"
 #include "Vulkan/buffer.h"
 
-/*这些转到 uniformManager.h 当中去管理了
-#include "Vulkan/descriptorSetLayout.h"
-#include "Vulkan/descriptorPool.h"
-#include "Vulkan/descriptorSet.h"
-#include "Vulkan/description.h"*/
-
-/*这些转到 texture/texture.h 当中去管理了
-#include "Vulkan/image.h"//加载图片
-#include "Vulkan/sampler.h"//设置图片采样器*/
-
-//#include "uniformManager.h"
-
 #include "Camera.h"
 
 #include "SoundEffect/SoundEffect.h"
@@ -64,9 +52,6 @@ namespace GAME {
 
 		~Application() = default;
 
-		unsigned int mWidth;
-		unsigned int mHeight;
-
 		//总初始化
 		void run(VulKan::Window* w);
 		//鼠标事件
@@ -79,11 +64,6 @@ namespace GAME {
 			m_position.z += z * 10;
 			mCamera.update();
 		}
-
-		//读取配置信息
-		void ReadConfigure();
-		//储存配置信息
-		void StorageConfigure();
 
 	private:
 		//窗口的初始化
@@ -186,9 +166,6 @@ namespace GAME {
 		VPMatrices	mVPMatrices;//玩家变换矩阵（位置 角度）
 		Camera      mCamera;//定义的相机
 		std::vector<VulKan::Buffer*> mCameraVPMatricesBuffer;//GPU用的玩家变换矩阵（位置 角度）
-
-
-		inih::INIReader iniData{ IniPath };// ini 配置信息处理
 
 	public:
 		ImGuiInterFace* InterFace = nullptr; // ImGui 游戏界面都写这里面

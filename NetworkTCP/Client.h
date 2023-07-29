@@ -24,7 +24,7 @@
 
 #include "StructTCP.h"
 
-#include "../ini.h"
+#include "../GlobalVariable.h"
 
 
 //错误，超时 （连接断开会进入）
@@ -59,11 +59,8 @@ class client :public SynchronizeClass
 public:
 	static client* GetClient() {
 		if (mClient == nullptr) {
-			inih::INIReader Ini{ IniPath };
-			int Port = Ini.Get<int>("ClientTCP", "Port");
-			std::string IP = Ini.Get<std::string>("ClientTCP", "IP");
-			std::cout << "创建Client  IP: " << IP << "   Port: " << Port << std::endl;
-			mClient = new client(IP, Port);
+			std::cout << "创建Client  IP: " << Global::ClientIP << "   Port: " << Global::ClientPort << std::endl;
+			mClient = new client(Global::ClientIP, Global::ClientPort);
 		}
 		return mClient;
 	}

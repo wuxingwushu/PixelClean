@@ -61,3 +61,30 @@ void CPlayerInformation(bufferevent* be, void* Data) {
 	LData->mBufferEventSingleData = new BufferEventSingleData(100);
 	LData->mBufferEventSingleData->mBrokenData = client::GetClient()->GetGamePlayer()->GetBrokenData();*/
 }
+
+void CInitLabyrinth(bufferevent* be, void* Data) {
+	SynchronizeData* AData = (SynchronizeData*)Data;
+	int X = ((int*)AData->Pointer)[0];
+	int Y = ((int*)AData->Pointer)[1];
+	client::GetClient()->GetLabyrinth()->LoadLabyrinth(
+		X, Y, 
+		&(((int*)AData->Pointer)[2 + (X * Y)]),
+		&(((unsigned int*)AData->Pointer)[2])
+	);
+	client::GetClient()->GetArms()->GetSquarePhysics()->SetFixedSizeTerrain(client::GetClient()->GetLabyrinth()->mFixedSizeTerrain);
+}
+
+void CLabyrinthPixel(bufferevent* be, void* Data) {
+	SynchronizeData* AData = (SynchronizeData*)Data;
+	PixelSynchronize* BData = (PixelSynchronize*)AData->Pointer;
+	for (size_t i = 0; i < AData->Size; i++)
+	{
+		if (BData[i].State) {
+			client::GetClient()->GetLabyrinth()->AddPixel(BData[i].X, BData[i].Y);
+		}
+		else {
+			client::GetClient()->GetLabyrinth()->SetPixel(BData[i].X, BData[i].Y);
+		}
+		
+	}
+}

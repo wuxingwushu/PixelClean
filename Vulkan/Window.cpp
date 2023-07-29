@@ -64,7 +64,7 @@ namespace GAME::VulKan {
 	}
 
 	void Window::WindowClose() {
-		mApp->StorageConfigure();
+		Global::Storage();
 		exit(0);//用这个退出是直接关闭整个程序，所以要提前储存配置信息
 	}
 

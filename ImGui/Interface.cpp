@@ -226,14 +226,18 @@ namespace GAME {
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 			StartMultiPlayerGames = true;
-			ServerToClient = true;
+			Global::MultiplePeopleMode = true;
+			ServerOrClient = true;
+			Global::ServerOrClient = true;
 			server::GetServer();
 		}
 		if (ImGui::Button(u8"客户端")) {
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 			StartMultiPlayerGames = true;
-			ServerToClient = false;
+			Global::MultiplePeopleMode = true;
+			ServerOrClient = false;
+			Global::ServerOrClient = false;
 			client::GetClient();
 		}
 		ImGui::End();

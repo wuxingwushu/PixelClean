@@ -173,6 +173,8 @@ void server::InitSynchronizeMap() {
 	AddSynchronizeMap(2, { DataBuffer, sizeof(SynchronizeBullet), SArmsSynchronize });
 	AddSynchronizeMap(3, { DataBuffer, sizeof(int), SGamePlayerBroken });
 	AddSynchronizeMap(4, { DataBuffer, sizeof(int), SPlayerInformation });
+	AddSynchronizeMap(5, { DataBuffer, sizeof(int), SInitLabyrinth });
+	AddSynchronizeMap(6, { DataBuffer, sizeof(PixelSynchronize), SLabyrinthPixel });
 }
 
 server::~server() {

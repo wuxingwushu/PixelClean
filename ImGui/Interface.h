@@ -9,6 +9,8 @@
 #include "../NetworkTCP/Server.h"
 #include "../NetworkTCP/Client.h"
 
+#include "../GlobalVariable.h"
+
 namespace GAME {
 	class ImGuiInterFace
 	{	
@@ -40,7 +42,7 @@ namespace GAME {
 		VkCommandBuffer GetCommandBuffer(int i, VkCommandBufferInheritanceInfo info);
 
 		bool GetMultiplePeople() { return StartMultiPlayerGames; }
-		bool GetServerToClient() { return ServerToClient; }
+		bool GetServerOrClient() { return ServerOrClient; }
 
 	private:
 		VkDescriptorPool			g_DescriptorPool = VK_NULL_HANDLE;//给 ImGui 创建的 DescriptorPool 记得销毁
@@ -64,7 +66,7 @@ namespace GAME {
 		void ViceInterface();//游戏时的界面
 
 		bool StartMultiPlayerGames = false;//是否为多人模式
-		bool ServerToClient;//是服务器还是客户端
+		bool ServerOrClient;//是服务器还是客户端
 		void MultiplePeopleInterface();//多人界面
 	};
 }

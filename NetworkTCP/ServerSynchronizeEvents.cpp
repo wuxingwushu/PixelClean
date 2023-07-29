@@ -39,6 +39,15 @@ void SGamePlayerSynchronize(bufferevent* be, void* Data) {
 		bufferevent_write(be, server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mSubmitBullet->GetData(), DH.Size);//发送数据
 		server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mSubmitBullet->ClearAll();
 	}
+
+	if (server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->GetNumber() != 0) {
+		DataHeader DH;
+		DH.Key = 6;
+		DH.Size = sizeof(PixelSynchronize) * server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->GetNumber();
+		bufferevent_write(be, &DH, sizeof(DataHeader));//发送数据头
+		bufferevent_write(be, server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->GetData(), DH.Size);//发送数据
+		server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->ClearAll();
+	}
 }
 
 void SArmsSynchronize(bufferevent* be, void* Data) {
@@ -85,4 +94,32 @@ void SPlayerInformation(bufferevent* be, void* Data) {
 	bufferevent_write(be, &DH, sizeof(DataHeader));
 	evutil_socket_t fd = bufferevent_getfd(be);
 	bufferevent_write(be, &fd, DH.Size);//告诉客户端他自己的 evutil_socket_t
+}
+
+void SInitLabyrinth(bufferevent* be, void* Data) {
+	GAME::Labyrinth* LLabyrinth = server::GetServer()->GetLabyrinth();
+	DataHeader DH;
+	DH.Key = 5;
+	DH.Size = (LLabyrinth->numberX * LLabyrinth->numberY * sizeof(unsigned int)) + (LLabyrinth->numberX * LLabyrinth->numberY * 16 * 16 * sizeof(int)) + (2 * sizeof(int));
+	bufferevent_write(be, &DH, sizeof(DataHeader));
+	bufferevent_write(be, &LLabyrinth->numberX, sizeof(int));
+	bufferevent_write(be, &LLabyrinth->numberY, sizeof(int));
+	for (size_t i = 0; i < LLabyrinth->numberX; i++)
+	{
+		bufferevent_write(be, LLabyrinth->BlockTypeS[i], (LLabyrinth->numberY * sizeof(unsigned int)));
+	}
+	bufferevent_write(be, LLabyrinth->BlockPixelS, (LLabyrinth->numberX * LLabyrinth->numberY * 16 * 16 * sizeof(int)));
+}
+
+void SLabyrinthPixel(bufferevent* be, void* Data) {
+	SynchronizeData* AData = (SynchronizeData*)Data;
+	PixelSynchronize* BData = (PixelSynchronize*)AData->Pointer;
+	evutil_socket_t fd = bufferevent_getfd(be);
+	for (size_t i = 0; i < AData->Size; i++)
+	{
+		if (server::GetServer()->GetLabyrinth()->GetPixel(BData[i].X, BData[i].Y) != BData[i].State) {
+			BData[i].State = !BData[i].State;
+			server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->add(BData[i]);
+		}
+	}
 }

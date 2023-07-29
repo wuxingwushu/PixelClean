@@ -15,7 +15,6 @@ namespace GAME {
 	}
 
 	Application::Application() {
-		ReadConfigure();
 	}
 
 	//总初始化
@@ -36,7 +35,7 @@ namespace GAME {
 		TOOL::mTimer->MomentEnd();
 		TOOL::mTimer->MomentEnd();
 		mainLoop();//开启主循环main
-		StorageConfigure();//储存配置
+		Global::Storage();
 		cleanUp();//回收资源
 	}
 
@@ -68,20 +67,6 @@ namespace GAME {
 		mGamePlayer->mObjectCollision->SetForce(PlayerSpeed);//设置玩家受力
 	}
 
-	//读取配置信息
-	void Application::ReadConfigure() {
-		mWidth = iniData.Get<int>("Window", "Width");
-		mHeight = iniData.Get<int>("Window", "Height");
-	}
-
-	//储存配置信息
-	void Application::StorageConfigure() {
-		iniData.UpdateEntry("Window", "Width", mWidth);//修改
-		iniData.UpdateEntry("Window", "Height", mHeight);//修改
-		inih::INIWriter::write_Gai(IniPath, iniData);//保存
-
-		//cleanUp();//回收资源
-	}
 
 	//窗口的初始化
 	void Application::initWindow() {
@@ -90,7 +75,7 @@ namespace GAME {
 		//设置摄像机   位置，朝向（后面两个 vec3 来决定）
 		mCamera.lookAt(glm::vec3(20.0f, 20.0f, 400.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		//设置Perpective
-		mCamera.setPerpective(45.0f, (float)mWidth / (float)mHeight, 0.1f, 1000.0f);
+		mCamera.setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
 		//设置摄像机移动速度
 		mCamera.setSpeed(0.5f);
 		mCamera.setSpeedX(0.5f);
@@ -100,13 +85,13 @@ namespace GAME {
 	//初始化Vulkan
 	//1 rendePass 加入pipeline 2 生成FrameBuffer
 	void Application::initVulkan() {
-		mInstance = new VulKan::Instance(false);//实列化需要的VulKan功能APi
+		mInstance = new VulKan::Instance(true);//实列化需要的VulKan功能APi
 		mWindowSurface = new VulKan::WindowSurface(mInstance, mWindow);//获取你在什么平台运行调用不同的API（比如：Window，Android）
 		mDevice = new VulKan::Device(mInstance, mWindowSurface);//获取电脑的硬件设备，vma内存分配器 也在这里被创建了
 		mCommandPool = new VulKan::CommandPool(mDevice);//创建指令池，给CommandBuffer用的
 		mSwapChain = new VulKan::SwapChain(mDevice, mWindow, mWindowSurface, mCommandPool);//设置VulKan的工作细节
-		mWidth = mSwapChain->getExtent().width;
-		mHeight = mSwapChain->getExtent().height;
+		Global::mWidth = mSwapChain->getExtent().width;
+		Global::mHeight = mSwapChain->getExtent().height;
 		mRenderPass = new VulKan::RenderPass(mDevice);//创建GPU画布描述
 		mImGuuiRenderPass = new VulKan::RenderPass(mDevice);
 		mSampler = new VulKan::Sampler(mDevice);//采样器
@@ -163,13 +148,13 @@ namespace GAME {
 		}
 
 		//生成迷宫
-		mLabyrinth = new Labyrinth(mDevice, 21, 21);
+		mLabyrinth = new Labyrinth();
+		mLabyrinth->InitLabyrinth(mDevice, 21, 21);
 		mLabyrinth->initUniformManager(
 			mDevice,
-			mCommandPool,
 			mSwapChain->getImageCount(),
 			mPipeline->DescriptorSetLayout,
-			mCameraVPMatricesBuffer,
+			&mCameraVPMatricesBuffer,
 			mSampler
 		);
 		mLabyrinth->RecordingCommandBuffer(mRenderPass->getRenderPass(), mSwapChain, mPipeline);
@@ -219,7 +204,7 @@ namespace GAME {
 		mSquarePhysics->AddObjectCollision(mGamePlayer->mObjectCollision);//添加玩家碰撞
 
 		//测试
-		mGifPipeline = new GifPipeline(mHeight, mWidth, mDevice, mRenderPass);
+		mGifPipeline = new GifPipeline(Global::mHeight, Global::mWidth, mDevice, mRenderPass);
 		mGIF = new GIF(mDevice, mGifPipeline, mSwapChain, mRenderPass, 44);
 		mGIF->initUniformManager("002.png", mCameraVPMatricesBuffer, mSampler);
 		mGIF->UpDataCommandBuffer();
@@ -230,15 +215,15 @@ namespace GAME {
 		//设置视口
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
-		viewport.y = (float)mHeight;
-		viewport.width = (float)mWidth;
-		viewport.height = -(float)mHeight;
+		viewport.y = (float)Global::mHeight;
+		viewport.width = (float)Global::mWidth;
+		viewport.height = -(float)Global::mHeight;
 		viewport.minDepth = 0.0f;//最近显示为 0 的物体
 		viewport.maxDepth = 1.0f;//最远显示为 1 的物体（最远为 1 ）
 
 		VkRect2D scissor = {};
 		scissor.offset = { 0, 0 };//偏移
-		scissor.extent = { mWidth, mHeight };//剪裁大小
+		scissor.extent = { Global::mWidth, Global::mHeight };//剪裁大小
 
 		mPipeline->setViewports({ viewport });
 		mPipeline->setScissors({ scissor });
@@ -601,8 +586,8 @@ namespace GAME {
 		vkDeviceWaitIdle(mDevice->getDevice());
 		cleanupSwapChain();
 		mSwapChain = new VulKan::SwapChain(mDevice, mWindow, mWindowSurface, mCommandPool);
-		mWidth = mSwapChain->getExtent().width;
-		mHeight = mSwapChain->getExtent().height;
+		Global::mWidth = mSwapChain->getExtent().width;
+		Global::mHeight = mSwapChain->getExtent().height;
 		//mRenderPass = new VulKan::RenderPass(mDevice);
 		//createRenderPass();
 		mSwapChain->createFrameBuffers(mRenderPass);
@@ -641,16 +626,18 @@ namespace GAME {
 				//S->Pause();
 				if (InterFace->GetMultiplePeople())
 				{
-					if (InterFace->GetServerToClient()) {
+					if (InterFace->GetServerOrClient()) {
 						server::GetServer()->SetArms(mArms);
 						server::GetServer()->SetCrowd(mCrowd);
 						server::GetServer()->SetGamePlayer(mGamePlayer);
+						server::GetServer()->SetLabyrinth(mLabyrinth);
 						server::GetServer()->GetServerData()->Get(0)->mBufferEventSingleData->mBrokenData = mGamePlayer->GetBrokenData();//玩家受损状态指针
 					}
 					else {
 						client::GetClient()->SetArms(mArms);
 						client::GetClient()->SetCrowd(mCrowd);
 						client::GetClient()->SetGamePlayer(mGamePlayer);
+						client::GetClient()->SetLabyrinth(mLabyrinth);
 					}
 				}
 			}
@@ -675,7 +662,7 @@ namespace GAME {
 			TOOL::mTimer->StartEnd();
 			if (InterFace->GetMultiplePeople())
 			{
-				if (InterFace->GetServerToClient()) {
+				if (InterFace->GetServerOrClient()) {
 					PlayerPos* pos = server::GetServer()->GetServerData()->Get(0);
 					if (pos != nullptr) {
 						pos->X = m_position.x;
@@ -744,7 +731,7 @@ namespace GAME {
 			glm::dvec2 Armsdain =  SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle + 1.57f);
 			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, color, m_angle + 1.57f, 500);
 			if (InterFace->GetMultiplePeople()) {//是否为多人模式
-				if (InterFace->GetServerToClient()) {//服务器还是客户端
+				if (InterFace->GetServerOrClient()) {//服务器还是客户端
 					PlayerPos* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
 					BufferEventSingleData* LBufferEventSingleData;
 					for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
@@ -783,7 +770,7 @@ namespace GAME {
 		ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->mObjectCollision->GetSpeed().x, mGamePlayer->mObjectCollision->GetSpeed().y);
 		ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
 		if (InterFace->GetMultiplePeople()) {
-			if (InterFace->GetServerToClient()) {
+			if (InterFace->GetServerOrClient()) {
 				ImGui::Text(u8"S M：%d  |  %d", server::GetServer()->GetServerData()->GetNumber(), mCrowd->GetNumber());
 			}
 			else {

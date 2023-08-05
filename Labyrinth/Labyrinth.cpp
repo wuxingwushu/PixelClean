@@ -1,7 +1,7 @@
 #include "Labyrinth.h"
 #include "../NetworkTCP/Server.h"
 #include "../NetworkTCP/Client.h"
-
+#include "../SoundEffect/SoundEffect.h"
 
 
 namespace GAME {
@@ -9,7 +9,11 @@ namespace GAME {
 
 	void Labyrinth_SetPixel(int x, int y, void* mclass) {
 		Labyrinth* mClass = (Labyrinth*)mclass;
+		//音效
+		SoundEffect::SoundEffect::GetSoundEffect()->Play("Impact", MP3, 0, 1.0f, 0.0f);
+		//破坏像素
 		mClass->SetPixel(x, y);
+		//同步
 		if (Global::MultiplePeopleMode) {
 			if (Global::ServerOrClient) {
 				PlayerPos* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
@@ -198,6 +202,13 @@ namespace GAME {
 		//wymiwustruct.Color = -460365120;
 	}
 
+	void MixColors(unsigned char* color, const unsigned char* Hcolor) {
+		color[0] = unsigned char(Hcolor[0] * 0.3f);
+		color[1] = unsigned char(Hcolor[1] * 0.3f);
+		color[2] = unsigned char(Hcolor[2] * 0.3f);
+		color[3] = 255;
+	}
+
 	Labyrinth::~Labyrinth()
 	{
 		//销毁是否是墙壁
@@ -280,13 +291,6 @@ namespace GAME {
 		unsigned char* mPixelS = new unsigned char[numberX * 16 * numberY * 16 * 4];
 		unsigned char* mMistS = new unsigned char[numberX * 16 * numberY * 16 * 4];
 
-		unsigned char Mist[4] = { 0,0,0,230 };
-		//std::cout << *((int*)Mist) << std::endl;
-		for (size_t i = 0; i < (numberX * 16 * numberY * 16); i++)
-		{
-			memcpy(&mMistS[i * 4], Mist, 4);
-		}
-
 		SquarePhysics::PixelAttribute** LPixelAttribute = mFixedSizeTerrain->GetPixelAttributeData();
 
 		for (size_t x = 0; x < numberX; x++)
@@ -299,12 +303,16 @@ namespace GAME {
 					{
 						if (BlockPixelS[(((x * 16) + pX) * (numberY * 16)) + ((y * 16) + pY)] == 1) {
 							memcpy(&mPixelS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))], 4);
+							MixColors(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))]);
+							//memcpy(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))], 4);
 							LPixelAttribute[x * 16 + pX][y * 16 + pY].Collision = true;
 						}else{
 							/*if (BlockTypeS[x][y] >= TextureNumber) {
 								std::cout << "Error: BlockTypeS > " << TextureNumber << "。  BlockTypeS = " << BlockTypeS[x][y] << std::endl;
 							}*/
 							memcpy(&mPixelS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))], 4);
+							MixColors(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))]);
+							//memcpy(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))], 4);
 							LPixelAttribute[x * 16 + pX][y * 16 + pY].Collision = false;
 						}
 					}
@@ -436,10 +444,11 @@ namespace GAME {
 	void Labyrinth::SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy) {
 		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
-		unsigned char* Mistwall = (unsigned char*)WallBool->getupdateBufferByMap();
+		int* Mistwall = (int*)WallBool->getupdateBufferByMap();
 		memcpy(&TexturePointer[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * Dx) + (Dy * 4)], 4);
-		TextureMist[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4) + 3] = 230;
-		memset(&Mistwall[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)], 0, 4);
+		//TextureMist[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4) + 3] = 230;
+		MixColors(&TextureMist[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * Dx) + (Dy * 4)]);
+		Mistwall[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)] = 0;
 		WallBool->endupdateBufferByMap();
 		PixelTextureS->endHOSTImagePointer();
 		WarfareMist->endHOSTImagePointer();
@@ -452,7 +461,8 @@ namespace GAME {
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
 		int* Mistwall = (int*)WallBool->getupdateBufferByMap();
 		memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[BlockTypeS[x / 16][y / 16]][(((x % 16) * 16) + (y % 16)) * 4], 4);
-		TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
+		//TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
+		MixColors(&TextureMist[(x * numberY * 16 * 4) + (y * 4)], &pixelS[BlockTypeS[x / 16][y / 16]][(((x % 16) * 16) + (y % 16)) * 4]);
 		Mistwall[(x * numberY * 16) + y] = 0;
 		WallBool->endupdateBufferByMap();
 		PixelTextureS->endHOSTImagePointer();
@@ -466,7 +476,8 @@ namespace GAME {
 		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
 		int* Mistwall = (int*)WallBool->getupdateBufferByMap();
 		memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[2][(((x % 16) * 16) + (y % 16)) * 4], 4);
-		TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
+		//TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
+		MixColors(&TextureMist[(x * numberY * 16 * 4) + (y * 4)], &pixelS[2][(((x % 16) * 16) + (y % 16)) * 4]);
 		Mistwall[(x * numberY * 16) + y] = 1;
 		WallBool->endupdateBufferByMap();
 		PixelTextureS->endHOSTImagePointer();

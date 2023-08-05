@@ -1,4 +1,6 @@
 #include "Interface.h"
+#include "../SoundEffect/SoundEffect.h"
+
 namespace GAME {
 	ImGuiInterFace::ImGuiInterFace(
 		VulKan::Device* device, 
@@ -37,8 +39,8 @@ namespace GAME {
 		// 设置字体
 		ImFontConfig Font_cfg;
 		Font_cfg.FontDataOwnedByAtlas = false;
-		ImFont* Font = io.Fonts->AddFontFromMemoryTTF((void*)Font_data, Font_size, 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
-
+		//ImFont* Font = io.Fonts->AddFontFromMemoryTTF((void*)Font_data, Font_size, 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+		ImFont* Font = io.Fonts->AddFontFromFileTTF("./FounderPixel12.TTF", 16, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
 
 		
 
@@ -70,7 +72,7 @@ namespace GAME {
 			pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
 			pool_info.pPoolSizes = pool_sizes;
 			if (vkCreateDescriptorPool(mDevice->getDevice(), &pool_info, nullptr, &g_DescriptorPool)) {
-				throw std::runtime_error("Error: initImGui DescriptorPool 生成失败");
+				throw std::runtime_error("Error: initImGui DescriptorPool 生成失败 ");
 			}
 		}
 
@@ -167,24 +169,27 @@ namespace GAME {
 
 	void ImGuiInterFace::MainInterface()
 	{
-		ImGui::Begin(u8"游戏ESC界面", NULL,
+		ImGui::Begin(u8"游戏ESC界面 ", NULL,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(1920, 1080));
-		if (ImGui::Button(u8"开始游戏")) {
+		if (ImGui::Button(u8"开始游戏 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 		}
-		if (ImGui::Button(u8"多人游戏")) {
+		if (ImGui::Button(u8"多人游戏 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			InterfaceIndexes = 2;
 		}
-		if (ImGui::Button(u8"游戏设置")) {
-
+		if (ImGui::Button(u8"游戏设置 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 		}
-		if (ImGui::Button(u8"退出游戏")) {
+		if (ImGui::Button(u8"退出游戏 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			mWindown->WindowClose();
 		}
 		ImGui::End();
@@ -192,37 +197,42 @@ namespace GAME {
 
 	void ImGuiInterFace::ViceInterface()
 	{
-		ImGui::Begin(u8"游戏时界面", NULL,
+		ImGui::Begin(u8"游戏时界面 ", NULL,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(1920, 1080));
-		if (ImGui::Button(u8"继续游戏")) {
+		if (ImGui::Button(u8"继续游戏 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			InterFaceBool = false;
 		}
-		if (ImGui::Button(u8"游戏设置")) {
+		if (ImGui::Button(u8"游戏设置 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 
 		}
-		if (ImGui::Button(u8"返回主页")) {
+		if (ImGui::Button(u8"返回主页 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			InterfaceIndexes = 0;
 		}
-		if (ImGui::Button(u8"退出游戏")) {
+		if (ImGui::Button(u8"退出游戏 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			mWindown->WindowClose();
 		}
 		ImGui::End();
 	}
 
 	void ImGuiInterFace::MultiplePeopleInterface() {
-		ImGui::Begin(u8"多人界面", NULL,
+		ImGui::Begin(u8"多人界面 ", NULL,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(1920, 1080));
-		if (ImGui::Button(u8"服务器")) {
+		if (ImGui::Button(u8"服务器 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 			StartMultiPlayerGames = true;
@@ -231,7 +241,8 @@ namespace GAME {
 			Global::ServerOrClient = true;
 			server::GetServer();
 		}
-		if (ImGui::Button(u8"客户端")) {
+		if (ImGui::Button(u8"客户端 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 			StartMultiPlayerGames = true;
@@ -256,17 +267,17 @@ namespace GAME {
 		{
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::Text(u8"名字");
+			ImGui::Text(u8"名字 ");
 			ImGui::TableNextColumn();
-			ImGui::Text(u8"耗时");
+			ImGui::Text(u8"耗时 ");
 			ImGui::TableNextColumn();
-			ImGui::Text(u8"百分比");
+			ImGui::Text(u8"百分比 ");
 			ImGui::SameLine();//让一个元素并排
-			HelpMarker(u8"相对与一帧时间的占比");
+			HelpMarker(u8"相对与一帧时间的占比 ");
 
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::Text(u8"帧时间");
+			ImGui::Text(u8"帧时间 ");
 			ImGui::TableNextColumn();
 			ImGui::Text(u8"%f", TOOL::FPStime);
 			for (int i = 0; i < TOOL::mTimer->Count; i++)
@@ -287,7 +298,7 @@ namespace GAME {
 					);
 				}
 				else {
-					ImGui::Text(u8"%1.6f 秒", TOOL::mTimer->mTimerS[i]);
+					ImGui::Text(u8"%1.6f 秒 ", TOOL::mTimer->mTimerS[i]);
 				}
 				ImGui::TableNextColumn();
 				ImGui::Text("%3.3f %%", TOOL::mTimer->mTimerPercentageS[i]);

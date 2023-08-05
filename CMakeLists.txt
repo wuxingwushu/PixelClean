@@ -72,6 +72,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders/Spv ${CMAKE_CURRENT_BINARY_DIR}/shaders) # 拷贝shaders
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./SoundEffect/Resources ${CMAKE_CURRENT_BINARY_DIR}/Resources)# 拷贝音效
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/002.png ${CMAKE_CURRENT_BINARY_DIR})# 测试图片
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ImGui/FounderPixel12.TTF ${CMAKE_CURRENT_BINARY_DIR})# 字体
 
 add_subdirectory(Vulkan)
 add_subdirectory(texture)
@@ -91,7 +92,7 @@ add_executable(VulKan  ${DIRSRCS})
 
 # 预处理定义
 #target_compile_definitions( VulKan PRIVATE _CONSOLE)
-target_compile_definitions(VulKan PRIVATE -DWIN32_LEAN_AND_MEAN)
+#target_compile_definitions(VulKan PRIVATE -DWIN32_LEAN_AND_MEAN)
 
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	target_link_libraries(

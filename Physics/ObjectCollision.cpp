@@ -35,63 +35,40 @@ namespace SquarePhysics {
 		{
 			for (size_t y = 0; y < mNumberY; y++)
 			{
-				if (OutlinePointJudge(x,y,1))
+				if (mPixelAttributeS[x][y].Collision)
 				{
-					mOutlinePointSet[OutlinePointSize].x = x;
-					mOutlinePointSet[OutlinePointSize].y = y;
-					OutlinePointSize++;
+					OutlinePointJudge(x,y);
 				}
-				if (OutlinePointJudge(x, y, 0) && mPixelAttributeS[x][y].Collision)
-				{
-					mOutlinePointSet[OutlinePointSize].x = x;
-					mOutlinePointSet[OutlinePointSize].y = y + 1;
-					OutlinePointSize++;
-				}
-			}
-		}
-
-		for (size_t y = 0; y < mNumberY; y++)
-		{
-			if (mPixelAttributeS[mNumberX - 1][y].Collision) {
-				mOutlinePointSet[OutlinePointSize].x = mNumberX;
-				mOutlinePointSet[OutlinePointSize].y = y;
-				OutlinePointSize++;
-			}
-			if (!PixelAttributeCollision(mNumberX - 1, y + 1) && mPixelAttributeS[mNumberX - 1][y].Collision)
-			{
-				mOutlinePointSet[OutlinePointSize].x = mNumberX;
-				mOutlinePointSet[OutlinePointSize].y = y + 1;
-				OutlinePointSize++;
 			}
 		}
 	}
 
-	bool ObjectCollision::OutlinePointJudge(int x, int y, bool UpAndDown) {
-		if (UpAndDown)
-		{
-			if (mPixelAttributeS[x][y].Collision)
-			{
-				if (!PixelAttributeCollision(x - 1, y) || !PixelAttributeCollision(x, y - 1) || !PixelAttributeCollision(x - 1, y - 1)) {
-					return true;//在外围
-				}
-				else {
-					return false;//有碰撞，但是在内部，没必要检测
-				}
-			}
-			else {
-				return false;//没有碰撞，
-			}
+	void ObjectCollision::OutlinePointJudge(int x, int y) {
+		//左上角
+		if (!PixelAttributeCollision(x - 1, y) || !PixelAttributeCollision(x, y - 1) || !PixelAttributeCollision(x - 1, y - 1)) {
+			mOutlinePointSet[OutlinePointSize].x = x;
+			mOutlinePointSet[OutlinePointSize].y = y;
+			OutlinePointSize++;
 		}
-		else {
-			if (!PixelAttributeCollision(x, y + 1)) {
-				return true;//没有那就一定在外围
-			}
-			else {
-				return false;//下面那个点，有碰撞，就不需要加了，避免重复
-			}
+		//左下角
+		if (!PixelAttributeCollision(x, y + 1)) {
+			mOutlinePointSet[OutlinePointSize].x = x;
+			mOutlinePointSet[OutlinePointSize].y = y + 1;
+			OutlinePointSize++;
+		}
+		//右上角
+		if (!(PixelAttributeCollision(x + 1, y - 1) || PixelAttributeCollision(x + 1, y))) {
+			mOutlinePointSet[OutlinePointSize].x = x + 1;
+			mOutlinePointSet[OutlinePointSize].y = y;
+			OutlinePointSize++;
+		}
+		//右下角
+		if (!(PixelAttributeCollision(x + 1, y) || PixelAttributeCollision(x + 1, y + 1) || PixelAttributeCollision(x, y + 1))) {
+			mOutlinePointSet[OutlinePointSize].x = x + 1;
+			mOutlinePointSet[OutlinePointSize].y = y + 1;
+			OutlinePointSize++;
 		}
 	}
-
 
 	bool ObjectCollision::PixelCollision(glm::ivec2 dian) {
 		dian -= glm::ivec2(mPos);//网格体为中心
@@ -104,6 +81,50 @@ namespace SquarePhysics {
 		}
 		else {
 			return false;
+		}
+	}
+
+	[[nodiscard]] CollisionInfo ObjectCollision::RelativeCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End) {
+		CollisionInfo LCollisionInfo = RadialCollisionDetection(
+			vec2angle((glm::vec2(Start) - mPos), -mAngleFloat),
+			vec2angle((glm::vec2(End) - mPos), -mAngleFloat)
+		);
+		/*if (LCollisionInfo.Collision)
+		{
+			LCollisionInfo.Pos = glm::vec2(vec2angle(LCollisionInfo.Pos, mAngleFloat)) + mPos;
+		}*/
+		return LCollisionInfo;
+	}
+
+	[[nodiscard]] CollisionInfo ObjectCollision::RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End) {
+		int dx = abs(End.x - Start.x);
+		int dy = abs(End.y - Start.y);
+		int sx = (Start.x < End.x) ? 1 : -1;
+		int sy = (Start.y < End.y) ? 1 : -1;
+		int err = dx - dy;
+		int e2;
+		while (true) {
+			if (GetFixedCollisionBool(Start)) {
+				return { true, Start };
+			}
+			if (Start.x == End.x && Start.y == End.y) {
+				return { false, Start };
+			}
+			e2 = 2 * err;
+			if (e2 > -dy) {
+				err -= dy;
+				Start.x += sx;
+			}
+			if (GetFixedCollisionBool(Start)) {
+				return { true, Start };
+			}
+			if (Start.x == End.x && Start.y == End.y) {
+				return { false, Start };
+			}
+			if (e2 < dx) {
+				err += dx;
+				Start.y += sy;
+			}
 		}
 	}
 }

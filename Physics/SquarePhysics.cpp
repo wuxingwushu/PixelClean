@@ -43,158 +43,94 @@ namespace SquarePhysics {
 		PixelCollision** PixelCollisionS = mPixelCollisionS->Data();
 		PixelCollision* LPixel;
 		ObjectCollision* LObject;
-		glm::dvec2 pos,dianpos,dian, zhuang, speed;
+
+		glm::dvec2 Jpos, Xpos, Dian, DianPos, Speed, Deviation;
 		glm::ivec2 Start, End;
-		int XX, YY;
-		//射线
-		int dx, dy, sx, sy, err, e2;
-		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); i++)
+		CollisionInfo LCollisionInfo;
+
+		//玩家对地图碰撞事件
+		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
 		{
-			LPixel = PixelCollisionS[i];
-			pos = LPixel->GetPos();
-			LPixel->FrameTimeStep(TimeStep, 0);
-			dian = LPixel->GetPos();
-			//dianpos = mFixedSizeTerrain->RadialCollisionDetection(pos, dian);
-			End = dian;
-			Start = pos;
-
-			dx = abs(End.x - Start.x);
-			dy = abs(End.y - Start.y);
-			sx = (Start.x < End.x) ? 1 : -1;
-			sy = (Start.y < End.y) ? 1 : -1;
-			err = dx - dy;
-			e2;
-			LObject = nullptr;
-			while (true) {
-				if ((Start.x == End.x && Start.y == End.y) || mFixedSizeTerrain->GetFixedCollisionBool(Start.x, Start.y)) {
-					break;
-				}
-				LObject = ObjectS_PixelCollision(Start);
-				if (LObject != nullptr)
-				{
-					LPixel->CollisionCallback(LPixel);
-					mPixelCollisionS->Delete(i);
-					i--;
-					break;
-				}
-				e2 = 2 * err;
-				if (e2 > -dy) {
-					err -= dy;
-					Start.x += sx;
-				}
-				if ((Start.x == End.x && Start.y == End.y) || mFixedSizeTerrain->GetFixedCollisionBool(Start.x, Start.y)) {
-					break;
-				}
-				LObject = ObjectS_PixelCollision(Start);
-				if (LObject != nullptr)
-				{
-					LPixel->CollisionCallback(LPixel);
-					mPixelCollisionS->Delete(i);
-					i--;
-					break;
-				}
-				if (e2 < dx) {
-					err += dx;
-					Start.y += sy;
-				}
-			}
-
-
-			if (LObject != nullptr)
+			LObject = ObjectNumberS[i];
+			Jpos = LObject->GetPos();//久位置
+			LObject->FrameTimeStep(TimeStep, mFixedSizeTerrain->GetFixedFrictionCoefficient(Jpos.x, Jpos.y));//物理模拟
+			Xpos = LObject->GetPos();//新位置
+			Deviation = Xpos - Jpos;//移动方向和大小
+			for (size_t i2 = 0; i2 < LObject->GetOutlinePointSize(); i2++)
 			{
-				continue;
-			}
-			XX = Start.x;
-			YY = Start.y;
-			if (mFixedSizeTerrain->CrossingTheBoundary(XX, YY))
-			{
-				LPixel->CollisionCallback(LPixel);
-				mPixelCollisionS->Delete(i);
-				i--;
-				break;
-			}
-			if (mFixedSizeTerrain->GetFixedCollisionBool(XX, YY)) {
-				LPixel->CollisionCallback(LPixel);
-				mPixelCollisionS->Delete(i);
-				i--;
-				mFixedSizeTerrain->CollisionCallback(XX, YY);
-				mFixedSizeTerrain->SetFixedCollisionBool(XX, YY);
-				break;
+				Dian = vec2angle(LObject->GetOutlinePointSet(i2), LObject->GetAngle());//获取骨骼点
+				Start = Jpos + Dian;//久位置的骨骼点位置
+				if (Start.x < 0)Start.x -= 1;//负值偏移
+				if (Start.y < 0)Start.y -= 1;//负值偏移
+				End = Xpos + Dian;//新位置的骨骼点位置
+				if (End.x < 0)End.x -= 1;//负值偏移
+				if (End.y < 0)End.y -= 1;//负值偏移
+				LCollisionInfo = mFixedSizeTerrain->RadialCollisionDetection(Start, End);//对地图射线碰撞进行判断
+				if (LCollisionInfo.Collision) {//是否碰撞
+					Speed = LObject->GetSpeed();
+					if (fabs(Dian.x) < fabs(Dian.y))//偏向玩家位置移动
+					{
+						if (Dian.y < 0)//以 1 * 1 的正方形为判断
+						{
+							LCollisionInfo.Pos.y += 1;//偏移
+						}
+						Speed.y = 0;
+						Xpos.y = glm::dvec2(LCollisionInfo.Pos).y - Dian.y;
+					}
+					else
+					{
+						if (Dian.x < 0)//以 1 * 1 的正方形为判断
+						{
+							LCollisionInfo.Pos.x += 1;//偏移
+						}
+						Speed.x = 0;
+						Xpos.x = glm::dvec2(LCollisionInfo.Pos).x - Dian.x;
+					}
+					LObject->SetSpeed(Speed);//设置速度
+					LObject->SetPos(Xpos);//设置位置
+				}
 			}
 		}
 
-
-		unsigned int monicishu = 60;
-		TimeStep = TimeStep / monicishu;
-		//glm::dvec2 dianji[256], posL, pian;
-		//glm::ivec2 chapos;
-		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
+		//子弹碰撞
+		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); i++)//遍历所有子弹
 		{
-			/*LObject = ObjectNumberS[i];
-			pos = LObject->GetPos();
-			XX = pos.x;	
-			YY = pos.y;
-			for (size_t iDD = 0; iDD < LObject->GetOutlinePointSize(); iDD++) {
-				dianji[iDD] = vec2angle(LObject->GetOutlinePointSet(iDD), LObject->GetAngle());
-			}
-			LObject->FrameTimeStep(TimeStep, mFixedSizeTerrain->GetFixedFrictionCoefficient(XX, YY));
-			posL = glm::dvec2(LObject->GetPos());
-			pian = posL - pos;
-			for (size_t iDD = 0; iDD < LObject->GetOutlinePointSize(); iDD++) {
-				dianpos = mFixedSizeTerrain->RadialCollisionDetection(dianji[iDD], vec2angle(LObject->GetOutlinePointSet(iDD), LObject->GetAngle()));
-				dian = dianpos - dianji[iDD];
-				chapos = glm::ivec2(dian);
-				if (chapos != glm::ivec2(pian)) {
-					if (fabs(XX) < abs(chapos.x))
-					{
-						XX = chapos.x;
-					}
-					if (fabs(YY) < abs(chapos.y))
-					{
-						YY = chapos.y;
-					}
-				}
-			}*/
+			LPixel = PixelCollisionS[i];//子弹
+			Jpos = LPixel->GetPos();//现在位置
+			LPixel->FrameTimeStep(TimeStep, 0);//更新物理状态
+			Xpos = LPixel->GetPos();//新位置
+			LCollisionInfo = mFixedSizeTerrain->RadialCollisionDetection(Jpos, Xpos);//对地图碰撞进行判断
+			if (LCollisionInfo.Collision) {//是否碰撞
 
-			LObject = ObjectNumberS[i];
-			for (size_t iFF = 0; iFF < monicishu; iFF++)
+				LPixel->SetPos(LCollisionInfo.Pos);//设置为碰撞位置
+				LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
+				mPixelCollisionS->Delete(i);//销毁对应的像素
+
+				mFixedSizeTerrain->CollisionCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//调用地图像素点回调函数
+				mFixedSizeTerrain->SetFixedCollisionBool(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//修改地图像素点的碰撞信息
+
+				i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
+				continue;
+			}
+
+			for (size_t i2 = 0; i2 < mObjectCollisionS->GetNumber(); i2++)
 			{
-				pos = LObject->GetPos();
-				//LObject->SetPos(glm::vec2(pos) + LObject->GetSpeed() * TimeStep);
-				XX = pos.x;
-				YY = pos.y;
-				LObject->FrameTimeStep(TimeStep, mFixedSizeTerrain->GetFixedFrictionCoefficient(XX, YY));
-				for (size_t iDD = 0; iDD < LObject->GetOutlinePointSize(); iDD++)
+				LObject = ObjectNumberS[i2];
+				LCollisionInfo = LObject->RelativeCoordinateSystemRadialCollisionDetection(Jpos, Xpos);
+				if (LCollisionInfo.Collision)
 				{
-					dian = vec2angle(LObject->GetOutlinePointSet(iDD), LObject->GetAngle());
-					dianpos = pos + dian;
-					XX = dianpos.x;
-					YY = dianpos.y;
-					if (XX < 0)
-					{
-						XX--;
-					}
-					if (YY < 0)
-					{
-						YY--;
-					}
-					if (mFixedSizeTerrain->GetFixedCollisionBool(XX, YY)) {
-						zhuang = SquareToDrop(-0.001f, 1.001f, -0.001f, 1.001f, { (dianpos.x - 0.0f) - XX, (dianpos.y - 0.0f) - YY }, { -dian.x,-dian.y });
-						speed = LObject->GetSpeed();
-						if (ModulusLength(zhuang) != 0) {
-							if (pow(zhuang.x, 2) > pow(zhuang.y, 2)) {
-								speed.x = 0;
-							}
-							else {
-								speed.y = 0;
-							}
-						}
-						LObject->SetSpeed(speed);
-						LObject->SetPos(zhuang + pos);
-					}
+					LPixel->SetPos(Xpos);//设置为碰撞位置
+					LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
+					mPixelCollisionS->Delete(i);//销毁对应的像素
+
+					LObject->SetFixedCollisionBool(LCollisionInfo.Pos);//修改碰撞像素点信息
+					LObject->CollisionCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//调用碰撞像素点回调事件
+					LObject->OutlineCalculate();//重新生成碰撞骨骼点
+
+					i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
+					break;
 				}
 			}
-			
 		}
 	}
 

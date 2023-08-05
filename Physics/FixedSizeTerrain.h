@@ -103,6 +103,7 @@ namespace SquarePhysics {
 			return true;
 		}
 
+		//离开地图了
 		[[nodiscard]] bool CrossingTheBoundary(int x, int y) {
 			int Oxy = -int(OriginX);
 			int Nxy = (mNumberX - OriginX);
@@ -119,7 +120,8 @@ namespace SquarePhysics {
 			return false;
 		}
 
-		[[nodiscard]] glm::ivec2 RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
+		//路径碰撞判断
+		[[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
 
 	private:
 		void* mClass = nullptr;

@@ -1,5 +1,6 @@
 #include "Tool.h"
 #include <iostream>
+#include <filesystem>
 
 
 namespace TOOL {
@@ -116,6 +117,49 @@ namespace TOOL {
 #endif
 
 #ifdef TOOL_Convert
+	std::string StrTolower(std::string Str) {
+		std::string str;
+		for (size_t i = 0; i < Str.size(); i++)
+		{
+			str += tolower(Str[i]);
+		}
+		return str;
+	}
+
+	std::string StrName(std::string Str) {
+		size_t dianI = Str.size();
+		size_t xieI = 0;
+		for (size_t i = Str.size() - 1; i > 0; i--) {
+			if (Str[i] == '.') {
+				dianI = i - 1;
+			}
+			if (Str[i] == '\\') {
+				dianI -= i;
+				xieI = i + 1;
+				break;
+			}
+		}
+		return Str.substr(xieI, dianI);
+	}
+
+	void FilePath(const char* path, std::vector<std::string>* strS, const char* Suffix, const char* Name, int* Index) {
+		std::string ModelFileName;
+		for (const auto& entry : std::filesystem::directory_iterator(path)) {
+			ModelFileName = entry.path().filename().string();//获取文件名字
+			for (size_t i = 0; i < ModelFileName.size(); i++)
+			{
+				if ((ModelFileName[i] == '.') && (StrTolower(ModelFileName.substr(i + 1, ModelFileName.size() - i - 1)) == StrTolower(Suffix))) {
+					ModelFileName = ModelFileName.substr(0, i);
+					strS->push_back(ModelFileName);
+					if (ModelFileName == Name) {
+						Index[0] = strS->size() - 1;
+					}
+				}
+			}
+		}
+	}
+
+
 	void* memcpyf(void* dest, const void* src, size_t n, size_t b) { //n 是有多少个数据， b 是数据多少个字节 sizeof()获得有多少个字节
 		char* pDest = (char*)dest;
 		const char* pSrc = (const char*)src;

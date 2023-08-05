@@ -1,5 +1,5 @@
 #include "Arms.h"
-
+#include "../SoundEffect/SoundEffect.h"
 
 namespace GAME {
 
@@ -24,6 +24,9 @@ namespace GAME {
 	}
 
 	void Arms::ShootBullets(float x, float y, unsigned char* colour, float angle, float speed) {
+
+		SoundEffect::SoundEffect::GetSoundEffect()->Play("Pistol", MP3);
+
 		//std::cout << "X: " << x << "Y: " << y << "angle: " << angle << std::endl;
 		SquarePhysics::PixelCollision* LPixelCollision = new SquarePhysics::PixelCollision(1);//生成子弹物理模型
 		Particle* Ppppx = mBullet->New(LPixelCollision);//生成子弹

@@ -31,9 +31,7 @@ public:
 			return;
 		}
 		mNumber--;
-		//TData dadd = mData[index];
 		mData[index] = mData[mNumber];
-		//mData[mNumber] = dadd;
 	}
 
 	[[nodiscard]] constexpr TData* Data() const noexcept {

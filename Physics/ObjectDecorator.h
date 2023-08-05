@@ -10,11 +10,11 @@ namespace SquarePhysics {
 		
 		void SetQuality(float quality) { mQuality = quality; }
 
-		[[nodiscard]] float GetQuality() { return mQuality; }
+		[[nodiscard]] constexpr float GetQuality() const noexcept { return mQuality; }
 
 		void SetFrictionCoefficient(float frictionCoefficient) { mFrictionCoefficient = frictionCoefficient; }
 
-		[[nodiscard]] float GetFrictionCoefficient() { return mFrictionCoefficient; }
+		[[nodiscard]] constexpr float GetFrictionCoefficient() const noexcept { return mFrictionCoefficient; }
 
 
 
@@ -38,13 +38,13 @@ namespace SquarePhysics {
 			mAngle = AngleFloatToAngleVec(angle);
 		}
 
-		[[nodiscard]] float GetAngleX() { return mAngle.x; }
+		[[nodiscard]] constexpr float GetAngleX() const noexcept { return mAngle.x; }
 
-		[[nodiscard]] float GetAngleY() { return mAngle.y; }
+		[[nodiscard]] constexpr float GetAngleY() const noexcept { return mAngle.y; }
 
-		[[nodiscard]] glm::vec2 GetAngle() { return mAngle; }
+		[[nodiscard]] constexpr glm::vec2 GetAngle() const noexcept { return mAngle; }
 
-		[[nodiscard]] float GetAngleFloat() { return mAngleFloat; }
+		[[nodiscard]] constexpr float GetAngleFloat() const noexcept { return mAngleFloat; }
 
 
 
@@ -68,21 +68,21 @@ namespace SquarePhysics {
 			mForce = mForceFloat * mForceAngle;
 		}
 
-		[[nodiscard]] float GetForceX() { return mForce.x; }
+		[[nodiscard]] constexpr float GetForceX() const noexcept { return mForce.x; }
 
-		[[nodiscard]] float GetForceY() { return mForce.y; }
+		[[nodiscard]] constexpr float GetForceY() const noexcept { return mForce.y; }
 
-		[[nodiscard]] float GetForceAngleX() { return mForceAngle.x; }
+		[[nodiscard]] constexpr float GetForceAngleX() const noexcept { return mForceAngle.x; }
 
-		[[nodiscard]] float GetForceAngleY() { return mForceAngle.y; }
+		[[nodiscard]] constexpr float GetForceAngleY() const noexcept { return mForceAngle.y; }
 
-		[[nodiscard]] glm::vec2 GetForce() { return mForce; }
+		[[nodiscard]] constexpr glm::vec2 GetForce() const noexcept { return mForce; }
 
-		[[nodiscard]] float GetForceFloat() { return mForceFloat; }
+		[[nodiscard]] constexpr float GetForceFloat() const noexcept { return mForceFloat; }
 
-		[[nodiscard]] float GetForceAngleFloat() { return mForceAngleFloat; }
+		[[nodiscard]] constexpr float GetForceAngleFloat() const noexcept { return mForceAngleFloat; }
 
-		[[nodiscard]] glm::vec2 GetForceAngle() { return mForceAngle; }
+		[[nodiscard]] constexpr glm::vec2 GetForceAngle() const noexcept { return mForceAngle; }
 
 
 
@@ -107,21 +107,21 @@ namespace SquarePhysics {
 		}
 
 
-		[[nodiscard]] float GetSpeedX() { return mSpeed.x; }
+		[[nodiscard]] constexpr float GetSpeedX() const noexcept { return mSpeed.x; }
 
-		[[nodiscard]] float GetSpeedY() { return mSpeed.y; }
+		[[nodiscard]] constexpr float GetSpeedY() const noexcept { return mSpeed.y; }
 
-		[[nodiscard]] float GetSpeedAngleX() { return mSpeedAngle.x; }
+		[[nodiscard]] constexpr float GetSpeedAngleX() const noexcept { return mSpeedAngle.x; }
 
-		[[nodiscard]] float GetSpeedAngleY() { return mSpeedAngle.y; }
+		[[nodiscard]] constexpr float GetSpeedAngleY() const noexcept { return mSpeedAngle.y; }
 
-		[[nodiscard]] glm::vec2 GetSpeed() { return mSpeed; }
+		[[nodiscard]] constexpr glm::vec2 GetSpeed() const noexcept { return mSpeed; }
 
-		[[nodiscard]] float GetSpeedFloat() { return mSpeedFloat; }
+		[[nodiscard]] constexpr float GetSpeedFloat() const noexcept { return mSpeedFloat; }
 
-		[[nodiscard]] float GetSpeedAngleFloat() { return mSpeedAngleFloat; }
+		[[nodiscard]] constexpr float GetSpeedAngleFloat() const noexcept { return mSpeedAngleFloat; }
 
-		[[nodiscard]] glm::vec2 GetSpeedAngle() { return mSpeedAngle; }
+		[[nodiscard]] constexpr glm::vec2 GetSpeedAngle() const noexcept { return mSpeedAngle; }
 
 
 
@@ -172,16 +172,16 @@ namespace SquarePhysics {
 			{
 				mSpeed.x = 0.0f;
 				mSpeedAngle.x = 0.0f;
+				mSpeedBack[0] = SpeedX;
 			}
 
 			if (SpeedY != mSpeedBack[1])
 			{
 				mSpeed.y = 0.0f;
 				mSpeedAngle.y = 0.0f;
+				mSpeedBack[1] = SpeedY;
 			}
 			SetSpeed(mSpeed);
-			mSpeedBack[0] = SpeedX;
-			mSpeedBack[1] = SpeedY;
 		}
 
 		//更新各个方向速度的Bool

@@ -94,6 +94,10 @@ namespace TOOL {
 #endif
 	
 #ifdef TOOL_Convert
+	std::string StrTolower(std::string Str);
+	std::string StrName(std::string Str);
+	void FilePath(const char* path, std::vector<std::string>* strS, const char* Suffix, const char* Name, int* Index);
+
 	void* memcpyf(void* dest, const void* src, size_t n, size_t b);//反方向复制，
 
 	template<typename T, typename U, size_t>void TypenameMemcpy(T* t, U* u, size_t n);

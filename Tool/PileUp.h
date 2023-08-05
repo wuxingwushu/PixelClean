@@ -20,7 +20,7 @@ public:
     void add(T Parameter) {
         if (Index >= Max)
         {
-            std::cout << "超出" << std::endl;
+            std::cout << "[PileUp]Error: GoBeyond" << std::endl;
             return;
         }
         //memcpy(&mPileUp[Index], &Parameter, sizeof(T));
@@ -31,7 +31,7 @@ public:
     [[nodiscard]] T* pop() {
         if (Index == 0)
         {
-            std::cout << "空" << std::endl;
+            std::cout << "[PileUp]Error: Empty" << std::endl;
             return nullptr;
         }
         Index--;

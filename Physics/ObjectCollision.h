@@ -128,7 +128,7 @@ namespace SquarePhysics {
 		void OutlineCalculate();
 
 		//判断点是否符合骨架的条件
-		bool OutlinePointJudge(int x, int y, bool UpAndDown);
+		void OutlinePointJudge(int x, int y);
 		
 		//获取点信息
 		bool PixelAttributeCollision(int x, int y) {
@@ -147,6 +147,9 @@ namespace SquarePhysics {
 
 		//子弹对玩家的碰撞判断
 		bool PixelCollision(glm::ivec2 dian);
+		//路径碰撞判断
+		[[nodiscard]] CollisionInfo RelativeCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End);
+		[[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
 
 
 	private:

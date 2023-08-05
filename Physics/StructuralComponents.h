@@ -30,4 +30,9 @@ namespace SquarePhysics {
 		float FrictionCoefficient = 0.6f;	//摩擦系数
 		unsigned int Type = 0;				//这是什么类型对象
 	};
+
+	struct CollisionInfo {
+		bool Collision = false;
+		glm::ivec2 Pos{ 0 };
+	};
 }

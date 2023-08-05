@@ -21,7 +21,7 @@ public:
     void add(T Parameter) {
         if (Max(TailIndex + 1) == HeadIndex)
         {
-            std::cout << "超出" << std::endl;
+            std::cout << "[Queue]Error: GoBeyond" << std::endl;
             return;
         }
         mQueue[TailIndex] = Parameter;
@@ -31,7 +31,7 @@ public:
     [[nodiscard]] T pop() {
         if (TailIndex == HeadIndex)
         {
-            std::cout << "空" << std::endl;
+            std::cout << "[Queue]Error: Empty" << std::endl;
             return 0;
         }
         T Parameter = mQueue[HeadIndex];

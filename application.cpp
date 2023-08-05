@@ -20,17 +20,17 @@ namespace GAME {
 	//总初始化
 	void Application::run(VulKan::Window* w) {
 		mWindow = w;
-		TOOL::mTimer->MomentTiming(u8"总初始化");
-		TOOL::mTimer->MomentTiming(u8"初始化窗口");
+		TOOL::mTimer->MomentTiming(u8"总初始化 ");
+		TOOL::mTimer->MomentTiming(u8"初始化窗口 ");
 		initWindow();//初始化窗口
 		TOOL::mTimer->MomentEnd();
-		TOOL::mTimer->MomentTiming(u8"初始化Vulkan");
+		TOOL::mTimer->MomentTiming(u8"初始化Vulkan ");
 		initVulkan();//初始化Vulkan
 		TOOL::mTimer->MomentEnd();
-		TOOL::mTimer->MomentTiming(u8"初始化ImGui");
+		TOOL::mTimer->MomentTiming(u8"初始化ImGui ");
 		initImGui();//初始化ImGui
 		TOOL::mTimer->MomentEnd();
-		TOOL::mTimer->MomentTiming(u8"初始化游戏");
+		TOOL::mTimer->MomentTiming(u8"初始化游戏 ");
 		initGame();//初始化游戏
 		TOOL::mTimer->MomentEnd();
 		TOOL::mTimer->MomentEnd();
@@ -612,18 +612,14 @@ namespace GAME {
 
 	//主循环main
 	void Application::mainLoop() {
-		SoundEffect::SoundEffect* S = new SoundEffect::SoundEffect();
-		S->PlayFile(夜に駆ける);
-		
-		
+		SoundEffect::SoundEffect::GetSoundEffect()->Play("夜に駆ける", MIDI, true);
 		while (!mWindow->shouldClose()) {//窗口被关闭结束循环
+			SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
 			PlayerSpeed = { 0,0 };
 			mWindow->pollEvents();
-			
 			if (InterFace->GetInterFaceBool()) {
 				mWindow->ImGuiKeyBoardEvent();//监听键盘
 				InterFace->InterFace();
-				//S->Pause();
 				if (InterFace->GetMultiplePeople())
 				{
 					if (InterFace->GetServerOrClient()) {
@@ -642,22 +638,16 @@ namespace GAME {
 				}
 			}
 			else {
-				S->Play();
-
-				TOOL::mTimer->StartTiming(u8"游戏逻辑", true);
-
+				TOOL::mTimer->StartTiming(u8"游戏逻辑 ", true);
 				mWindow->processEvent();//监听键盘
 				GameLoop();
 				TOOL::mTimer->StartEnd();
 
-				
-
 				TOOL::FPS();//刷新帧数
-
 				TOOL::mTimer->RefreshTiming();
 			}
 
-			TOOL::mTimer->StartTiming(u8"画面渲染");
+			TOOL::mTimer->StartTiming(u8"画面渲染 ");
 			Render();//根据录制的主指令缓存显示画面
 			TOOL::mTimer->StartEnd();
 			if (InterFace->GetMultiplePeople())
@@ -669,16 +659,14 @@ namespace GAME {
 						pos->Y = m_position.y;
 						pos->ang = m_angle * 180 / M_PI;
 					}
-
 					event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
 				}
 				else {
-
 					event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
 				}
 			}
 		}
-		S->~SoundEffect();
+		SoundEffect::SoundEffect::GetSoundEffect()->~SoundEffect();
 		//等待设备所以命令执行完毕才可以开始销毁，
 		vkDeviceWaitIdle(mDevice->getDevice());//等待命令执行完毕
 	}
@@ -724,7 +712,7 @@ namespace GAME {
 		static double ArmsContinuityFire = 0;
 		ArmsContinuityFire += TOOL::FPStime;
 		int Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.1f)))
+		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.2f)))
 		{
 			ArmsContinuityFire = 0;
 			unsigned char color[4] = { 0,255,0,125 };
@@ -753,7 +741,7 @@ namespace GAME {
 		mLabyrinth->UpDateMaps();
 
 		//战争迷雾
-		TOOL::mTimer->StartTiming(u8"战争迷雾耗时", true);
+		TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
 		mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f);
 		TOOL::mTimer->StartEnd();
 
@@ -762,7 +750,7 @@ namespace GAME {
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::Begin(u8"监视器");
+		ImGui::Begin(u8"监视器 ");
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(400, 600));
 		ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera.getCameraPos().x, mCamera.getCameraPos().y, mCamera.getCameraPos().z);
@@ -829,7 +817,7 @@ namespace GAME {
 		}
 
 		//重新录制指令
-		TOOL::mTimer->StartTiming(u8"录制指令");
+		TOOL::mTimer->StartTiming(u8"录制指令 ");
 		createCommandBuffers(imageIndex);
 		TOOL::mTimer->StartEnd();
 
@@ -858,7 +846,7 @@ namespace GAME {
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		mFences[mCurrentFrame]->resetFence();
-		TOOL::mTimer->StartTiming(u8"等待渲染完成");
+		TOOL::mTimer->StartTiming(u8"等待渲染完成 ");
 		if (vkQueueSubmit(mDevice->getGraphicQueue(), 1, &submitInfo, mFences[mCurrentFrame]->getFence()) != VK_SUCCESS) {
 			throw std::runtime_error("Error:failed to submit renderCommand");
 		}
@@ -881,7 +869,7 @@ namespace GAME {
 		presentInfo.pImageIndices = &imageIndex;
 
 		//如果开了帧数限制，GPU会在这里等待，让当前循环符合GPU设置的帧数
-		TOOL::mTimer->StartTiming(u8"垂直同步");
+		TOOL::mTimer->StartTiming(u8"垂直同步 ");
 		result = vkQueuePresentKHR(mDevice->getPresentQueue(), &presentInfo);//开始渲染
 		TOOL::mTimer->StartEnd();
 

@@ -33,6 +33,6 @@ namespace SquarePhysics {
 
 	struct CollisionInfo {
 		bool Collision = false;
-		glm::ivec2 Pos{ 0 };
+		glm::vec2 Pos{ 0 };
 	};
 }

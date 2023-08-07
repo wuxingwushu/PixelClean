@@ -153,7 +153,7 @@ namespace GAME {
 		VulKan::Sampler* sampler
 	)
 	{
-		mPixelTexture = new PixelTexture(device, commandPool, pixelS[16],16,16,4, sampler);
+		mPixelTexture = new PixelTexture(device, commandPool, pixelS[10],16,16,4, sampler);
 
 		VulKan::UniformParameter* vpParam = new VulKan::UniformParameter();
 		vpParam->mBinding = 0;

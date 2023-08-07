@@ -145,10 +145,14 @@ namespace SquarePhysics {
 		glm::vec2 GetOutlinePointSet(unsigned int i) { return { mOutlinePointSet[i].x - OriginX, mOutlinePointSet[i].y - OriginY }; }
 
 
-		//子弹对玩家的碰撞判断
-		bool PixelCollision(glm::ivec2 dian);
+		//点对玩家的碰撞判断
+		CollisionInfo PixelCollision(glm::vec2 dian);
 		//路径碰撞判断
+		//（输入是 SquarePhysics 坐标的两个点，返回是 SquarePhysics 坐标点， 偏移方向）
+		[[nodiscard]] CollisionInfo SquarePhysicsCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End, glm::vec2 Direction);
+		//（输入是 SquarePhysics 坐标的两个点，返回是 mPixelAttributeS 数组索引）
 		[[nodiscard]] CollisionInfo RelativeCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End);
+		//（输入是 Object 的 mPixelAttributeS 数组索引两个点，返回是 mPixelAttributeS 数组索引）
 		[[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
 
 

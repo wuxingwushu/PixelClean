@@ -27,25 +27,17 @@ namespace SquarePhysics {
 		delete mPixelCollisionS;
 	}
 
-	ObjectCollision* SquarePhysics::ObjectS_PixelCollision(glm::ivec2 pos) {
-		ObjectCollision** ObjectNumberS = mObjectCollisionS->Data();
-		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
-		{
-			if (ObjectNumberS[i]->PixelCollision(pos)) {
-				return ObjectNumberS[i];
-			}
-		}
-		return nullptr;
-	}
-
 	void SquarePhysics::PhysicsSimulation(float TimeStep) {
 		ObjectCollision** ObjectNumberS = mObjectCollisionS->Data();
 		PixelCollision** PixelCollisionS = mPixelCollisionS->Data();
 		PixelCollision* LPixel;
 		ObjectCollision* LObject;
+		ObjectCollision* LObject2;
 
-		glm::dvec2 Jpos, Xpos, Dian, DianPos, Speed, Deviation;
+		glm::dvec2 Jpos, Xpos, Dian, Speed, Deviation;
 		glm::ivec2 Start, End;
+		float DeviationDistance;//偏移距离
+		glm::dvec2 DStart, DEnd;
 		CollisionInfo LCollisionInfo;
 
 		//玩家对地图碰撞事件
@@ -59,7 +51,7 @@ namespace SquarePhysics {
 			for (size_t i2 = 0; i2 < LObject->GetOutlinePointSize(); i2++)
 			{
 				Dian = vec2angle(LObject->GetOutlinePointSet(i2), LObject->GetAngle());//获取骨骼点
-				Start = Jpos + Dian;//久位置的骨骼点位置
+				Start = Jpos;//久位置的骨骼点位置
 				if (Start.x < 0)Start.x -= 1;//负值偏移
 				if (Start.y < 0)Start.y -= 1;//负值偏移
 				End = Xpos + Dian;//新位置的骨骼点位置
@@ -88,6 +80,44 @@ namespace SquarePhysics {
 					}
 					LObject->SetSpeed(Speed);//设置速度
 					LObject->SetPos(Xpos);//设置位置
+				}
+			}
+			//玩家碰撞玩家
+			
+		}
+
+		//玩家碰撞玩家
+		for (size_t i = 0; i < (mObjectCollisionS->GetNumber() - 1); i++)
+		{
+			LObject = ObjectNumberS[i];
+			Xpos = LObject->GetPos();//位置
+			for (size_t i2 = (i + 1); i2 < mObjectCollisionS->GetNumber(); i2++)
+			{
+				LObject2 = ObjectNumberS[i2];
+				if (Modulus(LObject->GetPos() - LObject2->GetPos()) < 22.7f) {//到了碰撞范围
+					for (size_t i3 = 0; i3 < LObject->GetOutlinePointSize(); i3++)
+					{
+						Dian = vec2angle(LObject->GetOutlinePointSet(i3), LObject->GetAngle());//获取骨骼点
+						Deviation = LObject->GetPos() - LObject2->GetPos();
+						LCollisionInfo = LObject2->SquarePhysicsCoordinateSystemRadialCollisionDetection(Xpos, Xpos + Dian, Deviation);//获取碰撞点
+						if (LCollisionInfo.Collision) {
+							if (fabs(Deviation.x) < fabs(Deviation.y))//偏向玩家位置移动
+							{
+								DeviationDistance = (glm::dvec2(LCollisionInfo.Pos).y - Dian.y) - Xpos.y;
+								DeviationDistance /= 2;
+								Xpos.y += DeviationDistance;
+								LObject2->SetPos({ LObject2->GetPosX(), LObject2->GetPosY() - DeviationDistance });//设置位置
+							}
+							else
+							{
+								DeviationDistance = (glm::dvec2(LCollisionInfo.Pos).x - Dian.x) - Xpos.x;
+								DeviationDistance /= 2;
+								Xpos.x += DeviationDistance;
+								LObject2->SetPos({ LObject2->GetPosX() - DeviationDistance, LObject2->GetPosY() });//设置位置
+							}
+							LObject->SetPos(Xpos);//设置位置
+						}
+					}
 				}
 			}
 		}
@@ -133,24 +163,4 @@ namespace SquarePhysics {
 			}
 		}
 	}
-
-
-	bool SquarePhysics::PixelCollisionPhysicsSimulation(float TimeStep, PixelCollision* LPixelCollision) {
-		glm::vec2 pos;
-		int XX, YY;
-		TimeStep = TimeStep / 60.0f;
-		for (size_t i = 0; i < 60; i++)
-		{
-			pos = LPixelCollision->GetPos();
-			XX = pos.x;
-			YY = pos.y;
-			LPixelCollision->FrameTimeStep(TimeStep, mFixedSizeTerrain->GetFixedFrictionCoefficient(XX, YY));
-			if (mFixedSizeTerrain->GetFixedCollisionBool(XX, YY)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	
 }

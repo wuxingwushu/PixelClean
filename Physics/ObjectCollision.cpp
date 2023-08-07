@@ -70,29 +70,63 @@ namespace SquarePhysics {
 		}
 	}
 
-	bool ObjectCollision::PixelCollision(glm::ivec2 dian) {
-		dian -= glm::ivec2(mPos);//网格体为中心
-		dian = vec2angle(dian, -mAngleFloat);//减除玩家的角度
+	CollisionInfo ObjectCollision::PixelCollision(glm::vec2 dian) {
+		dian -= mPos;//网格体为中心
+		dian = vec2angle(dian, { mAngle.x, -mAngle.y });//减除玩家的角度// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		if (GetFixedCollisionBool(dian)) {
 			SetFixedCollisionBool(dian);
 			CollisionCallback(dian.x, dian.y);
 			OutlineCalculate();
-			return true;
+			return { true, glm::ivec2(dian) };
 		}
 		else {
-			return false;
+			return { false };
 		}
+	}
+
+	[[nodiscard]] CollisionInfo ObjectCollision::SquarePhysicsCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End, glm::vec2 Direction) {
+		Start = vec2angle((glm::vec2(Start) - mPos), { mAngle.x, -mAngle.y} ); // -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+		End = vec2angle((glm::vec2(End) - mPos), { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+		glm::ivec2 IStart = Start, IEnd = End;
+		if (IStart.x < 0)IStart.x -= 1;//负值偏移
+		if (IStart.y < 0)IStart.y -= 1;//负值偏移
+		if (IEnd.x < 0)IEnd.x -= 1;//负值偏移
+		if (IEnd.y < 0)IEnd.y -= 1;//负值偏移
+		CollisionInfo LCollisionInfo = RadialCollisionDetection(IStart, IEnd);
+		if (LCollisionInfo.Collision)
+		{
+			Direction = vec2angle(Direction, { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+
+			glm::ivec2 IEnd = End;
+			glm::dvec2 YEnd = End - glm::dvec2(IEnd);
+			if (YEnd.x < 0) {
+				YEnd.x += 1;
+			}
+			if (YEnd.y < 0) {
+				YEnd.y += 1;
+			}
+
+			int Depth = 0;
+			IEnd -= glm::ivec2(LCollisionInfo.Pos);
+			if (fabs(IEnd.x) < fabs(IEnd.y)) {
+				Depth = fabs(IEnd.y) - 1;
+			}
+			else
+			{
+				Depth = fabs(IEnd.x) - 1;
+			}
+
+			End += SquareToRadial(-Depth, 1 + Depth,  -Depth, 1 + Depth, YEnd, Direction);
+			LCollisionInfo.Pos = glm::vec2(vec2angle(End, mAngle)) + mPos;
+		}
+		return LCollisionInfo;
 	}
 
 	[[nodiscard]] CollisionInfo ObjectCollision::RelativeCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End) {
 		CollisionInfo LCollisionInfo = RadialCollisionDetection(
-			vec2angle((glm::vec2(Start) - mPos), -mAngleFloat),
-			vec2angle((glm::vec2(End) - mPos), -mAngleFloat)
+			vec2angle((glm::vec2(Start) - mPos), { mAngle.x, -mAngle.y }),// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+			vec2angle((glm::vec2(End) - mPos), { mAngle.x, -mAngle.y })// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		);
-		/*if (LCollisionInfo.Collision)
-		{
-			LCollisionInfo.Pos = glm::vec2(vec2angle(LCollisionInfo.Pos, mAngleFloat)) + mPos;
-		}*/
 		return LCollisionInfo;
 	}
 

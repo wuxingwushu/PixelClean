@@ -203,6 +203,22 @@ namespace GAME {
 		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);//添加地图碰撞
 		mSquarePhysics->AddObjectCollision(mGamePlayer->mObjectCollision);//添加玩家碰撞
 
+		PlayerPos px;
+		px.X = -24.0f;
+		px.Y = 24.0f;
+		px.ang = 45.0f;
+		GamePlayer* LPlayer = mCrowd->GetGamePlayer(56);
+		LPlayer->setGamePlayerMatrix(glm::rotate(
+			glm::translate(glm::mat4(1.0f), glm::vec3(px.X, px.Y, 0.0f)),
+			glm::radians(px.ang),
+			glm::vec3(0.0f, 0.0f, 1.0f)
+		),
+			3,
+			true
+		);
+		LPlayer->mObjectCollision->SetAngle(px.ang / 180.0f * 3.14159265359f);
+		LPlayer->mObjectCollision->SetPos({ -24, 24 });
+
 		//测试
 		mGifPipeline = new GifPipeline(Global::mHeight, Global::mWidth, mDevice, mRenderPass);
 		mGIF = new GIF(mDevice, mGifPipeline, mSwapChain, mRenderPass, 44);
@@ -684,6 +700,18 @@ namespace GAME {
 			}
 			mGIF->SetFrame(GIFzheng, 3);
 		}
+
+
+		GamePlayer* LPlayer = mCrowd->GetGamePlayer(56);
+		LPlayer->setGamePlayerMatrix(glm::rotate(
+			glm::translate(glm::mat4(1.0f), glm::vec3(LPlayer->mObjectCollision->GetPosX(), LPlayer->mObjectCollision->GetPosY(), 0.0f)),
+			glm::radians(LPlayer->mObjectCollision->GetAngleFloat() * 180.0f / 3.14159265359f),
+			glm::vec3(0.0f, 0.0f, 1.0f)
+		),
+			3,
+			true
+		);
+
 		/*++++++++++++++++++*/
 		
 		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);//获取角度
@@ -783,7 +811,7 @@ namespace GAME {
 
 		mParticleSystem->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 		//加到显示数组中
-		mCrowd->TimeoutDetection();
+		//mCrowd->TimeoutDetection();
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
 		mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);

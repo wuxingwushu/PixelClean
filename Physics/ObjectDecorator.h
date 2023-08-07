@@ -7,6 +7,14 @@ namespace SquarePhysics {
 	class ObjectDecorator //装饰器模式
 	{
 	public:
+
+		ObjectDecorator() {
+
+		}
+
+		~ObjectDecorator() {
+
+		}
 		
 		void SetQuality(float quality) { mQuality = quality; }
 

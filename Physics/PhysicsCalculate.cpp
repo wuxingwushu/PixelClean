@@ -121,4 +121,37 @@ namespace SquarePhysics {
 		return PYpos;
 	}
 
+	glm::dvec2 SquareToRadial(float A1, float A2, float B1, float B2, glm::dvec2 Drop, glm::dvec2 PY) {
+		glm::dvec2 PYpos{ 0.0f,0.0f };
+		float angle = EdgeVecToCosAngleFloat(PY);
+		if (((Drop.x >= A1) && (Drop.x <= A2)) && ((Drop.y >= B1) && (Drop.y <= B2))) {//判断这个点是否在另外一个正方形里面
+			if (PY.x > 0) {
+				PYpos.x = A2 - Drop.x;
+			}
+			else {
+				PY.x = -PY.x;
+				PYpos.x = A1 - Drop.x;
+			}
+
+			if (PY.y > 0) {
+				PYpos.y = B2 - Drop.y;
+			}
+			else {
+				PY.y = -PY.y;
+				PYpos.y = B1 - Drop.y;
+			}
+
+			if (PY.x < PY.y) {
+				PYpos.x = 0;
+			}
+			else {
+				PYpos.y = 0;
+			}
+		}
+		angle -= EdgeVecToCosAngleFloat(PYpos);
+		PYpos /= fabs(cos(angle));
+		PYpos = vec2angle(PYpos, angle);
+		return PYpos;
+	}
+
 }

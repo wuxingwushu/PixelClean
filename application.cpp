@@ -85,7 +85,11 @@ namespace GAME {
 	//初始化Vulkan
 	//1 rendePass 加入pipeline 2 生成FrameBuffer
 	void Application::initVulkan() {
-		mInstance = new VulKan::Instance(true);//实列化需要的VulKan功能APi
+		mInstance = new VulKan::Instance(Global::VulKanValidationLayer);//实列化需要的VulKan功能APi
+		if (Global::VulKanValidationLayer && !mInstance->getEnableValidationLayer()) {
+			Global::VulKanValidationLayer = false;
+			Global::Storage();
+		}
 		mWindowSurface = new VulKan::WindowSurface(mInstance, mWindow);//获取你在什么平台运行调用不同的API（比如：Window，Android）
 		mDevice = new VulKan::Device(mInstance, mWindowSurface);//获取电脑的硬件设备，vma内存分配器 也在这里被创建了
 		mCommandPool = new VulKan::CommandPool(mDevice);//创建指令池，给CommandBuffer用的
@@ -659,13 +663,15 @@ namespace GAME {
 				GameLoop();
 				TOOL::mTimer->StartEnd();
 
-				TOOL::FPS();//刷新帧数
 				TOOL::mTimer->RefreshTiming();
 			}
+			TOOL::FPS();//刷新帧数
 
 			TOOL::mTimer->StartTiming(u8"画面渲染 ");
 			Render();//根据录制的主指令缓存显示画面
 			TOOL::mTimer->StartEnd();
+
+			TOOL::mTimer->StartTiming(u8"TCP ");
 			if (InterFace->GetMultiplePeople())
 			{
 				if (InterFace->GetServerOrClient()) {
@@ -681,6 +687,7 @@ namespace GAME {
 					event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
 				}
 			}
+			TOOL::mTimer->StartEnd();
 		}
 		SoundEffect::SoundEffect::GetSoundEffect()->~SoundEffect();
 		//等待设备所以命令执行完毕才可以开始销毁，
@@ -716,7 +723,11 @@ namespace GAME {
 		
 		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);//获取角度
 		mGamePlayer->mObjectCollision->SetAngle(m_angle);//设置玩家物理角度
+
+		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
+		TOOL::mTimer->StartEnd();
+
 		mGamePlayer->mObjectCollision->SetForce({0,0});//设置玩家力
 		mCamera.setCameraPos(mGamePlayer->mObjectCollision->GetPos());
 
@@ -774,32 +785,33 @@ namespace GAME {
 		TOOL::mTimer->StartEnd();
 
 		//ImGui显示录制
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
+		if (Global::Monitor) {
+			ImGui_ImplVulkan_NewFrame();
+			ImGui_ImplGlfw_NewFrame();
+			ImGui::NewFrame();
+			ImGui::Begin(u8"监视器 ");
+			ImGui::SetWindowPos(ImVec2(0, 0));
+			ImGui::SetWindowSize(ImVec2(400, 600));
+			ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera.getCameraPos().x, mCamera.getCameraPos().y, mCamera.getCameraPos().z);
+			ImGui::Text(u8"鼠标角度：%10.3f", m_angle * 180 / M_PI);
+			ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->mObjectCollision->GetSpeed().x, mGamePlayer->mObjectCollision->GetSpeed().y);
+			ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
+			if (InterFace->GetMultiplePeople()) {
+				if (InterFace->GetServerOrClient()) {
+					ImGui::Text(u8"S M：%d  |  %d", server::GetServer()->GetServerData()->GetNumber(), mCrowd->GetNumber());
+				}
+				else {
+					ImGui::Text(u8"C M：%d  |  %d", client::GetClient()->GetClientData()->GetNumber(), mCrowd->GetNumber());
+				}
+			}
+			InterFace->ImGuiShowFPS();
+			InterFace->ImGuiShowTiming();
+			ImGui::End();
 
-		ImGui::Begin(u8"监视器 ");
-		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(400, 600));
-		ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera.getCameraPos().x, mCamera.getCameraPos().y, mCamera.getCameraPos().z);
-		ImGui::Text(u8"鼠标角度：%10.3f", m_angle * 180 / M_PI);
-		ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->mObjectCollision->GetSpeed().x, mGamePlayer->mObjectCollision->GetSpeed().y);
-		ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
-		if (InterFace->GetMultiplePeople()) {
-			if (InterFace->GetServerOrClient()) {
-				ImGui::Text(u8"S M：%d  |  %d", server::GetServer()->GetServerData()->GetNumber(), mCrowd->GetNumber());
-			}
-			else {
-				ImGui::Text(u8"C M：%d  |  %d", client::GetClient()->GetClientData()->GetNumber(), mCrowd->GetNumber());
-			}
+			//ImGui::ShowDemoWindow();
+
+			ImGui::Render();
 		}
-		InterFace->ImGuiShowFPS();
-		InterFace->ImGuiShowTiming();
-		ImGui::End();
-
-		//ImGui::ShowDemoWindow();
-
-		ImGui::Render();
 	}
 
 	void Application::GameCommandBuffers(unsigned int Format_i, VkCommandBufferInheritanceInfo info) {
@@ -878,9 +890,9 @@ namespace GAME {
 		if (vkQueueSubmit(mDevice->getGraphicQueue(), 1, &submitInfo, mFences[mCurrentFrame]->getFence()) != VK_SUCCESS) {
 			throw std::runtime_error("Error:failed to submit renderCommand");
 		}
-		if (!InterFace->GetInterFaceBool())
+		if (!InterFace->GetInterFaceBool() && Global::Monitor)
 		{
-			mImGuuiCommandBuffers->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
+			mImGuuiCommandBuffers->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);//这个部分电脑，不支持 分两次 vkQueueSubmit 导致 只看得见 监视器
 		}
 		TOOL::mTimer->StartEnd();
 

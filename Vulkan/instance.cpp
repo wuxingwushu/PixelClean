@@ -48,6 +48,7 @@ namespace GAME::VulKan {
 		mEnableValidationLayer = enableValidationLayer;//存储当前是否开启验证层
 
 		if (mEnableValidationLayer && !checkValidationLayerSupport()) {//判断测试功能开启成功没
+			mEnableValidationLayer = false;
 			throw std::runtime_error("Error: validation layer is not supported");
 		}
 

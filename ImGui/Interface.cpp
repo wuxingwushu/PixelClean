@@ -156,6 +156,9 @@ namespace GAME {
 		case 2:
 			MultiplePeopleInterface();
 			break;
+		case 3:
+			SetInterface();
+			break;
 		}
 		ImGui::Render();
 	}
@@ -175,7 +178,7 @@ namespace GAME {
 			ImGuiWindowFlags_NoMove
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(1920, 1080));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 		if (ImGui::Button(u8"开始游戏 ")) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			InterFaceBool = false;
@@ -187,6 +190,9 @@ namespace GAME {
 		}
 		if (ImGui::Button(u8"游戏设置 ")) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SetBool = true;
+			InterfaceIndexes = 3;
+			PreviousLayerInterface = 0;
 		}
 		if (ImGui::Button(u8"退出游戏 ")) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
@@ -203,14 +209,16 @@ namespace GAME {
 			ImGuiWindowFlags_NoMove
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(1920, 1080));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 		if (ImGui::Button(u8"继续游戏 ")) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			InterFaceBool = false;
 		}
 		if (ImGui::Button(u8"游戏设置 ")) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
-
+			SetBool = true;
+			InterfaceIndexes = 3;
+			PreviousLayerInterface = 1;
 		}
 		if (ImGui::Button(u8"返回主页 ")) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
@@ -230,7 +238,7 @@ namespace GAME {
 			ImGuiWindowFlags_NoMove
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(1920, 1080));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 		if (ImGui::Button(u8"服务器 ")) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
 			InterFaceBool = false;
@@ -250,6 +258,69 @@ namespace GAME {
 			ServerOrClient = false;
 			Global::ServerOrClient = false;
 			client::GetClient();
+		}
+		if (ImGui::Button(u8"返回 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			InterfaceIndexes = 0;
+		}
+		ImGui::End();
+	}
+
+	void ImGuiInterFace::SetInterface() {
+		static int SetServerPort;
+		static int SetClientPort;
+		static char SetClientIP[16];
+		static bool SetVulKanValidationLayer;
+		static bool SetMonitor;
+
+		struct TextFilters
+		{
+			// Return 0 (pass) if the character is 'i' or 'm' or 'g' or 'u' or 'i'
+			static int FilterImGuiLetters(ImGuiInputTextCallbackData* data)
+			{
+				if (data->EventChar < 256 && strchr("1234567890.", (char)data->EventChar))
+					return 0;
+				return 1;
+			}
+		};
+
+		if (SetBool) {
+			SetBool = false;
+
+			SetServerPort = Global::ServerPort;
+			SetClientPort = Global::ClientPort;
+			memcpy(SetClientIP, Global::ClientIP.c_str(), Global::ClientIP.size());
+			SetVulKanValidationLayer = Global::VulKanValidationLayer;
+			SetMonitor = Global::Monitor;
+		}
+
+		ImGui::Begin(u8"设置界面 ", NULL,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove
+		);
+		ImGui::SetWindowPos(ImVec2(0, 0));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+		ImGui::DragInt("服务器端口 ", &SetServerPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家开设在本地的服务器端口 ");
+		ImGui::InputText("客户端链接IP", SetClientIP, 16, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters); HelpMarker("玩家链接服务器IP");
+		ImGui::DragInt("客户端链接端口)", &SetClientPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家链接服务器端口");
+		ImGui::Checkbox("VulKan 验证层 ", &SetVulKanValidationLayer); HelpMarker("VulKan 校验层 （部分设备不支持） ");
+		ImGui::Checkbox("监视器 ", &SetMonitor); HelpMarker("监视器 （部分设备不支持） ");
+		if (ImGui::Button(u8"保存 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+
+			Global::ServerPort = SetServerPort;
+			Global::ClientPort = SetClientPort;
+			Global::ClientIP = SetClientIP;
+			Global::VulKanValidationLayer = SetVulKanValidationLayer;
+			Global::Monitor = SetMonitor;
+
+			Global::Storage();
+			InterfaceIndexes = PreviousLayerInterface;
+		}
+		if (ImGui::Button(u8"返回 ")) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			InterfaceIndexes = PreviousLayerInterface;
 		}
 		ImGui::End();
 	}

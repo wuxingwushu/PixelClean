@@ -14,6 +14,8 @@ namespace Global {
 		ServerPort = Ini.Get<int>("ServerTCP", "Port");
 		ClientPort = Ini.Get<int>("ClientTCP", "Port");
 		ClientIP = Ini.Get<std::string>("ClientTCP", "IP");
+		VulKanValidationLayer = Ini.Get<bool>("Set", "VulKanValidationLayer");
+		Monitor = Ini.Get<bool>("Set", "Monitor");
 	}
 
 	void Storage() {
@@ -23,12 +25,18 @@ namespace Global {
 		Ini.UpdateEntry("ServerTCP", "Port", ServerPort);
 		Ini.UpdateEntry("ClientTCP", "Port", ClientPort);
 		Ini.UpdateEntry("ClientTCP", "IP", ClientIP);
+		Ini.UpdateEntry("Set", "VulKanValidationLayer", VulKanValidationLayer);
+		Ini.UpdateEntry("Set", "Monitor", Monitor);
 		inih::INIWriter::write_Gai(IniPath, Ini);//保存
 	}
 
 	unsigned int mWidth;
 	unsigned int mHeight;
+
 	int ServerPort;
 	int ClientPort;
 	std::string ClientIP;
+
+	bool VulKanValidationLayer;
+	bool Monitor;
 }

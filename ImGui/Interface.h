@@ -68,5 +68,9 @@ namespace GAME {
 		bool StartMultiPlayerGames = false;//是否为多人模式
 		bool ServerOrClient;//是服务器还是客户端
 		void MultiplePeopleInterface();//多人界面
+
+		bool SetBool;
+		int PreviousLayerInterface = 0;//储存上一层界面
+		void SetInterface();//设置界面
 	};
 }

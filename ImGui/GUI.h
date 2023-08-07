@@ -12,6 +12,7 @@
 
 static void HelpMarker(const char* desc)
 {
+    ImGui::SameLine();
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
     {

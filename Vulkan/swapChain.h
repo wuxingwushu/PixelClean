@@ -26,6 +26,8 @@ namespace GAME::VulKan {
 			CommandPool* commandPool
 		);
 
+		void StructureSwapChain();
+
 		~SwapChain();
 
 		//查找交换链支持信息
@@ -81,5 +83,6 @@ namespace GAME::VulKan {
 		Device* mDevice{ nullptr };
 		Window* mWindow{ nullptr };
 		WindowSurface* mSurface{ nullptr };
+		CommandPool* mCommandPool{ nullptr };
 	};
 }

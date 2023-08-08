@@ -44,7 +44,7 @@ namespace GAME {
 		//获得 索引数量
 		[[nodiscard]] size_t getIndexCount() const { return mIndexDatasSize; }
 
-		void RecordingCommandBuffer(VkRenderPass R, VulKan::SwapChain* S, VulKan::Pipeline* P) {
+		void RecordingCommandBuffer(VulKan::RenderPass* R, VulKan::SwapChain* S, VulKan::Pipeline* P) {
 			mRenderPass = R;
 			mSwapChain = S;
 			mPipeline = P;
@@ -81,7 +81,7 @@ namespace GAME {
 		VulKan::CommandPool** mThreadCommandPoolS;
 		VulKan::CommandBuffer** mThreadCommandBufferS;
 
-		VkRenderPass mRenderPass;
+		VulKan::RenderPass* mRenderPass;
 		VulKan::Pipeline* mPipeline;
 		VulKan::SwapChain* mSwapChain;
 	};

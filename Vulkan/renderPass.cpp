@@ -49,6 +49,10 @@ namespace GAME::VulKan {
 	}
 
 	RenderPass::~RenderPass() {
+		mSubPasses.clear();
+		mDependencies.clear();
+		mAttachmentDescriptions.clear();
+
 		if (mRenderPass != VK_NULL_HANDLE) {
 			vkDestroyRenderPass(mDevice->getDevice(), mRenderPass, nullptr);
 		}

@@ -24,6 +24,8 @@ namespace GAME {
 			int FormatCount
 		);
 
+		void StructureImGuiInterFace();//构建
+
 		~ImGuiInterFace();
 
 		void InterFace();//显示
@@ -50,6 +52,10 @@ namespace GAME {
 		int mFormatCount;
 		VulKan::Window* mWindown{ nullptr };
 		VulKan::Device* mDevice{ nullptr };
+		ImGui_ImplVulkan_InitInfo mInfo;
+		VulKan::RenderPass* mRenderPass;
+		ImFont* Font; //字体
+		VulKan::CommandBuffer* mCommandBuffer;
 
 		int InterfaceIndexes = 0;//显示那个界面
 		bool InterFaceBool = true;//是否显示界面

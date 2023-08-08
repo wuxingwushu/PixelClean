@@ -41,6 +41,14 @@ namespace GAME {
 			MapPlayerS->SetTimeoutCallback(TimeoutCrowd, nullptr);
 		}
 
+		void ReconfigurationCommandBuffer() {
+			GamePlayer** LGamePlayer = MapPlayerS->GetData();
+			for (size_t i = 0; i < MapPlayerS->GetNumber(); i++)
+			{
+				LGamePlayer[i]->InitCommandBuffer();
+			}
+		}
+
 	private:
 		//储存用来生成玩家
 		unsigned int mSize = 0;

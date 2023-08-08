@@ -12,7 +12,11 @@ namespace GAME::VulKan {
 		mDevice = device;
 		mWindow = window;
 		mSurface = surface;
+		mCommandPool = commandPool;
+		StructureSwapChain();
+	}
 
+	void SwapChain::StructureSwapChain() {
 		SwapChainSupportInfo swapChainSupportInfo = querySwapChainSupportInfo();
 
 		//选择vkformat
@@ -92,7 +96,7 @@ namespace GAME::VulKan {
 		for (int i = 0; i < mImageCount; ++i) {
 			mSwapChainImageViews[i] = createImageView(mSwapChainImages[i], mSwapChainFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 		}
-		
+
 		//创建depth image
 		mDepthImages.resize(mImageCount);
 
@@ -106,17 +110,17 @@ namespace GAME::VulKan {
 		for (int i = 0; i < mImageCount; ++i) {
 			mDepthImages[i] = Image::createDepthImage(
 				mDevice,
-				mSwapChainExtent.width, 
+				mSwapChainExtent.width,
 				mSwapChainExtent.height,
 				mDevice->getMaxUsableSampleCount()
 			);
-			
+
 			mDepthImages[i]->setImageLayout(
 				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
 				region,
-				commandPool
+				mCommandPool
 			);
 		}
 
@@ -143,7 +147,7 @@ namespace GAME::VulKan {
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				regionMutiSample,
-				commandPool
+				mCommandPool
 			);
 		}
 	}

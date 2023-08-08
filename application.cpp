@@ -135,10 +135,10 @@ namespace GAME {
 		init_info.CheckVkResultFn = check_vk_result;//错误处理
 		
 
-		InterFace = new ImGuiInterFace(mDevice, mWindow, init_info, mRenderPass, mCommandBuffers[0], mSwapChain->getImageCount());
-
 		mImGuuiCommandPool = new VulKan::CommandPool(mDevice);
 		mImGuuiCommandBuffers = new VulKan::CommandBuffer(mDevice, mImGuuiCommandPool);
+
+		InterFace = new ImGuiInterFace(mDevice, mWindow, init_info, mRenderPass, mImGuuiCommandBuffers, mSwapChain->getImageCount());
 	}
 
 	
@@ -161,7 +161,7 @@ namespace GAME {
 			&mCameraVPMatricesBuffer,
 			mSampler
 		);
-		mLabyrinth->RecordingCommandBuffer(mRenderPass->getRenderPass(), mSwapChain, mPipeline);
+		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipeline);
 
 		//创建粒子系统
 		mParticleSystem = new ParticleSystem(mDevice, 1000);
@@ -173,7 +173,7 @@ namespace GAME {
 			mCameraVPMatricesBuffer,
 			mSampler
 		);
-		mParticleSystem->RecordingCommandBuffer(mRenderPass->getRenderPass(), mSwapChain, mPipeline);
+		mParticleSystem->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipeline);
 
 		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleSystem, 1000);
 
@@ -597,6 +597,7 @@ namespace GAME {
 	}
 
 	void Application::recreateSwapChain() {
+		TOOL::mTimer->MomentTiming(u8"窗口重构 ");
 		int width = 0, height = 0;
 		glfwGetFramebufferSize(mWindow->getWindow(), &width, &height);
 		while (width == 0 || height == 0) {
@@ -604,30 +605,46 @@ namespace GAME {
 			glfwGetFramebufferSize(mWindow->getWindow(), &width, &height);
 		}
 		vkDeviceWaitIdle(mDevice->getDevice());
-		cleanupSwapChain();
-		mSwapChain = new VulKan::SwapChain(mDevice, mWindow, mWindowSurface, mCommandPool);
+
+		mSwapChain->~SwapChain();
+		mSwapChain->StructureSwapChain();
 		Global::mWidth = mSwapChain->getExtent().width;
 		Global::mHeight = mSwapChain->getExtent().height;
-		//mRenderPass = new VulKan::RenderPass(mDevice);
-		//createRenderPass();
+		mRenderPass->~RenderPass();
+		mImGuuiRenderPass->~RenderPass();
+		createRenderPass();
 		mSwapChain->createFrameBuffers(mRenderPass);
-		mPipeline = new VulKan::Pipeline(mDevice, mRenderPass);
-		createPipeline();
-		createSyncObjects();
-	}
+		InterFace->~ImGuiInterFace();
+		InterFace->StructureImGuiInterFace();
 
-	void Application::cleanupSwapChain() {
-		//mRenderPass->~RenderPass();
-		for (int i = 0; i < mSwapChain->getImageCount(); ++i) {
-			delete mImageAvailableSemaphores[i];
-			delete mRenderFinishedSemaphores[i];
-			delete mFences[i];
-		}
-		delete mSwapChain;
-		delete mPipeline;
-		mImageAvailableSemaphores.clear();
-		mRenderFinishedSemaphores.clear();
-		mFences.clear();
+		//设置Perpective
+		mCamera.setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
+
+		//mPipeline = new VulKan::Pipeline(mDevice, mRenderPass);
+		//设置视口
+		VkViewport viewport = {};
+		viewport.x = 0.0f;
+		viewport.y = (float)Global::mHeight;
+		viewport.width = (float)Global::mWidth;
+		viewport.height = -(float)Global::mHeight;
+		viewport.minDepth = 0.0f;//最近显示为 0 的物体
+		viewport.maxDepth = 1.0f;//最远显示为 1 的物体（最远为 1 ）
+
+		VkRect2D scissor = {};
+		scissor.offset = { 0, 0 };//偏移
+		scissor.extent = { Global::mWidth, Global::mHeight };//剪裁大小
+
+		mPipeline->setViewports({ viewport });
+		mPipeline->setScissors({ scissor });
+
+		createPipeline();
+
+		mLabyrinth->ThreadUpdateCommandBuffer();
+		mGIF->UpDataCommandBuffer();
+		mGamePlayer->InitCommandBuffer();
+		mParticleSystem->ThreadUpdateCommandBuffer();
+		mCrowd->ReconfigurationCommandBuffer();
+		TOOL::mTimer->MomentEnd();
 	}
 
 	//主循环main

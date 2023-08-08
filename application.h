@@ -109,8 +109,6 @@ namespace GAME {
 		
 		//重建交换链:  当窗口大小发生变化的时候，交换链也要发生变化，Frame View Pipeline RenderPass Sync
 		void recreateSwapChain();
-		//重建交换链前销毁掉要重新创建的类
-		void cleanupSwapChain();
 
 
 

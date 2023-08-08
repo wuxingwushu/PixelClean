@@ -14,7 +14,14 @@ namespace GAME {
 		mWindown = Win;
 		mDevice = device;
 		mFormatCount = FormatCount;
+		mInfo = Info;
+		mRenderPass = Pass;
+		mCommandBuffer = commandbuffer;
 
+		StructureImGuiInterFace();
+	}
+
+	void ImGuiInterFace::StructureImGuiInterFace() {
 		// 安装 Dear ImGui 上下文
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -39,10 +46,10 @@ namespace GAME {
 		// 设置字体
 		ImFontConfig Font_cfg;
 		Font_cfg.FontDataOwnedByAtlas = false;
-		//ImFont* Font = io.Fonts->AddFontFromMemoryTTF((void*)Font_data, Font_size, 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
-		ImFont* Font = io.Fonts->AddFontFromFileTTF("./FounderPixel12.TTF", 16, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+		//Font = io.Fonts->AddFontFromMemoryTTF((void*)Font_data, Font_size, 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+		Font = io.Fonts->AddFontFromFileTTF("./FounderPixel12.TTF", 16, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
 
-		
+
 
 
 
@@ -76,16 +83,16 @@ namespace GAME {
 			}
 		}
 
-		Info.DescriptorPool = g_DescriptorPool;
-		Info.MinImageCount = g_MinImageCount;
+		mInfo.DescriptorPool = g_DescriptorPool;
+		mInfo.MinImageCount = g_MinImageCount;
 
-		ImGui_ImplVulkan_Init(&Info, Pass->getRenderPass());
+		ImGui_ImplVulkan_Init(&mInfo, mRenderPass->getRenderPass());
 
 		// 上传 DearImgui 字体
-		commandbuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);//开始录制要提交的指令
-		ImGui_ImplVulkan_CreateFontsTexture(commandbuffer->getCommandBuffer());//要录制的内容
-		commandbuffer->end();//结束录制要提交的指令
-		commandbuffer->submitSync(mDevice->getGraphicQueue());//等待指令上传结束
+		mCommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);//开始录制要提交的指令
+		ImGui_ImplVulkan_CreateFontsTexture(mCommandBuffer->getCommandBuffer());//要录制的内容
+		mCommandBuffer->end();//结束录制要提交的指令
+		mCommandBuffer->submitSync(mDevice->getGraphicQueue());//等待指令上传结束
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 
@@ -113,9 +120,9 @@ namespace GAME {
 		Color[ImGuiCol_HeaderHovered] = ImColor(30, 125, 76, 255);
 		Color[ImGuiCol_HeaderActive] = ImColor(0, 95, 46, 255);
 
-		ImGuiCommandPoolS = new VulKan::CommandPool* [FormatCount];
-		ImGuiCommandBufferS = new VulKan::CommandBuffer* [FormatCount];
-		for (int i = 0; i < FormatCount; i++)
+		ImGuiCommandPoolS = new VulKan::CommandPool * [mFormatCount];
+		ImGuiCommandBufferS = new VulKan::CommandBuffer * [mFormatCount];
+		for (int i = 0; i < mFormatCount; i++)
 		{
 			ImGuiCommandPoolS[i] = new VulKan::CommandPool(mDevice);
 			ImGuiCommandBufferS[i] = new VulKan::CommandBuffer(mDevice, ImGuiCommandPoolS[i], true);
@@ -138,6 +145,8 @@ namespace GAME {
 			delete ImGuiCommandBufferS[i];
 			delete ImGuiCommandPoolS[i];
 		}
+		delete ImGuiCommandBufferS;
+		delete ImGuiCommandPoolS;
 	}
 
 	void ImGuiInterFace::InterFace()

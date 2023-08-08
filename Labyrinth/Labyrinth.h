@@ -65,7 +65,7 @@ namespace GAME {
 		[[nodiscard]] size_t getIndexCount() const { return mIndexDatasSize; }
 
 		
-		void RecordingCommandBuffer(VkRenderPass R, VulKan::SwapChain* S, VulKan::Pipeline* P) {
+		void RecordingCommandBuffer(VulKan::RenderPass* R, VulKan::SwapChain* S, VulKan::Pipeline* P) {
 			mRenderPass = R;
 			mSwapChain = S;
 			mPipeline = P;
@@ -137,7 +137,7 @@ namespace GAME {
 		
 	private://储存信息
 		VulKan::Device* mDevice = nullptr;
-		VkRenderPass mRenderPass;
+		VulKan::RenderPass* mRenderPass = nullptr;
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VulKan::Pipeline* mPipeline = nullptr;
 		VulKan::SwapChain* mSwapChain = nullptr;

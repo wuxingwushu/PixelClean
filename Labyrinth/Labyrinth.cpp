@@ -399,7 +399,7 @@ namespace GAME {
 
 		VkCommandBufferInheritanceInfo InheritanceInfo{};
 		InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-		InheritanceInfo.renderPass = mRenderPass;
+		InheritanceInfo.renderPass = mRenderPass->getRenderPass();
 		InheritanceInfo.framebuffer = mSwapChain->getFrameBuffer(FrameCount);
 
 

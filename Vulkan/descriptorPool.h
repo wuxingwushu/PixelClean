@@ -4,7 +4,7 @@
 #include "device.h"
 #include "description.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	class DescriptorPool {
 	public:

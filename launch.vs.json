@@ -8,9 +8,7 @@
       "projectTarget": "VulKan.exe",
       "name": "VulKan.exe",
       "cwd": "${fileDirname}",
-      "env": {
-        //"PATH": "PATH};${fileDirname}\\Environment\\Visual_Leak_Detector\\bin\\Win64;"
-      }
+      "env": {}
     }
   ]
 }

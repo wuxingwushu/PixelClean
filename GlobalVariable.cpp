@@ -3,6 +3,7 @@
 #include "FilePath.h"
 
 namespace Global {
+	bool* MainCommandBufferS = nullptr;
 	bool MultiplePeopleMode = false;
 	bool ServerOrClient;
 
@@ -16,6 +17,7 @@ namespace Global {
 		ClientIP = Ini.Get<std::string>("ClientTCP", "IP");
 		VulKanValidationLayer = Ini.Get<bool>("Set", "VulKanValidationLayer");
 		Monitor = Ini.Get<bool>("Set", "Monitor");
+		FullScreen = Ini.Get<bool>("Set", "FullScreen");
 	}
 
 	void Storage() {
@@ -27,6 +29,7 @@ namespace Global {
 		Ini.UpdateEntry("ClientTCP", "IP", ClientIP);
 		Ini.UpdateEntry("Set", "VulKanValidationLayer", VulKanValidationLayer);
 		Ini.UpdateEntry("Set", "Monitor", Monitor);
+		Ini.UpdateEntry("Set", "FullScreen", FullScreen);
 		inih::INIWriter::write_Gai(IniPath, Ini);//保存
 	}
 
@@ -39,4 +42,5 @@ namespace Global {
 
 	bool VulKanValidationLayer;
 	bool Monitor;
+	bool FullScreen;
 }

@@ -43,7 +43,7 @@
 
 #include "Character/Crowd.h"
 
-
+#include "VulkanTool/PipelineS.h"
 
 namespace GAME {
 	class Application{
@@ -64,6 +64,9 @@ namespace GAME {
 			m_position.z += z * 10;
 			mCamera.update();
 		}
+
+		//重建交换链:  当窗口大小发生变化的时候，交换链也要发生变化，Frame View Pipeline RenderPass Sync
+		void recreateSwapChain();
 
 	private:
 		//窗口的初始化
@@ -107,8 +110,7 @@ namespace GAME {
 
 
 		
-		//重建交换链:  当窗口大小发生变化的时候，交换链也要发生变化，Frame View Pipeline RenderPass Sync
-		void recreateSwapChain();
+		
 
 
 
@@ -129,10 +131,12 @@ namespace GAME {
 		VulKan::WindowSurface* mWindowSurface{ nullptr };//获取你在什么平台运行调用不同的API（比如：Window，Android）
 		VulKan::SwapChain* mSwapChain{ nullptr };//设置VulKan的工作细节
 		VulKan::RenderPass* mRenderPass{ nullptr };//设置GPU画布
-		VulKan::Pipeline* mPipeline{ nullptr };//设置渲染管线
+		//VulKan::Pipeline* mPipeline{ nullptr };//设置渲染管线
 		VulKan::CommandPool* mCommandPool{ nullptr };//设置渲染指令的工作
 		VulKan::Sampler* mSampler{ nullptr };//图片采样器
 		std::vector<VulKan::CommandBuffer*> mCommandBuffers{};//主录入渲染指令
+
+		VulKan::PipelineS* mPipelineS{ nullptr }; //渲染管线集合
 
 		//ImGui
 		VulKan::CommandPool* mImGuuiCommandPool;
@@ -150,9 +154,9 @@ namespace GAME {
 		std::vector<VulKan::Fence*> mFences{};//控制管线工作，比如（下一个管线需要上一个管线的图片，那就等上一个管线图片输入进来才开始工作）
 
 
-		glm::vec2 PlayerSpeed{};
+		glm::vec2 PlayerForce{};//玩家移动受力
 		GamePlayer* mGamePlayer{ nullptr };//玩家
-		double CursorPosX, CursorPosY;
+		double CursorPosX, CursorPosY;//光标位置
 
 	private:
 
@@ -177,7 +181,7 @@ namespace GAME {
 
 
 		//测试
-		GifPipeline* mGifPipeline = nullptr;//GIF渲染管线
-		GIF* mGIF = nullptr;//GIF
+		//GifPipeline* mGifPipeline = nullptr;//GIF渲染管线
+		//GIF* mGIF = nullptr;//GIF
 	};
 }

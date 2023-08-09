@@ -6,7 +6,7 @@
 
 
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	const std::vector<const char*> deviceRequiredExtensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,

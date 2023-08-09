@@ -1,6 +1,6 @@
 #include "instance.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 	//validation layer 回调函数
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallBack(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,//消息等级

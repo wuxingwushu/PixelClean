@@ -4,7 +4,7 @@
 #include "instance.h"
 #include "window.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	class WindowSurface {
 	public:

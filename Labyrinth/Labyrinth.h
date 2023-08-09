@@ -9,7 +9,7 @@
 #include "../texture/PixelTexture.h"
 
 #include "GenerateMaze.h"
-#include "../BlockS/PixelS.h"
+
 
 #include "../GeneralCalculationGPU/GPU.h"
 

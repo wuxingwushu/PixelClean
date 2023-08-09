@@ -281,6 +281,8 @@ namespace GAME {
 		static char SetClientIP[16];
 		static bool SetVulKanValidationLayer;
 		static bool SetMonitor;
+		static bool SetFullScreen;
+		
 
 		struct TextFilters
 		{
@@ -296,6 +298,7 @@ namespace GAME {
 		if (SetBool) {
 			SetBool = false;
 
+			SetFullScreen = Global::FullScreen;
 			SetServerPort = Global::ServerPort;
 			SetClientPort = Global::ClientPort;
 			memcpy(SetClientIP, Global::ClientIP.c_str(), Global::ClientIP.size());
@@ -315,9 +318,13 @@ namespace GAME {
 		ImGui::DragInt("客户端链接端口)", &SetClientPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家链接服务器端口");
 		ImGui::Checkbox("VulKan 验证层 ", &SetVulKanValidationLayer); HelpMarker("VulKan 校验层 （部分设备不支持） ");
 		ImGui::Checkbox("监视器 ", &SetMonitor); HelpMarker("监视器 （部分设备不支持） ");
+		ImGui::Checkbox("全屏 ", &SetFullScreen);
 		if (ImGui::Button(u8"保存 ")) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
-
+			if (Global::FullScreen != SetFullScreen) {
+				Global::FullScreen = SetFullScreen;
+				mWindown->SetWindow(SetFullScreen);
+			}
 			Global::ServerPort = SetServerPort;
 			Global::ClientPort = SetClientPort;
 			Global::ClientIP = SetClientIP;
@@ -393,6 +400,7 @@ namespace GAME {
 			}
 			ImGui::EndTable();
 		}
+		ImGui::Text(u8"如果只看得到监视窗口去设置中关掉监视器 ! ");
 	}
 }
 

@@ -2,7 +2,7 @@
 
 #include "../base.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 	
 	class Instance {
 	public:

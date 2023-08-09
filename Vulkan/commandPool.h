@@ -3,7 +3,7 @@
 #include "../base.h"
 #include "device.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	class CommandPool {
 	public:

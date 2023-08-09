@@ -2,6 +2,7 @@
 #include <string>
 
 namespace Global {
+	extern bool* MainCommandBufferS;
 	extern bool MultiplePeopleMode;	//多人模式
 	extern bool ServerOrClient;		//服务器还是客户端
 
@@ -21,4 +22,5 @@ namespace Global {
 	//设置
 	extern bool VulKanValidationLayer;	//VulKan 验证层 的 开关
 	extern bool Monitor;				//监视器
+	extern bool FullScreen;				//全屏
 }

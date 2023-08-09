@@ -14,4 +14,4 @@
 
 uint32_t* readFile(uint32_t& length, const char* filename);
 
-void Mandelbrot(GAME::VulKan::Device* device);
+void Mandelbrot(VulKan::Device* device);

@@ -2,7 +2,7 @@
 //#include "../vk_mem_alloc.h"
 
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	Image* Image::createDepthImage(
 		Device* device,
@@ -291,8 +291,8 @@ namespace GAME::VulKan {
 		LayoutcommandBuffer->submitSync(mDevice->getGraphicQueue());//执行这个指令
 
 		if (LayoutcommandBuffer != VK_NULL_HANDLE) { 
-			LayoutcommandBuffer->~CommandBuffer(); 
-			LayoutcommandBuffer != VK_NULL_HANDLE; 
+			delete LayoutcommandBuffer; 
+			LayoutcommandBuffer = VK_NULL_HANDLE; 
 		}
 	}
 

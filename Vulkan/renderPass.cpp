@@ -1,6 +1,6 @@
 #include "renderPass.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	SubPass::SubPass() {
 

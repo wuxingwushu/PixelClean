@@ -3,7 +3,7 @@
 #define	andesite 0
 #define	andesite1 1
 #define	bedrock 2
-#define	bottom 3
+#define	bottom0 3
 #define	bottom1 4
 #define	bottom2 5
 #define	bottom3 6

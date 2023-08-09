@@ -4,7 +4,7 @@
 #define VMA_IMPLEMENTATION
 #include "../vk_mem_alloc.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	Device::Device(Instance* instance, WindowSurface* surface) {
 		mInstance = instance;

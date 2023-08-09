@@ -1,6 +1,6 @@
 #include "commandBuffer.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 	CommandBuffer::CommandBuffer(Device* device, const CommandPool* commandPool, bool asSecondary) {
 		mDevice = device;
 		mCommandPool = commandPool;

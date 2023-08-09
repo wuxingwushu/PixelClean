@@ -2,7 +2,7 @@
 //#include "../vk_mem_alloc.h"
 
 
-namespace GAME::VulKan {
+namespace VulKan {
 	Buffer* Buffer::createVertexBuffer(Device* device, VkDeviceSize size, void* pData, bool ThreadBool) {
 		Buffer* buffer = new Buffer(
 			device, size,

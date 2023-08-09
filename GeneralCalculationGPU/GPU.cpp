@@ -35,7 +35,7 @@ uint32_t* readFile(uint32_t& length, const char* filename) {
 
 
 
-void Mandelbrot(GAME::VulKan::Device* device) {
+void Mandelbrot(VulKan::Device* device) {
     //GAME::VulKan::Instance* mInstance = new GAME::VulKan::Instance(true);
     //unsigned int w = 100, h = 100;
     //GAME::VulKan::Window* mWin = new GAME::VulKan::Window(w, h, 0, 0);
@@ -58,9 +58,9 @@ void Mandelbrot(GAME::VulKan::Device* device) {
 
     unsigned Siezd = WIDTH * HEIGHT * WORKGROUP_SIZE;
 
-	auto buffer = new GAME::VulKan::Buffer(device, Siezd, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_SHARING_MODE_EXCLUSIVE);
+	auto buffer = new VulKan::Buffer(device, Siezd, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_SHARING_MODE_EXCLUSIVE);
 
-    auto buffer2 = new GAME::VulKan::Buffer(device, sizeof(float), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_SHARING_MODE_EXCLUSIVE);
+    auto buffer2 = new VulKan::Buffer(device, sizeof(float), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_SHARING_MODE_EXCLUSIVE);
     float dadada = 0.5f;
     buffer2->updateBufferByMap(&dadada, sizeof(float));
 
@@ -184,8 +184,8 @@ void Mandelbrot(GAME::VulKan::Device* device) {
     */
     vkCreateComputePipelines(mDevice, VK_NULL_HANDLE,1, &pipelineCreateInfo,NULL, &pipeline);
 
-    GAME::VulKan::CommandPool* mCommandPool = new GAME::VulKan::CommandPool(device);
-    GAME::VulKan::CommandBuffer* mCommandBuffer = new GAME::VulKan::CommandBuffer(device, mCommandPool);
+    VulKan::CommandPool* mCommandPool = new VulKan::CommandPool(device);
+    VulKan::CommandBuffer* mCommandBuffer = new VulKan::CommandBuffer(device, mCommandPool);
 
     mCommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     mCommandBuffer->bindGraphicPipeline(pipeline, VK_PIPELINE_BIND_POINT_COMPUTE);

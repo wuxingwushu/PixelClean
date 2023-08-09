@@ -6,7 +6,7 @@
 //用来同步，
 //列：通知GPU是否画完画布，或 ，画布是否显示完毕
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	class Semaphore {
 	public:

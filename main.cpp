@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
 	GAME::Application* app = new GAME::Application();
 
-	GAME::VulKan::Window* mWin = new GAME::VulKan::Window(Global::mWidth, Global::mHeight, 0, 0);
+	VulKan::Window* mWin = new VulKan::Window(Global::mWidth, Global::mHeight, false, Global::FullScreen);
 
 	mWin->setApp(app);
 

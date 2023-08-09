@@ -12,7 +12,7 @@ struct PixelDian {
 	unsigned char* Pixel;
 };
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	// Buffer 用于 CPU 向 GPU 提供数据用的
 

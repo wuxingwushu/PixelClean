@@ -1,6 +1,6 @@
 #include "descriptorPool.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	DescriptorPool::DescriptorPool(Device* device) {
 		mDevice = device;

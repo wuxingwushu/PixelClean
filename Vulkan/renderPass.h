@@ -5,7 +5,7 @@
 
 //用于汇集所有要渲染的物体，然后一次性提交渲染
 
-namespace GAME::VulKan {
+namespace VulKan {
 	//思路
 	/*
 	* 1 attachment  

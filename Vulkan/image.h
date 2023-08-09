@@ -6,7 +6,7 @@
 #include "commandBuffer.h"
 #include "buffer.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 	/*
 	* 分析：如果我们需要做一张被用于纹理采样的图片，那么我们首先
 	* 需要从undefinedLayout变换成为TransferDst， 然后在数据拷贝
@@ -68,8 +68,6 @@ namespace GAME::VulKan {
 
 
 		void fillImageData(size_t size, void* pData);
-
-		void fillImageData2(size_t size, void* pData);
 
 		void ThreadFillImageData(size_t size, void* pData);
 

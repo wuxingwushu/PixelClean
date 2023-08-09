@@ -1,6 +1,6 @@
 #include "descriptorSet.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	DescriptorSet::DescriptorSet(
 		Device* device,

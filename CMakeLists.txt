@@ -75,6 +75,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/002.png $
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ImGui/FounderPixel12.TTF ${CMAKE_CURRENT_BINARY_DIR})# 字体
 
 add_subdirectory(Vulkan)
+add_subdirectory(VulkanTool)
 add_subdirectory(texture)
 add_subdirectory(ImGui)
 add_subdirectory(BlockS)
@@ -101,6 +102,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	
 		# 文件夹代码
 		vulkanLib 
+		vulkanToolLib
 		textureLib 
 		imguiLib 
 		BlockSLib 
@@ -145,7 +147,8 @@ else()
 		VulKan 
 	
 		# 文件夹代码
-		vulkanLib 
+		vulkanLib
+		vulkanToolLib
 		textureLib 
 		imguiLib 
 		BlockSLib 

@@ -4,7 +4,7 @@
 #include "commandPool.h"
 #include "device.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	class CommandBuffer {
 	public:

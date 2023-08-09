@@ -1,4 +1,5 @@
 #include "GamePlayer.h"
+#include "../BlockS/PixelS.h"
 
 namespace GAME {
 

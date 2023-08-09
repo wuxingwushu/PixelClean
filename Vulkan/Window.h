@@ -6,7 +6,7 @@ namespace GAME {
 	class Application;
 }
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	class Window {
 	public:
@@ -26,9 +26,11 @@ namespace GAME::VulKan {
 		//窗口获取事件
 		void pollEvents();
 
+		void SetWindow(bool FullScreen);
+
 		[[nodiscard]] GLFWwindow* getWindow() const noexcept { return mWindow; }
 
-		void setApp(Application* app) { mApp = app; }
+		void setApp(GAME::Application* app) { mApp = app; }
 
 		//界面键盘事件
 		void ImGuiKeyBoardEvent();
@@ -37,7 +39,7 @@ namespace GAME::VulKan {
 
 	public:
 		bool mWindowResized{ false };//窗口大小是否发生改变
-		Application* mApp;
+		GAME::Application* mApp;
 
 	private:
 		bool MouseDisabled = false;//是否显示鼠标光标

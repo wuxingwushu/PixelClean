@@ -75,7 +75,7 @@ namespace SoLoud
 		aSamplesToRead = tick(aBuffer, aSamplesToRead);
 		mPlaying = mTrack != NULL;
 		if (!mPlaying)
-			fprintf(stdout, "ENDED\n");
+			fprintf(stdout, "Song ENDED\n");
 
 		return aSamplesToRead;
 	}

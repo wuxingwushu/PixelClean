@@ -10,7 +10,7 @@
 
 #include "../Physics/SquarePhysics.h"
 
-#include "../BlockS/PixelS.h"
+
 
 namespace GAME {
 	class GamePlayer

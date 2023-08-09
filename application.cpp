@@ -1,6 +1,6 @@
 #include "application.h"
 
-int zuojian;
+
 
 namespace GAME {
 
@@ -50,21 +50,21 @@ namespace GAME {
 		switch (moveDirection)
 		{
 		case CAMERA_MOVE::MOVE_LEFT:
-			PlayerSpeed.x -= lidaxiao;
+			PlayerForce.x -= lidaxiao;
 			break;
 		case CAMERA_MOVE::MOVE_RIGHT:
-			PlayerSpeed.x += lidaxiao;
+			PlayerForce.x += lidaxiao;
 			break;
 		case CAMERA_MOVE::MOVE_FRONT:
-			PlayerSpeed.y += lidaxiao;
+			PlayerForce.y += lidaxiao;
 			break;
 		case CAMERA_MOVE::MOVE_BACK:
-			PlayerSpeed.y -= lidaxiao;
+			PlayerForce.y -= lidaxiao;
 			break;
 		default:
 			break;
 		}
-		mGamePlayer->mObjectCollision->SetForce(PlayerSpeed);//设置玩家受力
+		mGamePlayer->mObjectCollision->SetForce(PlayerForce);//设置玩家受力
 	}
 
 
@@ -86,7 +86,7 @@ namespace GAME {
 	//1 rendePass 加入pipeline 2 生成FrameBuffer
 	void Application::initVulkan() {
 		mInstance = new VulKan::Instance(Global::VulKanValidationLayer);//实列化需要的VulKan功能APi
-		if (Global::VulKanValidationLayer && !mInstance->getEnableValidationLayer()) {
+		if (Global::VulKanValidationLayer && !mInstance->getEnableValidationLayer()) {//如果设备不支持，强制性修改设置信息，关闭验证层
 			Global::VulKanValidationLayer = false;
 			Global::Storage();
 		}
@@ -102,15 +102,14 @@ namespace GAME {
 		createRenderPass();//设置GPU画布描述
 		mSwapChain->createFrameBuffers(mRenderPass);//把GPU画布描述传给交换链生成GPU画布
 
-		//创建渲染管线
-		mPipeline = new VulKan::Pipeline(mDevice, mRenderPass);
+		mPipelineS = new VulKan::PipelineS(mDevice, mRenderPass);//创建渲染管线集合
 
-		createPipeline();//设置渲染管线
-
+		Global::MainCommandBufferS = new bool[mSwapChain->getImageCount()];
 		//主指令缓存录制
 		mCommandBuffers.resize(mSwapChain->getImageCount());//用来给每个GPU画布都绑上单独的 主CommandBuffer
 		for (int i = 0; i < mSwapChain->getImageCount(); ++i) {
 			mCommandBuffers[i] = new VulKan::CommandBuffer(mDevice, mCommandPool);//创建主指令缓存
+			Global::MainCommandBufferS[i] = true;
 		}
 
 		createSyncObjects();//创建信号量（用于渲染同步）
@@ -157,11 +156,11 @@ namespace GAME {
 		mLabyrinth->initUniformManager(
 			mDevice,
 			mSwapChain->getImageCount(),
-			mPipeline->DescriptorSetLayout,
+			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
 			&mCameraVPMatricesBuffer,
 			mSampler
 		);
-		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipeline);
+		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
 
 		//创建粒子系统
 		mParticleSystem = new ParticleSystem(mDevice, 1000);
@@ -169,11 +168,11 @@ namespace GAME {
 			mDevice,
 			mCommandPool,
 			mSwapChain->getImageCount(),
-			mPipeline->DescriptorSetLayout,
+			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
 			mCameraVPMatricesBuffer,
 			mSampler
 		);
-		mParticleSystem->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipeline);
+		mParticleSystem->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
 
 		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleSystem, 1000);
 
@@ -187,17 +186,17 @@ namespace GAME {
 		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
 
 		//创建多人玩家
-		mCrowd = new Crowd(100, mDevice, mPipeline, mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer);
+		mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer);
 		mCrowd->SteSquarePhysics(mSquarePhysics);
 
 		//创建玩家
-		mGamePlayer = new GamePlayer(mDevice, mPipeline, mSwapChain, mRenderPass, mCamera.getCameraPos().x, mCamera.getCameraPos().y);
+		mGamePlayer = new GamePlayer(mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mCamera.getCameraPos().x, mCamera.getCameraPos().y);
 		mGamePlayer->initUniformManager(
 			mDevice,
 			mCommandPool,
 			mSwapChain->getImageCount(),
 			10,
-			mPipeline->DescriptorSetLayout,
+			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
 			mCameraVPMatricesBuffer,
 			mSampler
 		);
@@ -224,207 +223,10 @@ namespace GAME {
 		LPlayer->mObjectCollision->SetPos({ -24, 24 });
 
 		//测试
-		mGifPipeline = new GifPipeline(Global::mHeight, Global::mWidth, mDevice, mRenderPass);
-		mGIF = new GIF(mDevice, mGifPipeline, mSwapChain, mRenderPass, 44);
-		mGIF->initUniformManager("002.png", mCameraVPMatricesBuffer, mSampler);
-		mGIF->UpDataCommandBuffer();
-	}
-
-
-	void Application::createPipeline() {
-		//设置视口
-		VkViewport viewport = {};
-		viewport.x = 0.0f;
-		viewport.y = (float)Global::mHeight;
-		viewport.width = (float)Global::mWidth;
-		viewport.height = -(float)Global::mHeight;
-		viewport.minDepth = 0.0f;//最近显示为 0 的物体
-		viewport.maxDepth = 1.0f;//最远显示为 1 的物体（最远为 1 ）
-
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };//偏移
-		scissor.extent = { Global::mWidth, Global::mHeight };//剪裁大小
-
-		mPipeline->setViewports({ viewport });
-		mPipeline->setScissors({ scissor });
-
-
-		//设置shader
-		std::vector<VulKan::Shader*> shaderGroup{};
-
-		VulKan::Shader* shaderVertex = new VulKan::Shader(mDevice, vs_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
-		shaderGroup.push_back(shaderVertex);
-
-		VulKan::Shader* shaderFragment = new VulKan::Shader(mDevice, fs_spv, VK_SHADER_STAGE_FRAGMENT_BIT, "main");
-		shaderGroup.push_back(shaderFragment);
-
-		mPipeline->setShaderGroup(shaderGroup);
-
-		//顶点的排布模式
-		std::vector<VkVertexInputBindingDescription> vertexBindingDes{};
-		vertexBindingDes.resize(2);
-		vertexBindingDes[0].binding = 0;
-		vertexBindingDes[0].stride = sizeof(float) * 3;
-		vertexBindingDes[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		vertexBindingDes[1].binding = 1;
-		vertexBindingDes[1].stride = sizeof(float) * 2;
-		vertexBindingDes[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		std::vector<VkVertexInputAttributeDescription> attributeDes{};
-		attributeDes.resize(2);
-		attributeDes[0].binding = 0;
-		attributeDes[0].location = 0;
-		attributeDes[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDes[0].offset = 0;
-		attributeDes[1].binding = 1;
-		attributeDes[1].location = 2;
-		attributeDes[1].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDes[1].offset = 0;
-
-
-		//顶点的排布模式
-		mPipeline->mVertexInputState.vertexBindingDescriptionCount = vertexBindingDes.size();
-		mPipeline->mVertexInputState.pVertexBindingDescriptions = vertexBindingDes.data();
-		mPipeline->mVertexInputState.vertexAttributeDescriptionCount = attributeDes.size();
-		mPipeline->mVertexInputState.pVertexAttributeDescriptions = attributeDes.data();
-
-		//图元装配
-		mPipeline->mAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		mPipeline->mAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;//说明那些 MVP 变换完的点，组成什么（这里是组成离散的三角形）
-		mPipeline->mAssemblyState.primitiveRestartEnable = VK_FALSE;
-
-		//光栅化设置
-		mPipeline->mRasterState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		mPipeline->mRasterState.polygonMode = VK_POLYGON_MODE_FILL;//其他模式需要开启gpu特性 // VK_POLYGON_MODE_LINE 线框 // VK_POLYGON_MODE_FILL 正常画面
-		mPipeline->mRasterState.lineWidth = 1.0f;//大于1需要开启gpu特性
-		mPipeline->mRasterState.cullMode = VK_CULL_MODE_BACK_BIT;//开启背面剔除
-		mPipeline->mRasterState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;//设置逆时针为正面
-
-		mPipeline->mRasterState.depthBiasEnable = VK_FALSE; //是否开启深度在处理（比如深度后一点 ，前一点）
-		mPipeline->mRasterState.depthBiasConstantFactor = 0.0f;
-		mPipeline->mRasterState.depthBiasClamp = 0.0f;
-		mPipeline->mRasterState.depthBiasSlopeFactor = 0.0f;
-
-		//多重采样
-		mPipeline->mSampleState.sampleShadingEnable = VK_FALSE;
-		mPipeline->mSampleState.rasterizationSamples = mDevice->getMaxUsableSampleCount();//采样的Bit数
-		mPipeline->mSampleState.minSampleShading = 1.0f;
-		mPipeline->mSampleState.pSampleMask = nullptr;
-		mPipeline->mSampleState.alphaToCoverageEnable = VK_FALSE;
-		mPipeline->mSampleState.alphaToOneEnable = VK_FALSE;
-
-		//深度与模板测试
-		mPipeline->mDepthStencilState.depthTestEnable = VK_TRUE;
-		mPipeline->mDepthStencilState.depthWriteEnable = VK_TRUE;
-		mPipeline->mDepthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-
-		//颜色混合
-
-		//这个是颜色混合掩码，得到的混合结果，按照通道与掩码进行AND操作，输出
-		VkPipelineColorBlendAttachmentState blendAttachment{};
-		blendAttachment.colorWriteMask = 
-			VK_COLOR_COMPONENT_R_BIT |//开启的颜色通道
-			VK_COLOR_COMPONENT_G_BIT |
-			VK_COLOR_COMPONENT_B_BIT |
-			VK_COLOR_COMPONENT_A_BIT;
-
-		blendAttachment.blendEnable = VK_TRUE;
-		blendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		blendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		blendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-
-		blendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		blendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		blendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-
-		mPipeline->pushBlendAttachment(blendAttachment);
-
-		//1 blend有两种计算方式，第一种如上所述，进行alpha为基础的计算，第二种进行位运算
-		//2 如果开启了logicOp，那么上方设置的alpha为基础的运算，失灵
-		//3 ColorWrite掩码，仍然有效，即便开启了logicOP
-		//4 因为，我们可能会有多个FrameBuffer输出，所以可能需要多个BlendAttachment
-		mPipeline->mBlendState.logicOpEnable = VK_FALSE;
-		mPipeline->mBlendState.logicOp = VK_LOGIC_OP_COPY;
-
-		//配合blendAttachment的factor与operation
-		mPipeline->mBlendState.blendConstants[0] = 0.0f;
-		mPipeline->mBlendState.blendConstants[1] = 0.0f;
-		mPipeline->mBlendState.blendConstants[2] = 0.0f;
-		mPipeline->mBlendState.blendConstants[3] = 0.0f;
-
-
-
-
-		//uniform的传递 就是一些临时信息，比如当前摄像机的方向，（在下一帧使用的信息）
-		std::vector<VkDescriptorSetLayoutBinding> layoutBindings{};
-		layoutBindings.resize(3);
-		layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;//绑定类型
-		layoutBindings[0].binding = 0;//那个Binding通道
-		layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		layoutBindings[0].descriptorCount = 1;//多少个数据
-
-		layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;//绑定类型
-		layoutBindings[1].binding = 1;//那个Binding通道
-		layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		layoutBindings[1].descriptorCount = 1;//多少个数据
-
-		layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;//绑定类型
-		layoutBindings[2].binding = 2;//那个Binding通道
-		layoutBindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		layoutBindings[2].descriptorCount = 1;//多少个数据
-
-		//uniform的传递
-		VkDescriptorSetLayoutCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		createInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
-		createInfo.pBindings = layoutBindings.data();
-
-		//VkDescriptorSetLayout mLayout = VK_NULL_HANDLE;
-
-		if (vkCreateDescriptorSetLayout(mDevice->getDevice(), &createInfo, nullptr, &mPipeline->DescriptorSetLayout) != VK_SUCCESS) {
-			throw std::runtime_error("Error: failed to create descriptor set layout");
-		}
-
-
-		//uniform的传递 就是一些临时信息，比如当前摄像机的方向，（在下一帧使用的信息）
-		std::vector<VkDescriptorSetLayoutBinding> layoutBindings2{};
-		layoutBindings2.resize(2);
-
-		layoutBindings2[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;//绑定类型
-		layoutBindings2[0].binding = 1;//那个Binding通道
-		layoutBindings2[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		layoutBindings2[0].descriptorCount = 1;//多少个数据
-
-		layoutBindings2[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;//绑定类型
-		layoutBindings2[1].binding = 2;//那个Binding通道
-		layoutBindings2[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		layoutBindings2[1].descriptorCount = 1;//多少个数据
-
-		//uniform的传递
-		VkDescriptorSetLayoutCreateInfo createInfo2{};
-		createInfo2.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		createInfo2.bindingCount = static_cast<uint32_t>(layoutBindings2.size());
-		createInfo2.pBindings = layoutBindings2.data();
-
-		//VkDescriptorSetLayout mLayout = VK_NULL_HANDLE;
-
-		if (vkCreateDescriptorSetLayout(mDevice->getDevice(), &createInfo2, nullptr, &mPipeline->DescriptorSetLayout2) != VK_SUCCESS) {
-			throw std::runtime_error("Error: failed to create descriptor set layout");
-		}
-
-		std::vector<VkDescriptorSetLayout> mDescriptorSetLayout;
-		mDescriptorSetLayout.push_back(mPipeline->DescriptorSetLayout);
-		mDescriptorSetLayout.push_back(mPipeline->DescriptorSetLayout2);
-
-		mPipeline->mLayoutState.setLayoutCount = mDescriptorSetLayout.size();
-		mPipeline->mLayoutState.pSetLayouts = mDescriptorSetLayout.data();
-		//mPipeline->mLayoutState.pSetLayouts = &mPipeline->DescriptorSetLayout;
-		mPipeline->mLayoutState.pushConstantRangeCount = 0;
-		mPipeline->mLayoutState.pPushConstantRanges = nullptr;
-
-
-
-		mPipeline->build();
+		//mGifPipeline = new GifPipeline(Global::mHeight, Global::mWidth, mDevice, mRenderPass);
+		//mGIF = new GIF(mDevice, mGifPipeline, mSwapChain, mRenderPass, 44);
+		//mGIF->initUniformManager("002.png", mCameraVPMatricesBuffer, mSampler);
+		//mGIF->UpDataCommandBuffer();
 	}
 
 	void Application::createRenderPass() {
@@ -506,7 +308,7 @@ namespace GAME {
 
 		mRenderPass->buildRenderPass();
 
-		finalAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		//finalAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		mImGuuiRenderPass->addAttachment(finalAttachmentDes);
 		MutiAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		mImGuuiRenderPass->addAttachment(MutiAttachmentDes);
@@ -527,11 +329,8 @@ namespace GAME {
 
 
 
-
-
 		VkRenderPassBeginInfo renderBeginInfo{};
 		renderBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderBeginInfo.renderPass = mRenderPass->getRenderPass();//获得画布信息
 		renderBeginInfo.framebuffer = mSwapChain->getFrameBuffer(i);//设置是那个GPU画布
 		renderBeginInfo.renderArea.offset = { 0, 0 };//画布从哪里开始画
 		renderBeginInfo.renderArea.extent = mSwapChain->getExtent();//画到哪里结束
@@ -553,17 +352,39 @@ namespace GAME {
 		renderBeginInfo.clearValueCount = static_cast<uint32_t>(clearColors.size());//有多少个
 		renderBeginInfo.pClearValues = clearColors.data();//用来清理的颜色数据
 
+
+		if (InterFace->GetInterFaceBool())
+		{
+			renderBeginInfo.renderPass = mRenderPass->getRenderPass();//获得画布信息
+			mCommandBuffers[i]->begin();//开始录制主指令
+			mCommandBuffers[i]->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);//关于画布信息  !!!这个只有主指令才有
+			ThreadCommandBufferS.push_back(InterFace->GetCommandBuffer(i, InheritanceInfo));
+			vkCmdExecuteCommands(mCommandBuffers[i]->getCommandBuffer(), ThreadCommandBufferS.size(), ThreadCommandBufferS.data());
+			mCommandBuffers[i]->endRenderPass();//结束RenderPass
+			mCommandBuffers[i]->end();//结束
+			Global::MainCommandBufferS[i] = true;
+		}
+		else {
+			renderBeginInfo.renderPass = mImGuuiRenderPass->getRenderPass();//获得画布信息
+			mImGuuiCommandBuffers->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+			mImGuuiCommandBuffers->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mImGuuiCommandBuffers->getCommandBuffer());
+			mImGuuiCommandBuffers->endRenderPass();//结束RenderPass
+			mImGuuiCommandBuffers->end();//结束
+		}
+
+
+		if (!Global::MainCommandBufferS[i] || InterFace->GetInterFaceBool()) {//如果没有更新就退出
+			return;
+		}
+
+		renderBeginInfo.renderPass = mRenderPass->getRenderPass();//获得画布信息
+
 		mCommandBuffers[i]->begin();//开始录制主指令
 
 		mCommandBuffers[i]->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);//关于画布信息  !!!这个只有主指令才有
 
-		if (!InterFace->GetInterFaceBool()) {
-			GameCommandBuffers(i, InheritanceInfo);
-		}
-		else
-		{
-			ThreadCommandBufferS.push_back(InterFace->GetCommandBuffer(i, InheritanceInfo));
-		}
+		GameCommandBuffers(i, InheritanceInfo);
 		
 		//把全部二级指令绑定到主指令缓存
 		vkCmdExecuteCommands(mCommandBuffers[i]->getCommandBuffer(), ThreadCommandBufferS.size(), ThreadCommandBufferS.data());
@@ -572,15 +393,7 @@ namespace GAME {
 
 		mCommandBuffers[i]->end();//结束
 
-		if (!InterFace->GetInterFaceBool())
-		{
-			renderBeginInfo.renderPass = mImGuuiRenderPass->getRenderPass();
-			mImGuuiCommandBuffers->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-			mImGuuiCommandBuffers->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mImGuuiCommandBuffers->getCommandBuffer());
-			mImGuuiCommandBuffers->endRenderPass();//结束RenderPass
-			mImGuuiCommandBuffers->end();//结束
-		}
+		Global::MainCommandBufferS[i] = false;
 	}
 
 	void Application::createSyncObjects() {
@@ -598,6 +411,7 @@ namespace GAME {
 
 	void Application::recreateSwapChain() {
 		TOOL::mTimer->MomentTiming(u8"窗口重构 ");
+
 		int width = 0, height = 0;
 		glfwGetFramebufferSize(mWindow->getWindow(), &width, &height);
 		while (width == 0 || height == 0) {
@@ -614,36 +428,22 @@ namespace GAME {
 		mImGuuiRenderPass->~RenderPass();
 		createRenderPass();
 		mSwapChain->createFrameBuffers(mRenderPass);
-		InterFace->~ImGuiInterFace();
-		InterFace->StructureImGuiInterFace();
-
-		//设置Perpective
+		//InterFace->~ImGuiInterFace();
+		//InterFace->StructureImGuiInterFace();
 		mCamera.setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
+		mPipelineS->ReconfigurationPipelineS();
 
-		//mPipeline = new VulKan::Pipeline(mDevice, mRenderPass);
-		//设置视口
-		VkViewport viewport = {};
-		viewport.x = 0.0f;
-		viewport.y = (float)Global::mHeight;
-		viewport.width = (float)Global::mWidth;
-		viewport.height = -(float)Global::mHeight;
-		viewport.minDepth = 0.0f;//最近显示为 0 的物体
-		viewport.maxDepth = 1.0f;//最远显示为 1 的物体（最远为 1 ）
-
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };//偏移
-		scissor.extent = { Global::mWidth, Global::mHeight };//剪裁大小
-
-		mPipeline->setViewports({ viewport });
-		mPipeline->setScissors({ scissor });
-
-		createPipeline();
+		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
+		{
+			Global::MainCommandBufferS[i] = true;
+		}
 
 		mLabyrinth->ThreadUpdateCommandBuffer();
-		mGIF->UpDataCommandBuffer();
+		//mGIF->UpDataCommandBuffer();
 		mGamePlayer->InitCommandBuffer();
 		mParticleSystem->ThreadUpdateCommandBuffer();
 		mCrowd->ReconfigurationCommandBuffer();
+
 		TOOL::mTimer->MomentEnd();
 	}
 
@@ -652,7 +452,7 @@ namespace GAME {
 		SoundEffect::SoundEffect::GetSoundEffect()->Play("夜に駆ける", MIDI, true);
 		while (!mWindow->shouldClose()) {//窗口被关闭结束循环
 			SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
-			PlayerSpeed = { 0,0 };
+			PlayerForce = { 0,0 };
 			mWindow->pollEvents();
 			if (InterFace->GetInterFaceBool()) {
 				mWindow->ImGuiKeyBoardEvent();//监听键盘
@@ -714,7 +514,7 @@ namespace GAME {
 	void Application::GameLoop() {
 
 		/*++++++++++++++++++*/
-		static clock_t GIFtime = 0;
+		/*static clock_t GIFtime = 0;
 		static unsigned int GIFzheng = 0;
 		if ((clock() - GIFtime) > 66) {
 			GIFtime = clock();
@@ -723,7 +523,7 @@ namespace GAME {
 				GIFzheng = 0;
 			}
 			mGIF->SetFrame(GIFzheng, 3);
-		}
+		}*/
 
 
 		GamePlayer* LPlayer = mCrowd->GetGamePlayer(56);
@@ -767,6 +567,7 @@ namespace GAME {
 
 		static double ArmsContinuityFire = 0;
 		ArmsContinuityFire += TOOL::FPStime;
+		static int zuojian;
 		int Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
 		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.2f)))
 		{
@@ -808,7 +609,6 @@ namespace GAME {
 			ImGui::NewFrame();
 			ImGui::Begin(u8"监视器 ");
 			ImGui::SetWindowPos(ImVec2(0, 0));
-			ImGui::SetWindowSize(ImVec2(400, 600));
 			ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera.getCameraPos().x, mCamera.getCameraPos().y, mCamera.getCameraPos().z);
 			ImGui::Text(u8"鼠标角度：%10.3f", m_angle * 180 / M_PI);
 			ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->mObjectCollision->GetSpeed().x, mGamePlayer->mObjectCollision->GetSpeed().y);
@@ -836,7 +636,7 @@ namespace GAME {
 
 		mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 
-		ThreadCommandBufferS.push_back(mGIF->getCommandBuffer(Format_i));
+		//ThreadCommandBufferS.push_back(mGIF->getCommandBuffer(Format_i));
 
 		mParticleSystem->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 		//加到显示数组中
@@ -909,7 +709,7 @@ namespace GAME {
 		}
 		if (!InterFace->GetInterFaceBool() && Global::Monitor)
 		{
-			mImGuuiCommandBuffers->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);//这个部分电脑，不支持 分两次 vkQueueSubmit 导致 只看得见 监视器
+			mImGuuiCommandBuffers->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);//这个功能部分电脑，不支持 分两次 vkQueueSubmit 导致 只看得见 监视器
 		}
 		TOOL::mTimer->StartEnd();
 
@@ -927,7 +727,7 @@ namespace GAME {
 
 		//如果开了帧数限制，GPU会在这里等待，让当前循环符合GPU设置的帧数
 		TOOL::mTimer->StartTiming(u8"垂直同步 ");
-		result = vkQueuePresentKHR(mDevice->getPresentQueue(), &presentInfo);//开始渲染
+		result = vkQueuePresentKHR(mDevice->getPresentQueue(), &presentInfo);//更新画面
 		TOOL::mTimer->StartEnd();
 
 		//由于驱动程序不一定精准，所以我们还需要用自己的标志位判断
@@ -946,10 +746,13 @@ namespace GAME {
 	void Application::cleanUp() {
 		vkDeviceWaitIdle(mDevice->getDevice());//等待命令执行完毕
 
+		mSquarePhysics->RemoveObjectCollision(mGamePlayer->mObjectCollision);
 		delete mGamePlayer;
-
 		delete mCrowd;
-
+		delete mSquarePhysics;
+		delete mParticlesSpecialEffect;
+		delete mArms;
+		
 
 		for (int i = 0; i < mSwapChain->getImageCount(); ++i) {
 			delete mCameraVPMatricesBuffer[i];
@@ -959,11 +762,13 @@ namespace GAME {
 			delete mFences[i];
 		}
 
-
+		delete mImGuuiCommandBuffers;
+		delete mImGuuiCommandPool;
+		delete mImGuuiRenderPass;
 		delete InterFace;
 
 		delete mSampler;
-		delete mPipeline;
+		delete mPipelineS;
 		delete mRenderPass;
 		delete mSwapChain;
 		delete mCommandPool;

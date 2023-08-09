@@ -1,4 +1,6 @@
 #include "ParticleSystem.h"
+#include "../BlockS/PixelS.h"
+
 namespace GAME {
 	ParticleSystem::ParticleSystem(VulKan::Device* device, int Number)
 	{

@@ -3,7 +3,7 @@
 #include "../base.h"
 #include "device.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 	/*
 	* fence是控制一次队列提交的标志，与semaphore区别，semaphore控制单一命令提交信息内的
 	* 不同执行阶段之间的依赖关系，semaphore无法手动用API去激发的

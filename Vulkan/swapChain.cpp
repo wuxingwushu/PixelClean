@@ -1,7 +1,7 @@
 #include "swapChain.h"
 #include "renderPass.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	SwapChain::SwapChain(
 		Device* device, 

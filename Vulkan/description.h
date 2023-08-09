@@ -3,7 +3,7 @@
 #include "../texture/texture.h"
 #include "../texture/PixelTexture.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	struct UniformParameter {
 		size_t					mSize{ 0 };
@@ -16,8 +16,8 @@ namespace GAME::VulKan {
 		VkShaderStageFlagBits	mStage;
 
 		std::vector<Buffer*> mBuffers{};
-		Texture* mTexture{ nullptr };
-		PixelTexture* mPixelTexture{ nullptr };
+		GAME::Texture* mTexture{ nullptr };
+		GAME::PixelTexture* mPixelTexture{ nullptr };
 	};
 
 }

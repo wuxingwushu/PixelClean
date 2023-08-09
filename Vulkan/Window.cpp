@@ -2,7 +2,7 @@
 #include "../application.h"
 #include "../Camera.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	//获取窗口大小是否改变
 	static void windowResized(GLFWwindow* window, int width, int height) {
@@ -42,8 +42,10 @@ namespace GAME::VulKan {
 		glfwSetWindowUserPointer(mWindow, this);
 		glfwSetFramebufferSizeCallback(mWindow, windowResized);//绑定窗口大小改变事件
 		//glfwSetCursorPosCallback(mWindow, cursorPosCallBack);//绑定鼠标事件
-
-		//glfwSetWindowMonitor(mWindow, glfwGetPrimaryMonitor(), 0, 0, mWidth, mHeight, GLFW_DONT_CARE);//全屏
+		if (FullScreen) {
+			glfwSetWindowMonitor(mWindow, glfwGetPrimaryMonitor(), 0, 0, mWidth, mHeight, GLFW_DONT_CARE);//全屏
+		}
+		
 
 		// 注册鼠标滚轮回调函数
 		glfwSetScrollCallback(mWindow, scroll_callback);
@@ -61,6 +63,20 @@ namespace GAME::VulKan {
 	Window::~Window() {
 		glfwDestroyWindow(mWindow);//回收GLFW的API
 		glfwTerminate();
+	}
+
+	void Window::SetWindow(bool FullScreen) {
+		if (FullScreen) {
+			RECT windowRect;
+			GetWindowRect(GetDesktopWindow(), &windowRect);
+			mWidth = windowRect.right;
+			mHeight = windowRect.bottom;
+			glfwSetWindowMonitor(mWindow, glfwGetPrimaryMonitor(), 0, 0, mWidth, mHeight, GLFW_DONT_CARE);//全屏
+		}
+		else {
+			glfwSetWindowMonitor(mWindow, NULL, mWidth / 4, mHeight / 4, mWidth/2, mHeight/2, 0);
+		}
+		mApp->recreateSwapChain();
 	}
 
 	void Window::WindowClose() {

@@ -306,36 +306,8 @@ namespace GAME {
 			throw std::runtime_error("Error: failed to create descriptor set layout");
 		}
 
-
-		//uniform的传递 就是一些临时信息，比如当前摄像机的方向，（在下一帧使用的信息）
-		std::vector<VkDescriptorSetLayoutBinding> layoutBindings2{};
-		layoutBindings2.resize(2);
-
-		layoutBindings2[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;//绑定类型
-		layoutBindings2[0].binding = 1;//那个Binding通道
-		layoutBindings2[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		layoutBindings2[0].descriptorCount = 1;//多少个数据
-
-		layoutBindings2[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;//绑定类型
-		layoutBindings2[1].binding = 2;//那个Binding通道
-		layoutBindings2[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		layoutBindings2[1].descriptorCount = 1;//多少个数据
-
-		//uniform的传递
-		VkDescriptorSetLayoutCreateInfo createInfo2{};
-		createInfo2.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		createInfo2.bindingCount = static_cast<uint32_t>(layoutBindings2.size());
-		createInfo2.pBindings = layoutBindings2.data();
-
-		//VkDescriptorSetLayout mLayout = VK_NULL_HANDLE;
-
-		if (vkCreateDescriptorSetLayout(mDevice->getDevice(), &createInfo2, nullptr, &mPipeline->DescriptorSetLayout2) != VK_SUCCESS) {
-			throw std::runtime_error("Error: failed to create descriptor set layout");
-		}
-
 		std::vector<VkDescriptorSetLayout> mDescriptorSetLayout;
 		mDescriptorSetLayout.push_back(mPipeline->DescriptorSetLayout);
-		mDescriptorSetLayout.push_back(mPipeline->DescriptorSetLayout2);
 
 		mPipeline->mLayoutState.setLayoutCount = mDescriptorSetLayout.size();
 		mPipeline->mLayoutState.pSetLayouts = mDescriptorSetLayout.data();

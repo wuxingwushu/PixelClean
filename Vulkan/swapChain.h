@@ -8,7 +8,7 @@
 #include "image.h"
 #include "commandPool.h"
 
-namespace GAME::VulKan {
+namespace VulKan {
 
 	struct SwapChainSupportInfo {
 		VkSurfaceCapabilitiesKHR mCapabilities;

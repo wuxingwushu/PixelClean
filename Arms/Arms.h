@@ -9,6 +9,7 @@ struct SynchronizeBullet {
 	float X;
 	float Y;
 	float angle;
+	unsigned int Type;//那种子弹
 };
 
 
@@ -36,7 +37,7 @@ namespace GAME {
 		}
 
 		//生成子弹
-		void ShootBullets(float x, float y, unsigned char* colour, float angle, float speed);
+		void ShootBullets(float x, float y, float angle, float speed, unsigned int Type);
 
 		//void BulletsEvent(float Stepping, SquarePhysics::SquarePhysics* LSquarePhysics);
 

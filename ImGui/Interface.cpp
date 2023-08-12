@@ -189,22 +189,22 @@ namespace GAME {
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 		if (ImGui::Button(u8"开始游戏 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 		}
 		if (ImGui::Button(u8"多人游戏 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = 2;
 		}
 		if (ImGui::Button(u8"游戏设置 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			SetBool = true;
 			InterfaceIndexes = 3;
 			PreviousLayerInterface = 0;
 		}
 		if (ImGui::Button(u8"退出游戏 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			mWindown->WindowClose();
 		}
 		ImGui::End();
@@ -220,21 +220,21 @@ namespace GAME {
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 		if (ImGui::Button(u8"继续游戏 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 		}
 		if (ImGui::Button(u8"游戏设置 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			SetBool = true;
 			InterfaceIndexes = 3;
 			PreviousLayerInterface = 1;
 		}
 		if (ImGui::Button(u8"返回主页 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = 0;
 		}
 		if (ImGui::Button(u8"退出游戏 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			mWindown->WindowClose();
 		}
 		ImGui::End();
@@ -249,7 +249,7 @@ namespace GAME {
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 		if (ImGui::Button(u8"服务器 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 			StartMultiPlayerGames = true;
@@ -259,7 +259,7 @@ namespace GAME {
 			server::GetServer();
 		}
 		if (ImGui::Button(u8"客户端 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 			StartMultiPlayerGames = true;
@@ -269,7 +269,7 @@ namespace GAME {
 			client::GetClient();
 		}
 		if (ImGui::Button(u8"返回 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = 0;
 		}
 		ImGui::End();
@@ -282,7 +282,14 @@ namespace GAME {
 		static bool SetVulKanValidationLayer;
 		static bool SetMonitor;
 		static bool SetFullScreen;
-		
+		static float SetMusicVolume;
+		static float SetSoundEffectsVolume;
+		static bool SetMonitorCompatibleMode;
+
+		static char SetKeyW[2];//截止符
+		static char SetKeyS[2];
+		static char SetKeyA[2];
+		static char SetKeyD[2];
 
 		struct TextFilters
 		{
@@ -298,12 +305,19 @@ namespace GAME {
 		if (SetBool) {
 			SetBool = false;
 
+			SetKeyW[0] = Global::KeyW;
+			SetKeyS[0] = Global::KeyS;
+			SetKeyA[0] = Global::KeyA;
+			SetKeyD[0] = Global::KeyD;
+			SetMusicVolume = Global::MusicVolume;
+			SetSoundEffectsVolume = Global::SoundEffectsVolume;
 			SetFullScreen = Global::FullScreen;
 			SetServerPort = Global::ServerPort;
 			SetClientPort = Global::ClientPort;
 			memcpy(SetClientIP, Global::ClientIP.c_str(), Global::ClientIP.size());
 			SetVulKanValidationLayer = Global::VulKanValidationLayer;
 			SetMonitor = Global::Monitor;
+			SetMonitorCompatibleMode = Global::MonitorCompatibleMode;
 		}
 
 		ImGui::Begin(u8"设置界面 ", NULL,
@@ -313,18 +327,45 @@ namespace GAME {
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
-		ImGui::DragInt("服务器端口 ", &SetServerPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家开设在本地的服务器端口 ");
-		ImGui::InputText("客户端链接IP", SetClientIP, 16, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters); HelpMarker("玩家链接服务器IP");
-		ImGui::DragInt("客户端链接端口)", &SetClientPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家链接服务器端口");
-		ImGui::Checkbox("VulKan 验证层 ", &SetVulKanValidationLayer); HelpMarker("VulKan 校验层 （部分设备不支持） ");
-		ImGui::Checkbox("监视器 ", &SetMonitor); HelpMarker("监视器 （部分设备不支持） ");
-		ImGui::Checkbox("全屏 ", &SetFullScreen);
+		ImGui::DragFloat(u8"音乐音量 ", &SetMusicVolume, 0.001f, 0.0f, 10.0f);
+		ImGui::DragFloat(u8"音效音量 ", &SetSoundEffectsVolume, 0.001f, 0.0f, 10.0f);
+		ImGui::DragInt(u8"服务器端口 ", &SetServerPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家开设在本地的服务器端口 ");
+		ImGui::InputText(u8"客户端链接IP", SetClientIP, 16, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters); HelpMarker("玩家链接服务器IP");
+		ImGui::DragInt(u8"客户端链接端口)", &SetClientPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家链接服务器端口");
+		ImGui::Checkbox(u8"VulKan 验证层 ", &SetVulKanValidationLayer); HelpMarker("VulKan 校验层 （部分设备不支持） ");
+
+		ImGui::Checkbox(u8"监视器 ", &SetMonitor); 
+		if(SetMonitor){ ImGui::SameLine(); ImGui::Checkbox(u8"兼容模式 ", &SetMonitorCompatibleMode); } 
+		HelpMarker("监视器（部分设备不支持） \n兼容模式（会牺牲性能） ");
+
+		ImGui::Checkbox(u8"全屏 ", &SetFullScreen);
+
+		ImGui::Text(u8"按键 ");
+		ImGui::InputText(u8"上 ", SetKeyW, 2, ImGuiInputTextFlags_CharsUppercase);
+		ImGui::InputText(u8"下 ", SetKeyS, 2, ImGuiInputTextFlags_CharsUppercase);
+		ImGui::InputText(u8"左 ", SetKeyA, 2, ImGuiInputTextFlags_CharsUppercase);
+		ImGui::InputText(u8"右 ", SetKeyD, 2, ImGuiInputTextFlags_CharsUppercase);
+
 		if (ImGui::Button(u8"保存 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			if (SetMusicVolume > 10.0f) {
+				SetMusicVolume = 10.0f;
+			}
+			if (SetSoundEffectsVolume > 10.0f) {
+				SetSoundEffectsVolume = 10.0f;
+			}
+			SoundEffect::SoundEffect::GetSoundEffect()->SetVolume(SetMusicVolume);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, SetSoundEffectsVolume);
 			if (Global::FullScreen != SetFullScreen) {
 				Global::FullScreen = SetFullScreen;
 				mWindown->SetWindow(SetFullScreen);
 			}
+			Global::KeyW = SetKeyW[0];
+			Global::KeyS = SetKeyS[0];
+			Global::KeyA = SetKeyA[0];
+			Global::KeyD = SetKeyD[0];
+			Global::MonitorCompatibleMode = SetMonitor?SetMonitorCompatibleMode:false;
+			Global::MusicVolume = SetMusicVolume;
+			Global::SoundEffectsVolume = SetSoundEffectsVolume;
 			Global::ServerPort = SetServerPort;
 			Global::ClientPort = SetClientPort;
 			Global::ClientIP = SetClientIP;
@@ -335,7 +376,7 @@ namespace GAME {
 			InterfaceIndexes = PreviousLayerInterface;
 		}
 		if (ImGui::Button(u8"返回 ")) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3);
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = PreviousLayerInterface;
 		}
 		ImGui::End();

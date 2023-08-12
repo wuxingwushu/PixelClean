@@ -7,6 +7,7 @@ private:
     unsigned int HeadIndex = 0;
     unsigned int TailIndex = 0;
     unsigned int mMax;
+    unsigned int mNumber = 0;
     T* mQueue;
 public:
     Queue(unsigned int size) {
@@ -25,18 +26,20 @@ public:
             return;
         }
         mQueue[TailIndex] = Parameter;
+        mNumber++;
         TailIndex = Max(TailIndex + 1);
     };
 
-    [[nodiscard]] T pop() {
+    [[nodiscard]] T* pop() {
         if (TailIndex == HeadIndex)
         {
             std::cout << "[Queue]Error: Empty" << std::endl;
-            return 0;
+            return nullptr;
         }
         T Parameter = mQueue[HeadIndex];
+        mNumber--;
         HeadIndex = Max(HeadIndex + 1);
-        return Parameter;
+        return &Parameter;
     }
 
     unsigned int Max(unsigned int Index) {
@@ -46,4 +49,8 @@ public:
         }
         return Index;
     };
+
+    [[nodiscard]] unsigned int GetNumber() {
+        return mNumber;
+    }
 };

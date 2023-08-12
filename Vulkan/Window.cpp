@@ -1,6 +1,7 @@
 #include "window.h"
 #include "../application.h"
 #include "../Camera.h"
+#include "../GlobalVariable.h"
 
 namespace VulKan {
 
@@ -95,13 +96,10 @@ namespace VulKan {
 	}
 
 	void Window::ImGuiKeyBoardEvent() {
-		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-			while (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-			{
-				glfwPollEvents();
-			}
+		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_ESCAPE) != KeysRisingEdgeTrigger_Esc) {
 			mApp->InterFace->SetInterFaceBool();
 		}
+		KeysRisingEdgeTrigger_Esc = glfwGetKey(mWindow, GLFW_KEY_ESCAPE);
 
 		//控制鼠标显示和禁用
 		if (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_P) != KeysRisingEdgeTrigger) {
@@ -119,13 +117,10 @@ namespace VulKan {
 
 	//键盘事件
 	void Window::processEvent() {
-		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-			while (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-			{
-				glfwPollEvents();
-			}
+		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_ESCAPE) != KeysRisingEdgeTrigger_Esc) {
 			mApp->InterFace->SetInterFaceBool();
 		}
+		KeysRisingEdgeTrigger_Esc = glfwGetKey(mWindow, GLFW_KEY_ESCAPE);
 
 		//控制鼠标显示和禁用
 		if (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_P) != KeysRisingEdgeTrigger) {
@@ -140,20 +135,38 @@ namespace VulKan {
 		}
 		KeysRisingEdgeTrigger = glfwGetKey(mWindow, GLFW_KEY_P);
 
-		if (glfwGetKey(mWindow, GLFW_KEY_W) == GLFW_PRESS) {
+		if (glfwGetKey(mWindow, Global::KeyW) == GLFW_PRESS) {
 			mApp->onKeyDown(CAMERA_MOVE::MOVE_FRONT);
 		}
 
-		if (glfwGetKey(mWindow, GLFW_KEY_S) == GLFW_PRESS) {
+		if (glfwGetKey(mWindow, Global::KeyS) == GLFW_PRESS) {
 			mApp->onKeyDown(CAMERA_MOVE::MOVE_BACK);
 		}
 
-		if (glfwGetKey(mWindow, GLFW_KEY_A) == GLFW_PRESS) {
+		if (glfwGetKey(mWindow, Global::KeyA) == GLFW_PRESS) {
 			mApp->onKeyDown(CAMERA_MOVE::MOVE_LEFT);
 		}
 
-		if (glfwGetKey(mWindow, GLFW_KEY_D) == GLFW_PRESS) {
+		if (glfwGetKey(mWindow, Global::KeyD) == GLFW_PRESS) {
 			mApp->onKeyDown(CAMERA_MOVE::MOVE_RIGHT);
 		}
+
+		if (glfwGetKey(mWindow, GLFW_KEY_0) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_0) != KeysRisingEdgeTrigger_0) {
+			mApp->AttackType--;
+			if (mApp->AttackType > SquarePhysics::DestroyModeEnumNumber) {
+				mApp->AttackType = SquarePhysics::DestroyModeEnumNumber;
+			}
+			std::cout << mApp->AttackType << std::endl;
+		}
+		KeysRisingEdgeTrigger_0 = glfwGetKey(mWindow, GLFW_KEY_0);
+
+		if (glfwGetKey(mWindow, GLFW_KEY_1) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_1) != KeysRisingEdgeTrigger_1) {
+			mApp->AttackType++;
+			if (mApp->AttackType > SquarePhysics::DestroyModeEnumNumber) {
+				mApp->AttackType = 0;
+			}
+			std::cout << mApp->AttackType << std::endl;
+		}
+		KeysRisingEdgeTrigger_1 = glfwGetKey(mWindow, GLFW_KEY_1);
 	}
 }

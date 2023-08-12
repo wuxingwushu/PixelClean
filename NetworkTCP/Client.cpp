@@ -108,7 +108,7 @@ void client_write_cb(bufferevent* be, void* arg)
 	if (client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetNumber() != 0) {
 		DataHeader DHArms;
 		DHArms.Key = 6;
-		DHArms.Size = sizeof(PixelSynchronize) * client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetNumber();
+		DHArms.Size = sizeof(PixelState) * client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetNumber();
 		bufferevent_write(be, &DHArms, sizeof(DataHeader));
 		bufferevent_write(be, client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetData(), DHArms.Size);//发送客户端发射的子弹
 		client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->ClearAll();//客户端清空发射
@@ -200,7 +200,7 @@ void client::InitSynchronizeMap() {
 	AddSynchronizeMap(3, { DataBuffer, sizeof(PlayerBroken), CGamePlayerBroken });		//玩家损伤成度同步
 	AddSynchronizeMap(4, { DataBuffer, sizeof(evutil_socket_t), CPlayerInformation });	//返回玩家的初始信息
 	AddSynchronizeMap(5, { DataBuffer, sizeof(char), CInitLabyrinth });					//地图初始化同步
-	AddSynchronizeMap(6, { DataBuffer, sizeof(PixelSynchronize), CLabyrinthPixel });	//地图破坏同步
+	AddSynchronizeMap(6, { DataBuffer, sizeof(PixelState), CLabyrinthPixel });	//地图破坏同步
 }
 
 client::~client() {

@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include "PhysicsCalculate.h"
+#include "StructuralComponents.h"
 
 namespace SquarePhysics {
 
@@ -133,6 +134,19 @@ namespace SquarePhysics {
 
 
 
+		//破坏的回调函数
+		void SetDestroyModeCallback(_DestroyModeCallback DestroyModeCallback) {
+			mDestroyModeCallback = DestroyModeCallback;
+		}
+
+		void DestroyModeCallback(int x, int y, void* mclass, bool Bool) {
+			if (mDestroyModeCallback != nullptr) {
+				mDestroyModeCallback(x, y, mclass, Bool);
+			}
+		}
+
+
+
 
 		//帧时间步长模拟
 		void FrameTimeStep(float TimeStep, float FrictionCoefficient){
@@ -216,6 +230,8 @@ namespace SquarePhysics {
 		glm::vec2	mSpeedAngle{ 0.0f, 0.0f };		//速度角度
 		float		mSpeedAngleFloat = 0.0f;		//速度角度Float
 		bool		mSpeedBack[2];					//用于判断速度方向反转
+
+		_DestroyModeCallback mDestroyModeCallback = nullptr;
 	};
 
 }

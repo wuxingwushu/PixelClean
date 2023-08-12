@@ -38,7 +38,7 @@ void CArmsSynchronize(bufferevent* be, void* Data) {
 	unsigned char color[4] = { 0,255,0,125 };
 	for (size_t i = 0; i < AData->Size; i++)
 	{
-		client::GetClient()->GetArms()->ShootBullets(BData[i].X, BData[i].Y, color, BData[i].angle, 500);
+		client::GetClient()->GetArms()->ShootBullets(BData[i].X, BData[i].Y, BData[i].angle, 500, BData[i].Type);
 	}
 }
 
@@ -76,15 +76,9 @@ void CInitLabyrinth(bufferevent* be, void* Data) {
 
 void CLabyrinthPixel(bufferevent* be, void* Data) {
 	SynchronizeData* AData = (SynchronizeData*)Data;
-	PixelSynchronize* BData = (PixelSynchronize*)AData->Pointer;
+	PixelState* BData = (PixelState*)AData->Pointer;
 	for (size_t i = 0; i < AData->Size; i++)
 	{
-		if (BData[i].State) {
-			client::GetClient()->GetLabyrinth()->AddPixel(BData[i].X, BData[i].Y);
-		}
-		else {
-			client::GetClient()->GetLabyrinth()->SetPixel(BData[i].X, BData[i].Y);
-		}
-		
+		client::GetClient()->GetLabyrinth()->mPixelQueue->add({ BData[i].X, BData[i].Y, BData[i].State });
 	}
 }

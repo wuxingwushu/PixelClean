@@ -20,6 +20,10 @@
 
 #include "../GlobalVariable.h"
 
+#include "../Tool/Queue.h"
+
+#include "../GlobalStructural.h"
+
 struct miwustruct {
 	unsigned int size;
 	int x;
@@ -83,11 +87,20 @@ namespace GAME {
 		};
 
 		//void penzhang(unsigned int x, unsigned int y);
-		void SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy);
+		/*void SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy);
 		void SetPixel(unsigned int x, unsigned int y);
-		void AddPixel(unsigned int x, unsigned int y);
+		void AddPixel(unsigned int x, unsigned int y);*/
 		bool GetPixel(unsigned int x, unsigned int y);
 		void UpDateMaps();
+
+		//破坏指针
+		void GetPixelSPointer();
+		void SetPixelS(unsigned int x, unsigned int y, bool Switch);
+		void EndPixelSPointer();
+
+		unsigned char* TexturePointer = nullptr;
+		unsigned char* TextureMist = nullptr;
+		int* Mistwall = nullptr;
 
 		//录制缓存指令
 		void ThreadUpdateCommandBuffer();
@@ -110,7 +123,7 @@ namespace GAME {
 		int* BlockPixelS = nullptr;//像素点是否是墙壁
 		unsigned int** BlockTypeS = nullptr;//地面类型
 	private:
-		bool UpDateMapsSwitch = false;//地图是否修改
+		//bool UpDateMapsSwitch = false;//地图是否修改
 
 		VulKan::DescriptorPool* mDescriptorPool{ nullptr };//描述符池
 		std::vector<VulKan::UniformParameter*>* mUniformParams;
@@ -169,5 +182,6 @@ namespace GAME {
 
 	public://物理
 		SquarePhysics::FixedSizeTerrain* mFixedSizeTerrain = nullptr;
+		Queue<PixelState>* mPixelQueue = nullptr;
 	};
 }

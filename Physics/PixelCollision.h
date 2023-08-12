@@ -1,6 +1,7 @@
 #pragma once
 #include "StructuralComponents.h"
 #include "ObjectDecorator.h"
+#include "DestroyMode.h"
 
 //PixelCollision
 namespace SquarePhysics {

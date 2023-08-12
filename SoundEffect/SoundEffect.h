@@ -54,11 +54,13 @@ namespace GAME::SoundEffect {
 
 		void SoundEffectEvent();
 
+		void SetVolume(float Volume);
+
 	private:
 		static SoundEffect* mSoundEffect;
 		SoundEffect();
 		
-		SoLoud::Soloud Soloud;//主
+		SoLoud::Soloud mSoloud;//主
 		SoLoud::SoundFont MidiFont;//音色
 		SoLoud::Wav** mWaveS;
 		SoLoud::Midi** mMidiS;

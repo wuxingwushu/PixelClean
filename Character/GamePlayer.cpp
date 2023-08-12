@@ -3,9 +3,9 @@
 
 namespace GAME {
 
-	void GamePlayerDestroyPixel(int x, int y, void* mclass) {
+	void GamePlayerDestroyPixel(int x, int y, bool Bool, void* mclass) {
 		GamePlayer* Class = (GamePlayer*)mclass;
-		Class->DestroyPixel({x,y});
+		Class->mPixelQueue->add({x,y, Bool });
 	}
 
 	GamePlayer::GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, float X, float Y)
@@ -14,6 +14,8 @@ namespace GAME {
 		mSwapChain = swapChain;
 		mRenderPass = renderPass;
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(X, Y, 0.0f));//位移矩阵
+
+		mPixelQueue = new Queue<PixelState>(100);
 
 		mObjectCollision = new SquarePhysics::ObjectCollision(16, 16, 1);
 		mBrokenData = new bool[16 * 16];
@@ -39,10 +41,10 @@ namespace GAME {
 		};
 
 		std::vector<float> mUVs = {
-			0.0f,0.0f,
-			0.0f,1.0f,
-			1.0f,1.0f,
-			1.0f,0.0f,
+			0.01f,0.01f,
+			0.01f,0.99f,
+			0.99f,0.99f,
+			0.99f,0.01f,
 			
 		};
 
@@ -228,11 +230,31 @@ namespace GAME {
 		}
 	}
 
-	void GamePlayer::DestroyPixel(glm::ivec2 pixel) {
-		unsigned char* TexturePointer = (unsigned char*)mPixelTexture->getHOSTImagePointer();
-		memset(&TexturePointer[(pixel.x * 16 + pixel.y) * 4 + 3], 0, 1);
-		mBrokenData[pixel.x * 16 + pixel.y] = false;
+	void GamePlayer::GetPixelSPointer() {
+		TexturePointer = (unsigned char*)mPixelTexture->getHOSTImagePointer();
+	}
+	void GamePlayer::SetPixelS(unsigned int x, unsigned int y, bool Switch) {
+		memset(&TexturePointer[(x * 16 + y) * 4 + 3], 0, 1);
+		mBrokenData[x * 16 + y] = false;
+	}
+	void GamePlayer::EndPixelSPointer() {
 		mPixelTexture->endHOSTImagePointer();
 		mPixelTexture->UpDataImage();
+	}
+	void GamePlayer::UpData() {
+		if (mPixelQueue->GetNumber() != 0) {
+			PixelState* LPixel;
+			GetPixelSPointer();
+			while (mPixelQueue->GetNumber() != 0)
+			{
+				LPixel = mPixelQueue->pop();
+				if (LPixel != nullptr) {
+					if ((LPixel->X >= 0) && (LPixel->Y >= 0) && (LPixel->X < 16) && (LPixel->Y < 16)) {
+						SetPixelS(LPixel->X, LPixel->Y, LPixel->State);
+					}
+				}
+			}
+			EndPixelSPointer();
+		}
 	}
 }

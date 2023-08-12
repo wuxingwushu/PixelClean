@@ -1,5 +1,8 @@
 #include "Arms.h"
 #include "../SoundEffect/SoundEffect.h"
+#include "../GlobalVariable.h"
+#include "../Physics/DestroyMode.h"
+
 
 namespace GAME {
 
@@ -23,9 +26,11 @@ namespace GAME {
 		delete mBullet;
 	}
 
-	void Arms::ShootBullets(float x, float y, unsigned char* colour, float angle, float speed) {
+	void Arms::ShootBullets(float x, float y, float angle, float speed, unsigned int Type) {
 
-		SoundEffect::SoundEffect::GetSoundEffect()->Play("Pistol", MP3);
+		unsigned char color[4] = { 0,255,0,125 };
+
+		SoundEffect::SoundEffect::GetSoundEffect()->Play("Pistol", MP3, false, Global::SoundEffectsVolume);
 
 		//std::cout << "X: " << x << "Y: " << y << "angle: " << angle << std::endl;
 		SquarePhysics::PixelCollision* LPixelCollision = new SquarePhysics::PixelCollision(1);//生成子弹物理模型
@@ -46,7 +51,8 @@ namespace GAME {
 		LPixelCollision->SetSpeed(speed, angle);//设置速度，角度
 		LPixelCollision->SetCollisionCallback(Arms_DeleteBullet,this);//销毁回调函数
 		LPixelCollision->SetFrictionCoefficient(0.0f);//设置摩擦系数
-		Ppppx->Pixel->ModifyImage(4, colour);//设置模型颜色
+		LPixelCollision->SetDestroyModeCallback(SquarePhysics::GetDestroyMode(SquarePhysics::DestroyModeEnum(Type)));//破坏模式
+		Ppppx->Pixel->ModifyImage(4, color);//设置模型颜色
 		ObjectUniform mUniform;
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3( x, y, 0.0f));//位置矩阵
 		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(angle * 180 / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));//旋转矩阵

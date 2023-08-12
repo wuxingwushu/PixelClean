@@ -43,7 +43,7 @@ void SGamePlayerSynchronize(bufferevent* be, void* Data) {
 	if (server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->GetNumber() != 0) {
 		DataHeader DH;
 		DH.Key = 6;
-		DH.Size = sizeof(PixelSynchronize) * server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->GetNumber();
+		DH.Size = sizeof(PixelState) * server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->GetNumber();
 		bufferevent_write(be, &DH, sizeof(DataHeader));//发送数据头
 		bufferevent_write(be, server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->GetData(), DH.Size);//发送数据
 		server::GetServer()->GetServerData()->Get(fd)->mBufferEventSingleData->mLabyrinthPixel->ClearAll();
@@ -56,7 +56,7 @@ void SArmsSynchronize(bufferevent* be, void* Data) {
 	unsigned char color[4] = { 0,255,0,125 };
 	for (size_t i = 0; i < AData->Size; i++)
 	{
-		server::GetServer()->GetArms()->ShootBullets(BData[i].X, BData[i].Y, color, BData[i].angle, 500);
+		server::GetServer()->GetArms()->ShootBullets(BData[i].X, BData[i].Y, BData[i].angle, 500, BData[i].Type);
 	}
 	PlayerPos* LServerPos = server::GetServer()->GetServerData()->GetKeyData(bufferevent_getfd(be));
 	BufferEventSingleData* LBufferEventSingleData;
@@ -113,7 +113,7 @@ void SInitLabyrinth(bufferevent* be, void* Data) {
 
 void SLabyrinthPixel(bufferevent* be, void* Data) {
 	SynchronizeData* AData = (SynchronizeData*)Data;
-	PixelSynchronize* BData = (PixelSynchronize*)AData->Pointer;
+	PixelState* BData = (PixelState*)AData->Pointer;
 	evutil_socket_t fd = bufferevent_getfd(be);
 	for (size_t i = 0; i < AData->Size; i++)
 	{

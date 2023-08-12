@@ -9,8 +9,8 @@
 #include "../Vulkan/renderPass.h"
 
 #include "../Physics/SquarePhysics.h"
-
-
+#include "../Tool/Queue.h"
+#include "../GlobalStructural.h"
 
 namespace GAME {
 	class GamePlayer
@@ -36,7 +36,12 @@ namespace GAME {
 			Key = key;
 		}
 
-		void DestroyPixel(glm::ivec2 pixel);
+		//破坏指针
+		unsigned char* TexturePointer = nullptr;
+		void GetPixelSPointer();
+		void SetPixelS(unsigned int x, unsigned int y, bool Switch);
+		void EndPixelSPointer();
+		void UpData();
 
 
 		//更新描述符，模型位置
@@ -95,5 +100,6 @@ namespace GAME {
 
 	public://物理
 		SquarePhysics::ObjectCollision* mObjectCollision = nullptr;
+		Queue<PixelState>* mPixelQueue = nullptr;
 	};
 }

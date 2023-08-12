@@ -39,6 +39,7 @@ namespace GAME {
 			mSquarePhysics = SquarePhysics;
 			MapPlayerS->SetDeleteCallback(DeleteCrowd, mSquarePhysics);//销毁时，随便把物理模拟中的也一并销毁
 			MapPlayerS->SetTimeoutCallback(TimeoutCrowd, nullptr);
+			MapPlayerS->SetTimeoutTime(1000);
 		}
 
 		void ReconfigurationCommandBuffer() {
@@ -47,6 +48,10 @@ namespace GAME {
 			{
 				LGamePlayer[i]->InitCommandBuffer();
 			}
+		}
+		
+		void UpTime() {
+			MapPlayerS->UpDataWholeTime();
 		}
 
 	private:

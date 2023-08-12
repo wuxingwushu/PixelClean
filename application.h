@@ -19,8 +19,6 @@
 
 #include "SoundEffect/SoundEffect.h"
 
-#include "BlockS/BlockS.h"
-
 #include "Character/GamePlayer.h"
 
 #include "ImGui/Interface.h"
@@ -157,10 +155,10 @@ namespace GAME {
 		glm::vec2 PlayerForce{};//玩家移动受力
 		GamePlayer* mGamePlayer{ nullptr };//玩家
 		double CursorPosX, CursorPosY;//光标位置
-
+	public:
+		unsigned int AttackType = 0;
 	private:
 
-		//BlockS* mBlockS = nullptr;
 		Labyrinth* mLabyrinth = nullptr;//迷宫
 		ParticleSystem* mParticleSystem = nullptr;//粒子系统
 		

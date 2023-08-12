@@ -104,7 +104,8 @@ namespace GAME {
 
 		mPipelineS = new VulKan::PipelineS(mDevice, mRenderPass);//创建渲染管线集合
 
-		Global::MainCommandBufferS = new bool[mSwapChain->getImageCount()];
+		Global::CommandBufferSize = mSwapChain->getImageCount();
+		Global::MainCommandBufferS = new bool[Global::CommandBufferSize];
 		//主指令缓存录制
 		mCommandBuffers.resize(mSwapChain->getImageCount());//用来给每个GPU画布都绑上单独的 主CommandBuffer
 		for (int i = 0; i < mSwapChain->getImageCount(); ++i) {
@@ -363,8 +364,9 @@ namespace GAME {
 			mCommandBuffers[i]->endRenderPass();//结束RenderPass
 			mCommandBuffers[i]->end();//结束
 			Global::MainCommandBufferS[i] = true;
+			return;
 		}
-		else {
+		else if(!Global::MonitorCompatibleMode){
 			renderBeginInfo.renderPass = mImGuuiRenderPass->getRenderPass();//获得画布信息
 			mImGuuiCommandBuffers->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 			mImGuuiCommandBuffers->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -373,8 +375,7 @@ namespace GAME {
 			mImGuuiCommandBuffers->end();//结束
 		}
 
-
-		if (!Global::MainCommandBufferS[i] || InterFace->GetInterFaceBool()) {//如果没有更新就退出
+		if (!Global::MainCommandBufferS[i] && !Global::MonitorCompatibleMode) {
 			return;
 		}
 
@@ -385,6 +386,10 @@ namespace GAME {
 		mCommandBuffers[i]->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);//关于画布信息  !!!这个只有主指令才有
 
 		GameCommandBuffers(i, InheritanceInfo);
+
+		if (Global::MonitorCompatibleMode) {
+			ThreadCommandBufferS.push_back(InterFace->GetCommandBuffer(i, InheritanceInfo));
+		}
 		
 		//把全部二级指令绑定到主指令缓存
 		vkCmdExecuteCommands(mCommandBuffers[i]->getCommandBuffer(), ThreadCommandBufferS.size(), ThreadCommandBufferS.data());
@@ -449,7 +454,7 @@ namespace GAME {
 
 	//主循环main
 	void Application::mainLoop() {
-		SoundEffect::SoundEffect::GetSoundEffect()->Play("夜に駆ける", MIDI, true);
+		SoundEffect::SoundEffect::GetSoundEffect()->Play("夜に駆ける", MIDI, true, Global::MusicVolume);
 		while (!mWindow->shouldClose()) {//窗口被关闭结束循环
 			SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
 			PlayerForce = { 0,0 };
@@ -473,6 +478,8 @@ namespace GAME {
 						client::GetClient()->SetLabyrinth(mLabyrinth);
 					}
 				}
+				
+				mCrowd->UpTime();
 			}
 			else {
 				TOOL::mTimer->StartTiming(u8"游戏逻辑 ", true);
@@ -482,11 +489,7 @@ namespace GAME {
 
 				TOOL::mTimer->RefreshTiming();
 			}
-			TOOL::FPS();//刷新帧数
 
-			TOOL::mTimer->StartTiming(u8"画面渲染 ");
-			Render();//根据录制的主指令缓存显示画面
-			TOOL::mTimer->StartEnd();
 
 			TOOL::mTimer->StartTiming(u8"TCP ");
 			if (InterFace->GetMultiplePeople())
@@ -504,6 +507,13 @@ namespace GAME {
 					event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
 				}
 			}
+			TOOL::mTimer->StartEnd();
+
+
+			TOOL::FPS();//刷新帧数
+
+			TOOL::mTimer->StartTiming(u8"画面渲染 ");
+			Render();//根据录制的主指令缓存显示画面
 			TOOL::mTimer->StartEnd();
 		}
 		SoundEffect::SoundEffect::GetSoundEffect()->~SoundEffect();
@@ -545,6 +555,7 @@ namespace GAME {
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
 		TOOL::mTimer->StartEnd();
 
+		mGamePlayer->UpData();//更新玩家伤痕
 		mGamePlayer->mObjectCollision->SetForce({0,0});//设置玩家力
 		mCamera.setCameraPos(mGamePlayer->mObjectCollision->GetPos());
 
@@ -572,9 +583,8 @@ namespace GAME {
 		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.2f)))
 		{
 			ArmsContinuityFire = 0;
-			unsigned char color[4] = { 0,255,0,125 };
 			glm::dvec2 Armsdain =  SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle + 1.57f);
-			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, color, m_angle + 1.57f, 500);
+			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle + 1.57f, 500, AttackType);
 			if (InterFace->GetMultiplePeople()) {//是否为多人模式
 				if (InterFace->GetServerOrClient()) {//服务器还是客户端
 					PlayerPos* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
@@ -594,6 +604,7 @@ namespace GAME {
 
 		mArms->BulletsEvent();
 		
+		mCrowd->TimeoutDetection();//检测玩家更新情况
 		
 		mLabyrinth->UpDateMaps();
 
@@ -636,11 +647,8 @@ namespace GAME {
 
 		mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 
-		//ThreadCommandBufferS.push_back(mGIF->getCommandBuffer(Format_i));
-
 		mParticleSystem->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 		//加到显示数组中
-		//mCrowd->TimeoutDetection();
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
 		mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
@@ -707,7 +715,7 @@ namespace GAME {
 		if (vkQueueSubmit(mDevice->getGraphicQueue(), 1, &submitInfo, mFences[mCurrentFrame]->getFence()) != VK_SUCCESS) {
 			throw std::runtime_error("Error:failed to submit renderCommand");
 		}
-		if (!InterFace->GetInterFaceBool() && Global::Monitor)
+		if ((!InterFace->GetInterFaceBool() && Global::Monitor) && !Global::MonitorCompatibleMode)
 		{
 			mImGuuiCommandBuffers->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);//这个功能部分电脑，不支持 分两次 vkQueueSubmit 导致 只看得见 监视器
 		}

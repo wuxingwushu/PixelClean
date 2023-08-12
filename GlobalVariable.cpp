@@ -3,7 +3,15 @@
 #include "FilePath.h"
 
 namespace Global {
+	extern unsigned int CommandBufferSize = 0;
 	bool* MainCommandBufferS = nullptr;
+	void MainCommandBufferUpdateRequest() {
+		for (size_t i = 0; i < CommandBufferSize; i++)
+		{
+			MainCommandBufferS[i] = true;
+		}
+	}
+
 	bool MultiplePeopleMode = false;
 	bool ServerOrClient;
 
@@ -17,7 +25,14 @@ namespace Global {
 		ClientIP = Ini.Get<std::string>("ClientTCP", "IP");
 		VulKanValidationLayer = Ini.Get<bool>("Set", "VulKanValidationLayer");
 		Monitor = Ini.Get<bool>("Set", "Monitor");
+		MonitorCompatibleMode = Ini.Get<bool>("Set", "MonitorCompatibleMode");
 		FullScreen = Ini.Get<bool>("Set", "FullScreen");
+		MusicVolume = Ini.Get<float>("Set", "MusicVolume");
+		SoundEffectsVolume = Ini.Get<float>("Set", "SoundEffectsVolume");
+		KeyW = Ini.Get<unsigned char>("Key", "KeyW");
+		KeyS = Ini.Get<unsigned char>("Key", "KeyS");
+		KeyA = Ini.Get<unsigned char>("Key", "KeyA");
+		KeyD = Ini.Get<unsigned char>("Key", "KeyD");
 	}
 
 	void Storage() {
@@ -29,7 +44,14 @@ namespace Global {
 		Ini.UpdateEntry("ClientTCP", "IP", ClientIP);
 		Ini.UpdateEntry("Set", "VulKanValidationLayer", VulKanValidationLayer);
 		Ini.UpdateEntry("Set", "Monitor", Monitor);
+		Ini.UpdateEntry("Set", "MonitorCompatibleMode", MonitorCompatibleMode);
 		Ini.UpdateEntry("Set", "FullScreen", FullScreen);
+		Ini.UpdateEntry("Set", "MusicVolume", MusicVolume);
+		Ini.UpdateEntry("Set", "SoundEffectsVolume", SoundEffectsVolume);
+		Ini.UpdateEntry("Key", "KeyW", KeyW);
+		Ini.UpdateEntry("Key", "KeyS", KeyS);
+		Ini.UpdateEntry("Key", "KeyA", KeyA);
+		Ini.UpdateEntry("Key", "KeyD", KeyD);
 		inih::INIWriter::write_Gai(IniPath, Ini);//保存
 	}
 
@@ -42,5 +64,13 @@ namespace Global {
 
 	bool VulKanValidationLayer;
 	bool Monitor;
+	bool MonitorCompatibleMode;
 	bool FullScreen;
+	float MusicVolume;
+	float SoundEffectsVolume;
+
+	unsigned char KeyW;
+	unsigned char KeyS;
+	unsigned char KeyA;
+	unsigned char KeyD;
 }

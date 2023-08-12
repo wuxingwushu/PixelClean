@@ -6,16 +6,8 @@ namespace SquarePhysics {
 		unsigned int x, 
 		unsigned int y, 
 		unsigned int SideLength
-	) :
-		mNumberX(x),
-		mNumberY(y),
-		mSideLength(SideLength)
+	) : GridDecorator(x, y, SideLength)
 	{
-		mPixelAttributeS = new PixelAttribute * [mNumberX];
-		for (size_t i = 0; i < mNumberX; i++)
-		{
-			mPixelAttributeS[i] = new PixelAttribute[mNumberY];
-		}
 	}
 
 	FixedSizeTerrain::~FixedSizeTerrain()
@@ -36,7 +28,7 @@ namespace SquarePhysics {
 		int err = dx - dy;
 		int e2;
 		while (true) {
-			if (GetFixedCollisionBool(Start.x, Start.y)) {
+			if (GetFixedCollisionBool(Start)) {
 				return { true, Start };
 			}
 			if (Start.x == End.x && Start.y == End.y) {
@@ -47,7 +39,7 @@ namespace SquarePhysics {
 				err -= dy;
 				Start.x += sx;
 			}
-			if (GetFixedCollisionBool(Start.x, Start.y)) {
+			if (GetFixedCollisionBool(Start)) {
 				return { true, Start };
 			}
 			if (Start.x == End.x && Start.y == End.y) {

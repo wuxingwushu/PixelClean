@@ -174,6 +174,15 @@ public:
     void SetTimeoutTime(clock_t Time) {
         TimeoutTime = Time;
     }
+
+    //更新所有时间
+    void UpDataWholeTime() {
+        clock_t time = clock();
+        for (size_t i = 0; i < Number; i++)
+        {
+            TimeS[i] = time;
+        }
+    }
 #endif
 
     //获取除 Key 以外的所有 Data （且将 Key 移动最后面）

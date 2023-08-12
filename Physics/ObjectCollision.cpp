@@ -8,16 +8,8 @@ namespace SquarePhysics {
 		unsigned int x,
 		unsigned int y,
 		unsigned int SideLength
-	) :
-		mNumberX(x),
-		mNumberY(y),
-		mSideLength(SideLength)
+	): GridDecorator(x, y, SideLength)
 	{
-		mPixelAttributeS = new PixelAttribute * [mNumberX];
-		for (size_t i = 0; i < mNumberX; i++)
-		{
-			mPixelAttributeS[i] = new PixelAttribute[mNumberY];
-		}
 	}
 
 	ObjectCollision::~ObjectCollision()
@@ -75,7 +67,7 @@ namespace SquarePhysics {
 		dian = vec2angle(dian, { mAngle.x, -mAngle.y });//减除玩家的角度// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		if (GetFixedCollisionBool(dian)) {
 			SetFixedCollisionBool(dian);
-			CollisionCallback(dian.x, dian.y);
+			CollisionCallback(dian.x, dian.y, false);
 			OutlineCalculate();
 			return { true, glm::ivec2(dian) };
 		}

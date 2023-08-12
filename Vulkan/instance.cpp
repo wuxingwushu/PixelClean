@@ -61,7 +61,7 @@ namespace VulKan {
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);//版本
 		appInfo.pEngineName = "NO ENGINE";//是否有引擎，对引擎优化
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);//引擎版本
-		appInfo.apiVersion = VK_API_VERSION_1_2;//API 版本
+		appInfo.apiVersion = VK_API_VERSION_1_3;//API 版本
 
 		VkInstanceCreateInfo instCreateInfo = {}; 
 		instCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -119,7 +119,9 @@ namespace VulKan {
 		std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 		//添加校验层扩展
-		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME); //开启调试功能
+		if (mEnableValidationLayer) {
+			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME); //开启调试功能
+		}
 
 		return extensions;
 	}
@@ -167,7 +169,7 @@ namespace VulKan {
 		createInfo.pUserData = nullptr;
 
 		if (CreateDebugUtilsMessengerEXT(mInstance, &createInfo, nullptr, &mDebugger) != VK_SUCCESS) {//创建返回错误信息或警告的信使
-			throw std::runtime_error("Error:failed to create debugger");
+			throw std::runtime_error("Error:VulKan Instance . failed to create debugger");
 		}
 	}
 }

@@ -9,7 +9,7 @@ namespace GAME::SoundEffect {
 
 	SoundEffect::SoundEffect()
 	{
-		Soloud.init();
+		mSoloud.init();
 		MidiFont.load(TimGM6mb_sf2);
 		//gLPFilter.setParams(SoLoud::BiquadResonantFilter::LOWPASS, 10000, 0);//开启音效
 		//gWave.setFilter(0, &gLPFilter);//绑定音效
@@ -46,7 +46,7 @@ namespace GAME::SoundEffect {
 		delete[] mWaveS;
 		delete[] mMidiS;
 		delete SoundEffectsID;
-		Soloud.deinit();
+		mSoloud.deinit();
 	}
 
 	void SoundEffect::Play(std::string name, SoundType Type, bool Loop, float Volume, float LeftAndRightVocalChannels)
@@ -62,13 +62,13 @@ namespace GAME::SoundEffect {
 			if (Loop) {
 				((SoLoud::Wav*)SoundLibaryMap[name])->setLooping(true);
 			}
-			SoundEffectsID->add({ Soloud.play(*((SoLoud::Wav*)SoundLibaryMap[name]), Volume, LeftAndRightVocalChannels, 0, 0) });//播放这个音频
+			SoundEffectsID->add({ mSoloud.play(*((SoLoud::Wav*)SoundLibaryMap[name]), Volume, LeftAndRightVocalChannels, 0, 0) });//播放这个音频
 			break;
 		case MIDI:
 			if (Loop) {
 				((SoLoud::Midi*)SoundLibaryMap[name])->setLooping(true);
 			}
-			SoundEffectsID->add({ Soloud.play(*((SoLoud::Midi*)SoundLibaryMap[name]), Volume + 3.0f, LeftAndRightVocalChannels, 0, 0) });//播放这个音频
+			SoundEffectsID->add({ mSoloud.play(*((SoLoud::Midi*)SoundLibaryMap[name]), Volume, LeftAndRightVocalChannels, 0, 0) });//播放这个音频
 			break;
 		default:
 			break;
@@ -78,10 +78,10 @@ namespace GAME::SoundEffect {
 	void SoundEffect::Pause(SoLoud::handle Handle)
 	{
 		if (Handle == 0) {
-			Soloud.setPauseAll(1);//暂停所有音频
+			mSoloud.setPauseAll(1);//暂停所有音频
 		}
 		else {
-			Soloud.setPause(Handle, 1);//暂停这个音频
+			mSoloud.setPause(Handle, 1);//暂停这个音频
 		}
 	}
 
@@ -91,10 +91,10 @@ namespace GAME::SoundEffect {
 			SoundStruct* SoundStructS = SoundEffectsID->Data();
 			for (size_t i = 0; i < SoundSize; i++)
 			{
-				if (!Soloud.isValidVoiceHandle(SoundStructS[i].Handle))
+				if (!mSoloud.isValidVoiceHandle(SoundStructS[i].Handle))
 				{
 					//std::cout << "Delete Sound :" << SoundStructS[i].Handle << std::endl;
-					Soloud.setPause(SoundStructS[i].Handle, 1);//暂停这个音频
+					mSoloud.setPause(SoundStructS[i].Handle, 1);//暂停这个音频
 					SoundEffectsID->Delete(i);
 				}
 			}
@@ -111,6 +111,17 @@ namespace GAME::SoundEffect {
 			//soloud.fadeFilterParameter(kao, 0, SoLoud::BiquadResonantFilter::RESONANCE, 1, 1.0f);		//设置 共振
 			//soloud.fadeFilterParameter(kao, 0, SoLoud::BiquadResonantFilter::TYPE, 1, 1.0f);			//设置 类型
 			//soloud.fadeFilterParameter(kao, 0, SoLoud::BiquadResonantFilter::WET, 1, 1.0f);			//设置 潮湿的
+		}
+	}
+
+	void SoundEffect::SetVolume(float Volume) {
+		unsigned int SoundSize = SoundEffectsID->GetNumber();
+		if (SoundSize != 0) {
+			SoundStruct* SoundStructS = SoundEffectsID->Data();
+			for (size_t i = 0; i < SoundSize; i++)
+			{
+				mSoloud.setVolume(SoundStructS[i].Handle, Volume);//设置音量
+			}
 		}
 	}
 }

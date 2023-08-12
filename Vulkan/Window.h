@@ -49,7 +49,10 @@ namespace VulKan {
 
 	private:
 		//按键上升沿触发（储存上一时刻的值）
+		bool KeysRisingEdgeTrigger_Esc = false;
 		bool KeysRisingEdgeTrigger = false;
 
+		bool KeysRisingEdgeTrigger_0 = false;
+		bool KeysRisingEdgeTrigger_1 = false;
 	};
 }

@@ -4,6 +4,7 @@
 #include "../Arms/Arms.h"
 #include "../Labyrinth/Labyrinth.h"
 
+
 struct Zip {
 	z_stream* y;
 	z_stream* j;
@@ -43,23 +44,16 @@ struct _Synchronize
 	_SynchronizeCallback mSynchronizeCallback = nullptr;//函数
 };
 
-//地图点事件数据结构
-struct PixelSynchronize {
-	int X;
-	int Y;
-	bool State;
-};
-
 struct BufferEventSingleData
 {
 	PileUp<SynchronizeBullet>* mSubmitBullet;//子弹一次性数据
-	PileUp<PixelSynchronize>* mLabyrinthPixel;//地图点事件
+	PileUp<PixelState>* mLabyrinthPixel;//地图点事件
 
 	bool* mBrokenData;//破碎状态
 
 	BufferEventSingleData(unsigned int size) {
 		mSubmitBullet = new PileUp<SynchronizeBullet>(size);
-		mLabyrinthPixel = new PileUp<PixelSynchronize>(size);
+		mLabyrinthPixel = new PileUp<PixelState>(size);
 	}
 
 	~BufferEventSingleData() {

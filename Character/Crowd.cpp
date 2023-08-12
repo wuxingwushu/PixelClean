@@ -1,10 +1,12 @@
 #include "Crowd.h"
+#include "../GlobalVariable.h"
 
 namespace GAME {
 
 	void DeleteCrowd(GamePlayer* Player, void* Data) {
 		SquarePhysics::SquarePhysics* LSquarePhysics = (SquarePhysics::SquarePhysics*)Data;
 		LSquarePhysics->RemoveObjectCollision(Player->mObjectCollision);
+		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 		std::cout << "Delete Player, 释放 玩家" << std::endl;
 		delete Player;
 	}
@@ -58,12 +60,19 @@ namespace GAME {
 			);
 			(*LGamePlayer)->InitCommandBuffer();
 			mSquarePhysics->AddObjectCollision((*LGamePlayer)->mObjectCollision);
+
+			Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 		}
 		return (*LGamePlayer);
 	}
 
 	void Crowd::TimeoutDetection() {
 		MapPlayerS->TimeoutDetection();
+		GamePlayer** PlayerS = MapPlayerS->GetData();
+		for (size_t i = 0; i < MapPlayerS->GetNumber(); i++)
+		{
+			PlayerS[i]->UpData();//更新玩家伤痕
+		}
 	}
 
 	void Crowd::GetCommandBufferS(std::vector<VkCommandBuffer>* CommandBufferVector, unsigned int Format) {

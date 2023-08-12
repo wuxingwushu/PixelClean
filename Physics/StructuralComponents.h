@@ -35,4 +35,10 @@ namespace SquarePhysics {
 		bool Collision = false;
 		glm::vec2 Pos{ 0 };
 	};
+
+	//破坏模式回调函数
+	typedef void (*_DestroyModeCallback)(int x, int y, void* mclass, bool Bool);
+
+	//破坏点回调函数的类型
+	typedef void (*_TerrainCollisionCallback)(int x, int y, bool Bool, void* mclass);
 }

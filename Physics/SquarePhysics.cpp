@@ -45,7 +45,7 @@ namespace SquarePhysics {
 		{
 			LObject = ObjectNumberS[i];
 			Jpos = LObject->GetPos();//久位置
-			LObject->FrameTimeStep(TimeStep, mFixedSizeTerrain->GetFixedFrictionCoefficient(Jpos.x, Jpos.y));//物理模拟
+			LObject->FrameTimeStep(TimeStep, mFixedSizeTerrain->GetFrictionCoefficient(Jpos));//物理模拟
 			Xpos = LObject->GetPos();//新位置
 			Deviation = Xpos - Jpos;//移动方向和大小
 			for (size_t i2 = 0; i2 < LObject->GetOutlinePointSize(); i2++)
@@ -133,11 +133,12 @@ namespace SquarePhysics {
 			if (LCollisionInfo.Collision) {//是否碰撞
 
 				LPixel->SetPos(LCollisionInfo.Pos);//设置为碰撞位置
+				LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, mFixedSizeTerrain, true);
 				LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
 				mPixelCollisionS->Delete(i);//销毁对应的像素
 
-				mFixedSizeTerrain->CollisionCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//调用地图像素点回调函数
-				mFixedSizeTerrain->SetFixedCollisionBool(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//修改地图像素点的碰撞信息
+				//mFixedSizeTerrain->CollisionCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//调用地图像素点回调函数
+				//mFixedSizeTerrain->SetFixedCollisionBool(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//修改地图像素点的碰撞信息
 
 				i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
 				continue;
@@ -150,11 +151,12 @@ namespace SquarePhysics {
 				if (LCollisionInfo.Collision)
 				{
 					LPixel->SetPos(Xpos);//设置为碰撞位置
+					LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, LObject, false);
 					LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
 					mPixelCollisionS->Delete(i);//销毁对应的像素
 
-					LObject->SetFixedCollisionBool(LCollisionInfo.Pos);//修改碰撞像素点信息
-					LObject->CollisionCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//调用碰撞像素点回调事件
+					//LObject->SetFixedCollisionBool(LCollisionInfo.Pos);//修改碰撞像素点信息
+					//LObject->CollisionCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//调用碰撞像素点回调事件
 					LObject->OutlineCalculate();//重新生成碰撞骨骼点
 
 					i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件

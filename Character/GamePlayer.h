@@ -16,7 +16,8 @@ namespace GAME {
 	class GamePlayer
 	{
 	public:
-		GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, float X, float Y);
+		GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, 
+			SquarePhysics::SquarePhysics* SquarePhysics, float X, float Y);
 		~GamePlayer();
 
 		//初始化描述符
@@ -72,32 +73,33 @@ namespace GAME {
 		void UpDataBroken(bool* Broken);
 
 	private://模型变换矩阵
-		unsigned int Key;
-		ObjectUniform mUniform;
-		bool* mBrokenData;
+		unsigned int Key = 0;
+		ObjectUniform mUniform{};
+		bool* mBrokenData = nullptr;
 
 	private://模型   顶点，UV，顶点索引
 		VulKan::Buffer* mPositionBuffer{ nullptr };
 		VulKan::Buffer* mUVBuffer{ nullptr };
 		VulKan::Buffer* mIndexBuffer{ nullptr };
-		size_t mIndexDatasSize;
+		size_t mIndexDatasSize = 0;
 
 		PixelTexture* mPixelTexture = nullptr; //贴图
 
 	private://描述模型   位置   贴图
-		std::vector<VulKan::UniformParameter*> mUniformParams;
+		std::vector<VulKan::UniformParameter*> mUniformParams{};
 
 		VulKan::DescriptorPool* mDescriptorPool{ nullptr };
 		VulKan::DescriptorSet* mDescriptorSet{ nullptr };//指令录制用的数据
 
 	private:
-		VulKan::CommandPool* mBufferCopyCommandPool;
-		VulKan::CommandBuffer** mBufferCopyCommandBuffer;
+		VulKan::CommandPool* mBufferCopyCommandPool = nullptr;
+		VulKan::CommandBuffer** mBufferCopyCommandBuffer = nullptr;
 
-		VulKan::Pipeline* mPipeline;
-		VulKan::SwapChain* mSwapChain;
-		VulKan::RenderPass* mRenderPass;
+		VulKan::Pipeline* mPipeline = nullptr;
+		VulKan::SwapChain* mSwapChain = nullptr;
+		VulKan::RenderPass* mRenderPass = nullptr;
 
+		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理
 	public://物理
 		SquarePhysics::ObjectCollision* mObjectCollision = nullptr;
 		Queue<PixelState>* mPixelQueue = nullptr;

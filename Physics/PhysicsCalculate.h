@@ -28,5 +28,7 @@ namespace SquarePhysics {
 	[[nodiscard]] glm::dvec2 SquareToDrop(float A1, float A2, float B1, float B2, glm::dvec2 Drop, glm::dvec2 PY);
 	//正方形和射线的碰撞检测
 	[[nodiscard]] glm::dvec2 SquareToRadial(float A1, float A2, float B1, float B2, glm::dvec2 Drop, glm::dvec2 PY);
-
+	
+	//扭矩计算
+	[[nodiscard]] float TorqueCalculate(glm::vec2 Barycenter, glm::vec2 Spot, glm::vec2 Force);
 }

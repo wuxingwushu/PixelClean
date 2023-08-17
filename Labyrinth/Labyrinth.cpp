@@ -95,7 +95,7 @@ namespace GAME {
 		for (size_t i = 0; i < numberX; i++)
 		{
 			BlockS[i] = new bool[numberY];
-			BlockTypeS[i] = new unsigned int[numberX];
+			BlockTypeS[i] = new unsigned int[numberY];
 		}
 
 		bool** lblockS = nullptr;
@@ -135,6 +135,27 @@ namespace GAME {
 			}
 		}
 
+
+		PixelWallNumber = new short int* [numberX * 16];
+		
+		for (size_t ix = 0; ix < (numberX * 16); ix++)
+		{
+			PixelWallNumber[ix] = new short int[numberY * 16];
+			for (size_t iy = 0; iy < (numberY * 16); iy++)
+			{
+				PixelWallNumber[ix][iy] = 0;
+			}
+		}
+		for (size_t ix = 0; ix < numberX * 16; ix++)
+		{
+			for (size_t iy = 0; iy < numberY * 16; iy++)
+			{
+				if (BlockPixelS[(ix * numberY * 16) + iy] == 1) {
+					PixelWallNumberAdd(ix, iy);
+				}
+			}
+		}
+
 		delete P;
 		
 
@@ -156,8 +177,9 @@ namespace GAME {
 		int Ay = -((numberY / 2) * 16);
 		int Bx = (numberX * 16) + Ax;
 		int By = (numberY * 16) + Ay;
-
-		mFixedSizeTerrain->SetOrigin(unsigned int(-Ax + 8), unsigned int(-Ay + 8));
+		mOriginX = unsigned int(-Ax + 8);
+		mOriginY = unsigned int(-Ay + 8);
+		mFixedSizeTerrain->SetOrigin(mOriginX, mOriginY);
 
 
 
@@ -424,71 +446,64 @@ namespace GAME {
 		commandbuffer->drawIndex(getIndexCount());//获取绘画物体的顶点个数
 		commandbuffer->end();
 	}
-	//左下坐标，图片ID
-	/*void Labyrinth::penzhang(unsigned int x, unsigned int y) {
-		BlockS[x][y] = 0;
-		unsigned char* TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
-		unsigned char* TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
-		for (size_t i = 0; i < 16; i++)
+
+	bool Labyrinth::GetPixel(int x, int y) {
+		if (x >= numberX * 16 || x < 0)return true;
+		if (y >= numberY * 16 || x < 0)return true;
+		return BlockPixelS[(x * numberY * 16) + y] == 0 ? 0 : 1;
+	}
+
+	bool Labyrinth::GetPixelLegitimate(int x, int y) {
+		if (x >= numberX * 16 || x < 0)return false;
+		if (y >= numberY * 16 || x < 0)return false;
+		return true;
+	}
+
+	short int Labyrinth::GetPixelWallNumber(int x, int y) {
+		x += mOriginX;
+		y += mOriginY;
+		if (GetPixelLegitimate(x,y)) {
+			return PixelWallNumber[x][y];
+		}
+		else {
+			return 255;
+		}
+	}
+
+	void Labyrinth::PixelWallNumberCalculate(int x, int y) {
+		for (int ix = -9; ix < 10; ix++)
 		{
-			memcpy(&TexturePointer[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * i)], 16 * 4);
-			for (size_t idd = 0; idd < 16; idd++)
+			for (int iy = -9; iy < 10; iy++)
 			{
-				TextureMist[(((x * 16) + i) * numberY * 16 * 4) + (y * 16 * 4) + (idd * 4) + 3] = 230;
+				if (GetPixel(x+ix,y+iy)) {
+					PixelWallNumber[x][y]++;
+				}
 			}
 		}
-		PixelTextureS->endHOSTImagePointer();
-		WarfareMist->endHOSTImagePointer();
-		UpDateMapsSwitch = true;
-	}*/
+	}
 
-	//左下坐标，左下坐标，图片ID
-	//void Labyrinth::SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy) {
-	//	TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
-	//	TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
-	//	Mistwall = (int*)WallBool->getupdateBufferByMap();
-	//	memcpy(&TexturePointer[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * Dx) + (Dy * 4)], 4);
-	//	//TextureMist[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4) + 3] = 230;
-	//	MixColors(&TextureMist[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)], &pixelS[BlockTypeS[x][y]][(16 * 4 * Dx) + (Dy * 4)]);
-	//	Mistwall[(((x * 16) + Dx) * numberY * 16 * 4) + (((y * 16) + Dy) * 4)] = 0;
-	//	WallBool->endupdateBufferByMap();
-	//	PixelTextureS->endHOSTImagePointer();
-	//	WarfareMist->endHOSTImagePointer();
-	//	UpDateMapsSwitch = true;
-	//}
+	void Labyrinth::PixelWallNumberAdd(int x, int y) {
+		for (int ix = -9; ix < 10; ix++)
+		{
+			for (int iy = -9; iy < 10; iy++)
+			{
+				if (GetPixelLegitimate(x + ix, y + iy)) {
+					PixelWallNumber[x + ix][y + iy]++;
+				}
+			}
+		}
+	}
 
-	//void Labyrinth::SetPixel(unsigned int x, unsigned int y) {
-	//	BlockPixelS[(x * numberY * 16) + y] = 0;
-	//	TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
-	//	TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
-	//	Mistwall = (int*)WallBool->getupdateBufferByMap();
-	//	memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[BlockTypeS[x / 16][y / 16]][(((x % 16) * 16) + (y % 16)) * 4], 4);
-	//	//TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
-	//	MixColors(&TextureMist[(x * numberY * 16 * 4) + (y * 4)], &pixelS[BlockTypeS[x / 16][y / 16]][(((x % 16) * 16) + (y % 16)) * 4]);
-	//	Mistwall[(x * numberY * 16) + y] = 0;
-	//	WallBool->endupdateBufferByMap();
-	//	PixelTextureS->endHOSTImagePointer();
-	//	WarfareMist->endHOSTImagePointer();
-	//	UpDateMapsSwitch = true;
-	//}
-
-	//void Labyrinth::AddPixel(unsigned int x, unsigned int y) {
-	//	BlockPixelS[(x * numberY * 16) + y] = 1;
-	//	TexturePointer = (unsigned char*)PixelTextureS->getHOSTImagePointer();
-	//	TextureMist = (unsigned char*)WarfareMist->getHOSTImagePointer();
-	//	Mistwall = (int*)WallBool->getupdateBufferByMap();
-	//	memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[2][(((x % 16) * 16) + (y % 16)) * 4], 4);
-	//	//TextureMist[(x * numberY * 16 * 4) + (y * 4) + 3] = 230;
-	//	MixColors(&TextureMist[(x * numberY * 16 * 4) + (y * 4)], &pixelS[2][(((x % 16) * 16) + (y % 16)) * 4]);
-	//	Mistwall[(x * numberY * 16) + y] = 1;
-	//	WallBool->endupdateBufferByMap();
-	//	PixelTextureS->endHOSTImagePointer();
-	//	WarfareMist->endHOSTImagePointer();
-	//	UpDateMapsSwitch = true;
-	//}
-
-	bool Labyrinth::GetPixel(unsigned int x, unsigned int y) {
-		return BlockPixelS[(x * numberY * 16) + y] == 0 ? 0 : 1;
+	void Labyrinth::PixelWallNumberReduce(int x, int y) {
+		for (int ix = -9; ix < 10; ix++)
+		{
+			for (int iy = -9; iy < 10; iy++)
+			{
+				if (GetPixelLegitimate(x + ix, y + iy)) {
+					PixelWallNumber[x + ix][y + iy]--;
+				}
+			}
+		}
 	}
 
 	void Labyrinth::UpDateMaps() {
@@ -518,17 +533,22 @@ namespace GAME {
 		Mistwall = (int*)WallBool->getupdateBufferByMap();
 	}
 	void Labyrinth::SetPixelS(unsigned int x, unsigned int y, bool Switch) {
+		if ((BlockPixelS[(x * numberY * 16) + y] == 1) == Switch) {
+			return;
+		}
 		if (Switch) {
 			BlockPixelS[(x * numberY * 16) + y] = 1;
 			memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[2][(((x % 16) * 16) + (y % 16)) * 4], 4);
 			MixColors(&TextureMist[(x * numberY * 16 * 4) + (y * 4)], &pixelS[2][(((x % 16) * 16) + (y % 16)) * 4]);
 			Mistwall[(x * numberY * 16) + y] = 1;
+			PixelWallNumberAdd(x,y);
 		}
 		else {
 			BlockPixelS[(x * numberY * 16) + y] = 0;
 			memcpy(&TexturePointer[(x * numberY * 16 * 4) + (y * 4)], &pixelS[BlockTypeS[x / 16][y / 16]][(((x % 16) * 16) + (y % 16)) * 4], 4);
 			MixColors(&TextureMist[(x * numberY * 16 * 4) + (y * 4)], &pixelS[BlockTypeS[x / 16][y / 16]][(((x % 16) * 16) + (y % 16)) * 4]);
 			Mistwall[(x * numberY * 16) + y] = 0;
+			PixelWallNumberReduce(x, y);
 		}
 		
 	}

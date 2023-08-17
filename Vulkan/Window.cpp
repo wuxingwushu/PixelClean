@@ -151,22 +151,20 @@ namespace VulKan {
 			mApp->onKeyDown(CAMERA_MOVE::MOVE_RIGHT);
 		}
 
-		if (glfwGetKey(mWindow, GLFW_KEY_0) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_0) != KeysRisingEdgeTrigger_0) {
+		if (glfwGetKey(mWindow, GLFW_KEY_1) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_1) != KeysRisingEdgeTrigger_0) {
 			mApp->AttackType--;
 			if (mApp->AttackType > SquarePhysics::DestroyModeEnumNumber) {
 				mApp->AttackType = SquarePhysics::DestroyModeEnumNumber;
 			}
-			std::cout << mApp->AttackType << std::endl;
 		}
-		KeysRisingEdgeTrigger_0 = glfwGetKey(mWindow, GLFW_KEY_0);
+		KeysRisingEdgeTrigger_0 = glfwGetKey(mWindow, GLFW_KEY_1);
 
-		if (glfwGetKey(mWindow, GLFW_KEY_1) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_1) != KeysRisingEdgeTrigger_1) {
+		if (glfwGetKey(mWindow, GLFW_KEY_2) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_2) != KeysRisingEdgeTrigger_1) {
 			mApp->AttackType++;
 			if (mApp->AttackType > SquarePhysics::DestroyModeEnumNumber) {
 				mApp->AttackType = 0;
 			}
-			std::cout << mApp->AttackType << std::endl;
 		}
-		KeysRisingEdgeTrigger_1 = glfwGetKey(mWindow, GLFW_KEY_1);
+		KeysRisingEdgeTrigger_1 = glfwGetKey(mWindow, GLFW_KEY_2);
 	}
 }

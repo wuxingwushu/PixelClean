@@ -1,5 +1,7 @@
 #pragma once
 #include "GamePlayer.h"
+#include "NPC.h"
+#include "../Tool/ContinuousData.h"
 #include <event2/util.h>
 
 namespace GAME {
@@ -54,6 +56,10 @@ namespace GAME {
 			MapPlayerS->UpDataWholeTime();
 		}
 
+		void AddNPC(int x, int y, Labyrinth* Labyrinth);
+
+		void NPCEvent(int Format, float time);
+
 	private:
 		//储存用来生成玩家
 		unsigned int mSize = 0;
@@ -65,7 +71,9 @@ namespace GAME {
 		VulKan::Sampler* mSampler = nullptr;
 		std::vector<VulKan::Buffer*> mCameraVPMatricesBuffer = {};
 
-		ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS;//玩家映射
+		ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS = nullptr;//玩家映射
+
+		ContinuousData<NPC*>* mNPCS = nullptr;
 
 		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理
 	};

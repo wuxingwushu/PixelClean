@@ -2,6 +2,14 @@
 #include <string>
 
 namespace Global {
+	/*  测试  */
+
+	extern int GamePlayerX;
+	extern int GamePlayerY;
+
+	/*  测试  */
+
+
 	extern unsigned int CommandBufferSize;
 	extern bool* MainCommandBufferS;//需要更新MainCommandBuffer
 	void MainCommandBufferUpdateRequest();//全部 MainCommandBuffer 需要更新;

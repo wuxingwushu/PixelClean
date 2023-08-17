@@ -191,7 +191,7 @@ namespace GAME {
 		mCrowd->SteSquarePhysics(mSquarePhysics);
 
 		//创建玩家
-		mGamePlayer = new GamePlayer(mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mCamera.getCameraPos().x, mCamera.getCameraPos().y);
+		mGamePlayer = new GamePlayer(mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSquarePhysics, mCamera.getCameraPos().x, mCamera.getCameraPos().y);
 		mGamePlayer->initUniformManager(
 			mDevice,
 			mCommandPool,
@@ -203,26 +203,14 @@ namespace GAME {
 		);
 		mGamePlayer->InitCommandBuffer();
 
-		//武器系统添加
 		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);//添加地图碰撞
-		mSquarePhysics->AddObjectCollision(mGamePlayer->mObjectCollision);//添加玩家碰撞
 
 		PlayerPos px;
 		px.X = -24.0f;
 		px.Y = 24.0f;
-		px.ang = 45.0f;
-		GamePlayer* LPlayer = mCrowd->GetGamePlayer(56);
-		LPlayer->setGamePlayerMatrix(glm::rotate(
-			glm::translate(glm::mat4(1.0f), glm::vec3(px.X, px.Y, 0.0f)),
-			glm::radians(px.ang),
-			glm::vec3(0.0f, 0.0f, 1.0f)
-		),
-			3,
-			true
-		);
-		LPlayer->mObjectCollision->SetAngle(px.ang / 180.0f * 3.14159265359f);
-		LPlayer->mObjectCollision->SetPos({ -24, 24 });
-
+		px.ang = 40.0f;
+		
+		mCrowd->AddNPC(px.X, px.Y, mLabyrinth);
 		//测试
 		//mGifPipeline = new GifPipeline(Global::mHeight, Global::mWidth, mDevice, mRenderPass);
 		//mGIF = new GIF(mDevice, mGifPipeline, mSwapChain, mRenderPass, 44);
@@ -535,28 +523,22 @@ namespace GAME {
 			mGIF->SetFrame(GIFzheng, 3);
 		}*/
 
-
-		GamePlayer* LPlayer = mCrowd->GetGamePlayer(56);
-		LPlayer->setGamePlayerMatrix(glm::rotate(
-			glm::translate(glm::mat4(1.0f), glm::vec3(LPlayer->mObjectCollision->GetPosX(), LPlayer->mObjectCollision->GetPosY(), 0.0f)),
-			glm::radians(LPlayer->mObjectCollision->GetAngleFloat() * 180.0f / 3.14159265359f),
-			glm::vec3(0.0f, 0.0f, 1.0f)
-		),
-			3,
-			true
-		);
-
+		mCrowd->NPCEvent(mCurrentFrame, TOOL::FPStime);
+		Global::GamePlayerX = mGamePlayer->mObjectCollision->GetPosX();
+		Global::GamePlayerY = mGamePlayer->mObjectCollision->GetPosY();
 		/*++++++++++++++++++*/
 		
 		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);//获取角度
-		mGamePlayer->mObjectCollision->SetAngle(m_angle);//设置玩家物理角度
+		//mGamePlayer->mObjectCollision->SetAngle(m_angle);//设置玩家物理角度
+		mGamePlayer->mObjectCollision->PlayerTargetAngle(m_angle);//设置玩家物理角度
 
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
 		TOOL::mTimer->StartEnd();
 
+		m_angle = mGamePlayer->mObjectCollision->GetAngleFloat();
+
 		mGamePlayer->UpData();//更新玩家伤痕
-		mGamePlayer->mObjectCollision->SetForce({0,0});//设置玩家力
 		mCamera.setCameraPos(mGamePlayer->mObjectCollision->GetPos());
 
 		mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);
@@ -592,11 +574,11 @@ namespace GAME {
 					for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
 					{
 						LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
-						LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f });
+						LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f, AttackType });
 					}
 				}
 				else {
-					client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f });
+					client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f, AttackType });
 				}
 			}
 		}
@@ -610,7 +592,12 @@ namespace GAME {
 
 		//战争迷雾
 		TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
-		mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f);
+		static double MistContinuityFire = 0;
+		MistContinuityFire += TOOL::FPStime;
+		if (MistContinuityFire > 0.02f) {
+			MistContinuityFire = 0;
+			mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f);
+		}
 		TOOL::mTimer->StartEnd();
 
 		//ImGui显示录制
@@ -622,6 +609,7 @@ namespace GAME {
 			ImGui::SetWindowPos(ImVec2(0, 0));
 			ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera.getCameraPos().x, mCamera.getCameraPos().y, mCamera.getCameraPos().z);
 			ImGui::Text(u8"鼠标角度：%10.3f", m_angle * 180 / M_PI);
+			ImGui::Text(u8"攻击模式：%d (1 / 2 上下切换) ", AttackType);
 			ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->mObjectCollision->GetSpeed().x, mGamePlayer->mObjectCollision->GetSpeed().y);
 			ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
 			if (InterFace->GetMultiplePeople()) {
@@ -651,7 +639,7 @@ namespace GAME {
 		//加到显示数组中
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
-		mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
+		//mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
 
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}
@@ -754,7 +742,6 @@ namespace GAME {
 	void Application::cleanUp() {
 		vkDeviceWaitIdle(mDevice->getDevice());//等待命令执行完毕
 
-		mSquarePhysics->RemoveObjectCollision(mGamePlayer->mObjectCollision);
 		delete mGamePlayer;
 		delete mCrowd;
 		delete mSquarePhysics;

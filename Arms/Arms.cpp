@@ -49,6 +49,7 @@ namespace GAME {
 		
 		LPixelCollision->SetPos({ x,y });//设置位置
 		LPixelCollision->SetSpeed(speed, angle);//设置速度，角度
+		LPixelCollision->UpDataSpeedBack();
 		LPixelCollision->SetCollisionCallback(Arms_DeleteBullet,this);//销毁回调函数
 		LPixelCollision->SetFrictionCoefficient(0.0f);//设置摩擦系数
 		LPixelCollision->SetDestroyModeCallback(SquarePhysics::GetDestroyMode(SquarePhysics::DestroyModeEnum(Type)));//破坏模式

@@ -90,7 +90,7 @@ namespace GAME {
 		/*void SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy);
 		void SetPixel(unsigned int x, unsigned int y);
 		void AddPixel(unsigned int x, unsigned int y);*/
-		bool GetPixel(unsigned int x, unsigned int y);
+		
 		void UpDateMaps();
 
 		//破坏指针
@@ -117,11 +117,27 @@ namespace GAME {
 		
 		~Labyrinth();
 
-		int numberX;//Block 横排多少个
-		int numberY;//Block 纵排多少个
+		int mOriginX = 0;
+		int mOriginY = 0;
+		int numberX = 0;//Block 横排多少个
+		int numberY = 0;//Block 纵排多少个
 		bool** BlockS = nullptr;//是否是墙壁 16 * 16 
 		int* BlockPixelS = nullptr;//像素点是否是墙壁
 		unsigned int** BlockTypeS = nullptr;//地面类型
+
+		short int** PixelWallNumber;// 附近 17 * 17 的墙壁的数量
+		//获取点附近的墙壁数量
+		short int GetPixelWallNumber(int x, int y);
+		//计算点附近的墙壁数量
+		void PixelWallNumberCalculate(int x, int y);
+		//将 17 * 17 范围的点都加 1
+		void PixelWallNumberAdd(int x, int y);
+		//将 17 * 17 范围的点都减 1
+		void PixelWallNumberReduce(int x, int y);
+		//获取点是否是墙壁
+		bool GetPixel(int x, int y);
+		//获取位置是否合法
+		bool GetPixelLegitimate(int x, int y);
 	private:
 		//bool UpDateMapsSwitch = false;//地图是否修改
 
@@ -140,7 +156,7 @@ namespace GAME {
 		VulKan::Buffer* mIndexBuffer{ nullptr };//点排序
 		size_t mIndexDatasSize;//点的数量
 
-		unsigned int mFrameCount;
+		unsigned int mFrameCount = 0;
 		VulKan::CommandPool** mThreadCommandPoolS = nullptr;
 		VulKan::CommandBuffer** mThreadCommandBufferS = nullptr;//地图
 		VulKan::CommandBuffer** mMistCommandBufferS = nullptr;//迷雾
@@ -155,7 +171,7 @@ namespace GAME {
 		VulKan::Pipeline* mPipeline = nullptr;
 		VulKan::SwapChain* mSwapChain = nullptr;
 		VulKan::Sampler* mSampler = nullptr;
-		std::vector<VulKan::Buffer*>* mVPMstdBuffer;
+		std::vector<VulKan::Buffer*>* mVPMstdBuffer = nullptr;
 
 
 
@@ -169,13 +185,13 @@ namespace GAME {
 		VulKan::Buffer* information{ nullptr };//储存原数据的缓存(图片纹理)
 		VulKan::Buffer* WallBool{ nullptr };//储存碰撞(是否是墙壁)
 
-		VkDescriptorSetLayout descriptorSetLayout;
-		VkDescriptorPool descriptorPool;
-		VkDescriptorSet descriptorSet;
+		VkDescriptorSetLayout descriptorSetLayout{ VK_NULL_HANDLE };
+		VkDescriptorPool descriptorPool{ VK_NULL_HANDLE };
+		VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
 
-		VkPipeline pipeline;
-		VkPipelineLayout pipelineLayout;
-		VkShaderModule computeShaderModule;
+		VkPipeline pipeline{ VK_NULL_HANDLE };
+		VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
+		VkShaderModule computeShaderModule{ VK_NULL_HANDLE };
 
 		VulKan::CommandPool* mMistCalculateCommandPoolS = nullptr;
 		VulKan::CommandBuffer* mMistCalculate = nullptr;

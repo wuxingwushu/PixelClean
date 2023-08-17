@@ -3,6 +3,14 @@
 #include "FilePath.h"
 
 namespace Global {
+	/*  测试  */
+
+	int GamePlayerX;
+	int GamePlayerY;
+
+	/*  测试  */
+
+
 	extern unsigned int CommandBufferSize = 0;
 	bool* MainCommandBufferS = nullptr;
 	void MainCommandBufferUpdateRequest() {

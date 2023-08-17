@@ -1,0 +1,231 @@
+#pragma once
+
+#define AStar_MemoryPool
+
+#ifdef AStar_MemoryPool// 开启  内存池
+#include "MemoryPool.h"
+#endif
+
+struct AStarNode {
+    int x;
+    int y;
+    float g;    // 累积代价
+    float h;    // 启发式代价
+    float f;    // 总代价
+    AStarNode* parent = nullptr;    //父节点
+    std::vector<AStarNode*> pChild; //子节点
+
+    AStarNode(int _x, int _y, float _g, float _h, AStarNode* _parent) : x(_x), y(_y), g(_g), h(_h), parent(_parent) {
+        f = g + h;
+    }
+
+    ~AStarNode()
+    {
+    }
+};
+
+struct AStarVec2 {
+    int x;
+    int y;
+};
+
+class AStar {
+private:
+    AStarVec2 StartingPoint = { 0,0 };             //开始位置（也是偏移值）
+    const int mRange = 0;                     //范围
+    bool mPathfindingCompleted = true;  //寻路是否结束
+    typedef bool (*_ObstaclesCallback)(int x, int y, void* ptr);
+    _ObstaclesCallback mObstaclesCallback = nullptr;    //是否为障碍物回调函数
+    void* mDataPointer = nullptr;                       //回调参数
+    int** visited;
+#ifdef AStar_MemoryPool
+    MemoryPool<AStarNode, 4096> mMemoryPool;    //内存池
+#endif
+
+    //位置是否合法
+    bool Legitimacy(int x, int y) {
+        if (x >= -mRange && x < mRange && y >= -mRange && y < mRange) { return true; }
+        else { return false; }
+    }
+
+    bool Legitimacy2(int x, int y) {
+        if (x >= 0 && x < mRange*2 && y >= 0 && y < mRange*2) { return true; }
+        else { return false; }
+    }
+
+    //调用回调函数
+    bool isValid(int x, int y) {
+        if (Legitimacy(x, y)) {
+            return mObstaclesCallback(x + StartingPoint.x, y + StartingPoint.y, mDataPointer);
+        }
+        return false;
+    }
+
+    //计算代价
+    float calculateH(int x, int y, int targetX, int targetY) {
+        return fabs(x - targetX) + fabs(y - targetY);
+    }
+public:
+    AStar(int Range):mRange(Range){
+        visited = new int*[mRange*2];
+        for (size_t i = 0; i < mRange*2; i++)
+        {
+            visited[i] = new int[mRange*2];
+            for (size_t j = 0; j < mRange*2; j++)
+            {
+                visited[i][j] = 0;
+            }
+        }
+    }
+    ~AStar() {
+        for (size_t j = 0; j < mRange*2; j++)
+        {
+            delete visited[j];
+        }
+        delete visited;
+    }
+
+    //设置障碍物回调函数
+    void SetObstaclesCallback(_ObstaclesCallback ObstaclesCallback, void* DataPointer) {
+        mObstaclesCallback = ObstaclesCallback;
+        mDataPointer = DataPointer;
+    }
+
+    //获取寻路是否结束
+    bool GetPathfindingCompleted() {
+        return mPathfindingCompleted;
+    }
+
+    //开始寻路
+    void findPath(AStarVec2 start, AStarVec2 target, std::vector<AStarVec2>* PathVector) {
+        mPathfindingCompleted = false;
+        StartingPoint = start;
+        target.x -= start.x;
+        target.y -= start.y;
+        start = { 0,0 };
+        for (size_t i = 0; i < mRange*2; i++)
+        {
+            for (size_t j = 0; j < mRange*2; j++)
+            {
+                visited[i][j] = 0;
+            }
+        }
+
+        AStarNode* DAStarNode;
+
+#ifdef AStar_MemoryPool
+        AStarNode* LAStarNode = mMemoryPool.newElement(start.x, start.y, 0.0f, calculateH(start.x, start.y, target.x, target.y), nullptr);
+#else
+        AStarNode* LAStarNode = new AStarNode(start.x, start.y, 0.0f, calculateH(start.x, start.y, target.x, target.y), nullptr);
+#endif
+        int x, newX;
+        int y, newY;
+        int Count = 0;
+        do
+        {
+            if (Count > 5000) {
+                mPathfindingCompleted = true;
+                return;
+            }
+            x = LAStarNode->x;
+            y = LAStarNode->y;
+
+            if (visited[x + mRange][y + mRange] == 0) {
+                Count++;
+                visited[x + mRange][y + mRange] = 1;
+                for (int i = -1; i <= 1; i++) {
+                    for (int j = -1; j <= 1; j++) {
+                        if (i == 0 && j == 0)
+                            continue;
+
+                        newX = x + i;
+                        newY = y + j;
+
+                        if (isValid(newX, newY) && visited[newX + mRange][newY + mRange] == 0) {
+                            float newG = LAStarNode->g + 1.0f;
+                            float newH = calculateH(newX, newY, target.x, target.y);
+#ifdef AStar_MemoryPool
+                            LAStarNode->pChild.push_back(mMemoryPool.newElement(newX, newY, newG, newH, LAStarNode));
+#else
+                            LAStarNode->pChild.push_back(new AStarNode(newX, newY, newG, newH, LAStarNode));
+#endif
+                        }
+                    }
+                }
+                std::sort(LAStarNode->pChild.begin(), LAStarNode->pChild.end(), [](AStarNode* a, AStarNode* b) {
+                    return a->f > b->f;
+                    });
+            }
+
+            if (LAStarNode->pChild.size() != 0) {
+                DAStarNode = LAStarNode->pChild[LAStarNode->pChild.size() - 1];
+                //删除最小代价节点
+                LAStarNode->pChild.pop_back();
+                //当前点移动到这个最小代价点
+                LAStarNode = DAStarNode;
+
+                //有没有到达终点
+                if (LAStarNode->x == target.x && LAStarNode->y == target.y)
+                {
+                    AStarVec2 LStart = { LAStarNode->x + mRange, LAStarNode->y +mRange };
+                    AStarVec2 CurrentStart = LStart;
+                    Count = 2;
+                    while (LAStarNode != nullptr)
+                    {
+                        
+                        visited[LAStarNode->x + mRange][LAStarNode->y + mRange] = (++Count);
+                        for (size_t i = 0; i < LAStarNode->pChild.size(); i++)
+                        {
+#ifdef AStar_MemoryPool
+                            mMemoryPool.deleteElement(LAStarNode->pChild[i]);
+#else
+                            delete LAStarNode->pChild[i];
+#endif
+                        }
+                        DAStarNode = LAStarNode;
+                        LAStarNode = LAStarNode->parent;
+#ifdef AStar_MemoryPool
+                        mMemoryPool.deleteElement(DAStarNode);
+#else
+                        delete DAStarNode;
+#endif
+                    }
+
+                    StartingPoint.x -= mRange;
+                    StartingPoint.y -= mRange;
+                    while (visited[LStart.x][LStart.y] != Count)
+                    {
+                        PathVector->push_back({ LStart.x + StartingPoint.x, LStart.y + StartingPoint.y }); 
+                        for (int i = -1; i <= 1; i++) {
+                            for (int j = -1; j <= 1; j++) {
+                                if (i == 0 && j == 0)
+                                    continue;
+
+                                newX = LStart.x + i;
+                                newY = LStart.y + j;
+                                if (Legitimacy2(newX, newY) && visited[newX][newY] > 2 && visited[newX][newY] > visited[CurrentStart.x][CurrentStart.y]) {
+                                    CurrentStart.x = newX;
+                                    CurrentStart.y = newY;
+                                }
+                            }
+                        }
+                        LStart = CurrentStart;
+                    }
+                    PathVector->push_back({ LStart.x + StartingPoint.x, LStart.y + StartingPoint.y });
+                }
+            }
+            else
+            {
+                DAStarNode = LAStarNode;
+                LAStarNode = LAStarNode->parent;
+#ifdef AStar_MemoryPool
+                mMemoryPool.deleteElement(DAStarNode);
+#else
+                delete DAStarNode;
+#endif
+            }
+
+        } while (LAStarNode != nullptr);
+        mPathfindingCompleted = true;
+    }
+};

@@ -154,4 +154,14 @@ namespace SquarePhysics {
 		return PYpos;
 	}
 
+
+	//扭矩计算
+	float TorqueCalculate(glm::vec2 Barycenter, glm::vec2 Spot, glm::vec2 Force) {
+		glm::vec2 MoveAngle = Barycenter - Spot;
+		float AngleA = EdgeVecToCosAngleFloat(MoveAngle);
+		float AngleB = EdgeVecToCosAngleFloat(Force);
+		float Length = Modulus(MoveAngle);
+		return Modulus(Force) * Length * sin(AngleA - AngleB);
+	}
+
 }

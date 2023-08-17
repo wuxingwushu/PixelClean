@@ -156,7 +156,7 @@ namespace GAME {
 		GamePlayer* mGamePlayer{ nullptr };//玩家
 		double CursorPosX, CursorPosY;//光标位置
 	public:
-		unsigned int AttackType = 0;
+		unsigned int AttackType = 0;//攻击模式
 	private:
 
 		Labyrinth* mLabyrinth = nullptr;//迷宫

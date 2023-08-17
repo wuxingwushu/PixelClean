@@ -8,11 +8,13 @@ namespace GAME {
 		Class->mPixelQueue->add({x,y, Bool });
 	}
 
-	GamePlayer::GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, float X, float Y)
+	GamePlayer::GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, 
+		SquarePhysics::SquarePhysics* SquarePhysics, float X, float Y)
 	{
 		mPipeline = pipeline;
 		mSwapChain = swapChain;
 		mRenderPass = renderPass;
+		mSquarePhysics = SquarePhysics;
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(X, Y, 0.0f));//位移矩阵
 
 		mPixelQueue = new Queue<PixelState>(100);
@@ -32,6 +34,7 @@ namespace GAME {
 		mObjectCollision->SetPos({ X, Y });//设置位置
 		mObjectCollision->SetFrictionCoefficient(10.0f);//设置摩擦系数
 		mObjectCollision->SetCollisionCallback(GamePlayerDestroyPixel, this);//设置回调函数
+		mSquarePhysics->AddObjectCollision(mObjectCollision);//添加玩家碰撞
 
 		std::vector<float> mPositions = {
 			-8.0f, -8.0f, 0.0f,
@@ -75,6 +78,8 @@ namespace GAME {
 
 	GamePlayer::~GamePlayer()
 	{
+		mSquarePhysics->RemoveObjectCollision(mObjectCollision);//移除玩家碰撞
+
 		if (mPositionBuffer != nullptr) {
 			delete mPositionBuffer;
 		}

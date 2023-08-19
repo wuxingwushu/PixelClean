@@ -9,7 +9,7 @@ namespace Global {
 
 	/*  测试  */
 
-
+	extern bool ConsoleBool;
 	extern unsigned int CommandBufferSize;
 	extern bool* MainCommandBufferS;//需要更新MainCommandBuffer
 	void MainCommandBufferUpdateRequest();//全部 MainCommandBuffer 需要更新;

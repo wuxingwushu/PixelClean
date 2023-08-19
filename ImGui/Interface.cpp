@@ -1,5 +1,7 @@
 #include "Interface.h"
 #include "../SoundEffect/SoundEffect.h"
+#include "../Opcode/Opcode.h"
+#include "../Tool/trie.h"
 
 namespace GAME {
 	ImGuiInterFace::ImGuiInterFace(
@@ -127,6 +129,9 @@ namespace GAME {
 			ImGuiCommandPoolS[i] = new VulKan::CommandPool(mDevice);
 			ImGuiCommandBufferS[i] = new VulKan::CommandBuffer(mDevice, ImGuiCommandPoolS[i], true);
 		}
+
+
+		mChatBoxStr = new QueueData<ChatBoxStr>(100);
 	}
 
 	ImGuiInterFace::~ImGuiInterFace()
@@ -382,6 +387,133 @@ namespace GAME {
 		ImGui::End();
 	}
 
+	int InputTextCallbackData(ImGuiInputTextCallbackData* data){
+		if (data->HasSelection()) {//文本被选中时取消被选中
+			data->SelectionEnd = 0;
+			data->SelectionStart = 0;
+		}
+		return 0;
+	}
+
+	void ImGuiInterFace::ConsoleInterface() {
+		static char LOpCode[200] = { '\0' };
+		static unsigned int OpodeSize = 0;
+		static std::string LOpcodeStr;
+		static bool PromptBool = false;
+		static bool PromptTriggerBool = false;//触发过提示词
+		static int PromptSelected = -1;
+		static std::vector<const std::string*> Vvector;
+
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.WindowBorderSize = 0.0f;                // 设置窗口边框大小为0，即无边框
+		style.Colors[ImGuiCol_WindowBg].w = 0.0f;     // 将窗口背景颜色的Alpha通道设置为0，即完全透明
+
+		ImGui::Begin(u8"控制台 ", NULL,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove
+		);
+		ImVec2 OpBoxsize = { 400, 100 };
+		int CodeSize = ImGui::GetTextLineHeight() + 22 + (PromptBool ? 104 : 0);
+		ImGui::SetWindowPos(ImVec2(0, Global::mHeight - CodeSize));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth, CodeSize));
+		
+		
+		
+		
+		//ImGui::SetNextItemWidth(Global::mWidth - 18);
+		
+		if (PromptBool && ImGui::BeginListBox(" ", OpBoxsize)) {
+			for (int n = 0; n < Vvector.size(); n++)
+			{
+				if (ImGui::Selectable(Vvector[n]->c_str(), PromptSelected == n)) {
+					PromptSelected = n;
+					memcpy(&LOpCode[1], Vvector[n]->c_str(), Vvector[n]->size());
+					ConsoleFocusHere = true;
+					PromptTriggerBool = true;
+				}
+				if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+				{
+					ImGui::BeginTooltip();
+					ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+					ImGui::TextUnformatted(Opcode::GetOpAnnotation(Vvector[n]->c_str()));
+					ImGui::PopTextWrapPos();
+					ImGui::EndTooltip();
+				}
+			}
+			ImGui::EndListBox();
+		}
+		ImGui::SetNextItemWidth(Global::mWidth - 18);
+		if (ConsoleFocusHere) {
+			ImGui::SetKeyboardFocusHere();
+			ConsoleFocusHere = false;
+		}
+		if (ImGui::InputText(u8"  Code  ", LOpCode, 200, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, InputTextCallbackData)) {
+			if (LOpCode[0] == '/') {
+				Opcode::Opcode(&LOpCode[1]);
+			}
+			else {
+				mChatBoxStr->add({ LOpCode, clock() });
+			}
+			OpodeSize = 0;
+			ConsoleFocusHere = true;
+			Global::ConsoleBool = false;
+			LOpCode[0] = '\0';
+		}
+		LOpcodeStr = LOpCode;
+		if (LOpCode[0] == '/' && LOpcodeStr.size() > 2 && OpodeSize != LOpcodeStr.size()) {
+			OpodeSize = LOpcodeStr.size();
+			Vvector = Opcode::GetOpCodePrompt(&LOpCode[1]);
+			PromptBool = Vvector.size() != 0;
+			PromptSelected = -1;
+		}
+		if(PromptTriggerBool)
+		{
+			PromptTriggerBool = false;
+			PromptBool = false;
+		}
+		
+		ImGui::End();
+
+		style.WindowBorderSize = 1.0f;                // 设置窗口边框大小为0，即无边框
+		style.Colors[ImGuiCol_WindowBg].w = 1.0f;     // 将窗口背景颜色的Alpha通道设置为0，即完全透明
+	}
+
+	void ImGuiInterFace::DisplayTextS() {
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.WindowBorderSize = 0.0f;                // 设置窗口边框大小为0，即无边框
+		style.Colors[ImGuiCol_WindowBg].w = 0.0f;     // 将窗口背景颜色的Alpha通道设置为0，即完全透明
+
+		ImGui::Begin(u8"TEXT ", NULL,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoInputs
+		);
+		ImGui::SetWindowPos(ImVec2(0, 0));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+
+		ImVec2 textSize = ImGui::CalcTextSize(u8"道生");
+		ImGui::SetCursorPos({ (Global::mWidth / 2.0f - textSize.x / 2.0f),(Global::mHeight / 2.0f - textSize.y / 2.0f) });
+		ImGui::Text(u8"道生");
+
+		float LHeight = Global::mHeight - 60.0f;
+		mChatBoxStr->InitData();
+		for (size_t i = 0; i < mChatBoxStr->GetNumber(); i++)
+		{
+			if (i == (mChatBoxStr->GetNumber() - 1) && (clock() - mChatBoxStr->addData()->timr) > 10000) {
+				ChatBoxStr* L = mChatBoxStr->pop();
+			}
+			ImGui::SetCursorPos({ 30.0f,LHeight });
+			ImGui::Text(mChatBoxStr->addData()->str.c_str());
+			LHeight -= 20.0f;
+		}
+
+		ImGui::End();
+		style.WindowBorderSize = 1.0f;                // 设置窗口边框大小为0，即无边框
+		style.Colors[ImGuiCol_WindowBg].w = 1.0f;     // 将窗口背景颜色的Alpha通道设置为0，即完全透明
+	}
+
 	void ImGuiInterFace::ImGuiShowFPS() {
 		ImGui::Text(u8"FPS: %f", TOOL::FPSNumber);
 		static int values_offset = 0;
@@ -441,7 +573,6 @@ namespace GAME {
 			}
 			ImGui::EndTable();
 		}
-		ImGui::Text(u8"如果只看得到监视窗口去设置中关掉监视器 ! ");
 	}
 }
 

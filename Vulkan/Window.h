@@ -52,6 +52,7 @@ namespace VulKan {
 		bool KeysRisingEdgeTrigger_Esc = false;
 		bool KeysRisingEdgeTrigger = false;
 
+		bool KeysRisingEdgeTrigger_Console = false;
 		bool KeysRisingEdgeTrigger_0 = false;
 		bool KeysRisingEdgeTrigger_1 = false;
 	};

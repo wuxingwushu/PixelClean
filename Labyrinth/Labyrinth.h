@@ -39,13 +39,15 @@ namespace GAME {
 	{
 	public:
 		Labyrinth();
+		~Labyrinth();
 
+		//重新生成迷宫
 		void AgainGenerateLabyrinth(int X, int Y);
-
+		//加载迷宫
 		void LoadLabyrinth(int X, int Y, int* PixelData, unsigned int* BlockTypeData);
-
+		//初始化迷宫
 		void InitLabyrinth(VulKan::Device* device, int X, int Y, bool** LlblockS = nullptr);
-
+		//迷宫缓存
 		void LabyrinthBuffer();
 
 		//初始化描述符
@@ -85,28 +87,27 @@ namespace GAME {
 		void GetMistCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			Vector->push_back(mMistCommandBufferS[F]->getCommandBuffer());
 		};
-
-		//void penzhang(unsigned int x, unsigned int y);
-		/*void SetPixel(unsigned int x, unsigned int y, unsigned int Dx, unsigned int Dy);
-		void SetPixel(unsigned int x, unsigned int y);
-		void AddPixel(unsigned int x, unsigned int y);*/
 		
+
+
+		//更新迷宫破损情况
 		void UpDateMaps();
 
-		//破坏指针
+		//获取破坏指针
 		void GetPixelSPointer();
+		//修改像素
 		void SetPixelS(unsigned int x, unsigned int y, bool Switch);
+		//结束破坏指针
 		void EndPixelSPointer();
 
 		unsigned char* TexturePointer = nullptr;
 		unsigned char* TextureMist = nullptr;
 		int* Mistwall = nullptr;
 
-		//录制缓存指令
+		//多线程分配指令缓存
 		void ThreadUpdateCommandBuffer();
+		//录制缓存指令
 		void ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count);
-
-		//void MIWU(int wjx, int wjy, float ang);
 
 		//初始化战争迷雾
 		void InitMist();
@@ -115,15 +116,18 @@ namespace GAME {
 		//销毁战争迷雾
 		void DeleteMist();
 		
-		~Labyrinth();
 
+		//中心
 		int mOriginX = 0;
 		int mOriginY = 0;
 		int numberX = 0;//Block 横排多少个
 		int numberY = 0;//Block 纵排多少个
-		bool** BlockS = nullptr;//是否是墙壁 16 * 16 
-		int* BlockPixelS = nullptr;//像素点是否是墙壁
-		unsigned int** BlockTypeS = nullptr;//地面类型
+		//是否是墙壁 16 * 16 
+		bool** BlockS = nullptr;
+		//像素点是否是墙壁
+		int* BlockPixelS = nullptr;
+		//地面类型
+		unsigned int** BlockTypeS = nullptr;
 
 		short int** PixelWallNumber;// 附近 17 * 17 的墙壁的数量
 		//获取点附近的墙壁数量
@@ -138,8 +142,11 @@ namespace GAME {
 		bool GetPixel(int x, int y);
 		//获取位置是否合法
 		bool GetPixelLegitimate(int x, int y);
+
+
+		glm::ivec2 GetLegitimateGeneratePos();
+
 	private:
-		//bool UpDateMapsSwitch = false;//地图是否修改
 
 		VulKan::DescriptorPool* mDescriptorPool{ nullptr };//描述符池
 		std::vector<VulKan::UniformParameter*>* mUniformParams;
@@ -147,8 +154,6 @@ namespace GAME {
 		PixelTexture* PixelTextureS{ nullptr };//每块的贴图
 		VulKan::DescriptorSet* mDescriptorSet{ nullptr };//位置 贴图 的数据
 
-		
-		
 		
 
 		VulKan::Buffer* mPositionBuffer{ nullptr };//点坐标

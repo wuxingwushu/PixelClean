@@ -39,9 +39,13 @@ namespace GAME {
 
 		//破坏指针
 		unsigned char* TexturePointer = nullptr;
+		//获取破坏指针
 		void GetPixelSPointer();
+		//设置像素
 		void SetPixelS(unsigned int x, unsigned int y, bool Switch);
+		//结束破坏指针
 		void EndPixelSPointer();
+		//更新玩家损伤情况
 		void UpData();
 
 
@@ -68,14 +72,21 @@ namespace GAME {
 
 		[[nodiscard]] unsigned int GetKey() { return Key; }
 
+		//获取玩家破坏情况数据
 		[[nodiscard]] bool* GetBrokenData(){ return mBrokenData; }
-
+		//玩家破坏情况数据，更新玩家破损
 		void UpDataBroken(bool* Broken);
 
+		//判断是否伤及玩家要害
+		bool GetCrucial(int x, int y);
+		//获取玩家是否阵亡
+		[[nodiscard]] bool GetDeathInBattle(){ return DeathInBattle; }
+
 	private://模型变换矩阵
+		bool DeathInBattle = false;
 		unsigned int Key = 0;
 		ObjectUniform mUniform{};
-		bool* mBrokenData = nullptr;
+		bool* mBrokenData = nullptr; //破坏情况数据
 
 	private://模型   顶点，UV，顶点索引
 		VulKan::Buffer* mPositionBuffer{ nullptr };

@@ -1,5 +1,5 @@
 #include "application.h"
-
+#include "Opcode/OpcodeFunction.h"
 
 
 namespace GAME {
@@ -202,6 +202,7 @@ namespace GAME {
 			mSampler
 		);
 		mGamePlayer->InitCommandBuffer();
+		mGamePlayer->SetKey(0);
 
 		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);//添加地图碰撞
 
@@ -216,6 +217,12 @@ namespace GAME {
 		//mGIF = new GIF(mDevice, mGifPipeline, mSwapChain, mRenderPass, 44);
 		//mGIF->initUniformManager("002.png", mCameraVPMatricesBuffer, mSampler);
 		//mGIF->UpDataCommandBuffer();
+
+
+
+		//给操作码对象赋值
+		Opcode::OpLabyrinth = mLabyrinth;
+		Opcode::OpCrowd = mCrowd;
 	}
 
 	void Application::createRenderPass() {
@@ -622,9 +629,23 @@ namespace GAME {
 			}
 			InterFace->ImGuiShowFPS();
 			InterFace->ImGuiShowTiming();
+			ImGui::Text(u8"如果只看得到监视窗口去设置中关掉监视器 ! ");
 			ImGui::End();
 
+			if (Global::ConsoleBool) {
+				InterFace->ConsoleInterface();//控制台
+			}
+			InterFace->DisplayTextS();
+
 			//ImGui::ShowDemoWindow();
+
+			ImGui::Render();
+		}else if (Global::ConsoleBool) {
+			ImGui_ImplVulkan_NewFrame();
+			ImGui_ImplGlfw_NewFrame();
+			ImGui::NewFrame();
+
+			InterFace->ConsoleInterface();//控制台
 
 			ImGui::Render();
 		}

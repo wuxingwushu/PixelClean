@@ -44,13 +44,7 @@ namespace GAME {
 			MapPlayerS->SetTimeoutTime(1000);
 		}
 
-		void ReconfigurationCommandBuffer() {
-			GamePlayer** LGamePlayer = MapPlayerS->GetData();
-			for (size_t i = 0; i < MapPlayerS->GetNumber(); i++)
-			{
-				LGamePlayer[i]->InitCommandBuffer();
-			}
-		}
+		void ReconfigurationCommandBuffer();
 		
 		void UpTime() {
 			MapPlayerS->UpDataWholeTime();
@@ -59,6 +53,8 @@ namespace GAME {
 		void AddNPC(int x, int y, Labyrinth* Labyrinth);
 
 		void NPCEvent(int Format, float time);
+
+		void KillAll();
 
 	private:
 		//储存用来生成玩家

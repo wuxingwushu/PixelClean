@@ -10,7 +10,7 @@ namespace Global {
 
 	/*  测试  */
 
-
+	bool ConsoleBool = false;
 	extern unsigned int CommandBufferSize = 0;
 	bool* MainCommandBufferS = nullptr;
 	void MainCommandBufferUpdateRequest() {

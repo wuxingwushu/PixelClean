@@ -86,6 +86,7 @@ add_subdirectory(Physics)
 add_subdirectory(Labyrinth)
 add_subdirectory(Arms)
 add_subdirectory(GeneralCalculationGPU)
+add_subdirectory(Opcode)
 add_subdirectory(Tool)#文件夹里面要有代码文件，不可以是空的，会报错
 
 
@@ -114,6 +115,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		LabyrinthLib
 		ArmsLib
 		GeneralCalculationGPULib
+		OpcodeLib
 	
 	
 		# VulKan API
@@ -160,6 +162,7 @@ else()
 		LabyrinthLib
 		ArmsLib
 		GeneralCalculationGPULib
+		OpcodeLib
 	
 		# VulKan API
 		vulkan-1.lib 

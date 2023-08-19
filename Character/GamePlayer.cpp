@@ -1,5 +1,8 @@
 #include "GamePlayer.h"
 #include "../BlockS/PixelS.h"
+#include "../GlobalVariable.h"
+#include "../NetworkTCP/Server.h"
+#include "../NetworkTCP/Client.h"
 
 namespace GAME {
 
@@ -134,21 +137,22 @@ namespace GAME {
 	}
 
 	void GamePlayer::UpDataBroken(bool* Broken) {
-		unsigned char* TexturePointer = (unsigned char*)mPixelTexture->getHOSTImagePointer();
+		GetPixelSPointer();
 		for (size_t x = 0; x < 16; x++)
 		{
 			for (size_t y = 0; y < 16; y++)
 			{
-				if (Broken[x * 16 + y]) {
-					memset(&TexturePointer[(x * 16 + y) * 4 + 3], 255, 1);
-				}
-				else {
-					memset(&TexturePointer[(x * 16 + y) * 4 + 3], 0, 1);
-				}
+				SetPixelS(x, y, Broken[x * 16 + y]);
 			}
 		}
-		mPixelTexture->endHOSTImagePointer();
-		mPixelTexture->UpDataImage();
+		EndPixelSPointer();
+	}
+
+	bool GamePlayer::GetCrucial(int x, int y) {
+		if (x >= 6 && x <= 9 && y >= 6 && y <= 9) {
+			return true;
+		}
+		return false;
 	}
 
 	void GamePlayer::initUniformManager(
@@ -239,8 +243,19 @@ namespace GAME {
 		TexturePointer = (unsigned char*)mPixelTexture->getHOSTImagePointer();
 	}
 	void GamePlayer::SetPixelS(unsigned int x, unsigned int y, bool Switch) {
-		memset(&TexturePointer[(x * 16 + y) * 4 + 3], 0, 1);
-		mBrokenData[x * 16 + y] = false;
+		if (mBrokenData[x * 16 + y] == Switch) {
+			return;
+		}
+		mBrokenData[x * 16 + y] = Switch;
+		if (Switch) {
+			memset(&TexturePointer[(x * 16 + y) * 4 + 3], 255, 1);
+		}
+		else {
+			memset(&TexturePointer[(x * 16 + y) * 4 + 3], 0, 1);
+			if (GetCrucial(x, y)) {
+				DeathInBattle = true;
+			}
+		}
 	}
 	void GamePlayer::EndPixelSPointer() {
 		mPixelTexture->endHOSTImagePointer();

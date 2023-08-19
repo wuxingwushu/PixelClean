@@ -84,7 +84,7 @@ namespace GAME {
 		numberX = ((X / 2) * 4) + 1;
 		numberY = ((Y / 2) * 4) + 1;
 
-		mPixelQueue = new Queue<PixelState>(200);
+		mPixelQueue = new Queue<PixelState>(1000);
 
 		PerlinNoise* P = new PerlinNoise();
 
@@ -242,6 +242,12 @@ namespace GAME {
 		delete[] BlockS;
 		delete[] BlockPixelS;
 		delete[] BlockTypeS;
+
+		for (size_t i = 0; i < numberX*16; i++)
+		{
+			delete[] PixelWallNumber[i];
+		}
+		delete[] PixelWallNumber;
 
 		//销毁地面碰撞系统
 		delete mFixedSizeTerrain;
@@ -445,6 +451,15 @@ namespace GAME {
 		commandbuffer->bindDescriptorSet(mPipeline->getLayout(), mMistDescriptorSet->getDescriptorSet(FrameCount));//获得 模型位置数据， 贴图数据，……
 		commandbuffer->drawIndex(getIndexCount());//获取绘画物体的顶点个数
 		commandbuffer->end();
+	}
+
+	glm::ivec2 Labyrinth::GetLegitimateGeneratePos() {
+		glm::ivec2 rxy;
+		do{
+			rxy.x = rand() % (numberX * 16);
+			rxy.y = rand() % (numberY * 16);
+		} while (GetPixelWallNumber(rxy.x, rxy.y) <= 0);
+		return { rxy.x - mOriginX, rxy.y - mOriginY };
 	}
 
 	bool Labyrinth::GetPixel(int x, int y) {

@@ -10,10 +10,15 @@
 #include "../NetworkTCP/Client.h"
 
 #include "../GlobalVariable.h"
+#include "../Tool/QueueData.h"
 
 namespace GAME {
 	class ImGuiInterFace
-	{	
+	{
+		struct ChatBoxStr {
+			std::string str;
+			clock_t timr;
+		};
 	public:
 		ImGuiInterFace(
 			VulKan::Device* device, 
@@ -32,6 +37,13 @@ namespace GAME {
 
 		void ImGuiShowFPS();//显示
 		void ImGuiShowTiming();
+
+
+		bool ConsoleFocusHere = true;
+		void ConsoleInterface();//控制台
+
+		QueueData<ChatBoxStr>* mChatBoxStr;
+		void DisplayTextS();
 
 		bool GetInterFaceBool() {//获取显示状态
 			return InterFaceBool;

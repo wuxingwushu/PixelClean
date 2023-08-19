@@ -75,6 +75,19 @@ namespace GAME {
 		}
 	}
 
+	void Crowd::ReconfigurationCommandBuffer() {
+		GamePlayer** LGamePlayer = MapPlayerS->GetData();
+		for (size_t i = 0; i < MapPlayerS->GetNumber(); i++)
+		{
+			LGamePlayer[i]->InitCommandBuffer();
+		}
+		NPC** LNPC = mNPCS->Data();
+		for (size_t i = 0; i < mNPCS->GetNumber(); i++)
+		{
+			LNPC[i]->InitCommandBuffer();
+		}
+	}
+
 	void Crowd::GetCommandBufferS(std::vector<VkCommandBuffer>* CommandBufferVector, unsigned int Format) {
 		GamePlayer** PlayerS = MapPlayerS->GetData();
 		for (size_t i = 0; i < MapPlayerS->GetNumber(); i++)
@@ -104,13 +117,31 @@ namespace GAME {
 
 		NPC* LNPC = new NPC(LGamePlayer, Labyrinth);
 		mNPCS->add(LNPC);
+		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 	}
 
 	void Crowd::NPCEvent(int Format, float time) {
 		NPC** LNPC = mNPCS->Data();
 		for (size_t i = 0; i < mNPCS->GetNumber(); i++)
 		{
+			if (LNPC[i]->GetDeathInBattle()) {
+				Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
+				delete LNPC[i];
+				mNPCS->Delete(i);
+				i--;
+				continue;
+			}
 			LNPC[i]->Event(Format, time);
 		}
+	}
+
+	void Crowd::KillAll() {
+		NPC** LNPC = mNPCS->Data();
+		for (size_t i = 0; i < mNPCS->GetNumber(); i++)
+		{
+			delete LNPC[i];
+			mNPCS->Delete(i--);
+		}
+		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 	}
 }

@@ -102,7 +102,7 @@ namespace VulKan {
 		KeysRisingEdgeTrigger_Esc = glfwGetKey(mWindow, GLFW_KEY_ESCAPE);
 
 		//控制鼠标显示和禁用
-		if (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_P) != KeysRisingEdgeTrigger) {
+		if (glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT) != KeysRisingEdgeTrigger) {
 			if (MouseDisabled) {
 				glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 				MouseDisabled = false;
@@ -112,18 +112,14 @@ namespace VulKan {
 				MouseDisabled = true;
 			}
 		}
-		KeysRisingEdgeTrigger = glfwGetKey(mWindow, GLFW_KEY_P);
+		KeysRisingEdgeTrigger = glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT);
 	}
 
 	//键盘事件
 	void Window::processEvent() {
-		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_ESCAPE) != KeysRisingEdgeTrigger_Esc) {
-			mApp->InterFace->SetInterFaceBool();
-		}
-		KeysRisingEdgeTrigger_Esc = glfwGetKey(mWindow, GLFW_KEY_ESCAPE);
 
 		//控制鼠标显示和禁用
-		if (glfwGetKey(mWindow, GLFW_KEY_P) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_P) != KeysRisingEdgeTrigger) {
+		if (glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT) != KeysRisingEdgeTrigger) {
 			if (MouseDisabled) {
 				glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 				MouseDisabled = false;
@@ -133,7 +129,30 @@ namespace VulKan {
 				MouseDisabled = true;
 			}
 		}
-		KeysRisingEdgeTrigger = glfwGetKey(mWindow, GLFW_KEY_P);
+		KeysRisingEdgeTrigger = glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT);
+
+
+		if (glfwGetKey(mWindow, GLFW_KEY_SLASH) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_SLASH) != KeysRisingEdgeTrigger_Console) {
+			Global::ConsoleBool = true;
+		}
+		KeysRisingEdgeTrigger_Console = glfwGetKey(mWindow, GLFW_KEY_SLASH);
+
+		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_ESCAPE) != KeysRisingEdgeTrigger_Esc) {
+			if (Global::ConsoleBool) {
+				Global::ConsoleBool = false;
+				mApp->InterFace->ConsoleFocusHere = true;
+			}
+			else
+			{
+				mApp->InterFace->SetInterFaceBool();
+			}
+			
+		}
+		KeysRisingEdgeTrigger_Esc = glfwGetKey(mWindow, GLFW_KEY_ESCAPE);
+
+		if (Global::ConsoleBool) {
+			return;
+		}
 
 		if (glfwGetKey(mWindow, Global::KeyW) == GLFW_PRESS) {
 			mApp->onKeyDown(CAMERA_MOVE::MOVE_FRONT);

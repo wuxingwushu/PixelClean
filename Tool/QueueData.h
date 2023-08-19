@@ -1,14 +1,17 @@
 #pragma once
 
 template <typename T>
-class Queue
+class QueueData
 {
 private:
+    unsigned int DataHeadIndex = 0;//从队列拿数据，但是不是弹出数据、
+    unsigned int DataTailIndex = 0;
+
     unsigned int HeadIndex = 0;
     unsigned int TailIndex = 0;
     const unsigned int mMax;
     unsigned int mNumber = 0;
-    T* mQueue;
+    T* mQueueData;
 
     unsigned int Max(unsigned int Index) {
         if (Index >= mMax)
@@ -18,12 +21,12 @@ private:
         return Index;
     };
 public:
-    Queue(unsigned int size):mMax(size) {
-        mQueue = new T[size];
+    QueueData(unsigned int size) :mMax(size) {
+        mQueueData = new T[size];
     };
 
-    ~Queue() {
-        delete mQueue;
+    ~QueueData() {
+        delete mQueueData;
     };
 
     //添加
@@ -34,7 +37,7 @@ public:
             return;
         }
         mNumber++;
-        mQueue[TailIndex] = Parameter;
+        mQueueData[TailIndex] = Parameter;
         TailIndex = Max(TailIndex + 1);
     };
 
@@ -46,7 +49,7 @@ public:
             return nullptr;
         }
         mNumber--;
-        T* Parameter = &mQueue[HeadIndex];
+        T* Parameter = &mQueueData[HeadIndex];
         HeadIndex = Max(HeadIndex + 1);
         return Parameter;
     }
@@ -54,5 +57,24 @@ public:
     //队列数量
     [[nodiscard]] unsigned int GetNumber() {
         return mNumber;
+    }
+
+    //拿队列数据初始化
+    void InitData() {
+        DataHeadIndex = HeadIndex;
+        DataTailIndex = TailIndex-1;
+    }
+
+    //按顺序拿数据，不是弹出(调用前先 InitData() )
+    T* popData() {
+        T* Parameter = &mQueueData[DataHeadIndex];
+        DataHeadIndex = Max(DataHeadIndex + 1);
+        return Parameter;
+    }
+
+    T* addData() {
+        T* Parameter = &mQueueData[DataTailIndex];
+        DataTailIndex = Max(DataTailIndex - 1);
+        return Parameter;
     }
 };

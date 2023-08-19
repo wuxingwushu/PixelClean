@@ -31,15 +31,16 @@ struct AStarVec2 {
 
 class AStar {
 private:
-    AStarVec2 StartingPoint = { 0,0 };             //开始位置（也是偏移值）
-    const int mRange = 0;                     //范围
-    bool mPathfindingCompleted = true;  //寻路是否结束
+    AStarVec2 StartingPoint = { 0,0 };              //开始位置（也是偏移值）
+    const int mRange = 0;                           //范围
+    const int mSteps = 0;                           //最大步数
+    bool mPathfindingCompleted = true;              //寻路是否结束
     typedef bool (*_ObstaclesCallback)(int x, int y, void* ptr);
     _ObstaclesCallback mObstaclesCallback = nullptr;    //是否为障碍物回调函数
     void* mDataPointer = nullptr;                       //回调参数
-    int** visited;
+    int** visited;//记录当前格子是否被走过 或者 记录路径
 #ifdef AStar_MemoryPool
-    MemoryPool<AStarNode, 4096> mMemoryPool;    //内存池
+    MemoryPool<AStarNode, sizeof(AStarNode) * 100> mMemoryPool;    //内存池
 #endif
 
     //位置是否合法
@@ -47,7 +48,6 @@ private:
         if (x >= -mRange && x < mRange && y >= -mRange && y < mRange) { return true; }
         else { return false; }
     }
-
     bool Legitimacy2(int x, int y) {
         if (x >= 0 && x < mRange*2 && y >= 0 && y < mRange*2) { return true; }
         else { return false; }
@@ -66,7 +66,7 @@ private:
         return fabs(x - targetX) + fabs(y - targetY);
     }
 public:
-    AStar(int Range):mRange(Range){
+    AStar(int Range, int Steps):mRange(Range), mSteps(Steps){
         visited = new int*[mRange*2];
         for (size_t i = 0; i < mRange*2; i++)
         {
@@ -97,7 +97,8 @@ public:
     }
 
     //开始寻路
-    void findPath(AStarVec2 start, AStarVec2 target, std::vector<AStarVec2>* PathVector) {
+    void FindPath(AStarVec2 start, AStarVec2 target, std::vector<AStarVec2>* PathVector) {
+        //开始寻路
         mPathfindingCompleted = false;
         StartingPoint = start;
         target.x -= start.x;
@@ -123,7 +124,8 @@ public:
         int Count = 0;
         do
         {
-            if (Count > 5000) {
+            //是否超过最大步数
+            if (Count > mSteps) {
                 mPathfindingCompleted = true;
                 return;
             }
@@ -142,7 +144,7 @@ public:
                         newY = y + j;
 
                         if (isValid(newX, newY) && visited[newX + mRange][newY + mRange] == 0) {
-                            float newG = LAStarNode->g + 1.0f;
+                            float newG = LAStarNode->g + (i == 0 && j == 0) ? 1.0f : 1.414f;
                             float newH = calculateH(newX, newY, target.x, target.y);
 #ifdef AStar_MemoryPool
                             LAStarNode->pChild.push_back(mMemoryPool.newElement(newX, newY, newG, newH, LAStarNode));
@@ -158,6 +160,7 @@ public:
             }
 
             if (LAStarNode->pChild.size() != 0) {
+                //取最小代价的子节点
                 DAStarNode = LAStarNode->pChild[LAStarNode->pChild.size() - 1];
                 //删除最小代价节点
                 LAStarNode->pChild.pop_back();
@@ -167,13 +170,15 @@ public:
                 //有没有到达终点
                 if (LAStarNode->x == target.x && LAStarNode->y == target.y)
                 {
+                    //获取终点位置
                     AStarVec2 LStart = { LAStarNode->x + mRange, LAStarNode->y +mRange };
                     AStarVec2 CurrentStart = LStart;
                     Count = 2;
                     while (LAStarNode != nullptr)
                     {
-                        
-                        visited[LAStarNode->x + mRange][LAStarNode->y + mRange] = (++Count);
+                        //遍历走过的点
+                        visited[LAStarNode->x + mRange][LAStarNode->y + mRange] = ++Count;
+                        //销毁所有子节点
                         for (size_t i = 0; i < LAStarNode->pChild.size(); i++)
                         {
 #ifdef AStar_MemoryPool
@@ -183,8 +188,9 @@ public:
 #endif
                         }
                         DAStarNode = LAStarNode;
+                        //获取父节点
                         LAStarNode = LAStarNode->parent;
-#ifdef AStar_MemoryPool
+#ifdef AStar_MemoryPool //销毁自身
                         mMemoryPool.deleteElement(DAStarNode);
 #else
                         delete DAStarNode;
@@ -193,9 +199,12 @@ public:
 
                     StartingPoint.x -= mRange;
                     StartingPoint.y -= mRange;
+                    //是否到终点
                     while (visited[LStart.x][LStart.y] != Count)
                     {
-                        PathVector->push_back({ LStart.x + StartingPoint.x, LStart.y + StartingPoint.y }); 
+                        //获取路径
+                        PathVector->push_back({ LStart.x + StartingPoint.x, LStart.y + StartingPoint.y });
+                        //取周围最大的点
                         for (int i = -1; i <= 1; i++) {
                             for (int j = -1; j <= 1; j++) {
                                 if (i == 0 && j == 0)
@@ -203,18 +212,20 @@ public:
 
                                 newX = LStart.x + i;
                                 newY = LStart.y + j;
-                                if (Legitimacy2(newX, newY) && visited[newX][newY] > 2 && visited[newX][newY] > visited[CurrentStart.x][CurrentStart.y]) {
+                                if (Legitimacy2(newX, newY) && visited[newX][newY] > visited[CurrentStart.x][CurrentStart.y]) {
                                     CurrentStart.x = newX;
                                     CurrentStart.y = newY;
                                 }
                             }
                         }
+                        //设置为最大点
                         LStart = CurrentStart;
                     }
+                    //获取路径
                     PathVector->push_back({ LStart.x + StartingPoint.x, LStart.y + StartingPoint.y });
                 }
             }
-            else
+            else//没有子节点，返回父节点
             {
                 DAStarNode = LAStarNode;
                 LAStarNode = LAStarNode->parent;
@@ -226,6 +237,7 @@ public:
             }
 
         } while (LAStarNode != nullptr);
+        //寻路结束
         mPathfindingCompleted = true;
     }
 };

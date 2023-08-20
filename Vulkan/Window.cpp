@@ -2,6 +2,7 @@
 #include "../application.h"
 #include "../Camera.h"
 #include "../GlobalVariable.h"
+#include "../Physics/DestroyMode.h"
 
 namespace VulKan {
 

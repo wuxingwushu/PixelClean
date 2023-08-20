@@ -154,14 +154,12 @@ namespace SquarePhysics {
 			if (LCollisionInfo.Collision) {//是否碰撞
 
 				LPixel->SetPos(LCollisionInfo.Pos);//设置为碰撞位置
-				LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, mFixedSizeTerrain, true);
-				LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
-				mPixelCollisionS->Delete(i);//销毁对应的像素
+				if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LPixel, mFixedSizeTerrain, nullptr)) {
+					LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
+					mPixelCollisionS->Delete(i);//销毁对应的像素
+					i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
+				}
 
-				//mFixedSizeTerrain->CollisionCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//调用地图像素点回调函数
-				//mFixedSizeTerrain->SetFixedCollisionBool(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//修改地图像素点的碰撞信息
-
-				i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
 				continue;
 			}
 
@@ -172,15 +170,12 @@ namespace SquarePhysics {
 				if (LCollisionInfo.Collision)
 				{
 					LPixel->SetPos(Xpos);//设置为碰撞位置
-					LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, LObject, false);
-					LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
-					mPixelCollisionS->Delete(i);//销毁对应的像素
-
-					//LObject->SetFixedCollisionBool(LCollisionInfo.Pos);//修改碰撞像素点信息
-					//LObject->CollisionCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y);//调用碰撞像素点回调事件
-					LObject->OutlineCalculate();//重新生成碰撞骨骼点
-
-					i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
+					if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LPixel, LObject, nullptr)) {
+						LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
+						mPixelCollisionS->Delete(i);//销毁对应的像素
+						LObject->OutlineCalculate();//重新生成碰撞骨骼点
+						i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
+					}
 					break;
 				}
 			}

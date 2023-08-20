@@ -76,7 +76,6 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ImGui/Fou
 
 add_subdirectory(Vulkan)
 add_subdirectory(VulkanTool)
-add_subdirectory(texture)
 add_subdirectory(ImGui)
 add_subdirectory(BlockS)
 add_subdirectory(SoundEffect)
@@ -104,7 +103,6 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		# 文件夹代码
 		vulkanLib 
 		vulkanToolLib
-		textureLib 
 		imguiLib 
 		BlockSLib 
 		ToolLib 
@@ -151,7 +149,6 @@ else()
 		# 文件夹代码
 		vulkanLib
 		vulkanToolLib
-		textureLib 
 		imguiLib 
 		BlockSLib 
 		ToolLib 

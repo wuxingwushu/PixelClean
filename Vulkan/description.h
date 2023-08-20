@@ -1,7 +1,7 @@
 #pragma once
 #include "buffer.h"
-#include "../texture/texture.h"
-#include "../texture/PixelTexture.h"
+#include "../VulKanTool/texture.h"
+#include "../VulKanTool/PixelTexture.h"
 
 namespace VulKan {
 

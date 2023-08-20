@@ -6,7 +6,7 @@
 #include "../Vulkan/descriptorSet.h"
 #include "../Vulkan/description.h"
 #include "../Vulkan/buffer.h"
-#include "../texture/PixelTexture.h"
+#include "../VulKanTool/PixelTexture.h"
 
 #include "GenerateMaze.h"
 

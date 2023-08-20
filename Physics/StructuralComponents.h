@@ -37,8 +37,8 @@ namespace SquarePhysics {
 	};
 
 	//破坏模式回调函数
-	typedef void (*_DestroyModeCallback)(int x, int y, void* mclass, bool Bool);
+	//typedef void (*_DestroyModeCallback)(int x, int y, void* mclass, bool Bool);
 
 	//破坏点回调函数的类型
-	typedef void (*_TerrainCollisionCallback)(int x, int y, bool Bool, void* mclass);
+	//typedef void (*_TerrainCollisionCallback)(int x, int y, bool Bool, void* mclass);
 }

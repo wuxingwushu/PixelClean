@@ -1,5 +1,6 @@
 #pragma once
 #include "StructuralComponents.h"
+#include "Callback.h"
 
 namespace SquarePhysics {
 
@@ -15,12 +16,12 @@ namespace SquarePhysics {
 
 	_DestroyModeCallback GetDestroyMode(DestroyModeEnum Enum);
 
-	void DestroyModePixel(int x, int y, void* mclass, bool Bool);
+	bool DestroyModePixel(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
 
-	void DestroyModeCross(int x, int y, void* mclass, bool Bool);
+	bool DestroyModeCross(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
 
-	void DestroyModeSquare(int x, int y, void* mclass, bool Bool);
+	bool DestroyModeSquare(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
 
-	void DestroyModeSquareDA(int x, int y, void* mclass, bool Bool);
+	bool DestroyModeSquareDA(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
 
 }

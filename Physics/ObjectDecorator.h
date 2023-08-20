@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include "PhysicsCalculate.h"
 #include "StructuralComponents.h"
+#include "Callback.h"
 
 namespace SquarePhysics {
 
@@ -151,9 +152,9 @@ namespace SquarePhysics {
 			mDestroyModeCallback = DestroyModeCallback;
 		}
 
-		void DestroyModeCallback(int x, int y, void* mclass, bool Bool) {
+		bool DestroyModeCallback(int x, int y, bool Bool, ObjectDecorator* Object, GridDecorator* Grid, void* Data) {
 			if (mDestroyModeCallback != nullptr) {
-				mDestroyModeCallback(x, y, mclass, Bool);
+				return mDestroyModeCallback(x, y, Bool, Object, Grid, Data);
 			}
 		}
 

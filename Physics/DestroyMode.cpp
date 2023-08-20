@@ -21,90 +21,62 @@ namespace SquarePhysics {
 		}
 	}
 
-	void DestroyModePixel(int x, int y, void* mclass, bool Bool) {
-		GridDecorator* Class;
-		if (Bool)
-		{
-			Class = (FixedSizeTerrain*)mclass;
-		}
-		else {
-			Class = (ObjectCollision*)mclass;
-		}
+	bool DestroyModePixel(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
+		mGrid->CollisionCallback(x, y, false);
+		mGrid->SetFixedCollisionBool({ x, y });
 
-		Class->CollisionCallback(x, y, false);
-		Class->SetFixedCollisionBool({ x, y });
+		return true;
 	}
 
-	void DestroyModeCross(int x, int y, void* mclass, bool Bool) {
-		GridDecorator* Class;
-		if (Bool)
-		{
-			Class = (FixedSizeTerrain*)mclass;
-		}
-		else {
-			Class = (ObjectCollision*)mclass;
-		}
+	bool DestroyModeCross(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
+		mGrid->CollisionCallback(x, y, false);
+		mGrid->SetFixedCollisionBool({ x, y });
+		mGrid->CollisionCallback(x + 1, y, false);
+		mGrid->SetFixedCollisionBool({ x + 1, y });
+		mGrid->CollisionCallback(x, y + 1, false);
+		mGrid->SetFixedCollisionBool({ x, y + 1 });
+		mGrid->CollisionCallback(x - 1, y, false);
+		mGrid->SetFixedCollisionBool({ x - 1, y });
+		mGrid->CollisionCallback(x, y - 1, false);
+		mGrid->SetFixedCollisionBool({ x, y - 1 });
 
-		Class->CollisionCallback(x, y, false);
-		Class->SetFixedCollisionBool({ x, y });
-		Class->CollisionCallback(x + 1, y, false);
-		Class->SetFixedCollisionBool({ x + 1, y });
-		Class->CollisionCallback(x, y + 1, false);
-		Class->SetFixedCollisionBool({ x, y + 1 });
-		Class->CollisionCallback(x - 1, y, false);
-		Class->SetFixedCollisionBool({ x - 1, y });
-		Class->CollisionCallback(x, y - 1, false);
-		Class->SetFixedCollisionBool({ x, y - 1 });
+		return true;
 	}
 
-	void DestroyModeSquare(int x, int y, void* mclass, bool Bool) {
-		GridDecorator* Class;
-		if (Bool)
-		{
-			Class = (FixedSizeTerrain*)mclass;
-		}
-		else {
-			Class = (ObjectCollision*)mclass;
-		}
+	bool DestroyModeSquare(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
+		mGrid->CollisionCallback(x + 1, y+1, false);
+		mGrid->SetFixedCollisionBool({ x + 1, y+1 });
+		mGrid->CollisionCallback(x + 1, y, false);
+		mGrid->SetFixedCollisionBool({ x + 1, y });
+		mGrid->CollisionCallback(x + 1, y-1, false);
+		mGrid->SetFixedCollisionBool({ x + 1, y-1 });
 
-		Class->CollisionCallback(x + 1, y+1, false);
-		Class->SetFixedCollisionBool({ x + 1, y+1 });
-		Class->CollisionCallback(x + 1, y, false);
-		Class->SetFixedCollisionBool({ x + 1, y });
-		Class->CollisionCallback(x + 1, y-1, false);
-		Class->SetFixedCollisionBool({ x + 1, y-1 });
+		mGrid->CollisionCallback(x, y + 1, false);
+		mGrid->SetFixedCollisionBool({ x, y + 1 });
+		mGrid->CollisionCallback(x, y, false);
+		mGrid->SetFixedCollisionBool({ x, y });
+		mGrid->CollisionCallback(x, y - 1, false);
+		mGrid->SetFixedCollisionBool({ x, y - 1 });
 
-		Class->CollisionCallback(x, y + 1, false);
-		Class->SetFixedCollisionBool({ x, y + 1 });
-		Class->CollisionCallback(x, y, false);
-		Class->SetFixedCollisionBool({ x, y });
-		Class->CollisionCallback(x, y - 1, false);
-		Class->SetFixedCollisionBool({ x, y - 1 });
+		mGrid->CollisionCallback(x - 1, y+1, false);
+		mGrid->SetFixedCollisionBool({ x - 1, y+1 });
+		mGrid->CollisionCallback(x - 1, y, false);
+		mGrid->SetFixedCollisionBool({ x - 1, y });
+		mGrid->CollisionCallback(x - 1, y-1, false);
+		mGrid->SetFixedCollisionBool({ x - 1, y-1 });
 
-		Class->CollisionCallback(x - 1, y+1, false);
-		Class->SetFixedCollisionBool({ x - 1, y+1 });
-		Class->CollisionCallback(x - 1, y, false);
-		Class->SetFixedCollisionBool({ x - 1, y });
-		Class->CollisionCallback(x - 1, y-1, false);
-		Class->SetFixedCollisionBool({ x - 1, y-1 });
+		return true;
 	}
 
-	void DestroyModeSquareDA(int x, int y, void* mclass, bool Bool) {
-		GridDecorator* Class;
-		if (Bool)
-		{
-			Class = (FixedSizeTerrain*)mclass;
-		}
-		else {
-			Class = (ObjectCollision*)mclass;
-		}
+	bool DestroyModeSquareDA(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
 		const int Range = 5;
 		for (int i = -Range; i <= Range; i++) {
 			for (int j = -Range; j <= Range; j++) {
-				Class->CollisionCallback(x + i, y + j, false);
-				Class->SetFixedCollisionBool({ x + i, y + j });
+				mGrid->CollisionCallback(x + i, y + j, false);
+				mGrid->SetFixedCollisionBool({ x + i, y + j });
 			}
 		}
+		return true;
 	}
 
 }

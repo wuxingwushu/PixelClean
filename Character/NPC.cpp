@@ -12,7 +12,7 @@ namespace GAME {
 	{
 		mNPC = npc;
 		mLabyrinth = Labyrinth;
-		mNPC->mObjectCollision->SetAngle(0.01f);
+		mNPC->GetObjectCollision()->SetAngle(0.01f);
 		mAStar = new AStar(mRange, 5000);
 		mAStar->SetObstaclesCallback(AStarGetWall, mLabyrinth);
 	}
@@ -26,18 +26,24 @@ namespace GAME {
 		delete mAStar;
 	}
 
+	void NPC::SetNPC(int x, int y, float angle) {
+		mNPC->GetObjectCollision()->SetPos({ x, y });
+		mNPC->GetObjectCollision()->SetAngle(angle);
+		mNPC->setGamePlayerMatrix(3, true);
+	}
+
 	void NPC::Event(int Frame, float time) {
 		mTime += time;
 		mNPC->UpData();
 
-		glm::vec2 pos = mNPC->mObjectCollision->GetPos();
+		glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
 
 		//玩家相对NPC位置角度
 		float wanjiaAngle = SquarePhysics::EdgeVecToCosAngleFloat(glm::vec2{Global::GamePlayerX - pos.x, Global::GamePlayerY - pos.y});
 
 		//射线检测
 		SquarePhysics::CollisionInfo LInfo = mLabyrinth->mFixedSizeTerrain->RadialCollisionDetection(pos, { Global::GamePlayerX, Global::GamePlayerY });
-		if ((fabs(wanjiaAngle - mNPC->mObjectCollision->GetAngleFloat()) < 0.785f) && !LInfo.Collision) {//在视野范围内，且可以看到玩家
+		if ((fabs(wanjiaAngle - mNPC->GetObjectCollision()->GetAngleFloat()) < 0.785f) && !LInfo.Collision) {//在视野范围内，且可以看到玩家
 			mSuspicious = true;
 			mSuspiciousPos = { int(LInfo.Pos.x), int(LInfo.Pos.y) };
 		}
@@ -46,7 +52,7 @@ namespace GAME {
 
 
 		if (!LInfo.Collision && //看见玩家
-			(fabs(wanjiaAngle - mNPC->mObjectCollision->GetAngleFloat()) < 0.785f) && //玩家在视野范围内
+			(fabs(wanjiaAngle - mNPC->GetObjectCollision()->GetAngleFloat()) < 0.785f) && //玩家在视野范围内
 			mAStar->GetPathfindingCompleted() && //寻路可以用调用（防止反复调用）
 			LPath.size() <= 20 && //路径小于多少时
 			mTime >= mPathfindingCycle && //时间间隔
@@ -73,9 +79,9 @@ namespace GAME {
 				LPath.pop_back();
 			}
 			//mNPC->mObjectCollision->SetForce(yiPOS * 100.0f);
-			mNPC->mObjectCollision->SetAngle(wanjiaAngle);
-			mNPC->mObjectCollision->SetPos(yiPOS);
-			mNPC->mObjectCollision->SetSpeed(0, 0);
+			mNPC->GetObjectCollision()->SetAngle(wanjiaAngle);
+			mNPC->GetObjectCollision()->SetPos(yiPOS);
+			mNPC->GetObjectCollision()->SetSpeed(0, 0);
 		}
 		else if (mSuspicious && mAStar->GetPathfindingCompleted()) {//前往可疑位置
 			mSuspicious = false;
@@ -88,13 +94,13 @@ namespace GAME {
 		{
 			LPath.clear();
 			if (mLabyrinth->GetPixelWallNumber(pos.x + fang, pos.y) <= 0) {
-				mNPC->mObjectCollision->SetPos({ pos.x + (fang * 0.1f), pos.y });
+				mNPC->GetObjectCollision()->SetPos({ pos.x + (fang * 0.1f), pos.y });
 				if (fang > 0) {
-					mNPC->mObjectCollision->SetAngle(0.0f);
+					mNPC->GetObjectCollision()->SetAngle(0.0f);
 				}
 				else
 				{
-					mNPC->mObjectCollision->SetAngle(3.14f);
+					mNPC->GetObjectCollision()->SetAngle(3.14f);
 				}
 				//mNPC->mObjectCollision->SetPos({ fang * 100 , 0 });
 			}
@@ -102,14 +108,9 @@ namespace GAME {
 				fang = -fang;
 			}
 		}
+
 		//更新模型位置
-		mNPC->setGamePlayerMatrix(glm::rotate(
-			glm::translate(glm::mat4(1.0f), glm::vec3(mNPC->mObjectCollision->GetPosX(), mNPC->mObjectCollision->GetPosY(), 0.0f)),
-			glm::radians(mNPC->mObjectCollision->GetAngleFloat() * 180.0f / 3.14f),
-			glm::vec3(0.0f, 0.0f, 1.0f)
-			),
-			Frame
-		);
+		mNPC->setGamePlayerMatrix(Frame);
 	}
 
 }

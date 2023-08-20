@@ -129,9 +129,9 @@ namespace GAME {
 		//地面类型
 		unsigned int** BlockTypeS = nullptr;
 
-		short int** PixelWallNumber;// 附近 17 * 17 的墙壁的数量
+		short** PixelWallNumber = nullptr;// 附近 17 * 17 的墙壁的数量
 		//获取点附近的墙壁数量
-		short int GetPixelWallNumber(int x, int y);
+		short GetPixelWallNumber(int x, int y);
 		//计算点附近的墙壁数量
 		void PixelWallNumberCalculate(int x, int y);
 		//将 17 * 17 范围的点都加 1

@@ -14,7 +14,7 @@ namespace GAME {
 		//同步
 		if (Global::MultiplePeopleMode) {
 			if (Global::ServerOrClient) {
-				PlayerPos* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
+				RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
 				BufferEventSingleData* LBufferEventSingleData;
 				for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
 				{
@@ -23,7 +23,7 @@ namespace GAME {
 				}
 			}
 			else {
-				client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->add({ x,y,false });
+				client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mLabyrinthPixel->add({ x,y,false });
 			}
 		}
 	}
@@ -65,6 +65,18 @@ namespace GAME {
 			memcpy(BlockTypeS[i], PBlockTypeData, (numberY * sizeof(unsigned int)));
 			PBlockTypeData = PBlockTypeData + (numberY * sizeof(unsigned int));
 		}
+
+		PixelWallNumber = new short* [numberX * 16];
+
+		for (size_t ix = 0; ix < (numberX * 16); ix++)
+		{
+			PixelWallNumber[ix] = new short[numberY * 16];
+			for (size_t iy = 0; iy < (numberY * 16); iy++)
+			{
+				PixelWallNumber[ix][iy] = 0;
+			}
+		}
+
 		LabyrinthBuffer();
 		initUniformManager(
 			mDevice,
@@ -136,19 +148,19 @@ namespace GAME {
 		}
 
 
-		PixelWallNumber = new short int* [numberX * 16];
+		PixelWallNumber = new short* [numberX * 16];
 		
 		for (size_t ix = 0; ix < (numberX * 16); ix++)
 		{
-			PixelWallNumber[ix] = new short int[numberY * 16];
+			PixelWallNumber[ix] = new short[numberY * 16];
 			for (size_t iy = 0; iy < (numberY * 16); iy++)
 			{
 				PixelWallNumber[ix][iy] = 0;
 			}
 		}
-		for (size_t ix = 0; ix < numberX * 16; ix++)
+		for (size_t ix = 0; ix < (numberX * 16); ix++)
 		{
-			for (size_t iy = 0; iy < numberY * 16; iy++)
+			for (size_t iy = 0; iy < (numberY * 16); iy++)
 			{
 				if (BlockPixelS[(ix * numberY * 16) + iy] == 1) {
 					PixelWallNumberAdd(ix, iy);
@@ -243,10 +255,6 @@ namespace GAME {
 		delete[] BlockPixelS;
 		delete[] BlockTypeS;
 
-		for (size_t i = 0; i < numberX*16; i++)
-		{
-			delete[] PixelWallNumber[i];
-		}
 		delete[] PixelWallNumber;
 
 		//销毁地面碰撞系统
@@ -474,7 +482,7 @@ namespace GAME {
 		return true;
 	}
 
-	short int Labyrinth::GetPixelWallNumber(int x, int y) {
+	short Labyrinth::GetPixelWallNumber(int x, int y) {
 		x += mOriginX;
 		y += mOriginY;
 		if (GetPixelLegitimate(x,y)) {

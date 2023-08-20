@@ -26,6 +26,12 @@ namespace GAME {
 			mNPC->InitCommandBuffer();
 		}
 
+		evutil_socket_t GetKey() {
+			return mNPC->GetKey();
+		}
+
+		void SetNPC(int x, int y, float angle);
+
 	private:
 		int fang = 1;
 		int mRange = 160;//寻路范围

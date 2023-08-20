@@ -75,14 +75,15 @@ void server_listen_cb(evconnlistener* ev, evutil_socket_t s, sockaddr* sin, int 
 {
 	std::cout << "新连接接入:" << s << std::endl;
 	
-	PlayerPos* pos = server::GetServer()->GetServerData()->New(s);
+	RoleSynchronizationData* pos = server::GetServer()->GetServerData()->New(s);
 	pos->Key = s;
 	pos->X = 0;
 	pos->Y = 0;
 	pos->ang = 0;
 	pos->mBufferEventSingleData = new BufferEventSingleData(100);
 	GAME::GamePlayer* LPlayer = server::GetServer()->GetCrowd()->GetGamePlayer(s);
-	pos->mBufferEventSingleData->mBrokenData = LPlayer->GetBrokenData();
+	LPlayer->SetRoleSynchronizationData(pos);
+	server::GetServer()->GetServerData()->SetPointerData(s, LPlayer);
 
 	event_base* base = (event_base*)arg;
 
@@ -154,27 +155,24 @@ server::server(unsigned int Duan) {
 		sizeof(sin)
 	);
 
-	mServerData = new ContinuousMap<evutil_socket_t, PlayerPos>(100);
+	mServerData = new ContinuousMap<evutil_socket_t, RoleSynchronizationData>(100);
+	mServerData->SetPointerCallback(GAME::PointerGamePlayer);//（调整储存连续时，同时更新引用者）更新指针
 
 	//ServerPos* pos = server::GetServer()->GetServerData()->New(0); // 递归BUG 在创建 server 调用了 GetServer() 导致 mServer 一直为 nullptr
-	PlayerPos* pos = mServerData->New(0);
-	pos->Key = 0;
-	pos->ang = 0;
-	pos->X = 0;
-	pos->Y = 0;
-	pos->mBufferEventSingleData = new BufferEventSingleData(100);
-	//pos->mBufferEventSingleData->mBrokenData = GetGamePlayer()->GetBrokenData();
+	
 	InitSynchronizeMap();
 }
 
 void server::InitSynchronizeMap() {
 	char* DataBuffer = new char[100000000];
-	AddSynchronizeMap(1, { DataBuffer, sizeof(PlayerPos), SGamePlayerSynchronize });
-	AddSynchronizeMap(2, { DataBuffer, sizeof(SynchronizeBullet), SArmsSynchronize });
-	AddSynchronizeMap(3, { DataBuffer, sizeof(int), SGamePlayerBroken });
-	AddSynchronizeMap(4, { DataBuffer, sizeof(int), SPlayerInformation });
-	AddSynchronizeMap(5, { DataBuffer, sizeof(int), SInitLabyrinth });
-	AddSynchronizeMap(6, { DataBuffer, sizeof(PixelState), SLabyrinthPixel });
+	AddSynchronizeMap(1, { DataBuffer, sizeof(RoleSynchronizationData), SGamePlayerSynchronize });	//位置同步
+	AddSynchronizeMap(2, { DataBuffer, sizeof(SynchronizeBullet), SArmsSynchronize });				//子弹同步
+	AddSynchronizeMap(3, { DataBuffer, sizeof(int), SGamePlayerBroken });							//玩家损伤成度同步
+	AddSynchronizeMap(4, { DataBuffer, sizeof(int), SPlayerInformation });							//返回玩家的初始信息
+	AddSynchronizeMap(5, { DataBuffer, sizeof(int), SInitLabyrinth });								//地图初始化同步
+	AddSynchronizeMap(6, { DataBuffer, sizeof(PixelState), SLabyrinthPixel });						//地图破坏同步
+	AddSynchronizeMap(7, { DataBuffer, sizeof(RoleSynchronizationData), SNPCSSynchronize });		//NPC同步
+	AddSynchronizeMap(8, { DataBuffer, sizeof(char), SStrReceive });								//聊天窗口同步
 }
 
 server::~server() {

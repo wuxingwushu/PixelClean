@@ -6,9 +6,6 @@
 #include "../Vulkan/commandPool.h"
 #include "../Vulkan/commandBuffer.h"
 
-#include "../NetworkTCP/Server.h"
-#include "../NetworkTCP/Client.h"
-
 #include "../GlobalVariable.h"
 #include "../Tool/QueueData.h"
 

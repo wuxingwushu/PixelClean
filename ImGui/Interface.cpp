@@ -2,6 +2,10 @@
 #include "../SoundEffect/SoundEffect.h"
 #include "../Opcode/Opcode.h"
 #include "../Tool/trie.h"
+#include "../GlobalStructural.h"
+
+#include "../NetworkTCP/Server.h"
+#include "../NetworkTCP/Client.h"
 
 namespace GAME {
 	ImGuiInterFace::ImGuiInterFace(
@@ -429,6 +433,7 @@ namespace GAME {
 				if (ImGui::Selectable(Vvector[n]->c_str(), PromptSelected == n)) {
 					PromptSelected = n;
 					memcpy(&LOpCode[1], Vvector[n]->c_str(), Vvector[n]->size());
+					LOpCode[Vvector[n]->size() + 1] = '\0';
 					ConsoleFocusHere = true;
 					PromptTriggerBool = true;
 				}
@@ -455,6 +460,38 @@ namespace GAME {
 			else {
 				mChatBoxStr->add({ LOpCode, clock() });
 			}
+
+			if (Global::MultiplePeopleMode) {
+				LOpcodeStr = LOpCode;
+				OpodeSize = LOpcodeStr.size();
+				char* NewChar = new char[OpodeSize + 1];
+				memcpy(NewChar, LOpCode, OpodeSize + 1);
+
+				LimitUse<ChatStrStruct*>* LUse;
+				ContinuousMap<evutil_socket_t, RoleSynchronizationData>* LRoleMap;
+				RoleSynchronizationData* LRoleData;
+
+				ChatStrStruct* LChatStrStruct = new ChatStrStruct;
+				LChatStrStruct->str = NewChar;
+				LChatStrStruct->size = OpodeSize + 1;
+
+				if (Global::ServerOrClient) {
+					LRoleMap = server::GetServer()->GetServerData();
+					LRoleData = LRoleMap->GetKeyData(0);
+					LUse = new LimitUse<ChatStrStruct*>(LChatStrStruct, LRoleMap->GetKeyNumber());
+					for (size_t i = 0; i < LRoleMap->GetKeyNumber(); i++)
+					{
+						LRoleData[i].mBufferEventSingleData->mStr->add(LUse);
+					}
+				}
+				else
+				{
+					LRoleData = client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData();
+					LUse = new LimitUse<ChatStrStruct*>(LChatStrStruct, 1);
+					LRoleData->mBufferEventSingleData->mStr->add(LUse);
+				}
+			}
+
 			OpodeSize = 0;
 			ConsoleFocusHere = true;
 			Global::ConsoleBool = false;

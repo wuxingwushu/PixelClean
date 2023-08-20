@@ -23,6 +23,7 @@
 #include "ClientSynchronizeEvents.h"
 
 #include "StructTCP.h"
+#include "Struct.h"
 
 #include "../GlobalVariable.h"
 
@@ -67,7 +68,7 @@ public:
 	
 	~client();
 
-	[[nodiscard]] ContinuousMap<evutil_socket_t, PlayerPos>* GetClientData() const noexcept {
+	[[nodiscard]] ContinuousMap<evutil_socket_t, RoleSynchronizationData>* GetClientData() const noexcept {
 		return mClientData;
 	}
 
@@ -79,17 +80,10 @@ public:
 		return client_bev;
 	}
 
-	void InitBufferEventSingleData(unsigned	int size) {
-		mBufferEventSingleData = new BufferEventSingleData(size);
-	}
-
-	BufferEventSingleData* GetBufferEventSingleData() {
-		return mBufferEventSingleData;
-	}
-
 	void InitSynchronizeMap();
 
-	
+	bool InitbuffereventTO = true;//初始化信息
+
 	evutil_socket_t fd;
 private:
 	static client* mClient;
@@ -97,9 +91,9 @@ private:
 
 	event_base* client_base;
 	bufferevent* client_bev = nullptr;
-	ContinuousMap<evutil_socket_t, PlayerPos>* mClientData;
+	ContinuousMap<evutil_socket_t, RoleSynchronizationData>* mClientData;
 
-	BufferEventSingleData* mBufferEventSingleData;
+	
 };
 
 //进入事件帧循环

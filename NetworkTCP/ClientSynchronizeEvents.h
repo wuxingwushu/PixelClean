@@ -1,6 +1,6 @@
 #pragma once
 #include "Client.h"
-#include "StructTCP.h"
+
 
 //位置同步
 void CGamePlayerSynchronize(bufferevent* be, void* Data);
@@ -14,3 +14,9 @@ void CPlayerInformation(bufferevent* be, void* Data);
 void CInitLabyrinth(bufferevent* be, void* Data);
 //地图破坏同步
 void CLabyrinthPixel(bufferevent* be, void* Data);
+//NPC同步
+void CNPCSSynchronize(bufferevent* be, void* Data);
+//Str发送
+void CStrSend(bufferevent* be, void* Data);
+//Str接收
+void CStrReceive(bufferevent* be, void* Data);

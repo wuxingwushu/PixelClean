@@ -52,51 +52,45 @@ void client_event_cb(bufferevent* be, short events, void* arg)
 
 }
 
-struct writestruct {
-	DataHeader mDH;//发送数据头
-	PlayerPos mClientPos;
-};
 
 bool InitbuffereventFD = true;
 
 void client_write_cb(bufferevent* be, void* arg)
 {
-	if (InitbuffereventFD) {
-		DataHeader DHArms;
+	DataHeader DHArms;
+	if (client::GetClient()->InitbuffereventTO) {
 		DHArms.Key = 4;
 		DHArms.Size = sizeof(int);
 		bufferevent_write(be, &DHArms, sizeof(DataHeader));
 		bufferevent_write(be, &DHArms.Key, DHArms.Size);
-		DHArms.Key = 5;
-		DHArms.Size = sizeof(int);
-		bufferevent_write(be, &DHArms, sizeof(DataHeader));
-		bufferevent_write(be, &DHArms.Key, DHArms.Size);
-		InitbuffereventFD = false;
+		if (InitbuffereventFD) {
+			DHArms.Key = 5;
+			DHArms.Size = sizeof(int);
+			bufferevent_write(be, &DHArms, sizeof(DataHeader));
+			bufferevent_write(be, &DHArms.Key, DHArms.Size);
+			InitbuffereventFD = false;
+		}
 		return;
 	}
+	
+	
+	DHArms.Key = 1;
+	DHArms.Size = sizeof(RoleSynchronizationData);
+	bufferevent_write(be, &DHArms, sizeof(DataHeader));
+	bufferevent_write(be, client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData(), DHArms.Size);//发送玩家位置数据
 
-	//写入buffer
-	PlayerPos wanpos;
-	wanpos.X = m_position.x;
-	wanpos.Y = m_position.y;
-	wanpos.ang = m_angle * 180.0f / 3.14159265359f;
+	CStrSend(be, nullptr);//发送客户端发出的消息
 
-	writestruct mDC;
-	mDC.mDH.Key = 1;
-	mDC.mDH.Size = sizeof(PlayerPos);
-	mDC.mClientPos = wanpos;
-	bufferevent_write(be, &mDC, sizeof(writestruct));//发送玩家数据
-
-	if (client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->GetNumber() != 0) {
+	if (client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->GetNumber() != 0) {//子弹情况
 		DataHeader DHArms;
 		DHArms.Key = 2;
-		DHArms.Size = sizeof(SynchronizeBullet) * client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->GetNumber();
+		DHArms.Size = sizeof(SynchronizeBullet) * client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->GetNumber();
 		bufferevent_write(be, &DHArms, sizeof(DataHeader));
-		bufferevent_write(be, client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->GetData(), DHArms.Size);//发送客户端发射的子弹
-		client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->ClearAll();//客户端清空发射
+		bufferevent_write(be, client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->GetData(), DHArms.Size);//发送客户端发射的子弹
+		client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->ClearAll();//客户端清空发射
 	}
 
-	if ((clock() - Ctime) >= 1000) {
+	if ((clock() - Ctime) >= 1000) {//请求玩家破损情况
 		Ctime = clock();
 		DataHeader DHArms;
 		DHArms.Key = 3;
@@ -105,13 +99,13 @@ void client_write_cb(bufferevent* be, void* arg)
 		bufferevent_write(be, &DHArms.Key, DHArms.Size);
 	}
 
-	if (client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetNumber() != 0) {
+	if (client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mLabyrinthPixel->GetNumber() != 0) {//地图情况
 		DataHeader DHArms;
 		DHArms.Key = 6;
-		DHArms.Size = sizeof(PixelState) * client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetNumber();
+		DHArms.Size = sizeof(PixelState) * client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mLabyrinthPixel->GetNumber();
 		bufferevent_write(be, &DHArms, sizeof(DataHeader));
-		bufferevent_write(be, client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->GetData(), DHArms.Size);//发送客户端发射的子弹
-		client::GetClient()->GetBufferEventSingleData()->mLabyrinthPixel->ClearAll();//客户端清空发射
+		bufferevent_write(be, client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mLabyrinthPixel->GetData(), DHArms.Size);//发送客户端发射的子弹
+		client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mLabyrinthPixel->ClearAll();//客户端清空发射
 	}
 
 	//Sleep(10);
@@ -187,20 +181,22 @@ client::client(std::string IPV, unsigned int Duan) {
 		std::cout << "connected" << std::endl;
 	}
 
-	mClientData = new ContinuousMap<evutil_socket_t, PlayerPos>(100);
-	InitBufferEventSingleData(100);
+	mClientData = new ContinuousMap<evutil_socket_t, RoleSynchronizationData>(100);
+	mClientData->SetPointerCallback(GAME::PointerGamePlayer);//（调整储存连续时，同时更新引用者）更新指针
 
 	InitSynchronizeMap();
 }
 
 void client::InitSynchronizeMap() {
 	char* DataBuffer = new char[100000000];
-	AddSynchronizeMap(1, { DataBuffer, sizeof(PlayerPos), CGamePlayerSynchronize});		//位置同步
-	AddSynchronizeMap(2, { DataBuffer, sizeof(SynchronizeBullet), CArmsSynchronize });	//子弹同步
-	AddSynchronizeMap(3, { DataBuffer, sizeof(PlayerBroken), CGamePlayerBroken });		//玩家损伤成度同步
-	AddSynchronizeMap(4, { DataBuffer, sizeof(evutil_socket_t), CPlayerInformation });	//返回玩家的初始信息
-	AddSynchronizeMap(5, { DataBuffer, sizeof(char), CInitLabyrinth });					//地图初始化同步
-	AddSynchronizeMap(6, { DataBuffer, sizeof(PixelState), CLabyrinthPixel });	//地图破坏同步
+	AddSynchronizeMap(1, { DataBuffer, sizeof(RoleSynchronizationData), CGamePlayerSynchronize});		//位置同步
+	AddSynchronizeMap(2, { DataBuffer, sizeof(SynchronizeBullet), CArmsSynchronize });					//子弹同步
+	AddSynchronizeMap(3, { DataBuffer, sizeof(PlayerBroken), CGamePlayerBroken });						//玩家损伤成度同步
+	AddSynchronizeMap(4, { DataBuffer, sizeof(evutil_socket_t), CPlayerInformation });					//返回玩家的初始信息
+	AddSynchronizeMap(5, { DataBuffer, sizeof(char), CInitLabyrinth });									//地图初始化同步
+	AddSynchronizeMap(6, { DataBuffer, sizeof(PixelState), CLabyrinthPixel });							//地图破坏同步
+	AddSynchronizeMap(7, { DataBuffer, sizeof(RoleSynchronizationData), CNPCSSynchronize });			//NPC同步
+	AddSynchronizeMap(8, { DataBuffer, sizeof(char), CStrReceive });									//聊天窗口同步
 }
 
 client::~client() {

@@ -60,13 +60,13 @@ namespace Opcode {
 	//添加NPC
 	void AddNPC(Queue<const char*>* CodeS) {
 		glm::ivec2 pos = OpLabyrinth->GetLegitimateGeneratePos();
-		OpCrowd->AddNPC(pos.x, pos.y, OpLabyrinth);
+		OpCrowd->AddNPC(pos.x, pos.y);
 	}
 
 	//添加设置了位置的NPC
 	void AddNPCPos(Queue<const char*>* CodeS) {
 		if (CodeS->GetNumber() == 2) {
-			OpCrowd->AddNPC(OpConverter<int>(*CodeS->pop()), OpConverter<int>(*CodeS->pop()), OpLabyrinth);
+			OpCrowd->AddNPC(OpConverter<int>(*CodeS->pop()), OpConverter<int>(*CodeS->pop()));
 		}
 		else
 		{
@@ -81,7 +81,7 @@ namespace Opcode {
 			for (size_t i = 0; i < S; i++)
 			{
 				glm::ivec2 pos = OpLabyrinth->GetLegitimateGeneratePos();
-				OpCrowd->AddNPC(pos.x, pos.y, OpLabyrinth);
+				OpCrowd->AddNPC(pos.x, pos.y);
 			}
 		}
 		else

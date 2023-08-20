@@ -11,8 +11,12 @@
 #include "../Physics/SquarePhysics.h"
 #include "../Tool/Queue.h"
 #include "../GlobalStructural.h"
+#include "../NetworkTCP/StructTCP.h"
 
 namespace GAME {
+
+	void PointerGamePlayer(RoleSynchronizationData* Data, void* mclass);
+
 	class GamePlayer
 	{
 	public:
@@ -33,10 +37,6 @@ namespace GAME {
 
 		void InitCommandBuffer();
 
-		void SetKey(unsigned int key) {
-			Key = key;
-		}
-
 		//破坏指针
 		unsigned char* TexturePointer = nullptr;
 		//获取破坏指针
@@ -52,7 +52,7 @@ namespace GAME {
 		//更新描述符，模型位置
 		//mode = false 模式：持续更新位置（运动） [ 变换矩阵，那个GPU画布 ];
 		//mode = true  模式：一次设置位置（静止） [ 变换矩阵，GPU画布数量，true ];
-		void setGamePlayerMatrix(glm::mat4 Matrix, const int& frameCount, bool mode = false);
+		void setGamePlayerMatrix(const int& frameCount, bool mode = false);
 
 		//获取  顶点和UV  VkBuffer数组
 		[[nodiscard]] std::vector<VkBuffer> getVertexBuffers() const {
@@ -70,7 +70,8 @@ namespace GAME {
 
 		[[nodiscard]] VkCommandBuffer getCommandBuffer(int i)  const { return mBufferCopyCommandBuffer[i]->getCommandBuffer(); }
 
-		[[nodiscard]] unsigned int GetKey() { return Key; }
+		//获取钥匙
+		[[nodiscard]] evutil_socket_t GetKey() { return mSynchronizationData->Key; }
 
 		//获取玩家破坏情况数据
 		[[nodiscard]] bool* GetBrokenData(){ return mBrokenData; }
@@ -82,11 +83,23 @@ namespace GAME {
 		//获取玩家是否阵亡
 		[[nodiscard]] bool GetDeathInBattle(){ return DeathInBattle; }
 
+		//设置同步数据结构指针
+		void SetRoleSynchronizationData(RoleSynchronizationData* SynchronizationData) {
+			mSynchronizationData = SynchronizationData;
+			mSynchronizationData->mBufferEventSingleData->mBrokenData = GetBrokenData();
+		}
+
+		RoleSynchronizationData* GetRoleSynchronizationData() {
+			return mSynchronizationData;
+		}
+
 	private://模型变换矩阵
 		bool DeathInBattle = false;
-		unsigned int Key = 0;
 		ObjectUniform mUniform{};
 		bool* mBrokenData = nullptr; //破坏情况数据
+
+		//同步数据
+		RoleSynchronizationData* mSynchronizationData = nullptr;
 
 	private://模型   顶点，UV，顶点索引
 		VulKan::Buffer* mPositionBuffer{ nullptr };
@@ -111,8 +124,11 @@ namespace GAME {
 		VulKan::RenderPass* mRenderPass = nullptr;
 
 		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理
-	public://物理
 		SquarePhysics::ObjectCollision* mObjectCollision = nullptr;
+	public://物理
+		SquarePhysics::ObjectCollision* GetObjectCollision() {
+			return mObjectCollision;
+		}
 		Queue<PixelState>* mPixelQueue = nullptr;
 	};
 }

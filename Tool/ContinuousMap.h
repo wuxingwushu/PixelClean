@@ -4,6 +4,7 @@
 //#define ContinuousMap_New             // 开启  没有键就自动生成
 //#define ContinuousMap_Debug             // 开启  事件打印
 #define ContinuousMap_Timeout			// 开启  超时检测
+#define ContinuousMap_Pointer			// 开启  指针更新（在移动数据时更新对应引用）
 
 #ifdef ContinuousMap_Debug// 开启  事件打印
 #include <iostream>
@@ -24,13 +25,19 @@ class ContinuousMap
 private:
 
     typedef void (*_DeleteCallback)(TData data, void* ptr);//销毁 回调函数类型
-    _DeleteCallback DeleteCallback = nullptr;//用户自定义销毁 回调函数
-    void* DeleteData;
+    _DeleteCallback mDeleteCallback = nullptr;//用户自定义销毁 回调函数
+    void* mDeleteData;
 
 #ifdef ContinuousMap_Timeout
     typedef bool (*_TimeoutCallback)(TData data, void* ptr);//销毁 回调函数类型（返回值 表示释放要调用 销毁 函数）
-    _TimeoutCallback TimeoutCallback = nullptr;//用户自定义超时 回调函数
-    void* TimeoutData;
+    _TimeoutCallback mTimeoutCallback = nullptr;//用户自定义超时 回调函数
+    void* mTimeoutData;
+#endif
+
+#ifdef ContinuousMap_Pointer
+    typedef void (*_PointerCallback)(TData* data, void* ptr);//销毁 回调函数类型（返回值 表示释放要调用 销毁 函数）
+    _PointerCallback mPointerCallback = nullptr;//用户自定义超时 回调函数
+    void** mPointerData;
 #endif
 
     TKey* KeyS;//键
@@ -50,6 +57,9 @@ public:
 #ifdef ContinuousMap_Timeout
         TimeS = new clock_t[Max];
 #endif
+#ifdef ContinuousMap_Pointer
+        mPointerData = new void*[Max];
+#endif
     }
 
     ~ContinuousMap(){
@@ -57,6 +67,9 @@ public:
         delete DataS;
 #ifdef ContinuousMap_Timeout
         delete TimeS;
+#endif
+#ifdef ContinuousMap_Pointer
+        delete mPointerData;
 #endif
     }
 
@@ -74,6 +87,7 @@ public:
 #ifdef ContinuousMap_Debug
             std::cerr << "存在 " << key << " 创建失败！" << std::endl;
 #endif
+            return &DataS[Number++];
         }
         KeyS[Number] = key;//获取最前面的空位储存键
 #ifdef ContinuousMap_Timeout
@@ -108,9 +122,9 @@ public:
 #endif
     }
 
-    void SetDeleteCallback(_DeleteCallback mDeleteCallback, void* Data) {
-        DeleteCallback = mDeleteCallback;//设置销毁回调函数
-        DeleteData = Data;
+    void SetDeleteCallback(_DeleteCallback DeleteCallback, void* Data) {
+        mDeleteCallback = DeleteCallback;//设置销毁回调函数
+        mDeleteData = Data;
     }
 
     //销毁 TKey 对应的映射
@@ -122,8 +136,8 @@ public:
 #endif
             return;
         }
-        if (DeleteCallback != nullptr) {//判断是否有销毁回调函数
-            DeleteCallback(*Get(key), DeleteData);//调用对应的回调函数
+        if (mDeleteCallback != nullptr) {//判断是否有销毁回调函数
+            mDeleteCallback(*Get(key), mDeleteData);//调用对应的回调函数
         }
         Number--;
         unsigned int keyData = Dictionary[key];//获取要销毁的键
@@ -135,6 +149,12 @@ public:
             TimeS[keyData] = TimeS[Number];
 #endif
             Dictionary[KeyS[Number]] = keyData;
+#ifdef ContinuousMap_Pointer
+            if (mPointerCallback != nullptr) {
+                mPointerData[keyData] = mPointerData[Number];
+                mPointerCallback(&DataS[keyData], mPointerData[keyData]);
+            }
+#endif
         }
         Dictionary.erase(key);//Map销毁
 #ifdef ContinuousMap_Debug
@@ -152,8 +172,8 @@ public:
 #ifdef ContinuousMap_Debug
                 std::cerr << KeyS[i] << " 超时： 销毁！" << std::endl;
 #endif
-                if (TimeoutCallback != nullptr) {
-                    if (TimeoutCallback(*Get(KeyS[i]), TimeoutData)) {
+                if (mTimeoutCallback != nullptr) {
+                    if (mTimeoutCallback(*Get(KeyS[i]), mTimeoutData)) {
                         Delete(KeyS[i]);//销毁超时的键
                     }
                 }
@@ -165,9 +185,9 @@ public:
     }
 
     //设置超时回调函数
-    void SetTimeoutCallback(_TimeoutCallback mTimeoutCallback, void* Data) {
-        TimeoutCallback = mTimeoutCallback;
-        TimeoutData = Data;
+    void SetTimeoutCallback(_TimeoutCallback TimeoutCallback, void* Data) {
+        mTimeoutCallback = TimeoutCallback;
+        mTimeoutData = Data;
     }
 
     //设置超时时间
@@ -185,6 +205,18 @@ public:
     }
 #endif
 
+#ifdef ContinuousMap_Pointer
+
+    void SetPointerCallback(_PointerCallback PointerCallback) {
+        mPointerCallback = PointerCallback;
+    }
+
+    void SetPointerData(TKey key, void* Data) {
+        mPointerData[Dictionary[key]] = Data;
+    }
+
+#endif
+
     //获取除 Key 以外的所有 Data （且将 Key 移动最后面）
     [[nodiscard]] TData* GetKeyData(TKey key) {
         if (Dictionary.find(key) == Dictionary.end()) {//判断是否存在键
@@ -200,6 +232,16 @@ public:
             std::swap<TData>(DataS[keyData], DataS[Number - 1]);
 #ifdef ContinuousMap_Timeout
             std::swap<clock_t>(TimeS[keyData], TimeS[Number - 1]);
+#endif
+#ifdef ContinuousMap_Pointer
+            if (mPointerCallback != nullptr) {
+                void* LPointer = mPointerData[keyData];
+                mPointerData[keyData] = mPointerData[Number - 1];
+                mPointerData[Number - 1] = LPointer;
+
+                mPointerCallback(&DataS[keyData], mPointerData[keyData]);
+                mPointerCallback(&DataS[Number - 1], mPointerData[Number - 1]);
+            }
 #endif
         }
         return DataS;

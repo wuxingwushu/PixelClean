@@ -18,7 +18,8 @@ namespace GAME {
 			VulKan::SwapChain* SwapChain,
 			VulKan::RenderPass* RenderPass,
 			VulKan::Sampler* Sampler,
-			std::vector<VulKan::Buffer*> CameraVPMatricesBuffer
+			std::vector<VulKan::Buffer*> CameraVPMatricesBuffer,
+			Labyrinth* labyrinth
 		);
 
 		~Crowd();
@@ -50,14 +51,26 @@ namespace GAME {
 			MapPlayerS->UpDataWholeTime();
 		}
 
-		void AddNPC(int x, int y, Labyrinth* Labyrinth);
+		NPC* GetNPC(evutil_socket_t key);
+
+		//只有 客户端才要 检测 NPC 超时
+		void NPCTimeoutDetection() {
+			mNPCS->TimeoutDetection();
+		}
+
+		void AddNPC(int x, int y);
 
 		void NPCEvent(int Format, float time);
 
 		void KillAll();
 
+		ContinuousMap<evutil_socket_t, RoleSynchronizationData>* GetRoleSynchronizationData() {
+			return mNPCSynchronizationData;
+		}
+
 	private:
 		//储存用来生成玩家
+		Labyrinth* mLabyrinth = nullptr;
 		unsigned int mSize = 0;
 		VulKan::Device* mDevice = nullptr;
 		VulKan::CommandPool* mCommandPool = nullptr;
@@ -69,7 +82,9 @@ namespace GAME {
 
 		ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS = nullptr;//玩家映射
 
-		ContinuousData<NPC*>* mNPCS = nullptr;
+		unsigned int NPCID = 0;//分配 NPC ID
+		ContinuousMap<evutil_socket_t, NPC*>* mNPCS = nullptr;//NPC映射
+		ContinuousMap<evutil_socket_t, RoleSynchronizationData>* mNPCSynchronizationData;
 
 		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理
 	};

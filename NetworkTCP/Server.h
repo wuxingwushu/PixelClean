@@ -22,6 +22,7 @@
 #include "ServerSynchronizeEvents.h"
 
 #include "StructTCP.h"
+#include "Struct.h"
 
 #include "../GlobalVariable.h"
 
@@ -69,7 +70,7 @@ public:
 
 	~server();
 
-	[[nodiscard]] ContinuousMap<evutil_socket_t, PlayerPos>* GetServerData() const noexcept {
+	[[nodiscard]] ContinuousMap<evutil_socket_t, RoleSynchronizationData>* GetServerData() const noexcept {
 		return mServerData;
 	}
 
@@ -90,5 +91,5 @@ private:
 
 	event_base* server_base;
 	evconnlistener* server_ev;
-	ContinuousMap<evutil_socket_t, PlayerPos>* mServerData;
+	ContinuousMap<evutil_socket_t, RoleSynchronizationData>* mServerData;
 };

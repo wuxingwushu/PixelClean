@@ -64,7 +64,7 @@ namespace GAME {
 		default:
 			break;
 		}
-		mGamePlayer->mObjectCollision->SetForce(PlayerForce);//设置玩家受力
+		mGamePlayer->GetObjectCollision()->SetForce(PlayerForce);//设置玩家受力
 	}
 
 
@@ -187,7 +187,7 @@ namespace GAME {
 		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
 
 		//创建多人玩家
-		mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer);
+		mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer, mLabyrinth);
 		mCrowd->SteSquarePhysics(mSquarePhysics);
 
 		//创建玩家
@@ -202,23 +202,9 @@ namespace GAME {
 			mSampler
 		);
 		mGamePlayer->InitCommandBuffer();
-		mGamePlayer->SetKey(0);
+		
 
 		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);//添加地图碰撞
-
-		PlayerPos px;
-		px.X = -24.0f;
-		px.Y = 24.0f;
-		px.ang = 40.0f;
-		
-		mCrowd->AddNPC(px.X, px.Y, mLabyrinth);
-		//测试
-		//mGifPipeline = new GifPipeline(Global::mHeight, Global::mWidth, mDevice, mRenderPass);
-		//mGIF = new GIF(mDevice, mGifPipeline, mSwapChain, mRenderPass, 44);
-		//mGIF->initUniformManager("002.png", mCameraVPMatricesBuffer, mSampler);
-		//mGIF->UpDataCommandBuffer();
-
-
 
 		//给操作码对象赋值
 		Opcode::OpLabyrinth = mLabyrinth;
@@ -464,13 +450,21 @@ namespace GAME {
 						server::GetServer()->SetCrowd(mCrowd);
 						server::GetServer()->SetGamePlayer(mGamePlayer);
 						server::GetServer()->SetLabyrinth(mLabyrinth);
-						server::GetServer()->GetServerData()->Get(0)->mBufferEventSingleData->mBrokenData = mGamePlayer->GetBrokenData();//玩家受损状态指针
+						server::GetServer()->SetInterFace(InterFace);
+						if (mGamePlayer->GetRoleSynchronizationData() == nullptr) {
+							RoleSynchronizationData* LRole = server::GetServer()->GetServerData()->New(0);
+							LRole->Key = 0;
+							LRole->mBufferEventSingleData = new BufferEventSingleData(100);
+							mGamePlayer->SetRoleSynchronizationData(LRole);
+							server::GetServer()->GetServerData()->SetPointerData(0, mGamePlayer);
+						}
 					}
 					else {
 						client::GetClient()->SetArms(mArms);
 						client::GetClient()->SetCrowd(mCrowd);
 						client::GetClient()->SetGamePlayer(mGamePlayer);
 						client::GetClient()->SetLabyrinth(mLabyrinth);
+						client::GetClient()->SetInterFace(InterFace);
 					}
 				}
 				
@@ -490,12 +484,6 @@ namespace GAME {
 			if (InterFace->GetMultiplePeople())
 			{
 				if (InterFace->GetServerOrClient()) {
-					PlayerPos* pos = server::GetServer()->GetServerData()->Get(0);
-					if (pos != nullptr) {
-						pos->X = m_position.x;
-						pos->Y = m_position.y;
-						pos->ang = m_angle * 180 / M_PI;
-					}
 					event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
 				}
 				else {
@@ -518,35 +506,33 @@ namespace GAME {
 
 	void Application::GameLoop() {
 
-		/*++++++++++++++++++*/
-		/*static clock_t GIFtime = 0;
-		static unsigned int GIFzheng = 0;
-		if ((clock() - GIFtime) > 66) {
-			GIFtime = clock();
-			GIFzheng++;
-			if (GIFzheng >= 44) {
-				GIFzheng = 0;
-			}
-			mGIF->SetFrame(GIFzheng, 3);
-		}*/
+		
 
-		mCrowd->NPCEvent(mCurrentFrame, TOOL::FPStime);
-		Global::GamePlayerX = mGamePlayer->mObjectCollision->GetPosX();
-		Global::GamePlayerY = mGamePlayer->mObjectCollision->GetPosY();
-		/*++++++++++++++++++*/
+		if(Global::MultiplePeopleMode && !Global::ServerOrClient)
+		{
+			mCrowd->NPCTimeoutDetection();
+		}
+		else
+		{
+			mCrowd->NPCEvent(mCurrentFrame, TOOL::FPStime);
+		}
+		
+		Global::GamePlayerX = mGamePlayer->GetObjectCollision()->GetPosX();
+		Global::GamePlayerY = mGamePlayer->GetObjectCollision()->GetPosY();
+
 		
 		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);//获取角度
 		//mGamePlayer->mObjectCollision->SetAngle(m_angle);//设置玩家物理角度
-		mGamePlayer->mObjectCollision->PlayerTargetAngle(m_angle);//设置玩家物理角度
+		mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle);//设置玩家物理角度
 
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
 		TOOL::mTimer->StartEnd();
 
-		m_angle = mGamePlayer->mObjectCollision->GetAngleFloat();
+		m_angle = mGamePlayer->GetObjectCollision()->GetAngleFloat();
 
 		mGamePlayer->UpData();//更新玩家伤痕
-		mCamera.setCameraPos(mGamePlayer->mObjectCollision->GetPos());
+		mCamera.setCameraPos(mGamePlayer->GetObjectCollision()->GetPos());
 
 		mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);
 
@@ -556,14 +542,7 @@ namespace GAME {
 
 		
 		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
-		mGamePlayer->setGamePlayerMatrix(
-			glm::rotate(
-				glm::translate(glm::mat4(1.0f), glm::vec3(mCamera.getCameraPos().x, mCamera.getCameraPos().y, 0.0f)),
-				glm::radians(float(m_angle * 180.0f / M_PI)),
-				glm::vec3(0.0f, 0.0f, 1.0f)
-			),
-			mCurrentFrame
-		);
+		mGamePlayer->setGamePlayerMatrix(mCurrentFrame);
 
 		static double ArmsContinuityFire = 0;
 		ArmsContinuityFire += TOOL::FPStime;
@@ -576,7 +555,7 @@ namespace GAME {
 			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle + 1.57f, 500, AttackType);
 			if (InterFace->GetMultiplePeople()) {//是否为多人模式
 				if (InterFace->GetServerOrClient()) {//服务器还是客户端
-					PlayerPos* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
+					RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
 					BufferEventSingleData* LBufferEventSingleData;
 					for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
 					{
@@ -585,7 +564,7 @@ namespace GAME {
 					}
 				}
 				else {
-					client::GetClient()->GetBufferEventSingleData()->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f, AttackType });
+					client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f, AttackType });
 				}
 			}
 		}
@@ -617,7 +596,7 @@ namespace GAME {
 			ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera.getCameraPos().x, mCamera.getCameraPos().y, mCamera.getCameraPos().z);
 			ImGui::Text(u8"鼠标角度：%10.3f", m_angle * 180 / M_PI);
 			ImGui::Text(u8"攻击模式：%d (1 / 2 上下切换) ", AttackType);
-			ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->mObjectCollision->GetSpeed().x, mGamePlayer->mObjectCollision->GetSpeed().y);
+			ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->GetObjectCollision()->GetSpeed().x, mGamePlayer->GetObjectCollision()->GetSpeed().y);
 			ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
 			if (InterFace->GetMultiplePeople()) {
 				if (InterFace->GetServerOrClient()) {

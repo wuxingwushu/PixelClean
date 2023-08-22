@@ -45,12 +45,12 @@ namespace GAME {
 		mLabyrinth(labyrinth)
 	{
 		NPCID = size;
-		MapPlayerS = new ContinuousMap<evutil_socket_t, GamePlayer*>(size);
+		MapPlayerS = new ContinuousMap<evutil_socket_t, GamePlayer*>(size, ContinuousMap_Timeout);
 
-		mNPCS = new ContinuousMap<evutil_socket_t, NPC*>(100);
+		mNPCS = new ContinuousMap<evutil_socket_t, NPC*>(100, ContinuousMap_Timeout);
 		mNPCS->SetTimeoutTime(500);
 		mNPCS->SetTimeoutCallback(NPCTimeoutCrowd, this);
-		mNPCSynchronizationData = new ContinuousMap<evutil_socket_t, RoleSynchronizationData>(100);
+		mNPCSynchronizationData = new ContinuousMap<evutil_socket_t, RoleSynchronizationData>(100, ContinuousMap_Timeout | ContinuousMap_Pointer);
 		mNPCSynchronizationData->SetPointerCallback(PointerGamePlayer);//（调整储存连续时，同时更新引用者）更新指针
 
 		mCommandPool = new VulKan::CommandPool(mDevice);
@@ -179,9 +179,9 @@ namespace GAME {
 			if (LNPC[i]->GetDeathInBattle()) {
 				Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 				evutil_socket_t K = LNPC[i]->GetKey();
+				delete LNPC[i];
 				mNPCS->Delete(K);
 				mNPCSynchronizationData->Delete(K);
-				delete LNPC[i];
 				i--;
 				continue;
 			}

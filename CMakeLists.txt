@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(VulKan)
+project(PixelClean)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -72,7 +72,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders/Spv ${CMAKE_CURRENT_BINARY_DIR}/shaders) # 拷贝shaders
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./SoundEffect/Resources ${CMAKE_CURRENT_BINARY_DIR}/Resources)# 拷贝音效
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/002.png ${CMAKE_CURRENT_BINARY_DIR})# 测试图片
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ImGui/FounderPixel12.TTF ${CMAKE_CURRENT_BINARY_DIR})# 字体
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ImGui/Minecraft_AE.ttf ${CMAKE_CURRENT_BINARY_DIR})# 字体
 
 add_subdirectory(Vulkan)
 add_subdirectory(VulkanTool)
@@ -89,7 +89,7 @@ add_subdirectory(Opcode)
 add_subdirectory(Tool)#文件夹里面要有代码文件，不可以是空的，会报错
 
 
-add_executable(VulKan  ${DIRSRCS})
+add_executable(PixelClean  ${DIRSRCS})
 
 # 预处理定义
 #target_compile_definitions( VulKan PRIVATE _CONSOLE)
@@ -98,7 +98,7 @@ add_executable(VulKan  ${DIRSRCS})
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	target_link_libraries(
 		#设置启动项
-		VulKan 
+		PixelClean 
 	
 		# 文件夹代码
 		vulkanLib 
@@ -144,7 +144,7 @@ else()
 
 	target_link_libraries(
 		#设置启动项
-		VulKan 
+		PixelClean 
 	
 		# 文件夹代码
 		vulkanLib

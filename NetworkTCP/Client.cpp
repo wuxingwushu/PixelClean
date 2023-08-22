@@ -181,7 +181,7 @@ client::client(std::string IPV, unsigned int Duan) {
 		std::cout << "connected" << std::endl;
 	}
 
-	mClientData = new ContinuousMap<evutil_socket_t, RoleSynchronizationData>(100);
+	mClientData = new ContinuousMap<evutil_socket_t, RoleSynchronizationData>(100, ContinuousMap_Timeout | ContinuousMap_Pointer);
 	mClientData->SetPointerCallback(GAME::PointerGamePlayer);//（调整储存连续时，同时更新引用者）更新指针
 
 	InitSynchronizeMap();

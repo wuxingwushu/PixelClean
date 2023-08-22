@@ -324,7 +324,7 @@ namespace GAME {
 		clearColors.push_back(finalClearColor);
 
 		VkClearValue mutiClearColor{};
-		mutiClearColor.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+		mutiClearColor.color = { 0.0f, 0.0f, 0.0f, 1.0f };
 		clearColors.push_back(mutiClearColor);
 
 		VkClearValue depthClearColor{};
@@ -591,6 +591,9 @@ namespace GAME {
 			ImGui_ImplVulkan_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
+
+			ImGui::PushFont(InterFace->Font);
+			
 			ImGui::Begin(u8"监视器 ");
 			ImGui::SetWindowPos(ImVec2(0, 0));
 			ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera.getCameraPos().x, mCamera.getCameraPos().y, mCamera.getCameraPos().z);
@@ -617,15 +620,15 @@ namespace GAME {
 			InterFace->DisplayTextS();
 
 			//ImGui::ShowDemoWindow();
-
+			ImGui::PopFont();
 			ImGui::Render();
 		}else if (Global::ConsoleBool) {
 			ImGui_ImplVulkan_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
-
+			ImGui::PushFont(InterFace->Font);
 			InterFace->ConsoleInterface();//控制台
-
+			ImGui::PopFont();
 			ImGui::Render();
 		}
 	}
@@ -639,7 +642,7 @@ namespace GAME {
 		//加到显示数组中
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
-		//mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
+		mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
 
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}

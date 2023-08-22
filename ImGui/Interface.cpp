@@ -53,10 +53,11 @@ namespace GAME {
 		ImFontConfig Font_cfg;
 		Font_cfg.FontDataOwnedByAtlas = false;
 		//Font = io.Fonts->AddFontFromMemoryTTF((void*)Font_data, Font_size, 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
-		Font = io.Fonts->AddFontFromFileTTF("./FounderPixel12.TTF", 16, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+		Font = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 16, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+		Font2 = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 32, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
 
 
-
+		
 
 
 		// 安装 Platform/渲染器 backends
@@ -163,6 +164,7 @@ namespace GAME {
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
+		ImGui::PushFont(Font2);
 		switch (InterfaceIndexes)
 		{
 		case 0:
@@ -178,6 +180,7 @@ namespace GAME {
 			SetInterface();
 			break;
 		}
+		ImGui::PopFont();
 		ImGui::Render();
 	}
 
@@ -197,25 +200,82 @@ namespace GAME {
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
-		if (ImGui::Button(u8"开始游戏 ")) {
+		ImGui::SetWindowFontScale(1.0f);
+
+		int gao = (Global::mHeight / 7) - 4;
+		float kuan = Global::mWidth / 3;
+		float Bgao = Global::mHeight / 10;
+
+		ImGui::BeginTable("table_row_height", 1);
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+
+		ImGui::SetWindowFontScale(4.0f);
+
+		ImVec2 textSize = ImGui::CalcTextSize(u8"素  净");
+		float windowWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
+
+		float posX = (windowWidth - textSize.x) * 0.5f;
+		ImGui::SetCursorPosX(posX);
+		ImGui::Text(u8"素  净");
+
+
+
+
+		ImGui::SetWindowFontScale(1.0f);
+
+
+		posX = (windowWidth - kuan) * 0.5f;
+
+
+
+
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"开始游戏 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
 		}
-		if (ImGui::Button(u8"多人游戏 ")) {
+
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"多人游戏 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = 2;
 		}
-		if (ImGui::Button(u8"游戏设置 ")) {
+
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"游戏设置 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			SetBool = true;
 			InterfaceIndexes = 3;
 			PreviousLayerInterface = 0;
 		}
-		if (ImGui::Button(u8"退出游戏 ")) {
+
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"退出游戏 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			mWindown->WindowClose();
 		}
+
+		ImGui::EndTable();
+		
 		ImGui::End();
 	}
 
@@ -228,24 +288,62 @@ namespace GAME {
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
-		if (ImGui::Button(u8"继续游戏 ")) {
+
+		int gao = (Global::mHeight / 7) - 4;
+		float kuan = Global::mWidth / 3;
+		float Bgao = Global::mHeight / 10;
+		float windowWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
+
+		float posX = (windowWidth - kuan) * 0.5f;
+		
+
+		ImGui::BeginTable("table_row_height2", 1);
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"继续游戏 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 		}
-		if (ImGui::Button(u8"游戏设置 ")) {
+
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"游戏设置 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			SetBool = true;
 			InterfaceIndexes = 3;
 			PreviousLayerInterface = 1;
 		}
-		if (ImGui::Button(u8"返回主页 ")) {
+
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+		
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"返回主页 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = 0;
 		}
-		if (ImGui::Button(u8"退出游戏 ")) {
+
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"退出游戏 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			mWindown->WindowClose();
 		}
+
+		ImGui::EndTable();
+
 		ImGui::End();
 	}
 
@@ -257,7 +355,26 @@ namespace GAME {
 		);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
-		if (ImGui::Button(u8"服务器 ")) {
+
+		int gao = (Global::mHeight / 7) - 4;
+		float kuan = Global::mWidth / 3;
+		float Bgao = Global::mHeight / 10;
+		float windowWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
+
+		float posX = (windowWidth - kuan) * 0.5f;
+
+		ImGui::BeginTable("table_row_height2", 1);
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"服务器 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
@@ -267,7 +384,12 @@ namespace GAME {
 			Global::ServerOrClient = true;
 			server::GetServer();
 		}
-		if (ImGui::Button(u8"客户端 ")) {
+
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"客户端 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 			InterfaceIndexes = 1;
@@ -277,10 +399,18 @@ namespace GAME {
 			Global::ServerOrClient = false;
 			client::GetClient();
 		}
-		if (ImGui::Button(u8"返回 ")) {
+
+		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
+		ImGui::TableNextColumn();
+
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(u8"返回 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = 0;
 		}
+
+		ImGui::EndTable();
+
 		ImGui::End();
 	}
 
@@ -536,13 +666,16 @@ namespace GAME {
 
 		float LHeight = Global::mHeight - 60.0f;
 		mChatBoxStr->InitData();
+		ChatBoxStr* LChatBoxStr;
 		for (size_t i = 0; i < mChatBoxStr->GetNumber(); i++)
 		{
-			if (i == (mChatBoxStr->GetNumber() - 1) && (clock() - mChatBoxStr->addData()->timr) > 10000) {
-				ChatBoxStr* L = mChatBoxStr->pop();
+			LChatBoxStr = mChatBoxStr->addData();
+			if ((i == (mChatBoxStr->GetNumber() - 1)) && ((clock() - LChatBoxStr->timr) > 10000)) {
+				LChatBoxStr = mChatBoxStr->pop();
+				continue;
 			}
 			ImGui::SetCursorPos({ 30.0f,LHeight });
-			ImGui::Text(mChatBoxStr->addData()->str.c_str());
+			ImGui::Text(LChatBoxStr->str.c_str());
 			LHeight -= 20.0f;
 		}
 

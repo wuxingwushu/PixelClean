@@ -14,7 +14,7 @@ namespace GAME {
 	Arms::Arms(ParticleSystem* particleSystem, unsigned int size)
 	{
 		mParticleSystem = particleSystem;
-		mBullet = new ContinuousMap<SquarePhysics::PixelCollision*, Particle>(size);
+		mBullet = new ContinuousMap<SquarePhysics::PixelCollision*, Particle>(size, ContinuousMap_None);
 	}
 
 	Arms::~Arms()

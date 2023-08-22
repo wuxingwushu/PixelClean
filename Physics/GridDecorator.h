@@ -34,43 +34,26 @@ namespace SquarePhysics {
 
 
 
-		//设置回调函数的指针和输入
-		void SetCollisionCallback(_TerrainCollisionCallback CollisionCallback, void* mclass) {
-			mCollisionCallback = CollisionCallback;
-			mClass = mclass;
-		}
-
-		
-
-		//调用回调函数
-		void CollisionCallback(int x, int y, bool Bool) {
-			x += OriginX;
-			y += OriginY;
-			mCollisionCallback(x, y, Bool, mClass);
-		}
-
-
-
-
-
-
-
 		[[nodiscard]] PixelAttribute** GetPixelAttribute() { return mPixelAttributeS; }
 
 
-		//破坏某个点
-		void SetFixedCollisionBool(glm::ivec2 pos) {
+		//设置某个点
+		bool SetFixedCollisionBool(glm::ivec2 pos, bool Bool) {
 			pos.x += OriginX;
 			pos.y += OriginY;
 			if (pos.x >= mNumberX || pos.x < 0)
 			{
-				return;
+				return false;
 			}
 			if (pos.y >= mNumberY || pos.y < 0)
 			{
-				return;
+				return false;
 			}
-			mPixelAttributeS[pos.x][pos.y].Collision = false;
+			if (mPixelAttributeS[pos.x][pos.y].Collision == Bool) {
+				return false;
+			}
+			mPixelAttributeS[pos.x][pos.y].Collision = Bool;
+			return true;
 		}
 
 		[[nodiscard]] bool GetFixedCollisionBool(glm::ivec2 pos) {
@@ -128,6 +111,24 @@ namespace SquarePhysics {
 				return true;
 			}
 			return false;
+		}
+
+
+		//设置回调函数的指针和输入
+		void SetCollisionCallback(_TerrainCollisionCallback CollisionCallback, void* mclass) {
+			mCollisionCallback = CollisionCallback;
+			mClass = mclass;
+		}
+
+
+
+		//调用回调函数
+		void CollisionCallback(int x, int y, bool Bool) {
+			if (SetFixedCollisionBool({x, y}, Bool)) {
+				x += OriginX;
+				y += OriginY;
+				mCollisionCallback(x, y, Bool, mClass);
+			}
 		}
 
 

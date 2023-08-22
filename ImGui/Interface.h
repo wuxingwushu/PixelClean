@@ -55,6 +55,8 @@ namespace GAME {
 		bool GetMultiplePeople() { return StartMultiPlayerGames; }
 		bool GetServerOrClient() { return ServerOrClient; }
 
+		ImFont* Font; //字体小
+		ImFont* Font2; //字体大
 	private:
 		VkDescriptorPool			g_DescriptorPool = VK_NULL_HANDLE;//给 ImGui 创建的 DescriptorPool 记得销毁
 		int							g_MinImageCount = 3;
@@ -63,7 +65,7 @@ namespace GAME {
 		VulKan::Device* mDevice{ nullptr };
 		ImGui_ImplVulkan_InitInfo mInfo;
 		VulKan::RenderPass* mRenderPass;
-		ImFont* Font; //字体
+		
 		VulKan::CommandBuffer* mCommandBuffer;
 
 		int InterfaceIndexes = 0;//显示那个界面

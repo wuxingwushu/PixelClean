@@ -66,7 +66,7 @@ namespace SquarePhysics {
 		dian -= mPos;//网格体为中心
 		dian = vec2angle(dian, { mAngle.x, -mAngle.y });//减除玩家的角度// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		if (GetFixedCollisionBool(dian)) {
-			SetFixedCollisionBool(dian);
+			SetFixedCollisionBool(dian, false);
 			CollisionCallback(dian.x, dian.y, false);
 			OutlineCalculate();
 			return { true, glm::ivec2(dian) };

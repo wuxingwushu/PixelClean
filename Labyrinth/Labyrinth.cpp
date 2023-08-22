@@ -461,24 +461,38 @@ namespace GAME {
 		commandbuffer->end();
 	}
 
+	bool Labyrinth::RangeLegitimate(int x, int y) {
+		bool Bool = true;
+		for (int ix = -1; ix <= 1; ix++)
+		{
+			for (int iy = -1; iy <= 1; iy++)
+			{
+				if (!(GetPixelWallNumber(x + ix, y + iy) <= 0)) {
+					Bool = false;
+				}
+			}
+		}
+		return Bool;
+	}
+
 	glm::ivec2 Labyrinth::GetLegitimateGeneratePos() {
 		glm::ivec2 rxy;
 		do{
-			rxy.x = rand() % (numberX * 16);
-			rxy.y = rand() % (numberY * 16);
-		} while (GetPixelWallNumber(rxy.x, rxy.y) <= 0);
-		return { rxy.x - mOriginX, rxy.y - mOriginY };
+			rxy.x = rand() % (numberX * 16) - mOriginX;
+			rxy.y = rand() % (numberY * 16) - mOriginY;
+		} while (!RangeLegitimate(rxy.x, rxy.y));
+		return { rxy.x, rxy.y };
 	}
 
 	bool Labyrinth::GetPixel(int x, int y) {
-		if (x >= numberX * 16 || x < 0)return true;
-		if (y >= numberY * 16 || x < 0)return true;
+		if (x >= (numberX * 16) || x < 0) { return false; }
+		if (y >= (numberY * 16) || y < 0) { return false; }
 		return BlockPixelS[(x * numberY * 16) + y] == 0 ? 0 : 1;
 	}
 
 	bool Labyrinth::GetPixelLegitimate(int x, int y) {
-		if (x >= numberX * 16 || x < 0)return false;
-		if (y >= numberY * 16 || x < 0)return false;
+		if (x >= (numberX * 16) || x < 0) { return false; }
+		if (y >= (numberY * 16) || y < 0) { return false; }
 		return true;
 	}
 

@@ -143,7 +143,7 @@ namespace GAME {
 		//获取位置是否合法
 		bool GetPixelLegitimate(int x, int y);
 
-
+		bool RangeLegitimate(int x, int y);
 		glm::ivec2 GetLegitimateGeneratePos();
 
 	private:

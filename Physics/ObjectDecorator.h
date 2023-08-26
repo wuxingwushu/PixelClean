@@ -3,6 +3,7 @@
 #include "PhysicsCalculate.h"
 #include "StructuralComponents.h"
 #include "Callback.h"
+#include <iostream>
 
 namespace SquarePhysics {
 
@@ -259,11 +260,29 @@ namespace SquarePhysics {
 
 		void PlayerTargetAngle(float TargetAngle) {
 			mTargetAngle = TargetAngle;
-			float AngleForce = sin(mTargetAngle - mAngleFloat) * 0.05f;
-			if (cos(mTargetAngle - mAngleFloat) < -0.1) {
-				AngleForce *= -cos(mTargetAngle - mAngleFloat) * 10.0f;
+			bool B = false;
+			if (mAngleFloat == 3.14159f) {
+				B = true;
 			}
-			mAngleFloat +=  AngleForce;
+			TargetAngle = TargetAngle - mAngleFloat;
+			if (TargetAngle == 0) {
+				return;
+			}
+
+			float AngleForce = sin(TargetAngle) * 0.05f;
+			if (cos(TargetAngle) < -0.1) {
+				if (AngleForce < 0) {
+					AngleForce += cos(TargetAngle) * 0.5f;
+				}
+				else {
+					AngleForce -= cos(TargetAngle) * 0.5f;
+				}
+				
+			}
+			mAngleFloat += (AngleForce == 0.0f ? 0.1f : AngleForce);
+			if (B) {
+				std::cout << (AngleForce == 0.0f ? 0.1f : AngleForce) << std::endl;
+			}
 			mAngle = AngleFloatToAngleVec(mAngleFloat);
 		}
 

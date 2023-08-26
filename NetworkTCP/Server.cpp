@@ -185,6 +185,7 @@ server::~server() {
 	WSACleanup();
 #else
 #endif
+	mServer = nullptr;
 }
 
 //输入过滤器

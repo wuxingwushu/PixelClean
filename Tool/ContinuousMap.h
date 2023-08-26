@@ -8,9 +8,9 @@ enum ContinuousMapFlags_
 {
     ContinuousMap_None       = 0,
     ContinuousMap_New        = 1 << 0, // 开启  没有键就自动生成
-    ContinuousMap_Debug      = 1 << 0, // 开启  事件打印
-    ContinuousMap_Timeout    = 1 << 1, // 开启  超时检测
-    ContinuousMap_Pointer    = 1 << 2  // 开启  指针更新（在移动数据时更新对应引用）
+    ContinuousMap_Debug      = 1 << 1, // 开启  事件打印
+    ContinuousMap_Timeout    = 1 << 2, // 开启  超时检测
+    ContinuousMap_Pointer    = 1 << 3  // 开启  指针更新（在移动数据时更新对应引用）
 };
 
 
@@ -23,7 +23,7 @@ private:
     _DeleteCallback mDeleteCallback = nullptr;//用户自定义销毁 回调函数
     void* mDeleteData;
 
-    typedef bool (*_TimeoutCallback)(TData data, void* ptr);//销毁 回调函数类型（返回值 表示释放要调用 销毁 函数）
+    typedef bool (*_TimeoutCallback)(TData data, void* ptr);//超时 回调函数类型（返回值 表示释放要调用 销毁 函数）
     _TimeoutCallback mTimeoutCallback = nullptr;//用户自定义超时 回调函数
     void* mTimeoutData;
 
@@ -40,7 +40,7 @@ private:
     unsigned int Number = 0;//当前容量
     std::map<TKey, unsigned int> Dictionary;//索引对应数据
 public:
-    constexpr ContinuousMap(const unsigned int siez, ContinuousMapFlags flags) :
+    constexpr ContinuousMap(const unsigned int siez, ContinuousMapFlags flags = ContinuousMap_None) :
         mFlags(flags),
         Max(siez)
     {
@@ -55,13 +55,13 @@ public:
     }
 
     ~ContinuousMap(){
-        delete KeyS;
-        delete DataS;
+        delete[] KeyS;
+        delete[] DataS;
         if (mFlags & ContinuousMap_Timeout) {
-            delete TimeS;
+            delete[] TimeS;
         }
         if (mFlags & ContinuousMap_Pointer) {
-            delete mPointerData;
+            delete[] mPointerData;
         }
     }
 
@@ -112,6 +112,7 @@ public:
         return &DataS[Dictionary[key]];//返回数据指针
     }
 
+    //绑定销毁回调函数
     void SetDeleteCallback(_DeleteCallback DeleteCallback, void* Data) {
         mDeleteCallback = DeleteCallback;//设置销毁回调函数
         mDeleteData = Data;
@@ -140,10 +141,8 @@ public:
             }
             Dictionary[KeyS[Number]] = keyData;
             if (mFlags & ContinuousMap_Pointer) {
-                if (mPointerCallback != nullptr) {
-                    mPointerData[keyData] = mPointerData[Number];
-                    mPointerCallback(&DataS[keyData], mPointerData[keyData]);
-                }
+                mPointerData[keyData] = mPointerData[Number];
+                mPointerCallback(&DataS[keyData], mPointerData[keyData]);
             }
         }
         Dictionary.erase(key);//Map销毁
@@ -163,12 +162,7 @@ public:
                 if (mFlags & ContinuousMap_Debug) {
                     std::cerr << KeyS[i] << " 超时： 销毁！" << std::endl;
                 }
-                if (mTimeoutCallback != nullptr) {
-                    if (mTimeoutCallback(*Get(KeyS[i]), mTimeoutData)) {
-                        Delete(KeyS[i]);//销毁超时的键
-                    }
-                }
-                else {
+                if (mTimeoutCallback(*Get(KeyS[i]), mTimeoutData)) {
                     Delete(KeyS[i]);//销毁超时的键
                 }
             }
@@ -198,11 +192,13 @@ public:
         }
     }
 
+    //设置数据对齐时更新引用对象绑定的数据指针 回调函数
     void SetPointerCallback(_PointerCallback PointerCallback) {
         if (!(mFlags & ContinuousMap_Pointer))return;
         mPointerCallback = PointerCallback;
     }
 
+    //绑定数据引用对象
     void SetPointerData(TKey key, void* Data) {
         if (!(mFlags & ContinuousMap_Pointer))return;
         mPointerData[Dictionary[key]] = Data;
@@ -225,14 +221,12 @@ public:
                 std::swap<clock_t>(TimeS[keyData], TimeS[Number - 1]);
             }
             if (mFlags & ContinuousMap_Pointer) {
-                if (mPointerCallback != nullptr) {
-                    void* LPointer = mPointerData[keyData];
-                    mPointerData[keyData] = mPointerData[Number - 1];
-                    mPointerData[Number - 1] = LPointer;
+                void* LPointer = mPointerData[keyData];
+                mPointerData[keyData] = mPointerData[Number - 1];
+                mPointerData[Number - 1] = LPointer;
 
-                    mPointerCallback(&DataS[keyData], mPointerData[keyData]);
-                    mPointerCallback(&DataS[Number - 1], mPointerData[Number - 1]);
-                }
+                mPointerCallback(&DataS[keyData], mPointerData[keyData]);
+                mPointerCallback(&DataS[Number - 1], mPointerData[Number - 1]);
             }
         }
         return DataS;

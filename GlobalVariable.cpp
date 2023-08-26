@@ -5,8 +5,11 @@
 namespace Global {
 	/*  测试  */
 
-	int GamePlayerX;
+	int GamePlayerX;   
 	int GamePlayerY;
+
+	bool GameResourceLoadingBool = false;
+	bool GameResourceUninstallBool = false;
 
 	/*  测试  */
 

@@ -207,6 +207,7 @@ client::~client() {
 	WSACleanup();
 #else
 #endif
+	mClient = nullptr;
 }
 
 

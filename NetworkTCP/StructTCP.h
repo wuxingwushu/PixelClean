@@ -82,9 +82,10 @@ struct RoleSynchronizationData {
 	evutil_socket_t Key;
 
 	~RoleSynchronizationData() {
-		/*if (mBufferEventSingleData != nullptr) {
+		if (mBufferEventSingleData != nullptr) {
 			delete mBufferEventSingleData;
-		}*/
+			mBufferEventSingleData = nullptr;
+		}
 	}
 };
 

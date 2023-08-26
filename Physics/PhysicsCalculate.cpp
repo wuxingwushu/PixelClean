@@ -23,6 +23,9 @@ namespace SquarePhysics {
 		if (BeveledEdge == 0) {
 			return 0;//分母不可以为零
 		}
+		if (XYedge.x == 0) {
+			return XYedge.y < 0 ? -1.57f : 1.57f;
+		}
 		BeveledEdge = acos(XYedge.x / BeveledEdge);
 		if (XYedge.y < 0)
 		{

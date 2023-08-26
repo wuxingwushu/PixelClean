@@ -136,7 +136,7 @@ namespace GAME {
 			LRole->mBufferEventSingleData = new BufferEventSingleData(100);
 			LGamePlayer->SetRoleSynchronizationData(LRole);
 			NPC** LNPC = mNPCS->New(key);
-			*LNPC = new NPC(LGamePlayer, mLabyrinth);
+			*LNPC = new NPC(LGamePlayer, mLabyrinth, wArms);
 
 			mNPCSynchronizationData->SetPointerData(key, LGamePlayer);
 
@@ -164,7 +164,7 @@ namespace GAME {
 		LRole->mBufferEventSingleData = new BufferEventSingleData(100);
 		LGamePlayer->SetRoleSynchronizationData(LRole);
 		NPC** LNPC = mNPCS->New(NPCID);
-		*LNPC = new NPC(LGamePlayer, mLabyrinth);
+		*LNPC = new NPC(LGamePlayer, mLabyrinth, wArms);
 
 		mNPCSynchronizationData->SetPointerData(NPCID, LGamePlayer);
 

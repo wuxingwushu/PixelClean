@@ -10,6 +10,14 @@
 #include "../Tool/QueueData.h"
 
 namespace GAME {
+
+	enum InterFaceEnum_ {
+		MainInterface_Enum = 0,
+		ViceInterface_Enum,
+		MultiplePeopleInterface_Enum,
+		SetInterface_Enum
+	};
+
 	class ImGuiInterFace
 	{
 		struct ChatBoxStr {
@@ -31,6 +39,7 @@ namespace GAME {
 		~ImGuiInterFace();
 
 		void InterFace();//显示
+		int GetInterfaceIndexes() { return InterfaceIndexes; }
 
 		void ImGuiShowFPS();//显示
 		void ImGuiShowTiming();
@@ -52,9 +61,6 @@ namespace GAME {
 
 		VkCommandBuffer GetCommandBuffer(int i, VkCommandBufferInheritanceInfo info);
 
-		bool GetMultiplePeople() { return StartMultiPlayerGames; }
-		bool GetServerOrClient() { return ServerOrClient; }
-
 		ImFont* Font; //字体小
 		ImFont* Font2; //字体大
 	private:
@@ -68,26 +74,20 @@ namespace GAME {
 		
 		VulKan::CommandBuffer* mCommandBuffer;
 
-		int InterfaceIndexes = 0;//显示那个界面
+		InterFaceEnum_ InterfaceIndexes = MainInterface_Enum;//显示那个界面
 		bool InterFaceBool = true;//是否显示界面
 
 		VulKan::CommandPool** ImGuiCommandPoolS;
 		VulKan::CommandBuffer** ImGuiCommandBufferS;
 
-		void SetInterFace(int fi) {//设置显示界面
-			InterfaceIndexes = fi;
-		}
-
 		void MainInterface();//游戏主界面
 		
 		void ViceInterface();//游戏时的界面
 
-		bool StartMultiPlayerGames = false;//是否为多人模式
-		bool ServerOrClient;//是服务器还是客户端
 		void MultiplePeopleInterface();//多人界面
 
 		bool SetBool;
-		int PreviousLayerInterface = 0;//储存上一层界面
+		InterFaceEnum_ PreviousLayerInterface = MainInterface_Enum;//储存上一层界面
 		void SetInterface();//设置界面
 	};
 }

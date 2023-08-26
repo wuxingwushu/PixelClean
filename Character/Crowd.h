@@ -3,6 +3,7 @@
 #include "NPC.h"
 #include "../Tool/ContinuousData.h"
 #include <event2/util.h>
+#include "../Arms/Arms.h"
 
 namespace GAME {
 	void DeleteCrowd(GamePlayer* Player, void* Data);//销毁玩家
@@ -43,6 +44,10 @@ namespace GAME {
 			MapPlayerS->SetDeleteCallback(DeleteCrowd, mSquarePhysics);//销毁时，随便把物理模拟中的也一并销毁
 			MapPlayerS->SetTimeoutCallback(TimeoutCrowd, nullptr);
 			MapPlayerS->SetTimeoutTime(1000);
+		}
+
+		void SetArms(Arms* arms) {
+			wArms = arms;
 		}
 
 		void ReconfigurationCommandBuffer();
@@ -87,5 +92,7 @@ namespace GAME {
 		ContinuousMap<evutil_socket_t, RoleSynchronizationData>* mNPCSynchronizationData;
 
 		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理
+
+		Arms* wArms = nullptr;//武器
 	};
 }

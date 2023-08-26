@@ -7,6 +7,9 @@ namespace Global {
 	extern int GamePlayerX;
 	extern int GamePlayerY;
 
+	extern bool GameResourceLoadingBool;//加载游戏资源开关
+	extern bool GameResourceUninstallBool;//卸载游戏资源开关
+
 	/*  测试  */
 
 	extern bool ConsoleBool;

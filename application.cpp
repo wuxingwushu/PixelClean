@@ -1,4 +1,7 @@
 #include "application.h"
+#include "Opcode/Opcode.h"
+#include "NetworkTCP/Server.h"
+#include "NetworkTCP/Client.h"
 #include "Opcode/OpcodeFunction.h"
 
 
@@ -126,9 +129,7 @@ namespace GAME {
 		init_info.QueueFamily = mDevice->getGraphicQueueFamily().value();
 		init_info.Queue = mDevice->getGraphicQueue();
 		init_info.PipelineCache = nullptr;
-		//init_info.DescriptorPool = g_DescriptorPool;
 		init_info.Subpass = 0;
-		//init_info.MinImageCount = g_MinImageCount;
 		init_info.ImageCount = mSwapChain->getImageCount();
 		init_info.MSAASamples = mDevice->getMaxUsableSampleCount();
 		init_info.Allocator = nullptr;//内存分配器
@@ -150,18 +151,6 @@ namespace GAME {
 		for (int i = 0; i < mCameraVPMatricesBuffer.size(); i++) {
 			mCameraVPMatricesBuffer[i] = VulKan::Buffer::createUniformBuffer(mDevice, sizeof(VPMatrices), nullptr);
 		}
-
-		//生成迷宫
-		mLabyrinth = new Labyrinth();
-		mLabyrinth->InitLabyrinth(mDevice, 21, 21);
-		mLabyrinth->initUniformManager(
-			mDevice,
-			mSwapChain->getImageCount(),
-			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
-			&mCameraVPMatricesBuffer,
-			mSampler
-		);
-		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
 
 		//创建粒子系统
 		mParticleSystem = new ParticleSystem(mDevice, 1000);
@@ -186,9 +175,30 @@ namespace GAME {
 		mArms->SetSpecialEffect(mParticlesSpecialEffect);
 		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
 
+		
+	}
+
+	void Application::LoadingGame() {
+		//生成迷宫
+		mLabyrinth = new Labyrinth();
+		mLabyrinth->InitLabyrinth(mDevice, 21, 21);
+		mLabyrinth->initUniformManager(
+			mDevice,
+			mSwapChain->getImageCount(),
+			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
+			&mCameraVPMatricesBuffer,
+			mSampler
+		);
+		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
+
+		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);//添加地图碰撞
+
+
 		//创建多人玩家
 		mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer, mLabyrinth);
 		mCrowd->SteSquarePhysics(mSquarePhysics);
+		mCrowd->SetArms(mArms);
+
 
 		//创建玩家
 		mGamePlayer = new GamePlayer(mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSquarePhysics, mCamera.getCameraPos().x, mCamera.getCameraPos().y);
@@ -202,13 +212,54 @@ namespace GAME {
 			mSampler
 		);
 		mGamePlayer->InitCommandBuffer();
-		
 
-		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);//添加地图碰撞
+
+
+		if (Global::MultiplePeopleMode)
+		{
+			if (Global::ServerOrClient) {
+				server::GetServer()->SetArms(mArms);
+				server::GetServer()->SetCrowd(mCrowd);
+				server::GetServer()->SetGamePlayer(mGamePlayer);
+				server::GetServer()->SetLabyrinth(mLabyrinth);
+				server::GetServer()->SetInterFace(InterFace);
+				if (mGamePlayer->GetRoleSynchronizationData() == nullptr) {
+					RoleSynchronizationData* LRole = server::GetServer()->GetServerData()->New(0);
+					LRole->Key = 0;
+					LRole->mBufferEventSingleData = new BufferEventSingleData(100);
+					mGamePlayer->SetRoleSynchronizationData(LRole);
+					server::GetServer()->GetServerData()->SetPointerData(0, mGamePlayer);
+				}
+			}
+			else {
+				client::GetClient()->SetArms(mArms);
+				client::GetClient()->SetCrowd(mCrowd);
+				client::GetClient()->SetGamePlayer(mGamePlayer);
+				client::GetClient()->SetLabyrinth(mLabyrinth);
+				client::GetClient()->SetInterFace(InterFace);
+			}
+		}
 
 		//给操作码对象赋值
 		Opcode::OpLabyrinth = mLabyrinth;
 		Opcode::OpCrowd = mCrowd;
+	}
+
+	void Application::UninstallGame() {
+		delete mLabyrinth;
+		delete mGamePlayer;
+		delete mCrowd;
+
+		if (Global::MultiplePeopleMode)
+		{
+			if (Global::ServerOrClient) {
+				delete server::GetServer();
+			}
+			else {
+				delete client::GetClient();
+			}
+			Global::MultiplePeopleMode = false;
+		}
 	}
 
 	void Application::createRenderPass() {
@@ -443,32 +494,20 @@ namespace GAME {
 			if (InterFace->GetInterFaceBool()) {
 				mWindow->ImGuiKeyBoardEvent();//监听键盘
 				InterFace->InterFace();
-				if (InterFace->GetMultiplePeople())
-				{
-					if (InterFace->GetServerOrClient()) {
-						server::GetServer()->SetArms(mArms);
-						server::GetServer()->SetCrowd(mCrowd);
-						server::GetServer()->SetGamePlayer(mGamePlayer);
-						server::GetServer()->SetLabyrinth(mLabyrinth);
-						server::GetServer()->SetInterFace(InterFace);
-						if (mGamePlayer->GetRoleSynchronizationData() == nullptr) {
-							RoleSynchronizationData* LRole = server::GetServer()->GetServerData()->New(0);
-							LRole->Key = 0;
-							LRole->mBufferEventSingleData = new BufferEventSingleData(100);
-							mGamePlayer->SetRoleSynchronizationData(LRole);
-							server::GetServer()->GetServerData()->SetPointerData(0, mGamePlayer);
-						}
-					}
-					else {
-						client::GetClient()->SetArms(mArms);
-						client::GetClient()->SetCrowd(mCrowd);
-						client::GetClient()->SetGamePlayer(mGamePlayer);
-						client::GetClient()->SetLabyrinth(mLabyrinth);
-						client::GetClient()->SetInterFace(InterFace);
-					}
-				}
 				
-				mCrowd->UpTime();
+				if (Global::GameResourceLoadingBool) {
+					Global::GameResourceLoadingBool = false;
+					LoadingGame();
+				}
+
+				if (Global::GameResourceUninstallBool) {
+					Global::GameResourceUninstallBool = false;
+					UninstallGame();
+				}
+
+				if (InterFace->GetInterfaceIndexes() == InterFaceEnum_::ViceInterface_Enum && Global::MultiplePeopleMode && !Global::ServerOrClient) {
+					mCrowd->UpTime();
+				}
 			}
 			else {
 				TOOL::mTimer->StartTiming(u8"游戏逻辑 ", true);
@@ -481,9 +520,9 @@ namespace GAME {
 
 
 			TOOL::mTimer->StartTiming(u8"TCP ");
-			if (InterFace->GetMultiplePeople())
+			if (Global::MultiplePeopleMode)
 			{
-				if (InterFace->GetServerOrClient()) {
+				if (Global::ServerOrClient) {
 					event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
 				}
 				else {
@@ -553,8 +592,8 @@ namespace GAME {
 			ArmsContinuityFire = 0;
 			glm::dvec2 Armsdain =  SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle + 1.57f);
 			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle + 1.57f, 500, AttackType);
-			if (InterFace->GetMultiplePeople()) {//是否为多人模式
-				if (InterFace->GetServerOrClient()) {//服务器还是客户端
+			if (Global::MultiplePeopleMode) {//是否为多人模式
+				if (Global::ServerOrClient) {//服务器还是客户端
 					RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
 					BufferEventSingleData* LBufferEventSingleData;
 					for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
@@ -601,8 +640,8 @@ namespace GAME {
 			ImGui::Text(u8"攻击模式：%d (1 / 2 上下切换) ", AttackType);
 			ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->GetObjectCollision()->GetSpeed().x, mGamePlayer->GetObjectCollision()->GetSpeed().y);
 			ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
-			if (InterFace->GetMultiplePeople()) {
-				if (InterFace->GetServerOrClient()) {
+			if (Global::MultiplePeopleMode) {
+				if (Global::ServerOrClient) {
 					ImGui::Text(u8"S M：%d  |  %d", server::GetServer()->GetServerData()->GetNumber(), mCrowd->GetNumber());
 				}
 				else {
@@ -642,7 +681,7 @@ namespace GAME {
 		//加到显示数组中
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
-		mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
+		//mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
 
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}
@@ -745,8 +784,7 @@ namespace GAME {
 	void Application::cleanUp() {
 		vkDeviceWaitIdle(mDevice->getDevice());//等待命令执行完毕
 
-		delete mGamePlayer;
-		delete mCrowd;
+		delete mParticleSystem;
 		delete mSquarePhysics;
 		delete mParticlesSpecialEffect;
 		delete mArms;

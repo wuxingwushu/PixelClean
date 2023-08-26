@@ -23,27 +23,18 @@
 
 #include "ImGui/Interface.h"
 
-#include "ini.h"
-
-#include "NetworkTCP/Client.h"
-#include "NetworkTCP/Server.h"
-
 #include "Labyrinth/Labyrinth.h"
 
 #include "Arms/ParticleSystem.h"
 #include "Arms/Arms.h"
 
-
 #include "Physics/SquarePhysics.h"
-
-
-#include "Arms/GIF.h";
 
 #include "Character/Crowd.h"
 
 #include "VulkanTool/PipelineS.h"
 
-#include "Opcode/Opcode.h"
+
 
 namespace GAME {
 	class Application{
@@ -85,6 +76,12 @@ namespace GAME {
 		void mainLoop();
 
 		/*************************************************************************************/
+		//加载游戏内容
+		void LoadingGame();
+		//卸载游戏内容
+		void UninstallGame();
+
+
 		//游戏循环事件
 		void GameLoop();
 		void GameCommandBuffers(unsigned int Format_i, VkCommandBufferInheritanceInfo info);

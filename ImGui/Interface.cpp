@@ -242,7 +242,8 @@ namespace GAME {
 		if (ImGui::Button(u8"开始游戏 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
-			InterfaceIndexes = 1;
+			Global::GameResourceLoadingBool = true;//加载游戏资源
+			InterfaceIndexes = ViceInterface_Enum;
 		}
 
 		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
@@ -251,7 +252,7 @@ namespace GAME {
 		ImGui::SetCursorPosX(posX);
 		if (ImGui::Button(u8"多人游戏 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
-			InterfaceIndexes = 2;
+			InterfaceIndexes = MultiplePeopleInterface_Enum;
 		}
 
 		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
@@ -261,8 +262,8 @@ namespace GAME {
 		if (ImGui::Button(u8"游戏设置 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			SetBool = true;
-			InterfaceIndexes = 3;
-			PreviousLayerInterface = 0;
+			InterfaceIndexes = SetInterface_Enum;
+			PreviousLayerInterface = MainInterface_Enum;
 		}
 
 		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
@@ -320,8 +321,8 @@ namespace GAME {
 		if (ImGui::Button(u8"游戏设置 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			SetBool = true;
-			InterfaceIndexes = 3;
-			PreviousLayerInterface = 1;
+			InterfaceIndexes = SetInterface_Enum;
+			PreviousLayerInterface = ViceInterface_Enum;
 		}
 
 		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
@@ -330,7 +331,8 @@ namespace GAME {
 		ImGui::SetCursorPosX(posX);
 		if (ImGui::Button(u8"返回主页 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
-			InterfaceIndexes = 0;
+			Global::GameResourceUninstallBool = true;//返回主页 随便卸载资源
+			InterfaceIndexes = MainInterface_Enum;
 		}
 
 		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
@@ -377,11 +379,10 @@ namespace GAME {
 		if (ImGui::Button(u8"服务器 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
-			InterfaceIndexes = 1;
-			StartMultiPlayerGames = true;
+			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
-			ServerOrClient = true;
 			Global::ServerOrClient = true;
+			Global::GameResourceLoadingBool = true;//加载游戏资源
 			server::GetServer();
 		}
 
@@ -392,11 +393,10 @@ namespace GAME {
 		if (ImGui::Button(u8"客户端 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
-			InterfaceIndexes = 1;
-			StartMultiPlayerGames = true;
+			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
-			ServerOrClient = false;
 			Global::ServerOrClient = false;
+			Global::GameResourceLoadingBool = true;//加载游戏资源
 			client::GetClient();
 		}
 
@@ -406,7 +406,7 @@ namespace GAME {
 		ImGui::SetCursorPosX(posX);
 		if (ImGui::Button(u8"返回 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
-			InterfaceIndexes = 0;
+			InterfaceIndexes = MainInterface_Enum;
 		}
 
 		ImGui::EndTable();

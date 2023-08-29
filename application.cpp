@@ -250,6 +250,10 @@ namespace GAME {
 		delete mGamePlayer;
 		delete mCrowd;
 
+		mLabyrinth = nullptr;
+		mGamePlayer = nullptr;
+		mCrowd = nullptr;
+
 		if (Global::MultiplePeopleMode)
 		{
 			if (Global::ServerOrClient) {
@@ -475,12 +479,15 @@ namespace GAME {
 			Global::MainCommandBufferS[i] = true;
 		}
 
-		mLabyrinth->ThreadUpdateCommandBuffer();
-		//mGIF->UpDataCommandBuffer();
-		mGamePlayer->InitCommandBuffer();
-		mParticleSystem->ThreadUpdateCommandBuffer();
-		mCrowd->ReconfigurationCommandBuffer();
+		if (mLabyrinth != nullptr) {
+			mLabyrinth->ThreadUpdateCommandBuffer();
+			//mGIF->UpDataCommandBuffer();
+			mGamePlayer->InitCommandBuffer();
+			mCrowd->ReconfigurationCommandBuffer();
+		}
+		
 
+		mParticleSystem->ThreadUpdateCommandBuffer();
 		TOOL::mTimer->MomentEnd();
 	}
 
@@ -681,7 +688,7 @@ namespace GAME {
 		//加到显示数组中
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
-		//mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
+		mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
 
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}

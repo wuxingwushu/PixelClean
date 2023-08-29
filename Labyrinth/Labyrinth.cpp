@@ -3,6 +3,7 @@
 #include "../NetworkTCP/Client.h"
 #include "../SoundEffect/SoundEffect.h"
 #include "../BlockS/PixelS.h"
+#include "../Tool/GenerateMaze.h"
 
 namespace GAME {
 
@@ -89,20 +90,26 @@ namespace GAME {
 	}
 
 
-	void Labyrinth::InitLabyrinth(VulKan::Device* device, int X, int Y, bool** LlblockS)
+	void Labyrinth::InitLabyrinth(VulKan::Device* device, int X, int Y)
 	{
 		mDevice = device;
+
+		/*bool** lblockS = nullptr;
+		lblockS = new bool* [X];
+		for (size_t i = 0; i < X; i++)
+		{
+			lblockS[i] = new bool[Y];
+		}
+		GenerateMaze LGenerateMaze(lblockS, X, Y);*/
+
+		//numberX = ((X / 2) * 4) + 1;
+		//numberY = ((Y / 2) * 4) + 1;
 
 		numberX = ((X / 2) * 4) + 1;
 		numberY = ((Y / 2) * 4) + 1;
 
-		mPixelQueue = new Queue<PixelState>(1000);
-
-		PerlinNoise* P = new PerlinNoise();
-
-
 		BlockS = new bool* [numberX];
-		BlockPixelS = new int [numberX * 16 * numberY * 16]{false};
+		BlockPixelS = new int [numberX * 16 * numberY * 16] {false};
 		BlockTypeS = new unsigned int* [numberX];
 		for (size_t i = 0; i < numberX; i++)
 		{
@@ -110,42 +117,34 @@ namespace GAME {
 			BlockTypeS[i] = new unsigned int[numberY];
 		}
 
-		bool** lblockS = nullptr;
-		if (LlblockS == nullptr) {
-			lblockS = new bool* [X];
-			for (size_t i = 0; i < X; i++)
-			{
-				lblockS[i] = new bool[Y];
-			}
-			GenerateMaze(lblockS, X, Y);
-		}
-		else {
-			lblockS = LlblockS;
-		}
-		int NX, NY;
-		for (size_t x = 0; x < numberX; x++)
-		{
-			for (size_t y = 0; y < numberY; y++)
-			{
-				NX = (x / 4) * 2;
-				if ((x % 4) != 0) {
-					NX++;
-				}
-				NY = (y / 4) * 2;
-				if ((y % 4) != 0) {
-					NY++;
-				}
-				BlockS[x][y] = lblockS[NX][NY];
+		GenerateMaze LGenerateMaze;
+		LGenerateMaze.SetGenerateMazeCallback(
+			[](int x, int y, bool B, void* Lclass) {
+				Labyrinth* LLabyrinth = (Labyrinth*)Lclass;
+				LLabyrinth->BlockS[x][y] = B;
 				for (size_t ix = 0; ix < 16; ix++)
 				{
 					for (size_t iy = 0; iy < 16; iy++)
 					{
-						BlockPixelS[((x * 16 + ix) * (numberY * 16)) + (y * 16) + iy] = BlockS[x][y];
+						LLabyrinth->BlockPixelS[((x * 16 + ix) * (LLabyrinth->numberY * 16)) + (y * 16) + iy] = LLabyrinth->BlockS[x][y];
 					}
 				}
-				BlockTypeS[x][y] = P->noise(x * 0.01f, y * 0.01f, 0.5f) * TextureNumber;
-			}
-		}
+				PerlinNoise PNoise;
+				LLabyrinth->BlockTypeS[x][y] = PNoise.noise(x * 0.01f, y * 0.01f, 0.5f) * TextureNumber;
+			},
+			this
+		);
+		LGenerateMaze.GetGenerateMaze(nullptr, X, Y, 4);
+		
+
+		mPixelQueue = new Queue<PixelState>(1000);
+
+
+		
+
+		
+
+		
 
 
 		PixelWallNumber = new short* [numberX * 16];
@@ -168,14 +167,6 @@ namespace GAME {
 			}
 		}
 
-		delete P;
-		
-
-		for (size_t i = 0; i < X; i++)
-		{
-			delete[] lblockS[i];
-		}
-		delete[] lblockS;
 
 		LabyrinthBuffer();
 	}

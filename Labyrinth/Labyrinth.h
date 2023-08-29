@@ -8,8 +8,6 @@
 #include "../Vulkan/buffer.h"
 #include "../VulKanTool/PixelTexture.h"
 
-#include "GenerateMaze.h"
-
 
 #include "../GeneralCalculationGPU/GPU.h"
 
@@ -46,7 +44,7 @@ namespace GAME {
 		//加载迷宫
 		void LoadLabyrinth(int X, int Y, int* PixelData, unsigned int* BlockTypeData);
 		//初始化迷宫
-		void InitLabyrinth(VulKan::Device* device, int X, int Y, bool** LlblockS = nullptr);
+		void InitLabyrinth(VulKan::Device* device, int X, int Y);
 		//迷宫缓存
 		void LabyrinthBuffer();
 

@@ -134,14 +134,15 @@ public:
         unsigned int keyData = Dictionary[key];//获取要销毁的键
         if(keyData != Number){//判断不是在最后面
             //和最后一个的键交换位置
-            DataS[keyData] = DataS[Number];
-            KeyS[keyData] = KeyS[Number];
+            DataS[keyData] = std::move(DataS[Number]);
+            KeyS[keyData] = std::move(KeyS[Number]);
             if (mFlags & ContinuousMap_Timeout) {
-                TimeS[keyData] = TimeS[Number];
+                TimeS[keyData] = std::move(TimeS[Number]);
             }
             Dictionary[KeyS[Number]] = keyData;
             if (mFlags & ContinuousMap_Pointer) {
-                mPointerData[keyData] = mPointerData[Number];
+                assert(mPointerCallback != nullptr && "[Error]: mPointerCallback = nullptr !");
+                mPointerData[keyData] = std::move(mPointerData[Number]);
                 mPointerCallback(&DataS[keyData], mPointerData[keyData]);
             }
         }
@@ -154,7 +155,7 @@ public:
 
     //超时检测
     void TimeoutDetection() {
-        if (!(mFlags & ContinuousMap_Timeout))return;
+        assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
         for (size_t i = 0; i < Number; i++)
         {
@@ -171,20 +172,20 @@ public:
 
     //设置超时回调函数
     void SetTimeoutCallback(_TimeoutCallback TimeoutCallback, void* Data) {
-        if (!(mFlags & ContinuousMap_Timeout))return;
+        assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         mTimeoutCallback = TimeoutCallback;
         mTimeoutData = Data;
     }
 
     //设置超时时间
     void SetTimeoutTime(clock_t Time) {
-        if (!(mFlags & ContinuousMap_Timeout))return;
+        assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         TimeoutTime = Time;
     }
 
     //更新所有时间
     void UpDataWholeTime() {
-        if (!(mFlags & ContinuousMap_Timeout))return;
+        assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
         for (size_t i = 0; i < Number; i++)
         {
@@ -194,13 +195,13 @@ public:
 
     //设置数据对齐时更新引用对象绑定的数据指针 回调函数
     void SetPointerCallback(_PointerCallback PointerCallback) {
-        if (!(mFlags & ContinuousMap_Pointer))return;
+        assert(mFlags & ContinuousMap_Pointer && "Not Turned On ContinuousMap_Pointer");
         mPointerCallback = PointerCallback;
     }
 
     //绑定数据引用对象
     void SetPointerData(TKey key, void* Data) {
-        if (!(mFlags & ContinuousMap_Pointer))return;
+        assert(mFlags & ContinuousMap_Pointer && "Not Turned On ContinuousMap_Pointer");
         mPointerData[Dictionary[key]] = Data;
     }
 
@@ -221,6 +222,7 @@ public:
                 std::swap<clock_t>(TimeS[keyData], TimeS[Number - 1]);
             }
             if (mFlags & ContinuousMap_Pointer) {
+                assert(mPointerCallback != nullptr && "[Error]: mPointerCallback = nullptr !");
                 void* LPointer = mPointerData[keyData];
                 mPointerData[keyData] = mPointerData[Number - 1];
                 mPointerData[Number - 1] = LPointer;

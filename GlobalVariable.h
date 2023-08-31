@@ -4,6 +4,9 @@
 namespace Global {
 	/*  测试  */
 
+	extern bool DrawLinesMode;//画线模式
+	extern bool MistSwitch;//是否开启迷雾
+
 	extern int GamePlayerX;
 	extern int GamePlayerY;
 

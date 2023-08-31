@@ -98,7 +98,9 @@ namespace VulKan {
 
 	void Window::ImGuiKeyBoardEvent() {
 		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_ESCAPE) != KeysRisingEdgeTrigger_Esc) {
-			mApp->InterFace->SetInterFaceBool();
+			if (mApp->InterFace->GetInterfaceIndexes() == GAME::InterFaceEnum_::ViceInterface_Enum) {
+				mApp->InterFace->SetInterFaceBool();
+			}
 		}
 		KeysRisingEdgeTrigger_Esc = glfwGetKey(mWindow, GLFW_KEY_ESCAPE);
 

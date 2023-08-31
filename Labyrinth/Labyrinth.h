@@ -36,7 +36,7 @@ namespace GAME {
 	class Labyrinth
 	{
 	public:
-		Labyrinth();
+		Labyrinth(SquarePhysics::SquarePhysics* squarePhysics);
 		~Labyrinth();
 
 		//重新生成迷宫
@@ -147,7 +147,7 @@ namespace GAME {
 	private:
 
 		VulKan::DescriptorPool* mDescriptorPool{ nullptr };//描述符池
-		std::vector<VulKan::UniformParameter*>* mUniformParams;
+		std::vector<VulKan::UniformParameter*>* mUniformParams = nullptr;
 		
 		PixelTexture* PixelTextureS{ nullptr };//每块的贴图
 		VulKan::DescriptorSet* mDescriptorSet{ nullptr };//位置 贴图 的数据
@@ -157,7 +157,7 @@ namespace GAME {
 		VulKan::Buffer* mPositionBuffer{ nullptr };//点坐标
 		VulKan::Buffer* mUVBuffer{ nullptr };//点对应的UV
 		VulKan::Buffer* mIndexBuffer{ nullptr };//点排序
-		size_t mIndexDatasSize;//点的数量
+		size_t mIndexDatasSize = 0;//点的数量
 
 		unsigned int mFrameCount = 0;
 		VulKan::CommandPool** mThreadCommandPoolS = nullptr;
@@ -170,7 +170,7 @@ namespace GAME {
 	private://储存信息
 		VulKan::Device* mDevice = nullptr;
 		VulKan::RenderPass* mRenderPass = nullptr;
-		VkDescriptorSetLayout mDescriptorSetLayout;
+		VkDescriptorSetLayout mDescriptorSetLayout{VK_NULL_HANDLE};
 		VulKan::Pipeline* mPipeline = nullptr;
 		VulKan::SwapChain* mSwapChain = nullptr;
 		VulKan::Sampler* mSampler = nullptr;
@@ -200,6 +200,7 @@ namespace GAME {
 		VulKan::CommandBuffer* mMistCalculate = nullptr;
 
 	public://物理
+		SquarePhysics::SquarePhysics* wSquarePhysics = nullptr;
 		SquarePhysics::FixedSizeTerrain* mFixedSizeTerrain = nullptr;
 		Queue<PixelState>* mPixelQueue = nullptr;
 	};

@@ -1,5 +1,6 @@
 #include "Crowd.h"
 #include "../GlobalVariable.h"
+#include "../BlockS/PixelS.h"
 
 namespace GAME {
 
@@ -153,7 +154,7 @@ namespace GAME {
 			mDevice,
 			mCommandPool,
 			mSwapChain->getImageCount(),
-			6,
+			(rand() % TextureNumber),
 			mPipeline->DescriptorSetLayout,
 			mCameraVPMatricesBuffer,
 			mSampler

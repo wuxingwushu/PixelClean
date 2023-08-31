@@ -155,7 +155,7 @@ server::server(unsigned int Duan) {
 		sizeof(sin)
 	);
 
-	mServerData = new ContinuousMap<evutil_socket_t, RoleSynchronizationData>(100, ContinuousMap_None);
+	mServerData = new ContinuousMap<evutil_socket_t, RoleSynchronizationData>(100, ContinuousMap_Pointer);
 	mServerData->SetPointerCallback(GAME::PointerGamePlayer);//（调整储存连续时，同时更新引用者）更新指针
 
 	//ServerPos* pos = server::GetServer()->GetServerData()->New(0); // 递归BUG 在创建 server 调用了 GetServer() 导致 mServer 一直为 nullptr

@@ -62,7 +62,13 @@ public:
 	void GetGenerateMaze(bool** Block, int X, int Y, unsigned int K)
 	{
 		WIDTH = X;
+		if ((WIDTH % 2) == 0) {
+			WIDTH++;
+		}
 		HEIGHT = Y;
+		if ((HEIGHT % 2) == 0) {
+			HEIGHT++;
+		}
 		block = Block;
 		bool NewBlock = false;
 		if (block == nullptr) {
@@ -83,7 +89,16 @@ public:
 		}
 
 		PileUp<Pos>* mPos = new PileUp<Pos>(WIDTH * HEIGHT);
-		mPos->add(Pos{ (WIDTH / 2) + 1, (HEIGHT / 2) + 1 });
+		int TposX, TposY;
+		TposX = WIDTH / 2;
+		TposY = HEIGHT / 2;
+		if (!(TposX % 2)) {
+			TposX--;
+		}
+		if (!(TposY % 2)) {
+			TposY--;
+		}
+		mPos->add(Pos{ TposX, TposY });
 
 		while (mPos->GetNumber() != 0)
 		{
@@ -130,7 +145,8 @@ public:
 	}
 
 	~GenerateMaze() {
-
+		delete mPos1;
+		delete mPos2;
 	}
 
 	void SetGenerateMazeCallback(_GenerateMazeCallback Callback, void* Lclass) {

@@ -1,5 +1,4 @@
 #include "application.h"
-#include "Opcode/Opcode.h"
 #include "NetworkTCP/Server.h"
 #include "NetworkTCP/Client.h"
 #include "Opcode/OpcodeFunction.h"
@@ -180,7 +179,7 @@ namespace GAME {
 
 	void Application::LoadingGame() {
 		//生成迷宫
-		mLabyrinth = new Labyrinth();
+		mLabyrinth = new Labyrinth(mSquarePhysics);
 		mLabyrinth->InitLabyrinth(mDevice, 21, 21);
 		mLabyrinth->initUniformManager(
 			mDevice,
@@ -190,8 +189,6 @@ namespace GAME {
 			mSampler
 		);
 		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
-
-		mSquarePhysics->SetFixedSizeTerrain(mLabyrinth->mFixedSizeTerrain);//添加地图碰撞
 
 
 		//创建多人玩家
@@ -243,6 +240,8 @@ namespace GAME {
 		//给操作码对象赋值
 		Opcode::OpLabyrinth = mLabyrinth;
 		Opcode::OpCrowd = mCrowd;
+		Opcode::OpGamePlayer = mGamePlayer;
+		Opcode::OpApplication = this;
 	}
 
 	void Application::UninstallGame() {
@@ -566,8 +565,10 @@ namespace GAME {
 		Global::GamePlayerX = mGamePlayer->GetObjectCollision()->GetPosX();
 		Global::GamePlayerY = mGamePlayer->GetObjectCollision()->GetPosY();
 
-		
-		m_angle = std::atan2(960 - CursorPosX, 540 - CursorPosY);//获取角度
+		int winwidth, winheight;
+		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
+		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
+		m_angle = std::atan2((winwidth / 2) - CursorPosX, (winheight / 2) - CursorPosY) + 1.57f;//获取角度
 		//mGamePlayer->mObjectCollision->SetAngle(m_angle);//设置玩家物理角度
 		mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle);//设置玩家物理角度
 
@@ -587,7 +588,7 @@ namespace GAME {
 		mCameraVPMatricesBuffer[mCurrentFrame]->updateBufferByMap((void*)(&mVPMatrices), sizeof(VPMatrices));//更新Camera变换矩阵
 
 		
-		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
+		
 		mGamePlayer->setGamePlayerMatrix(mCurrentFrame);
 
 		static double ArmsContinuityFire = 0;
@@ -597,8 +598,8 @@ namespace GAME {
 		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.2f)))
 		{
 			ArmsContinuityFire = 0;
-			glm::dvec2 Armsdain =  SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle + 1.57f);
-			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle + 1.57f, 500, AttackType);
+			glm::dvec2 Armsdain =  SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle);
+			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
 			if (Global::MultiplePeopleMode) {//是否为多人模式
 				if (Global::ServerOrClient) {//服务器还是客户端
 					RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
@@ -606,11 +607,11 @@ namespace GAME {
 					for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
 					{
 						LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
-						LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f, AttackType });
+						LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
 					}
 				}
 				else {
-					client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle + 1.57f, AttackType });
+					client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
 				}
 			}
 		}
@@ -628,7 +629,7 @@ namespace GAME {
 		MistContinuityFire += TOOL::FPStime;
 		if (MistContinuityFire > 0.02f) {
 			MistContinuityFire = 0;
-			mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f);
+			mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
 		}
 		TOOL::mTimer->StartEnd();
 
@@ -688,7 +689,7 @@ namespace GAME {
 		//加到显示数组中
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
-		mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
+		if(Global::MistSwitch)mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
 
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}

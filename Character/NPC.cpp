@@ -35,12 +35,14 @@ namespace GAME {
 					boost::sml::state<C_Standby> +boost::sml::event<S_Patrol> = boost::sml::state<C_Patrol>,//巡逻
 					boost::sml::state<C_Standby> +boost::sml::event<S_Chasing> = boost::sml::state<C_Chasing>,//追击
 					boost::sml::state<C_Standby> +boost::sml::event<S_Attack> = boost::sml::state<C_Attack>,//攻击
+					boost::sml::state<C_Standby> +boost::sml::event<S_Injury> = boost::sml::state<C_Injury>,//受伤
 					//巡逻
 					boost::sml::state<C_Patrol> +boost::sml::event<S_Event>[std::bind(&NPC::Patrol, mNpc)],
 					boost::sml::state<C_Patrol> +boost::sml::on_entry<boost::sml::_> / [] { std::cout << "进入 巡逻 状态!" << std::endl; },
 					boost::sml::state<C_Patrol> +boost::sml::event<S_Standby> = boost::sml::state<C_Standby>,//待机
 					boost::sml::state<C_Patrol> +boost::sml::event<S_Attack> = boost::sml::state<C_Attack>,//攻击
 					boost::sml::state<C_Patrol> +boost::sml::event<S_Chasing> = boost::sml::state<C_Chasing>,//追击
+					boost::sml::state<C_Patrol> +boost::sml::event<S_Injury> = boost::sml::state<C_Injury>,//受伤
 					//追击
 					boost::sml::state<C_Chasing> +boost::sml::event<S_Event>[std::bind(&NPC::GoToLocation, mNpc)],
 					boost::sml::state<C_Chasing> +boost::sml::on_entry<boost::sml::_> / [] { std::cout << "进入 追击 状态!" << std::endl; },
@@ -55,6 +57,7 @@ namespace GAME {
 					//受伤
 					boost::sml::state<C_Injury> +boost::sml::event<S_Event>[std::bind(&NPC::Injury, mNpc)],
 					boost::sml::state<C_Injury> +boost::sml::on_entry<boost::sml::_> / [] { std::cout << "进入 受伤 状态!" << std::endl; },
+					boost::sml::state<C_Injury> +boost::sml::event<S_Chasing> = boost::sml::state<C_Chasing>,//追击
 					//逃跑
 					boost::sml::state<C_Escape> +boost::sml::event<S_Event>[std::bind(&NPC::Standby, mNpc)],
 					boost::sml::state<C_Escape> +boost::sml::on_entry<boost::sml::_> / [] { std::cout << "进入 逃跑 状态!" << std::endl; },
@@ -96,8 +99,7 @@ namespace GAME {
 
 		//歪门邪道 生成状态机
 		NPC_StateMachine NFSM(this);
-		boost::sml::sm<NPC_StateMachine> LNPCFSM(NFSM);
-		NPCFSM = new FSM(LNPCFSM);
+		NPCFSM = new FSM(boost::sml::sm<NPC_StateMachine>(NFSM));
 	}
 
 	NPC::~NPC()
@@ -163,18 +165,26 @@ namespace GAME {
 
 	//待机
 	bool NPC::Standby() {
+		if (mNPC->mPixelQueue->GetNumber() > 0) {//如果受伤
+			mTime = 0.0;
+			NPCFSM->Get()->process_event(S_Injury{});
+			return true;
+		}
+
 		int flags = GetSensoryMessages();
-		if (flags & SensoryMessages_Visible) {
-			if (flags & SensoryMessages_Range) {
+		if (flags & SensoryMessages_Visible) {//是否可见
+			if (flags & SensoryMessages_Range) {//是否在范围内
 				mTime = mPathfindingCycle + 1.0f;
 				NPCFSM->Get()->process_event(S_Chasing{});
+				return true;
 			}
 			else {
 				NPCFSM->Get()->process_event(S_Attack{});
+				return true;
 			}
 		}
 
-		mNPC->GetObjectCollision()->PlayerTargetAngle(SquarePhysics::EdgeVecToCosAngleFloat(qianjinfang));
+		mNPC->GetObjectCollision()->PlayerTargetAngle(SquarePhysics::EdgeVecToCosAngleFloat(qianjinfang));//旋转角度
 		if (mTime > 1.0f) {
 			NPCFSM->Get()->process_event(S_Patrol{});
 		}
@@ -184,13 +194,20 @@ namespace GAME {
 	//巡逻
 	bool NPC::Patrol() {
 		int flags = GetSensoryMessages();
-		if (flags & SensoryMessages_Visible) {
-			if (flags & SensoryMessages_Range) {
+		if (mNPC->mPixelQueue->GetNumber() > 0) {//如果受伤
+			mTime = 0.0;
+			NPCFSM->Get()->process_event(S_Injury{});
+			return true;
+		}
+		if (flags & SensoryMessages_Visible) {//是否可见
+			if (flags & SensoryMessages_Range) {//是否在范围内
 				mTime = mPathfindingCycle + 1.0f;
 				NPCFSM->Get()->process_event(S_Chasing{});
+				return true;
 			}
 			else {
 				NPCFSM->Get()->process_event(S_Attack{});
+				return true;
 			}
 		}
 		
@@ -246,7 +263,14 @@ namespace GAME {
 		return true;
 	}
 
+	//受伤
 	bool NPC::Injury() {
+		GetSensoryMessages();//感官消息
+		mNPC->GetObjectCollision()->PlayerTargetAngle(wanjiaAngle);//旋转角度
+		if (mTime > 2.0f) {
+			mTime = mPathfindingCycle + 1.0f;
+			NPCFSM->Get()->process_event(S_Chasing{});
+		}
 		return true;
 	}
 

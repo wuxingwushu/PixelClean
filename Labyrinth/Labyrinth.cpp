@@ -29,7 +29,9 @@ namespace GAME {
 		}
 	}
 
-	Labyrinth::Labyrinth() {
+	Labyrinth::Labyrinth(SquarePhysics::SquarePhysics* squarePhysics):
+		wSquarePhysics(squarePhysics)
+	{
 
 	}
 
@@ -174,7 +176,7 @@ namespace GAME {
 	void Labyrinth::LabyrinthBuffer() {
 		mFixedSizeTerrain = new SquarePhysics::FixedSizeTerrain(numberX * 16, numberY * 16, 1);
 		mFixedSizeTerrain->SetCollisionCallback(Labyrinth_SetPixel, this);
-
+		wSquarePhysics->SetFixedSizeTerrain(mFixedSizeTerrain);//添加地图碰撞
 
 		int Ax = -((numberX / 2) * 16);
 		int Ay = -((numberY / 2) * 16);
@@ -614,7 +616,7 @@ namespace GAME {
 		VkBufferCopy copyInfo{};
 		copyInfo.size = (numberX * numberY * 16 * 16 * 4);
 		mMistCalculate->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-		mMistCalculate->copyBufferToBuffer(WarfareMist->getHOSTImageBuffer(), jihsuanTP->getBuffer(), 1, { copyInfo });//获取原数据
+		mMistCalculate->copyBufferToBuffer	(WarfareMist->getHOSTImageBuffer(), jihsuanTP->getBuffer(), 1, { copyInfo });//获取原数据
 		mMistCalculate->bindGraphicPipeline(pipeline, VK_PIPELINE_BIND_POINT_COMPUTE);//设置计算管线
 		mMistCalculate->bindDescriptorSet(pipelineLayout, descriptorSet, VK_PIPELINE_BIND_POINT_COMPUTE);//获取描述符
 		vkCmdDispatch(mMistCalculate->getCommandBuffer(), (uint32_t)ceil((wymiwustruct.size) / float(64)), 1, 1);//分配计算单元开始计算
@@ -781,7 +783,7 @@ namespace GAME {
 		vkCreateComputePipelines(mDevice->getDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, NULL, &pipeline);
 	}
 
-
+	
 	void Labyrinth::DeleteMist() {
 		vkDestroyPipelineLayout(mDevice->getDevice(), pipelineLayout, nullptr);
 		vkDestroyPipeline(mDevice->getDevice(), pipeline, nullptr);

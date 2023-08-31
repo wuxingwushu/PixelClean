@@ -5,12 +5,17 @@
 #include <stdexcept>
 #include <sstream>
 
+#include "../Labyrinth/Labyrinth.h"
+#include "../Character/Crowd.h"
+#include "../application.h"
 
 namespace Opcode {
 
 	//指令对象数据
 	GAME::Labyrinth* OpLabyrinth = nullptr;
 	GAME::Crowd* OpCrowd = nullptr;
+	GAME::GamePlayer* OpGamePlayer = nullptr;
+	GAME::Application* OpApplication = nullptr;
 
 	void OPNULLPTR(Queue<const char*>* CodeS) {
 		return;
@@ -22,11 +27,15 @@ namespace Opcode {
 		AddCommand(AddNPC, "AddNPC", "AddNPC() 随机位置生成一个 NPC ");
 		AddCommand(AddNPCPos, "AddNPCPos", "AddNPCPos(int, int) 设置位置生成一个 NPC ");
 		AddCommand(AddNPCS, "AddNPCS", "AddNPCS(int) 随机位置生成 N 个 NPC "); 
-		AddCommand(KillAllNPC, "KillAllNPC", "AddNPCS() 清空所有 NPC ");
+		AddCommand(KillAllNPC, "KillAllNPC", "KillAllNPC() 清空所有 NPC ");
+		AddCommand(ReplaceMap, "ReplaceMap", "ReplaceMap(int, int) 更换地图(X,Y 都要 >= 5 )");
+		AddCommand(SetMistSwitch, "SetMistSwitch", "SetMistSwitch(bool) 设置迷雾开关");
+		AddCommand(SetPipelineLinesMode, "SetPipelineLinesMode", "SetPipelineLinesMode(bool) 设置线框渲染开关");
 	}
 
 	OpcodeMapping::~OpcodeMapping()
 	{
+		mOpcodeMapping = nullptr;
 	}
 
 	template <typename T>
@@ -93,5 +102,43 @@ namespace Opcode {
 	//清除所有NPC
 	void KillAllNPC(Queue<const char*>* CodeS) {
 		OpCrowd->KillAll();
+	}
+
+	//更换地图
+	void ReplaceMap(Queue<const char*>* CodeS) {
+		if (CodeS->GetNumber() == 2) {
+			OpCrowd->KillAll();
+			OpLabyrinth->AgainGenerateLabyrinth(OpConverter<int>(*CodeS->pop()), OpConverter<int>(*CodeS->pop()));
+			OpGamePlayer->GetObjectCollision()->SetPos(OpLabyrinth->GetLegitimateGeneratePos());
+		}
+		else
+		{
+			std::cout << "[Opcode][Error]: ReplaceMap Generate Error ! " << std::endl;
+		}
+		
+	}
+
+	//迷雾开关
+	void SetMistSwitch(Queue<const char*>* CodeS) {
+		if (CodeS->GetNumber() == 1) {
+			Global::MistSwitch = OpBoolConverter(*CodeS->pop());
+			Global::MainCommandBufferUpdateRequest();
+		}
+		else
+		{
+			std::cout << "[Opcode][Error]: SetMistSwitch Generate Error ! " << std::endl;
+		}
+	}
+
+	//线框模式
+	void SetPipelineLinesMode(Queue<const char*>* CodeS) {
+		if (CodeS->GetNumber() == 1) {
+			Global::DrawLinesMode = OpBoolConverter(*CodeS->pop());
+			OpApplication->recreateSwapChain();
+		}
+		else
+		{
+			std::cout << "[Opcode][Error]: SetPipelineLinesMode Generate Error ! " << std::endl;
+		}
 	}
 }

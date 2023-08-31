@@ -213,7 +213,8 @@ namespace GAME {
 		ImGui::TableNextColumn();
 
 
-		ImGui::SetWindowFontScale(4.0f);
+
+		ImGui::SetWindowFontScale(gao/32.0f);
 
 		ImVec2 textSize = ImGui::CalcTextSize(u8"素  净");
 		float windowWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
@@ -660,9 +661,9 @@ namespace GAME {
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 
-		ImVec2 textSize = ImGui::CalcTextSize(u8"道生");
-		ImGui::SetCursorPos({ (Global::mWidth / 2.0f - textSize.x / 2.0f),(Global::mHeight / 2.0f - textSize.y / 2.0f) });
-		ImGui::Text(u8"道生");
+		//ImVec2 textSize = ImGui::CalcTextSize(u8"道生");
+		//ImGui::SetCursorPos({ (Global::mWidth / 2.0f - textSize.x / 2.0f),(Global::mHeight / 2.0f - textSize.y / 2.0f) });
+		//ImGui::Text(u8"道生");
 
 		float LHeight = Global::mHeight - 60.0f;
 		mChatBoxStr->InitData();

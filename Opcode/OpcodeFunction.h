@@ -1,15 +1,23 @@
 #pragma once
 #include "../Tool/Queue.h"
 #include <string>
-#include "../Labyrinth/Labyrinth.h"
-#include "../Character/Crowd.h"
 #include "../Tool/trie.h"
+#include <iostream>
+
+namespace GAME {
+	class Labyrinth;
+	class Crowd;
+	class GamePlayer;
+	class Application;
+}
 
 namespace Opcode {
 
 	//指令对象数据
 	extern GAME::Labyrinth* OpLabyrinth;
 	extern GAME::Crowd* OpCrowd;
+	extern GAME::GamePlayer* OpGamePlayer;
+	extern GAME::Application* OpApplication;
 
 	void OPNULLPTR(Queue<const char*>* CodeS);
 
@@ -75,4 +83,10 @@ namespace Opcode {
 	void AddNPCS(Queue<const char*>* CodeS);
 	//清除所有NPC
 	void KillAllNPC(Queue<const char*>* CodeS);
+	//更换地图
+	void ReplaceMap(Queue<const char*>* CodeS);
+	//迷雾开关
+	void SetMistSwitch(Queue<const char*>* CodeS);
+	//线框模式
+	void SetPipelineLinesMode(Queue<const char*>* CodeS);
 }

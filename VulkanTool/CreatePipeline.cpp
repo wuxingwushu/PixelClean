@@ -67,7 +67,7 @@ namespace VulKan {
 
 		//光栅化设置
 		Pipeline->mRasterState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		Pipeline->mRasterState.polygonMode = VK_POLYGON_MODE_FILL;//其他模式需要开启gpu特性 // VK_POLYGON_MODE_LINE 线框 // VK_POLYGON_MODE_FILL 正常画面
+		Pipeline->mRasterState.polygonMode = Global::DrawLinesMode ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;//其他模式需要开启gpu特性 // VK_POLYGON_MODE_LINE 线框 // VK_POLYGON_MODE_FILL 正常画面
 		Pipeline->mRasterState.lineWidth = 1.0f;//大于1需要开启gpu特性
 		Pipeline->mRasterState.cullMode = VK_CULL_MODE_BACK_BIT;//开启背面剔除
 		Pipeline->mRasterState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;//设置逆时针为正面

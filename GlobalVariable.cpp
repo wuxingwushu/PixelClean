@@ -5,6 +5,9 @@
 namespace Global {
 	/*  测试  */
 
+	bool DrawLinesMode = false;
+	bool MistSwitch = true;
+
 	int GamePlayerX;   
 	int GamePlayerY;
 

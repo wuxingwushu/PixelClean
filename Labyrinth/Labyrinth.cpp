@@ -5,6 +5,7 @@
 #include "../BlockS/PixelS.h"
 #include "../Tool/GenerateMaze.h"
 
+
 namespace GAME {
 
 
@@ -610,32 +611,31 @@ namespace GAME {
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			region,
-			mMistCalculateCommandPoolS
+			mThreadCommandPoolS[0]
 		);
 
 		VkBufferCopy copyInfo{};
 		copyInfo.size = (numberX * numberY * 16 * 16 * 4);
-		mMistCalculate->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-		mMistCalculate->copyBufferToBuffer	(WarfareMist->getHOSTImageBuffer(), jihsuanTP->getBuffer(), 1, { copyInfo });//获取原数据
-		mMistCalculate->bindGraphicPipeline(pipeline, VK_PIPELINE_BIND_POINT_COMPUTE);//设置计算管线
-		mMistCalculate->bindDescriptorSet(pipelineLayout, descriptorSet, VK_PIPELINE_BIND_POINT_COMPUTE);//获取描述符
-		vkCmdDispatch(mMistCalculate->getCommandBuffer(), (uint32_t)ceil((wymiwustruct.size) / float(64)), 1, 1);//分配计算单元开始计算
-		mMistCalculate->copyBufferToImage(//将计算的迷雾结果更新到图片上
+
+		mCalculate->begin();
+		mCalculate->GetCommandBuffer()->copyBufferToBuffer(WarfareMist->getHOSTImageBuffer(), jihsuanTP->getBuffer(), 1, { copyInfo });//获取原数据
+		vkCmdDispatch(mCalculate->GetCommandBuffer()->getCommandBuffer(), (uint32_t)ceil((wymiwustruct.size) / float(64)), 1, 1);//分配计算单元开始计算
+		mCalculate->GetCommandBuffer()->copyBufferToImage(//将计算的迷雾结果更新到图片上
 			jihsuanTP->getBuffer(),
 			WarfareMist->getImage()->getImage(),
 			WarfareMist->getImage()->getLayout(),
 			WarfareMist->getImage()->getWidth(),
 			WarfareMist->getImage()->getHeight()
 		);
-		mMistCalculate->end();
-		mMistCalculate->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
+		mCalculate->end();
+		mCalculate->GetCommandBuffer()->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
 
 		WarfareMist->getImage()->setImageLayout(
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			region,
-			mMistCalculateCommandPoolS
+			mThreadCommandPoolS[0]
 		);
 	}
 
@@ -650,151 +650,21 @@ namespace GAME {
 
 		WallBool->updateBufferByMap(BlockPixelS, (numberX * numberY * 16 * 16 * 4));
 
-		mMistCalculateCommandPoolS = new VulKan::CommandPool(mDevice);
-		mMistCalculate = new VulKan::CommandBuffer(mDevice, mMistCalculateCommandPoolS);
-
-		VkDescriptorSetLayoutBinding descriptorSetLayoutBinding[3] = {};
-		descriptorSetLayoutBinding[0].binding = 0; // binding = 0  迷雾计算结果
-		descriptorSetLayoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		descriptorSetLayoutBinding[0].descriptorCount = 1;
-		descriptorSetLayoutBinding[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-		descriptorSetLayoutBinding[1].binding = 1; // binding = 0  描述符
-		descriptorSetLayoutBinding[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		descriptorSetLayoutBinding[1].descriptorCount = 1;
-		descriptorSetLayoutBinding[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-		descriptorSetLayoutBinding[2].binding = 2; // binding = 0  墙壁
-		descriptorSetLayoutBinding[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		descriptorSetLayoutBinding[2].descriptorCount = 1;
-		descriptorSetLayoutBinding[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-		descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		descriptorSetLayoutCreateInfo.bindingCount = 3; // only a single binding in this descriptor set layout. //*******************************************
-		descriptorSetLayoutCreateInfo.pBindings = descriptorSetLayoutBinding;                                   //*******************************************
-
-		// Create the descriptor set layout. 
-		vkCreateDescriptorSetLayout(mDevice->getDevice(), &descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout);
-
-		VkDescriptorPoolSize descriptorPoolSize[3] = {};                                                        //*******************************************
-		descriptorPoolSize[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		descriptorPoolSize[0].descriptorCount = 1;
-
-		descriptorPoolSize[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;                                         //*******************************************
-		descriptorPoolSize[1].descriptorCount = 1;                                                              //*******************************************
-
-		descriptorPoolSize[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;                                         //*******************************************
-		descriptorPoolSize[2].descriptorCount = 1;                                                              //*******************************************
+		CalculateBufferS.clear();
+		CalculateBufferS.resize(3);
+		CalculateBufferS[0] = { &jihsuanTP->getBufferInfo() };
+		CalculateBufferS[1] = { &information->getBufferInfo() };
+		CalculateBufferS[2] = { &WallBool->getBufferInfo() };
 
 
-		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
-		descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; //这个标志的作用就是指示VkDescriptorPool可以释放包含VkDescriptorSet的内存。
-		descriptorPoolCreateInfo.maxSets = 1; // we only need to allocate one descriptor set from the pool.
-		descriptorPoolCreateInfo.poolSizeCount = 3;                                                             //*******************************************
-		descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSize;
-
-		// create descriptor pool.
-		vkCreateDescriptorPool(mDevice->getDevice(), &descriptorPoolCreateInfo, NULL, &descriptorPool);
-
-		/*
-		With the pool allocated, we can now allocate the descriptor set.
-		*/
-		VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
-		descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		descriptorSetAllocateInfo.descriptorPool = descriptorPool; // pool to allocate from.
-		descriptorSetAllocateInfo.descriptorSetCount = 1; // allocate a single descriptor set.
-		descriptorSetAllocateInfo.pSetLayouts = &descriptorSetLayout;
-
-		// allocate descriptor set.
-		vkAllocateDescriptorSets(mDevice->getDevice(), &descriptorSetAllocateInfo, &descriptorSet);
-
-		/*
-		Next, we need to connect our actual storage buffer with the descrptor.
-		We use vkUpdateDescriptorSets() to update the descriptor set.
-		*/
-
-		// Specify the buffer to bind to the descriptor.
-
-		VkWriteDescriptorSet writeDescriptorSet[3] = {};                                                //*******************************************
-		writeDescriptorSet[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSet[0].dstSet = descriptorSet; // write to this descriptor set.
-		writeDescriptorSet[0].dstBinding = 0; // write to the first, and only binding.
-		writeDescriptorSet[0].descriptorCount = 1; // update a single descriptor.
-		writeDescriptorSet[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // storage buffer.
-		writeDescriptorSet[0].pBufferInfo = &jihsuanTP->getBufferInfo();
-
-		writeDescriptorSet[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSet[1].dstSet = descriptorSet; // write to this descriptor set.
-		writeDescriptorSet[1].dstBinding = 1; // write to the first, and only binding.
-		writeDescriptorSet[1].descriptorCount = 1; // update a single descriptor.
-		writeDescriptorSet[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // storage buffer.
-		writeDescriptorSet[1].pBufferInfo = &information->getBufferInfo();
-
-		writeDescriptorSet[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSet[2].dstSet = descriptorSet; // write to this descriptor set.
-		writeDescriptorSet[2].dstBinding = 2; // write to the first, and only binding.
-		writeDescriptorSet[2].descriptorCount = 1; // update a single descriptor.
-		writeDescriptorSet[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // storage buffer.
-		writeDescriptorSet[2].pBufferInfo = &WallBool->getBufferInfo();
-
-
-		// perform the update of the descriptor set.
-		vkUpdateDescriptorSets(mDevice->getDevice(), 3, writeDescriptorSet, 0, NULL);                                //*******************************************
-
-		uint32_t filelength;
-		// the code in comp.spv was created by running the command:
-		// glslangValidator.exe -V shader.comp
-		uint32_t* code = readFile(filelength, WarfareMist_spv);
-		VkShaderModuleCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		createInfo.pCode = code;
-		createInfo.codeSize = filelength;
-
-		vkCreateShaderModule(mDevice->getDevice(), &createInfo, NULL, &computeShaderModule);
-		delete[] code;
-
-
-		VkPipelineShaderStageCreateInfo shaderStageCreateInfo = {};
-		shaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		shaderStageCreateInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-		shaderStageCreateInfo.module = computeShaderModule;
-		shaderStageCreateInfo.pName = "main";
-
-		/*
-		The pipeline layout allows the pipeline to access descriptor sets.
-		So we just specify the descriptor set layout we created earlier.
-		*/
-		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutCreateInfo.setLayoutCount = 1;
-		pipelineLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
-		vkCreatePipelineLayout(mDevice->getDevice(), &pipelineLayoutCreateInfo, NULL, &pipelineLayout);
-
-		VkComputePipelineCreateInfo pipelineCreateInfo = {};
-		pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-		pipelineCreateInfo.stage = shaderStageCreateInfo;
-		pipelineCreateInfo.layout = pipelineLayout;
-
-		/*
-		Now, we finally create the compute pipeline.
-		*/
-		vkCreateComputePipelines(mDevice->getDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, NULL, &pipeline);
+		mCalculate = new VulKan::Calculate(mDevice, &CalculateBufferS, std::string(WarfareMist_spv).c_str());
 	}
 
 	
 	void Labyrinth::DeleteMist() {
-		vkDestroyPipelineLayout(mDevice->getDevice(), pipelineLayout, nullptr);
-		vkDestroyPipeline(mDevice->getDevice(), pipeline, nullptr);
-		vkDestroyShaderModule(mDevice->getDevice(), computeShaderModule, nullptr);
-		vkFreeDescriptorSets(mDevice->getDevice(), descriptorPool, 1, &descriptorSet);
-		vkDestroyDescriptorSetLayout(mDevice->getDevice(), descriptorSetLayout, nullptr);
-		vkDestroyDescriptorPool(mDevice->getDevice(), descriptorPool, nullptr);
+		delete mCalculate;
 		delete jihsuanTP;
 		delete information;
 		delete WallBool;
-		delete mMistCalculate;
-		delete mMistCalculateCommandPoolS;
 	}
 }

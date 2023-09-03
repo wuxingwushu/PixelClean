@@ -22,6 +22,8 @@
 
 #include "../GlobalStructural.h"
 
+#include "../VulkanTool/Calculate.h"
+
 struct miwustruct {
 	unsigned int size;
 	int x;
@@ -180,6 +182,11 @@ namespace GAME {
 
 
 	private://战争迷雾
+
+		VulKan::Calculate* mCalculate = nullptr;
+		std::vector<VulKan::CalculateStruct> CalculateBufferS;
+
+
 		PixelTexture* WarfareMist{ nullptr };//每块的贴图
 		VulKan::DescriptorSet* mMistDescriptorSet{ nullptr };//位置 角度  射线颜色 的数据
 
@@ -187,17 +194,6 @@ namespace GAME {
 		VulKan::Buffer* jihsuanTP{ nullptr };//储存计算结果的缓存
 		VulKan::Buffer* information{ nullptr };//储存原数据的缓存(图片纹理)
 		VulKan::Buffer* WallBool{ nullptr };//储存碰撞(是否是墙壁)
-
-		VkDescriptorSetLayout descriptorSetLayout{ VK_NULL_HANDLE };
-		VkDescriptorPool descriptorPool{ VK_NULL_HANDLE };
-		VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
-
-		VkPipeline pipeline{ VK_NULL_HANDLE };
-		VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
-		VkShaderModule computeShaderModule{ VK_NULL_HANDLE };
-
-		VulKan::CommandPool* mMistCalculateCommandPoolS = nullptr;
-		VulKan::CommandBuffer* mMistCalculate = nullptr;
 
 	public://物理
 		SquarePhysics::SquarePhysics* wSquarePhysics = nullptr;

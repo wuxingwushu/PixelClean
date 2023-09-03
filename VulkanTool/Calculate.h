@@ -12,12 +12,16 @@ namespace VulKan {
 	class Calculate
 	{
 	public:
-		Calculate(VkDevice Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp);
+		Calculate(Device* Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp);
 		~Calculate();
 
 		CommandBuffer* GetCommandBuffer() { return mCommandBuffer; }
+
+		void begin();
+
+		void end();
 	private:
-		VkDevice wDevice;
+		Device* wDevice;
 		CommandPool* mCommandPool = nullptr;
 		CommandBuffer* mCommandBuffer = nullptr;
 

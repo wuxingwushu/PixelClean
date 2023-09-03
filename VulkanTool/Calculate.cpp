@@ -3,9 +3,13 @@
 
 namespace VulKan {
 
-	Calculate::Calculate(VkDevice Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp)
+	Calculate::Calculate(Device* Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp)
 	{
 		wDevice = Device;
+
+		mCommandPool = new CommandPool(wDevice);
+		mCommandBuffer = new CommandBuffer(wDevice, mCommandPool);
+		
 
 		const int BufferSize = CalculateStructS->size();
 		std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindingS;
@@ -23,7 +27,7 @@ namespace VulKan {
 		descriptorSetLayoutCreateInfo.bindingCount = BufferSize; // only a single binding in this descriptor set layout.
 		descriptorSetLayoutCreateInfo.pBindings = DescriptorSetLayoutBindingS.data();
 	
-		vkCreateDescriptorSetLayout(wDevice, &descriptorSetLayoutCreateInfo, NULL, &mDescriptorSetLayout);
+		vkCreateDescriptorSetLayout(wDevice->getDevice(), &descriptorSetLayoutCreateInfo, NULL, &mDescriptorSetLayout);
 	
 
 
@@ -42,7 +46,7 @@ namespace VulKan {
 		descriptorPoolCreateInfo.poolSizeCount = BufferSize;
 		descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSize.data();
 	
-		vkCreateDescriptorPool(wDevice, &descriptorPoolCreateInfo, NULL, &mDescriptorPool);
+		vkCreateDescriptorPool(wDevice->getDevice(), &descriptorPoolCreateInfo, NULL, &mDescriptorPool);
 
 
 
@@ -52,7 +56,7 @@ namespace VulKan {
 		descriptorSetAllocateInfo.descriptorSetCount = 1; // allocate a single descriptor set.
 		descriptorSetAllocateInfo.pSetLayouts = &mDescriptorSetLayout;
 
-		vkAllocateDescriptorSets(wDevice, &descriptorSetAllocateInfo, &mDescriptorSet);
+		vkAllocateDescriptorSets(wDevice->getDevice(), &descriptorSetAllocateInfo, &mDescriptorSet);
 	
 
 	
@@ -68,7 +72,7 @@ namespace VulKan {
 			DescriptorSet[i].pBufferInfo = (*CalculateStructS)[i].mBufferInfo;
 		}
 
-		vkUpdateDescriptorSets(wDevice, BufferSize, DescriptorSet.data(), 0, NULL);                                //*******************************************
+		vkUpdateDescriptorSets(wDevice->getDevice(), BufferSize, DescriptorSet.data(), 0, NULL);                                //*******************************************
 
 
 
@@ -79,7 +83,7 @@ namespace VulKan {
 		createInfo.pCode = code;
 		createInfo.codeSize = filelength;
 
-		vkCreateShaderModule(wDevice, &createInfo, NULL, &mShaderModule);
+		vkCreateShaderModule(wDevice->getDevice(), &createInfo, NULL, &mShaderModule);
 		delete[] code;
 
 
@@ -94,14 +98,14 @@ namespace VulKan {
 		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutCreateInfo.setLayoutCount = 1;
 		pipelineLayoutCreateInfo.pSetLayouts = &mDescriptorSetLayout;
-		vkCreatePipelineLayout(wDevice, &pipelineLayoutCreateInfo, NULL, &mPipelineLayout);
+		vkCreatePipelineLayout(wDevice->getDevice(), &pipelineLayoutCreateInfo, NULL, &mPipelineLayout);
 
 		VkComputePipelineCreateInfo pipelineCreateInfo = {};
 		pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 		pipelineCreateInfo.stage = shaderStageCreateInfo;
 		pipelineCreateInfo.layout = mPipelineLayout;
 
-		vkCreateComputePipelines(wDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, NULL, &mPipeline);
+		vkCreateComputePipelines(wDevice->getDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, NULL, &mPipeline);
 	}
 
 	Calculate::~Calculate()
@@ -109,11 +113,22 @@ namespace VulKan {
 		delete mCommandBuffer;
 		delete mCommandPool;
 
-		vkDestroyPipelineLayout(wDevice, mPipelineLayout, nullptr);
-		vkDestroyPipeline(wDevice, mPipeline, nullptr);
-		vkDestroyShaderModule(wDevice, mShaderModule, nullptr);
-		vkFreeDescriptorSets(wDevice, mDescriptorPool, 1, &mDescriptorSet);
-		vkDestroyDescriptorSetLayout(wDevice, mDescriptorSetLayout, nullptr);
-		vkDestroyDescriptorPool(wDevice, mDescriptorPool, nullptr);
+		vkDestroyPipelineLayout(wDevice->getDevice(), mPipelineLayout, nullptr);
+		vkDestroyPipeline(wDevice->getDevice(), mPipeline, nullptr);
+		vkDestroyShaderModule(wDevice->getDevice(), mShaderModule, nullptr);
+		vkFreeDescriptorSets(wDevice->getDevice(), mDescriptorPool, 1, &mDescriptorSet);
+		vkDestroyDescriptorSetLayout(wDevice->getDevice(), mDescriptorSetLayout, nullptr);
+		vkDestroyDescriptorPool(wDevice->getDevice(), mDescriptorPool, nullptr);
+	}
+
+
+	void Calculate::begin() {
+		mCommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+		mCommandBuffer->bindGraphicPipeline(mPipeline, VK_PIPELINE_BIND_POINT_COMPUTE);//设置计算管线
+		mCommandBuffer->bindDescriptorSet(mPipelineLayout, mDescriptorSet, VK_PIPELINE_BIND_POINT_COMPUTE);//获取描述符
+	}
+
+	void Calculate::end() {
+		mCommandBuffer->end();
 	}
 }

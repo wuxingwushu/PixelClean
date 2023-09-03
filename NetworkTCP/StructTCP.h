@@ -56,7 +56,7 @@ struct BufferEventSingleData
 
 	BufferEventSingleData(unsigned int size) {
 		mSubmitBullet = new PileUp<SynchronizeBullet>(size);
-		mLabyrinthPixel = new PileUp<PixelState>(size);
+		mLabyrinthPixel = new PileUp<PixelState>(size*10);
 		mCharacterPixel = new PileUp<PixelState>(size);
 		mStr = new QueueData<LimitUse<ChatStrStruct*>*>(size);
 	}

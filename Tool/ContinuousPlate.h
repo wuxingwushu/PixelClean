@@ -85,13 +85,13 @@ public:
 		if ((fabs(uX) < mNumberX) && (fabs(uY) < mNumberY)) {
 			if (uX != 0)
 			{
-				mX = (int(x) / mEdge);
+				mX -= uX;
 				MovePlateX(uX);
 				UpDataBool = true;
 			}
 			if (uY != 0)
 			{
-				mY = (int(y) / mEdge);
+				mY -= uY;
 				MovePlateY(uY);
 				UpDataBool = true;
 			}

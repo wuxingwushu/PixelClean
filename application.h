@@ -34,6 +34,8 @@
 
 #include "VulkanTool/PipelineS.h"
 
+#include "Labyrinth/Dungeon.h"
+
 
 
 namespace GAME {
@@ -180,5 +182,6 @@ namespace GAME {
 		//测试
 		//GifPipeline* mGifPipeline = nullptr;//GIF渲染管线
 		//GIF* mGIF = nullptr;//GIF
+		Dungeon* mDungeon = nullptr;
 	};
 }

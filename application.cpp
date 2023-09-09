@@ -190,6 +190,14 @@ namespace GAME {
 		);
 		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
 
+		mDungeon = new Dungeon(mDevice, 10, 10);
+		mDungeon->initUniformManager(
+			mSwapChain->getImageCount(), 
+			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
+			mCameraVPMatricesBuffer,
+			mSampler
+			);
+		mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
 
 		//创建多人玩家
 		mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer, mLabyrinth);
@@ -248,10 +256,12 @@ namespace GAME {
 		delete mLabyrinth;
 		delete mGamePlayer;
 		delete mCrowd;
+		delete mDungeon;
 
 		mLabyrinth = nullptr;
 		mGamePlayer = nullptr;
 		mCrowd = nullptr;
+		mDungeon = nullptr;
 
 		if (Global::MultiplePeopleMode)
 		{
@@ -483,6 +493,7 @@ namespace GAME {
 			//mGIF->UpDataCommandBuffer();
 			mGamePlayer->InitCommandBuffer();
 			mCrowd->ReconfigurationCommandBuffer();
+			mDungeon->initCommandBuffer();
 		}
 		
 
@@ -575,6 +586,8 @@ namespace GAME {
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
 		TOOL::mTimer->StartEnd();
+
+		mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
 
 		m_angle = mGamePlayer->GetObjectCollision()->GetAngleFloat();
 
@@ -683,13 +696,15 @@ namespace GAME {
 	void Application::GameCommandBuffers(unsigned int Format_i, VkCommandBufferInheritanceInfo info) {
 		
 
-		mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
+		//mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 
 		mParticleSystem->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 		//加到显示数组中
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
-		if(Global::MistSwitch)mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
+		//if(Global::MistSwitch)mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
+
+		mDungeon->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}

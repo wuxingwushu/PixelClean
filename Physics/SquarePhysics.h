@@ -3,6 +3,7 @@
 #include "StructuralComponents.h"		//设置的结构体
 #include "ObjectDecorator.h"			//Class修饰体
 #include "FixedSizeTerrain.h"			//固定大小的网格地图（静态）（物理模块）
+#include "MoveTerrain.h"				//固定大小的网格地图群
 #include "ObjectCollision.h"			//固定大小的网格（动态）（物理模块）
 #include "PixelCollision.h"				//格子物理（动态）（物理模块）
 #include "../Tool/ContinuousData.h"		//动态连续储存
@@ -45,12 +46,12 @@ namespace SquarePhysics {
 			}
 		}
 		//设置地图
-		void SetFixedSizeTerrain(FixedSizeTerrain* LFixedSizeTerrain) { mFixedSizeTerrain = LFixedSizeTerrain; }
+		void SetFixedSizeTerrain(GridDecorator* LTerrain) { mTerrain = LTerrain; }
 		//物理模拟
 		void PhysicsSimulation(float TimeStep);
 
 	private:
-		FixedSizeTerrain* mFixedSizeTerrain = nullptr;					//地图
+		GridDecorator* mTerrain = nullptr;					//地图
 		ContinuousData<ObjectCollision*>* mObjectCollisionS = nullptr;	//玩家，物品，碎片
 		ContinuousData<PixelCollision*>* mPixelCollisionS = nullptr;	//子弹，碎片
 	};

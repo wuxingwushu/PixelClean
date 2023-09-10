@@ -178,26 +178,41 @@ namespace GAME {
 	}
 
 	void Application::LoadingGame() {
-		//生成迷宫
-		mLabyrinth = new Labyrinth(mSquarePhysics);
-		mLabyrinth->InitLabyrinth(mDevice, 21, 21);
-		mLabyrinth->initUniformManager(
-			mDevice,
-			mSwapChain->getImageCount(),
-			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
-			&mCameraVPMatricesBuffer,
-			mSampler
-		);
-		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
+		float mGamePlayerPosX = mCamera.getCameraPos().x;
+		float mGamePlayerPosY = mCamera.getCameraPos().y;
 
-		mDungeon = new Dungeon(mDevice, 10, 10);
-		mDungeon->initUniformManager(
-			mSwapChain->getImageCount(), 
-			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
-			mCameraVPMatricesBuffer,
-			mSampler
+		if (Global::GameMode) {
+			//生成迷宫
+			mLabyrinth = new Labyrinth(mSquarePhysics);
+			mLabyrinth->InitLabyrinth(mDevice, 21, 21);
+			mLabyrinth->initUniformManager(
+				mDevice,
+				mSwapChain->getImageCount(),
+				mPipelineS->GetPipeline(0)->DescriptorSetLayout,
+				&mCameraVPMatricesBuffer,
+				mSampler
 			);
-		mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
+			mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
+
+			glm::ivec2 Lpos = mLabyrinth->GetLegitimateGeneratePos();
+			mGamePlayerPosX = Lpos.x;
+			mGamePlayerPosY = Lpos.y;
+		}
+		else {
+			mDungeon = new Dungeon(mDevice, 50, 30, mSquarePhysics);
+			mDungeon->initUniformManager(
+				mSwapChain->getImageCount(),
+				mPipelineS->GetPipeline(0)->DescriptorSetLayout,
+				mCameraVPMatricesBuffer,
+				mSampler
+			);
+			mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
+			mGamePlayerPosX = 0;
+			mGamePlayerPosY = 0;
+		}
+		
+
+		
 
 		//创建多人玩家
 		mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer, mLabyrinth);
@@ -206,7 +221,7 @@ namespace GAME {
 
 
 		//创建玩家
-		mGamePlayer = new GamePlayer(mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSquarePhysics, mCamera.getCameraPos().x, mCamera.getCameraPos().y);
+		mGamePlayer = new GamePlayer(mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
 		mGamePlayer->initUniformManager(
 			mDevice,
 			mCommandPool,
@@ -253,15 +268,21 @@ namespace GAME {
 	}
 
 	void Application::UninstallGame() {
-		delete mLabyrinth;
-		delete mGamePlayer;
+		if (Global::GameMode) {
+			delete mLabyrinth;
+			mLabyrinth = nullptr;
+		}
+		else {
+			delete mDungeon;
+			mDungeon = nullptr;
+		}
 		delete mCrowd;
-		delete mDungeon;
+		delete mGamePlayer;
 
-		mLabyrinth = nullptr;
+		
 		mGamePlayer = nullptr;
 		mCrowd = nullptr;
-		mDungeon = nullptr;
+		
 
 		if (Global::MultiplePeopleMode)
 		{
@@ -488,8 +509,8 @@ namespace GAME {
 			Global::MainCommandBufferS[i] = true;
 		}
 
-		if (mLabyrinth != nullptr) {
-			mLabyrinth->ThreadUpdateCommandBuffer();
+		if (mGamePlayer != nullptr) {
+			//mLabyrinth->ThreadUpdateCommandBuffer();
 			//mGIF->UpDataCommandBuffer();
 			mGamePlayer->InitCommandBuffer();
 			mCrowd->ReconfigurationCommandBuffer();
@@ -587,7 +608,7 @@ namespace GAME {
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
 		TOOL::mTimer->StartEnd();
 
-		mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
+		
 
 		m_angle = mGamePlayer->GetObjectCollision()->GetAngleFloat();
 
@@ -634,17 +655,23 @@ namespace GAME {
 		
 		mCrowd->TimeoutDetection();//检测玩家更新情况
 		
-		mLabyrinth->UpDateMaps();
+		if (Global::GameMode) {
+			mLabyrinth->UpDateMaps();
 
-		//战争迷雾
-		TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
-		static double MistContinuityFire = 0;
-		MistContinuityFire += TOOL::FPStime;
-		if (MistContinuityFire > 0.02f) {
-			MistContinuityFire = 0;
-			mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
+			//战争迷雾
+			TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
+			static double MistContinuityFire = 0;
+			MistContinuityFire += TOOL::FPStime;
+			if (MistContinuityFire > 0.02f) {
+				MistContinuityFire = 0;
+				mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
+			}
+			TOOL::mTimer->StartEnd();
 		}
-		TOOL::mTimer->StartEnd();
+		else {
+			mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
+		}
+		
 
 		//ImGui显示录制
 		if (Global::Monitor) {
@@ -696,15 +723,14 @@ namespace GAME {
 	void Application::GameCommandBuffers(unsigned int Format_i, VkCommandBufferInheritanceInfo info) {
 		
 
-		//mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
+		if (Global::GameMode) { mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i); }
+		else { mDungeon->GetCommandBuffer(&ThreadCommandBufferS, Format_i); }
 
 		mParticleSystem->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 		//加到显示数组中
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
-		//if(Global::MistSwitch)mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i);
-
-		mDungeon->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
+		if (Global::GameMode) { if (Global::MistSwitch)mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i); }
 
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}

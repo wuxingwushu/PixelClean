@@ -9,13 +9,15 @@ namespace SquarePhysics {
 	class GridDecorator //装饰器模式
 	{
 	public:
-		GridDecorator(unsigned int x, unsigned int y, unsigned int SideLength)
+		GridDecorator(unsigned int x, unsigned int y, unsigned int SideLength, bool Structure = true)
 			: mNumberX(x), mNumberY(y), mSideLength(SideLength)
 		{
-			mPixelAttributeS = new PixelAttribute * [mNumberX];
-			for (size_t i = 0; i < mNumberX; i++)
-			{
-				mPixelAttributeS[i] = new PixelAttribute[mNumberY];
+			if (Structure) {
+				mPixelAttributeS = new PixelAttribute * [mNumberX];
+				for (size_t i = 0; i < mNumberX; i++)
+				{
+					mPixelAttributeS[i] = new PixelAttribute[mNumberY];
+				}
 			}
 		}
 		~GridDecorator() {}
@@ -38,7 +40,7 @@ namespace SquarePhysics {
 
 
 		//设置某个点
-		bool SetFixedCollisionBool(glm::ivec2 pos, bool Bool) {
+		virtual bool SetFixedCollisionBool(glm::ivec2 pos, bool Bool) {
 			pos.x += OriginX;
 			pos.y += OriginY;
 			if (pos.x >= mNumberX || pos.x < 0)
@@ -56,7 +58,7 @@ namespace SquarePhysics {
 			return true;
 		}
 
-		[[nodiscard]] bool GetFixedCollisionBool(glm::ivec2 pos) {
+		virtual [[nodiscard]] bool GetFixedCollisionBool(glm::ivec2 pos) {
 			pos.x += OriginX;
 			pos.y += OriginY;
 			if (pos.x >= mNumberX || pos.x < 0)
@@ -71,14 +73,14 @@ namespace SquarePhysics {
 		}
 
 		//获取某个像素带点的摩檫力系数
-		[[nodiscard]] float GetFrictionCoefficient(glm::ivec2 pos) {
+		virtual [[nodiscard]] float GetFrictionCoefficient(glm::ivec2 pos) {
 			pos.x += OriginX;
 			pos.y += OriginY;
-			if (pos.x > mNumberX || pos.x < 0)
+			if (pos.x >= mNumberX || pos.x < 0)
 			{
 				return 1.0f;
 			}
-			if (pos.y > mNumberY || pos.y < 0)
+			if (pos.y >= mNumberY || pos.y < 0)
 			{
 				return 1.0f;
 			}
@@ -86,7 +88,7 @@ namespace SquarePhysics {
 		}
 
 		//判断点是否出界
-		[[nodiscard]] bool BoundaryJudge(glm::ivec2 pos) {
+		virtual [[nodiscard]] bool BoundaryJudge(glm::ivec2 pos) {
 			if (pos.x >= mNumberX && pos.x < 0)
 			{
 				return false;
@@ -99,7 +101,7 @@ namespace SquarePhysics {
 		}
 
 		//判断点是否出界（中心偏移）
-		[[nodiscard]] bool CrossingTheBoundary(glm::ivec2 pos) {
+		virtual [[nodiscard]] bool CrossingTheBoundary(glm::ivec2 pos) {
 			pos.x += OriginX;
 			if ((pos.x >= mNumberX) || (pos.x < 0))
 			{
@@ -123,7 +125,7 @@ namespace SquarePhysics {
 
 
 		//调用回调函数
-		void CollisionCallback(int x, int y, bool Bool) {
+		virtual void CollisionCallback(int x, int y, bool Bool) {
 			if (SetFixedCollisionBool({x, y}, Bool)) {
 				x += OriginX;
 				y += OriginY;
@@ -132,7 +134,12 @@ namespace SquarePhysics {
 		}
 
 
-
+		
+		//（输入是 Object 的 mPixelAttributeS 数组索引两个点，返回是 mPixelAttributeS 数组索引）
+		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End) {
+			assert(true && "RadialCollisionDetection Absence Reconfiguration");
+			return CollisionInfo{};
+		}
 
 		//像素边长
 		unsigned int mSideLength = 1;

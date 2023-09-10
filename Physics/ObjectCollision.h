@@ -55,13 +55,13 @@ namespace SquarePhysics {
 		//（输入是 SquarePhysics 坐标的两个点，返回是 mPixelAttributeS 数组索引）
 		[[nodiscard]] CollisionInfo RelativeCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End);
 		//（输入是 Object 的 mPixelAttributeS 数组索引两个点，返回是 mPixelAttributeS 数组索引）
-		[[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
+		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
 
 		
 
 	private:
 		unsigned int OutlinePointSize = 0;//点集的数量
-		glm::vec2 mOutlinePointSet[256];//外包裹点集
+		glm::vec2 mOutlinePointSet[256]{};//外包裹点集
 	};
 
 }

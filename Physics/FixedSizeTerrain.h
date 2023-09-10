@@ -30,7 +30,7 @@ namespace SquarePhysics {
 
 
 		//路径碰撞判断
-		[[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
+		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
 
 	private:
 		float PosX = 0;

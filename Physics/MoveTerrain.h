@@ -6,7 +6,7 @@
 namespace SquarePhysics {
 
 	template<typename ClassT>
-	class MoveTerrain
+	class MoveTerrain :public GridDecorator
 	{
 	public:
 		struct RigidBodyAndModel {
@@ -33,25 +33,52 @@ namespace SquarePhysics {
 			return mGridDecoratorS->GetPlate(x,y);
 		}
 
-		bool GetFixedCollisionBool(glm::ivec2 dian) {
-			glm::ivec2 DA = dian / mSquareSideLength;
-			glm::ivec2 XI = dian % mSquareSideLength;
-			return mGridDecoratorS->GetPlate(DA.x, DA.y)->mGridDecorator->GetFixedCollisionBool(XI);
+		/************************  重写  ************************/
+		virtual [[nodiscard]] bool GetFixedCollisionBool(glm::ivec2 pos) {
+			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->CalculateGetPlate(pos.x, pos.y);
+			if (LRigidBodyAndModel != nullptr) {
+				return LRigidBodyAndModel->mGridDecorator->GetFixedCollisionBool({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
+			}
+			return true;
+		}
+
+		virtual [[nodiscard]] float GetFrictionCoefficient(glm::ivec2 pos) {
+			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->CalculateGetPlate(pos.x, pos.y);
+			if (LRigidBodyAndModel != nullptr) {
+				return LRigidBodyAndModel->mGridDecorator->GetFrictionCoefficient({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
+			}
+			return 1.0f;
+		}
+
+		//调用回调函数
+		virtual void CollisionCallback(int x, int y, bool Bool) {
+			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->CalculateGetPlate(x, y);
+			if (LRigidBodyAndModel != nullptr) {
+				LRigidBodyAndModel->mGridDecorator->CollisionCallback(x % mSquareSideLength, y % mSquareSideLength, Bool);
+			}
 		}
 
 		//路径碰撞判断
-		[[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
+		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
+		/************************  写完  ************************/
+
+		
 
 		//更新位置
 		void UpDataPos(float x, float y) {
 			mGridDecoratorS->UpData(x, y);
 		}
 
+		RigidBodyAndModel* CalculateGetRigidBodyAndModel(float x, float y) {
+			return mGridDecoratorS->CalculateGetPlate(x, y);
+		}
+
+		void SetPos(float x, float y) {
+			mGridDecoratorS->SetPos(x, y);
+		}
+
 	private:
-		unsigned int mNumberX;
-		unsigned int mNumberY;
 		unsigned int mSquareSideLength;
-		unsigned int mSideLength;
 		MovePlate<RigidBodyAndModel>* mGridDecoratorS = nullptr;
 	};
 
@@ -63,15 +90,13 @@ namespace SquarePhysics {
 		unsigned int SquareSideLength,
 		unsigned int SideLength
 	):
-		mNumberX(NumberX),
-		mNumberY(NumberY),
 		mSquareSideLength(SquareSideLength),
-		mSideLength(SideLength)
+		GridDecorator(NumberX, NumberY, SideLength, false)
 	{
 		mGridDecoratorS = new MovePlate<RigidBodyAndModel>(mNumberX, mNumberY, mSquareSideLength, mNumberX / 2, mNumberY / 2);
-		for (size_t ix = 0; ix < NumberX; ix++)
+		for (size_t ix = 0; ix < mNumberX; ix++)
 		{
-			for (size_t iy = 0; iy < NumberY; iy++)
+			for (size_t iy = 0; iy < mNumberY; iy++)
 			{
 				mGridDecoratorS->GetPlate(ix, iy)->mGridDecorator = new GridDecorator(mSquareSideLength, mSquareSideLength, mSideLength);
 			}
@@ -81,7 +106,14 @@ namespace SquarePhysics {
 	template<typename ClassT>
 	MoveTerrain<ClassT>::~MoveTerrain()
 	{
-
+		for (size_t ix = 0; ix < mNumberX; ix++)
+		{
+			for (size_t iy = 0; iy < mNumberY; iy++)
+			{
+				delete mGridDecoratorS->GetPlate(ix, iy)->mGridDecorator;
+			}
+		}
+		delete mGridDecoratorS;
 	}
 
 	template<typename ClassT>

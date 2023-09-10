@@ -98,7 +98,7 @@ namespace SquarePhysics {
 		{
 			LObject = ObjectNumberS[i];
 			Jpos = LObject->GetPos();//久位置
-			LObject->FrameTimeStep(TimeStep, mFixedSizeTerrain->GetFrictionCoefficient(Jpos));//物理模拟
+			LObject->FrameTimeStep(TimeStep, mTerrain->GetFrictionCoefficient(Jpos));//物理模拟
 			Xpos = LObject->GetPos();//新位置
 			Deviation = Xpos - Jpos;//移动方向和大小
 			for (size_t i2 = 0; i2 < LObject->GetOutlinePointSize(); i2++)
@@ -110,7 +110,7 @@ namespace SquarePhysics {
 				End = Xpos + Dian;//新位置的骨骼点位置
 				if (End.x < 0)End.x -= 1;//负值偏移
 				if (End.y < 0)End.y -= 1;//负值偏移
-				LCollisionInfo = mFixedSizeTerrain->RadialCollisionDetection(Start, End);//对地图射线碰撞进行判断
+				LCollisionInfo = mTerrain->RadialCollisionDetection(Start, End);//对地图射线碰撞进行判断
 				if (LCollisionInfo.Collision) {//是否碰撞
 					Speed = LObject->GetSpeed();
 					if (fabs(Dian.x) < fabs(Dian.y))//偏向玩家位置移动
@@ -150,11 +150,11 @@ namespace SquarePhysics {
 			Jpos = LPixel->GetPos();//现在位置
 			LPixel->FrameTimeStep(TimeStep, 0);//更新物理状态
 			Xpos = LPixel->GetPos();//新位置
-			LCollisionInfo = mFixedSizeTerrain->RadialCollisionDetection(Jpos, Xpos);//对地图碰撞进行判断
+			LCollisionInfo = mTerrain->RadialCollisionDetection(Jpos, Xpos);//对地图碰撞进行判断
 			if (LCollisionInfo.Collision) {//是否碰撞
 
 				LPixel->SetPos(LCollisionInfo.Pos);//设置为碰撞位置
-				if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LPixel, mFixedSizeTerrain, nullptr)) {
+				if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LPixel, mTerrain, nullptr)) {
 					LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
 					mPixelCollisionS->Delete(i);//销毁对应的像素
 					i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件

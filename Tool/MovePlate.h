@@ -31,7 +31,7 @@ public:
 		{
 			mPlate[i] = new PlateT[mNumberY];
 		}
-		LPlateX = new PlateT*[mNumberX];
+		LPlateX = new PlateT*[mNumberX];	
 		LPlateY = new PlateT[mNumberY];
 	}
 
@@ -56,28 +56,40 @@ public:
 
 	//设置位置
 	inline void SetPos(float x, float y) {
-		mPosX = int(x) / mEdge;
-		mPosY = int(y) / mEdge;
+		mPosX = x / mEdge;
+		mPosY = y / mEdge;
 	}
 
 	PlateT* GetPlate(unsigned int x, unsigned int y) {
+		if (x >= mNumberX || y >= mNumberY) {
+			return nullptr;
+		}
 		return &mPlate[x][y];
+	}
+
+	PlateT* CalculateGetPlate(float x, float y) {
+		unsigned int xx = (x / mEdge) - mPosX + mOriginX;
+		unsigned int yy = (y / mEdge) - mPosY + mOriginY;
+		if (xx >= mNumberX || yy >= mNumberY) {
+			return nullptr;
+		}
+		return &mPlate[xx][yy];
 	}
 
 	//更新当前监测位置，判断是否需要移动板块，返回板块是否移动信息
 	bool UpData(float x, float y) {
 		bool UpDataBool = false;
-		int uX = (int(x) / mEdge) - mPosX;
-		int uY = (int(y) / mEdge) - mPosY;
+		int uX = (x / mEdge) - mPosX;
+		int uY = (y / mEdge) - mPosY;
 		if ((fabs(uX) < mNumberX) && (fabs(uY) < mNumberY)) {
+			if (uY != 0) {
+				mPosY += uY;
+				MovePlateY(uY, uX);
+				UpDataBool = true;
+			}
 			if (uX != 0) {
 				mPosX += uX;
 				MovePlateX(uX);
-				UpDataBool = true;
-			}
-			if (uY != 0) {
-				mPosY += uY;
-				MovePlateY(uY);
 				UpDataBool = true;
 			}
 		}
@@ -140,9 +152,16 @@ public:
 	}
 
 	//板块 Y 的移动
-	void MovePlateY(int uY) {
+	void MovePlateY(int uY, int uX) {
+		int tX = 0, wX = 0;
+		if (uX > 0) {
+			tX = uX;
+		}
+		else {
+			wX = uX;
+		}
 		if (uY > 0) {
-			for (size_t ix = 0; ix < mNumberX; ix++)
+			for (size_t ix = tX; ix < mNumberX + wX; ix++)
 			{
 				for (size_t iy = 0; iy < uY; iy++)
 				{
@@ -154,14 +173,14 @@ public:
 				}
 				for (size_t iy = (mNumberY - uY); iy < mNumberY; iy++)
 				{
-					mPlate[ix][iy] = LPlateY[iy - (mNumberX - uY)];
+					mPlate[ix][iy] = LPlateY[iy - (mNumberY - uY)];
 					mDeleteCallback(&mPlate[ix][iy], mDeleteData);
 					mGenerateCallback(&mPlate[ix][iy], (ix + mPosX - mOriginX), (iy + mPosY - mOriginY), mGenerateData);
 				}
 			}
 		}
 		else {
-			for (size_t ix = 0; ix < mNumberX; ix++)
+			for (size_t ix = tX; ix < mNumberX + wX; ix++)
 			{
 				for (size_t iy = 0; iy < -uY; iy++)
 				{

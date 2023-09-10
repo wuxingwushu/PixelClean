@@ -13,6 +13,8 @@ namespace Global {
 	extern bool GameResourceLoadingBool;//加载游戏资源开关
 	extern bool GameResourceUninstallBool;//卸载游戏资源开关
 
+	extern bool GameMode;//游戏模式
+
 	/*  测试  */
 
 	extern bool ConsoleBool;

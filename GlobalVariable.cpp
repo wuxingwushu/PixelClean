@@ -14,6 +14,8 @@ namespace Global {
 	bool GameResourceLoadingBool = false;
 	bool GameResourceUninstallBool = false;
 
+	bool GameMode;
+
 	/*  测试  */
 
 	bool ConsoleBool = false;

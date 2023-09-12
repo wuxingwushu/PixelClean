@@ -65,8 +65,8 @@ namespace SquarePhysics {
 		
 
 		//更新位置
-		void UpDataPos(float x, float y) {
-			mGridDecoratorS->UpData(x, y);
+		MovePlateInfo UpDataPos(float x, float y) {
+			return mGridDecoratorS->UpData(x, y);
 		}
 
 		RigidBodyAndModel* CalculateGetRigidBodyAndModel(float x, float y) {
@@ -76,6 +76,9 @@ namespace SquarePhysics {
 		void SetPos(float x, float y) {
 			mGridDecoratorS->SetPos(x, y);
 		}
+
+		int GetGridSPosX() { return mGridDecoratorS->GetPosX(); }
+		int GetGridSPosY() { return mGridDecoratorS->GetPosY(); }
 
 	private:
 		unsigned int mSquareSideLength;
@@ -93,7 +96,9 @@ namespace SquarePhysics {
 		mSquareSideLength(SquareSideLength),
 		GridDecorator(NumberX, NumberY, SideLength, false)
 	{
-		mGridDecoratorS = new MovePlate<RigidBodyAndModel>(mNumberX, mNumberY, mSquareSideLength, mNumberX / 2, mNumberY / 2);
+		OriginX = mNumberX / 2;
+		OriginY = mNumberY / 2;
+		mGridDecoratorS = new MovePlate<RigidBodyAndModel>(mNumberX, mNumberY, mSquareSideLength, OriginX, OriginY);
 		for (size_t ix = 0; ix < mNumberX; ix++)
 		{
 			for (size_t iy = 0; iy < mNumberY; iy++)

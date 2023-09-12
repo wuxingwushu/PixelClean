@@ -657,7 +657,7 @@ namespace GAME {
 		CalculateBufferS[2] = { &WallBool->getBufferInfo() };
 
 
-		mCalculate = new VulKan::Calculate(mDevice, &CalculateBufferS, std::string(WarfareMist_spv).c_str());
+		mCalculate = new VulKan::Calculate(mDevice, &CalculateBufferS, WarfareMist_spv);
 	}
 
 	

@@ -669,7 +669,11 @@ namespace GAME {
 			TOOL::mTimer->StartEnd();
 		}
 		else {
-			mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
+			MovePlateInfo PlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
+			if (PlateInfo.UpData) {
+				mDungeon->UpdataMistData();
+			}
+			mDungeon->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
 		}
 		
 
@@ -730,7 +734,10 @@ namespace GAME {
 		//加到显示数组中
 		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
-		if (Global::GameMode) { if (Global::MistSwitch)mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i); }
+		if (Global::MistSwitch) {
+			if (Global::GameMode) { mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i); }
+			else { mDungeon->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i); }
+		}
 
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 	}

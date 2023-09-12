@@ -19,5 +19,6 @@
 #define	vs_spv					"./shaders/vs.spv"
 #define	fs_spv					"./shaders/fs.spv"
 #define	WarfareMist_spv			"./shaders/WarfareMist.spv"
+#define	DungeonWarfareMist_spv	"./shaders/DungeonWarfareMist.spv"
 #define GifFrag					"./shaders/GifFragShaderF.spv"
 #define GifVert					"./shaders/GifFragShaderV.spv"

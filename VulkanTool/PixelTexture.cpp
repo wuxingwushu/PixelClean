@@ -52,8 +52,9 @@ namespace GAME {
 		);
 
 		
-
-		HOSTImage->updateBufferByMap((void*)pixelS, texWidth * texHeight * ChannelsNumber);
+		if (pixelS != nullptr) {
+			HOSTImage->updateBufferByMap((void*)pixelS, texWidth * texHeight * ChannelsNumber);
+		}
 
 		UpDataImage();
 

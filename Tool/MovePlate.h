@@ -1,5 +1,12 @@
 #pragma once
 
+struct MovePlateInfo
+{
+	bool UpData = false;
+	int X = 0;
+	int Y = 0;
+};
+
 template<typename PlateT>
 class MovePlate
 {
@@ -21,6 +28,9 @@ private:
 	PlateT** LPlateX = nullptr;
 	PlateT* LPlateY = nullptr;
 public:
+	int GetPosX() { return mPosX; }
+	int GetPosY() { return mPosY; }
+
 	constexpr MovePlate(const unsigned int NumberX, const unsigned int NumberY, const unsigned int Edge,
 		const unsigned int OriginX = 0, const unsigned int OriginY = 0) :
 		mNumberX(NumberX), mNumberY(NumberY), mEdge(Edge),
@@ -77,25 +87,25 @@ public:
 	}
 
 	//更新当前监测位置，判断是否需要移动板块，返回板块是否移动信息
-	bool UpData(float x, float y) {
-		bool UpDataBool = false;
-		int uX = (x / mEdge) - mPosX;
-		int uY = (y / mEdge) - mPosY;
-		if ((fabs(uX) < mNumberX) && (fabs(uY) < mNumberY)) {
-			if (uY != 0) {
-				mPosY += uY;
-				MovePlateY(uY, uX);
-				UpDataBool = true;
+	MovePlateInfo UpData(float x, float y) {
+		MovePlateInfo Info;
+		Info.X = (x / mEdge) - mPosX;
+		Info.Y = (y / mEdge) - mPosY;
+		if ((fabs(Info.X) < mNumberX) && (fabs(Info.Y) < mNumberY)) {
+			if (Info.Y != 0) {
+				mPosY += Info.Y;
+				MovePlateY(Info.Y, Info.X);
+				Info.UpData = true;
 			}
-			if (uX != 0) {
-				mPosX += uX;
-				MovePlateX(uX);
-				UpDataBool = true;
+			if (Info.X != 0) {
+				mPosX += Info.X;
+				MovePlateX(Info.X);
+				Info.UpData = true;
 			}
 		}
 		else {//全部都要更新
-			mPosX += uX;
-			mPosY += uY;
+			mPosX += Info.X;
+			mPosY += Info.Y;
 			for (size_t Nx = 0; Nx < mNumberX; Nx++)
 			{
 				for (size_t Ny = 0; Ny < mNumberY; Ny++)
@@ -104,10 +114,12 @@ public:
 					mGenerateCallback(&mPlate[Nx][Ny], (Nx + mPosX - mOriginX), (Ny + mPosY - mOriginY), mGenerateData);
 				}
 			}
-			UpDataBool = true;
+			Info.UpData = true;
 		}
-		return UpDataBool;
+		return Info;
 	}
+
+private:
 
 	//板块 X 的移动
 	void MovePlateX(int uX) {

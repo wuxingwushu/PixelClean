@@ -10,4 +10,6 @@ mkdir Spv
 
 .\..\glslangValidator.exe  -V WarfareMist.comp -o Spv/WarfareMist.spv
 
+.\..\glslangValidator.exe  -V DungeonWarfareMist.comp -o Spv/DungeonWarfareMist.spv
+
 pause

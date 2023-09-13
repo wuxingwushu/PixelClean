@@ -29,7 +29,7 @@ namespace GAME {
 	};
 
 	struct TextureAndBuffer {
-		VulKan::Buffer** mBufferS = nullptr;
+		VulKan::Buffer* mBufferS = nullptr;
 		PixelTexture* mPixelTexture = nullptr;
 		unsigned int Type = 0;
 		unsigned int MistPointerX = 0;
@@ -47,7 +47,7 @@ namespace GAME {
 	{
 	public:
 
-		Dungeon(VulKan::Device* device, unsigned int X, unsigned int Y, SquarePhysics::SquarePhysics* squarePhysics);
+		Dungeon(VulKan::Device* device, unsigned int X, unsigned int Y, SquarePhysics::SquarePhysics* squarePhysics, float GamePlayerX, float GamePlayerY);
 		~Dungeon();
 
 		//初始化描述符
@@ -92,7 +92,7 @@ namespace GAME {
 	public://破坏
 		const unsigned int mNumberX;
 		const unsigned int mNumberY;
-
+		
 		int* LSPointer = nullptr;//贴图数据指针
 		void Destroy(int x, int y, bool Bool);//贴图修改
 
@@ -100,11 +100,18 @@ namespace GAME {
 
 		//计算可视范围
 		void UpdataMist(int x, int y, float ang);
+
+		bool Pointerkaiguan = true;
+		unsigned char* LSMistPointer = nullptr;
 		PixelTexture* WarfareMist{ nullptr };			//每块的贴图
 		VulKan::Buffer* WallBool{ nullptr };//储存碰撞(是否是墙壁)
 		void UpdataMistData();
 		int pianX = 0;
 		int pianY = 0;
+
+
+		std::vector<std::future<void>> MultithreadingGenerate;
+		std::vector<PixelTexture*>MultithreadingPixelTexture;
 	private://迷雾
 		//初始化战争迷雾
 		void InitMist();
@@ -112,11 +119,11 @@ namespace GAME {
 		void DeleteMist();
 
 		//计算
-		VulKan::Calculate* mCalculate = nullptr;
+		VulKan::Calculate* mCalculate = nullptr;//GPU计算
 		Dungeonmiwustruct wymiwustruct{};
 		VulKan::Buffer* jihsuanTP{ nullptr };//储存计算结果的缓存
 		VulKan::Buffer* information{ nullptr };//储存原数据的缓存(图片纹理)
-		VulKan::Buffer* CalculateIndex{ nullptr };
+		VulKan::Buffer* CalculateIndex{ nullptr };//计算UV像素位置索引
 		//渲染
 		VulKan::Buffer*** mMistUVBuffer{ nullptr };		//模型UV缓存
 		
@@ -131,6 +138,7 @@ namespace GAME {
 		VulKan::Buffer* mUVBuffer{ nullptr };		//模型UV缓存
 		VulKan::Buffer* mIndexBuffer{ nullptr };	//模型顶点索引缓存
 		size_t mIndexDatasSize{ 0 };				//顶点数量
+		
 
 		//获取  顶点和UV  VkBuffer数组
 		[[nodiscard]] std::vector<VkBuffer> getVertexBuffers() const {
@@ -152,7 +160,7 @@ namespace GAME {
 		VulKan::RenderPass* wRenderPass{ nullptr };
 		VulKan::Pipeline* wPipeline{ nullptr };
 		VulKan::SwapChain* wSwapChain{ nullptr };
-		SquarePhysics::SquarePhysics* mSquarePhysics{ nullptr };
+		SquarePhysics::SquarePhysics* wSquarePhysics{ nullptr };
 	};
 
 }

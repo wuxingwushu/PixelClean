@@ -9,6 +9,7 @@ namespace GAME {
 	class Crowd;
 	class GamePlayer;
 	class Application;
+	class ImGuiInterFace;
 }
 
 namespace Opcode {
@@ -18,6 +19,7 @@ namespace Opcode {
 	extern GAME::Crowd* OpCrowd;
 	extern GAME::GamePlayer* OpGamePlayer;
 	extern GAME::Application* OpApplication;
+	extern GAME::ImGuiInterFace* OpImGuiInterFace;
 
 	void OPNULLPTR(Queue<const char*>* CodeS);
 

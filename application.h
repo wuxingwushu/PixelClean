@@ -36,6 +36,8 @@
 
 #include "Labyrinth/Dungeon.h"
 
+#include "VulkanTool/VisualEffect.h"
+
 
 
 namespace GAME {
@@ -182,6 +184,8 @@ namespace GAME {
 		//测试
 		//GifPipeline* mGifPipeline = nullptr;//GIF渲染管线
 		//GIF* mGIF = nullptr;//GIF
-		Dungeon* mDungeon = nullptr;
+		Dungeon* mDungeon = nullptr;//无限地图
+
+		VulKan::VisualEffect* mVisualEffect{ nullptr };//视觉效果
 	};
 }

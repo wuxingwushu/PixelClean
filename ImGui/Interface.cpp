@@ -249,7 +249,7 @@ namespace GAME {
 		}
 		ImGui::SameLine();
 		ImGui::SetCursorPosX(posX + (kuan / 2) + 4);
-		if (ImGui::Button(u8"PVP ", { kuan/2 - 2, Bgao })) {
+		if (ImGui::Button(u8"迷宫 ", { kuan/2 - 2, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 			Global::GameMode = true;

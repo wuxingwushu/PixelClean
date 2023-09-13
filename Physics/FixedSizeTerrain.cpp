@@ -12,11 +12,6 @@ namespace SquarePhysics {
 
 	FixedSizeTerrain::~FixedSizeTerrain()
 	{
-		for (size_t i = 0; i < mNumberX; i++)
-		{
-			delete[] mPixelAttributeS[i];
-		}
-		delete[] mPixelAttributeS;
 	}
 
 	[[nodiscard]] CollisionInfo FixedSizeTerrain::RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End)

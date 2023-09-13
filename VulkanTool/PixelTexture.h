@@ -34,9 +34,11 @@ namespace GAME {
 
 		[[nodiscard]] void* getHOSTImagePointer() { return HOSTImage->getupdateBufferByMap(); }
 
-		[[nodiscard]] void endHOSTImagePointer() { return HOSTImage->endupdateBufferByMap(); }
+		void endHOSTImagePointer() { HOSTImage->endupdateBufferByMap(); }
 
 		[[nodiscard]] VkBuffer getHOSTImageBuffer() { return HOSTImage->getBuffer(); }
+
+		void updateBufferByMap(void* data, size_t size) { HOSTImage->updateBufferByMap(data, size); }
 
 		void UpDataImage();
 

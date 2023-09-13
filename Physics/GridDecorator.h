@@ -20,7 +20,15 @@ namespace SquarePhysics {
 				}
 			}
 		}
-		~GridDecorator() {}
+		~GridDecorator() {
+			if (mPixelAttributeS != nullptr) {
+				for (size_t i = 0; i < mNumberX; i++)
+				{
+					delete mPixelAttributeS[i];
+				}
+				delete mPixelAttributeS;
+			}
+		}
 
 		//设置原点
 		void SetOrigin(int x, int y) {

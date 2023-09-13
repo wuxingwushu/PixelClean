@@ -1,12 +1,12 @@
 #include "Dungeon.h"
 
 #include "../VulkanTool/PixelTexture.h"
-
+#include "../Tool/Tool.h"
 
 namespace GAME {
 
 	void Destroy(int* P, int x, int y, bool Bool) {
-		P[y * 16 + x] = 0;
+		P[y * 16 + x] = *((int*)&pixelS[20][(y * 16 + x) * 4]);
 	}
 
 	void DungeonDestroy(int x, int y, bool Bool, void* wClass) {
@@ -19,61 +19,67 @@ namespace GAME {
 		int* P = (int*)LSDungeon->wDungeon->WallBool->getupdateBufferByMap();
 		P[dian] = 0;
 		LSDungeon->wDungeon->WallBool->endupdateBufferByMap();
-		P = (int*)LSDungeon->wDungeon->WarfareMist->getHOSTImagePointer();
-		P[dian] = 0;
+		unsigned char* TP = (unsigned char*)LSDungeon->wDungeon->WarfareMist->getHOSTImagePointer();
+		for (size_t i = 0; i < 4; i++)
+		{
+			TP[dian * 4 + i] = pixelS[20][(y * 16 + x) * 4 + i] * (i == 3 ? 1 : 0.3f);
+		}
 		LSDungeon->wDungeon->WarfareMist->endHOSTImagePointer();
 	}
 
-	Dungeon::Dungeon(VulKan::Device* device, unsigned int X, unsigned int Y, SquarePhysics::SquarePhysics* squarePhysics)
+	void GenerateBlock(SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* mT, int x, int y, void* Data) {
+		GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
+		ObjectUniform LUniform;
+		LUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x * 16, y * 16, 0.0f));//位移矩阵
+		mT->mModel->mBufferS->updateBufferByMap((void*)&LUniform, sizeof(ObjectUniform));
+		mT->mModel->Type = LDungeon->GetNoise(x, y);
+		bool CollisionBool = false;
+		if (mT->mModel->Type > (TextureNumber / 2)) {
+			CollisionBool = true;
+		}
+		mT->mModel->mPixelTexture->updateBufferByMap((void*)pixelS[mT->mModel->Type], 16 * 16 * 4);
+		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ix++)
+		{
+			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; iy++)
+			{
+				for (size_t i = 0; i < 4; i++)
+				{
+					LDungeon->LSMistPointer[((mT->mModel->MistPointerY * 16 + ix) * 16 * LDungeon->mNumberX * 4) + (mT->mModel->MistPointerX * 16 * 4) + (iy * 4) + i] = pixelS[mT->mModel->Type][(ix * 16 * 4) + (iy * 4) + i] * (i == 3 ? 1 : 0.3f);
+				}
+				LDungeon->LSPointer[((mT->mModel->MistPointerY * 16 + ix) * 16 * LDungeon->mNumberX) + (mT->mModel->MistPointerX * 16) + iy] = CollisionBool;
+			}
+		}		
+		SquarePhysics::PixelAttribute** LSPixelAttribute = mT->mGridDecorator->GetPixelAttribute();
+		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ix++)
+		{
+			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; iy++)
+			{
+				LSPixelAttribute[ix][iy].Collision = CollisionBool;
+			}
+		}
+	}
+
+	Dungeon::Dungeon(VulKan::Device* device, unsigned int X, unsigned int Y, SquarePhysics::SquarePhysics* squarePhysics, float GamePlayerX, float GamePlayerY)
 		:wDevice(device),
 		mNumberX(X),
 		mNumberY(Y),
-		mSquarePhysics(squarePhysics)
+		wSquarePhysics(squarePhysics)
 	{
 		mPerlinNoise = new PerlinNoise();
 
 		mMoveTerrain = new SquarePhysics::MoveTerrain<TextureAndBuffer>(mNumberX, mNumberY, mSquareSideLength, 1);
-		mMoveTerrain->SetPos(0, 0);
+		mMoveTerrain->SetPos(GamePlayerX, GamePlayerY);
 		mMoveTerrain->SetOrigin(mNumberX/2, mNumberY/2);
 		mMoveTerrain->SetCallback(
 			[](SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* mT, int x, int y, void* Data) {
 				GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
-				ObjectUniform LUniform;
-				LUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x * 16, y * 16, 0.0f));//位移矩阵
-				for (size_t i = 0; i < LDungeon->wFrameCount; i++)
-				{
-					mT->mModel->mBufferS[i]->updateBufferByMap((void*)&LUniform, sizeof(ObjectUniform));
+				if (LDungeon->Pointerkaiguan) {//开启HOST指针
+					LDungeon->Pointerkaiguan = false;
+					LDungeon->LSMistPointer = (unsigned char*)LDungeon->WarfareMist->getHOSTImagePointer();
+					LDungeon->LSPointer = (int*)LDungeon->WallBool->getupdateBufferByMap();
 				}
-				mT->mModel->Type = LDungeon->GetNoise(x, y);
-				bool CollisionBool = false;
-				if (mT->mModel->Type > (TextureNumber / 2)) {
-					CollisionBool = true;
-				}
-				mT->mModel->mPixelTexture->ModifyImage(16*16*4, (void*)pixelS[mT->mModel->Type]);
-				unsigned char* LSPointer = (unsigned char*)LDungeon->WarfareMist->getHOSTImagePointer();
-				int* WallBoolPointer = (int*)LDungeon->WallBool->getupdateBufferByMap();
-				for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ix++)
-				{
-					for (size_t iy = 0; iy < LDungeon->mSquareSideLength; iy++)
-					{
-						for (size_t i = 0; i < 4; i++)
-						{
-							LSPointer[((mT->mModel->MistPointerY * 16 + ix) * 16 * LDungeon->mNumberX * 4) + (mT->mModel->MistPointerX * 16 * 4) + (iy * 4) + i] = pixelS[mT->mModel->Type][(ix * 16 * 4) + (iy * 4) + i] * (i == 3 ? 1 : 0.3f);
-						}
-						WallBoolPointer[((mT->mModel->MistPointerY * 16 + ix) * 16 * LDungeon->mNumberX) + (mT->mModel->MistPointerX * 16) + iy] = CollisionBool;
-					}
-				}
-				LDungeon->WallBool->endupdateBufferByMap();
-				LDungeon->WarfareMist->endHOSTImagePointer();
-				LDungeon->WarfareMist->UpDataImage();
-				SquarePhysics::PixelAttribute** LSPixelAttribute = mT->mGridDecorator->GetPixelAttribute();
-				for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ix++)
-				{
-					for (size_t iy = 0; iy < LDungeon->mSquareSideLength; iy++)
-					{
-						LSPixelAttribute[ix][iy].Collision = CollisionBool;
-					}
-				}
+				LDungeon->MultithreadingPixelTexture.push_back(mT->mModel->mPixelTexture);
+				LDungeon->MultithreadingGenerate.push_back(TOOL::mThreadPool->enqueue(&GenerateBlock, mT, x, y, Data));
 			},
 			this,
 			[](SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* mT, void* Data) {
@@ -81,7 +87,7 @@ namespace GAME {
 			},
 			this
 		);
-		mSquarePhysics->SetFixedSizeTerrain(mMoveTerrain);
+		wSquarePhysics->SetFixedSizeTerrain(mMoveTerrain);
 
 		const float Positions[] = {
 			-0.001f, -0.001f, 0.0f,
@@ -134,6 +140,53 @@ namespace GAME {
 
 	Dungeon::~Dungeon()
 	{
+		DeleteMist();
+
+		delete mMoveTerrain;
+
+		delete mPositionBuffer;
+		delete mUVBuffer;
+		delete mIndexBuffer;
+
+		delete mPerlinNoise;
+
+		for (size_t ix = 0; ix < mNumberX; ix++)
+		{
+			for (size_t iy = 0; iy < mNumberY; iy++)
+			{
+				delete mMistDescriptorSet[ix][iy];
+				delete mMistUVBuffer[ix][iy];
+				delete mDescriptorSet[ix][iy];
+
+				delete mTextureAndBuffer[ix][iy].mBufferS;
+				delete mTextureAndBuffer[ix][iy].mPixelTexture;
+			}
+			delete mMistDescriptorSet[ix];
+			delete mMistUVBuffer[ix];
+			delete mDescriptorSet[ix];
+
+			delete mDungeonDestroyStruct[ix]; 
+			delete mTextureAndBuffer[ix];
+		}
+		delete mMistDescriptorSet;
+		delete mMistUVBuffer;
+		delete mDescriptorSet;
+
+		delete mDungeonDestroyStruct;
+		delete mTextureAndBuffer;
+
+
+		for (size_t i = 0; i < wFrameCount; i++)
+		{
+			delete mMistCommandBuffer[i];
+			delete mCommandBuffer[i];
+		}
+		delete mMistCommandBuffer;
+		delete mCommandBuffer;
+
+		delete WarfareMist;
+		delete mDescriptorPool;
+		delete mCommandPool;
 	}
 
 	//初始化描述符
@@ -200,15 +253,14 @@ namespace GAME {
 			mMistDescriptorSet[ix] = new VulKan::DescriptorSet*[mNumberY];
 			for (int iy = 0; iy < mNumberY; iy++)
 			{
-				mTextureAndBuffer[ix][iy].mBufferS = new VulKan::Buffer*[wFrameCount];
-				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3((ix - mMoveTerrain->OriginX) * 16, (iy - mMoveTerrain->OriginY) * 16, 0.0f));//位移矩阵
+				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3((ix - mMoveTerrain->OriginX + mMoveTerrain->GetGridSPosX()) * 16, (iy - mMoveTerrain->OriginY + mMoveTerrain->GetGridSPosY()) * 16, 0.0f));//位移矩阵
+				mTextureAndBuffer[ix][iy].mBufferS = VulKan::Buffer::createUniformBuffer(wDevice, sizeof(ObjectUniform));
+				mTextureAndBuffer[ix][iy].mBufferS->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));
 				for (size_t i = 0; i < wFrameCount; i++)
 				{
-					mTextureAndBuffer[ix][iy].mBufferS[i] = VulKan::Buffer::createUniformBuffer(wDevice, sizeof(ObjectUniform));
-					mTextureAndBuffer[ix][iy].mBufferS[i]->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));
-					objectParam->mBuffers[i] = mTextureAndBuffer[ix][iy].mBufferS[i];
+					objectParam->mBuffers[i] = mTextureAndBuffer[ix][iy].mBufferS;
 				}
-				mTextureAndBuffer[ix][iy].Type = GetNoise(ix - mMoveTerrain->OriginX, iy - mMoveTerrain->OriginY);
+				mTextureAndBuffer[ix][iy].Type = GetNoise(ix - mMoveTerrain->OriginX + mMoveTerrain->GetGridSPosX(), iy - mMoveTerrain->OriginY + mMoveTerrain->GetGridSPosY());
 				mTextureAndBuffer[ix][iy].mPixelTexture = new GAME::PixelTexture(wDevice, mCommandPool, pixelS[mTextureAndBuffer[ix][iy].Type], 16, 16, 4, sampler);
 
 				bool CollisionBool = false;
@@ -379,6 +431,21 @@ namespace GAME {
 			}
 		}
 		CalculateIndex->endupdateBufferByMap();
+
+		for (size_t i = 0; i < MultithreadingGenerate.size(); i++)//等待全部线程任务结束
+		{
+			MultithreadingGenerate[i].wait();
+		}
+		MultithreadingGenerate.clear();//清空
+		for (size_t i = 0; i < MultithreadingPixelTexture.size(); i++)//提交所以上传贴图
+		{
+			MultithreadingPixelTexture[i]->UpDataImage();
+		}
+		MultithreadingPixelTexture.clear();//清空
+		//关闭HOST指针
+		WarfareMist->endHOSTImagePointer();
+		WallBool->endupdateBufferByMap();
+		Pointerkaiguan = true;
 	}
 
 	void Dungeon::DeleteMist() {
@@ -386,6 +453,7 @@ namespace GAME {
 		delete jihsuanTP;
 		delete information;
 		delete WallBool;
+		delete CalculateIndex;
 	}
 
 }

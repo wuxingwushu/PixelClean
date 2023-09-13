@@ -14,11 +14,6 @@ namespace SquarePhysics {
 
 	ObjectCollision::~ObjectCollision()
 	{
-		for (size_t i = 0; i < mNumberX; i++)
-		{
-			delete mPixelAttributeS[i];
-		}
-		delete mPixelAttributeS;
 	}
 
 	void ObjectCollision::OutlineCalculate() {

@@ -35,6 +35,21 @@ namespace SquarePhysics {
 		ObjectB->SetForce((ForceA + ForceB) / 2.0f);
 	}
 
+	ObjectSufferForce SquarePhysics::GetGoods(glm::vec2 pos) {
+		glm::vec2 Lpos;
+		ObjectCollision* LObjectDecorator = nullptr;
+		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
+		{
+			LObjectDecorator = mObjectCollisionS->Data()[i];
+			Lpos = pos - LObjectDecorator->GetPos();
+			Lpos = vec2angle(Lpos, -LObjectDecorator->GetAngleFloat());
+			if (LObjectDecorator->GetFixedCollisionBool(Lpos)) {
+				return { LObjectDecorator, Lpos };
+			}
+		}
+		return { nullptr, glm::vec2{ 0 } };
+	}
+
 	void SquarePhysics::PhysicsSimulation(float TimeStep) {
 		ObjectCollision** ObjectNumberS = mObjectCollisionS->Data();
 		PixelCollision** PixelCollisionS = mPixelCollisionS->Data();
@@ -152,14 +167,12 @@ namespace SquarePhysics {
 			Xpos = LPixel->GetPos();//新位置
 			LCollisionInfo = mTerrain->RadialCollisionDetection(Jpos, Xpos);//对地图碰撞进行判断
 			if (LCollisionInfo.Collision) {//是否碰撞
-
 				LPixel->SetPos(LCollisionInfo.Pos);//设置为碰撞位置
 				if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LPixel, mTerrain, nullptr)) {
 					LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
 					mPixelCollisionS->Delete(i);//销毁对应的像素
 					i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
 				}
-
 				continue;
 			}
 

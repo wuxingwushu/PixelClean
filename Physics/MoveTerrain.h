@@ -132,10 +132,10 @@ namespace SquarePhysics {
 		int e2;
 		while (true) {
 			if (GetFixedCollisionBool(Start)) {
-				return { true, Start };
+				return { true, Start, 1.57f - (sx == 1 ? 0 : 3.14f)};
 			}
 			if (Start.x == End.x && Start.y == End.y) {
-				return { false, Start };
+				return { false, Start, 0 };
 			}
 			e2 = 2 * err;
 			if (e2 > -dy) {
@@ -143,10 +143,10 @@ namespace SquarePhysics {
 				Start.x += sx;
 			}
 			if (GetFixedCollisionBool(Start)) {
-				return { true, Start };
+				return { true, Start, 0 + (sy == 1 ? 0 : 3.14f) };
 			}
 			if (Start.x == End.x && Start.y == End.y) {
-				return { false, Start };
+				return { false, Start, 0 };
 			}
 			if (e2 < dx) {
 				err += dx;

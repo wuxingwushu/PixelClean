@@ -50,6 +50,9 @@ namespace SquarePhysics {
 		//物理模拟
 		void PhysicsSimulation(float TimeStep);
 
+		//捕获选中动态物品
+		ObjectSufferForce GetGoods(glm::vec2 pos);
+
 	private:
 		GridDecorator* mTerrain = nullptr;					//地图
 		ContinuousData<ObjectCollision*>* mObjectCollisionS = nullptr;	//玩家，物品，碎片

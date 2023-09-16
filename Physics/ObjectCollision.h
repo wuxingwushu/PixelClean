@@ -41,6 +41,9 @@ namespace SquarePhysics {
 			return mPixelAttributeS[x][y].Collision;
 		}
 
+		//计算重心
+		void CalculationBarycenter();
+
 		//有多少个外骨架点
 		unsigned int GetOutlinePointSize() { return OutlinePointSize; }
 		//获取第 I 个外骨架点
@@ -54,8 +57,6 @@ namespace SquarePhysics {
 		[[nodiscard]] CollisionInfo SquarePhysicsCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End, glm::vec2 Direction);
 		//（输入是 SquarePhysics 坐标的两个点，返回是 mPixelAttributeS 数组索引）
 		[[nodiscard]] CollisionInfo RelativeCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End);
-		//（输入是 Object 的 mPixelAttributeS 数组索引两个点，返回是 mPixelAttributeS 数组索引）
-		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
 
 		
 

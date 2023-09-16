@@ -132,6 +132,11 @@ namespace TOOL {
 	extern float Min_values;//FPS数据 最小值
 	extern double Mean_values;//平均帧数
 
+	extern float Max_FrameAmplitude; //帧振幅 最大值
+	extern float Min_FrameAmplitude;//帧振幅 最小值
+	extern float FrameAmplitude;//帧振幅
+	extern float FrameAmplitudeAccumulate;//帧振幅累积
+
 	extern void FPS();
 #endif
 

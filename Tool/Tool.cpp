@@ -324,9 +324,27 @@ namespace TOOL {
 	float Min_values;//FPS数据 最小值
 	double Mean_values;//平均帧数
 
+
+
+	float LMax_FrameAmplitude;
+	float LMin_FrameAmplitude;
+	float Max_FrameAmplitude; //帧振幅 最大值
+	float Min_FrameAmplitude;//帧振幅 最小值
+	float FrameAmplitude;//帧振幅
+	float FrameAmplitudeAccumulate;//帧振幅累积
+
+
+	clock_t zhenfu_time;
+
 	void FPS()
 	{
 		if (number_time >= number) {
+			FrameAmplitude = FrameAmplitudeAccumulate;
+			Max_FrameAmplitude = LMax_FrameAmplitude;
+			Min_FrameAmplitude = LMin_FrameAmplitude;
+			LMax_FrameAmplitude = 0;
+			LMin_FrameAmplitude = 100.0f;
+			FrameAmplitudeAccumulate = 0;
 			number_time = 0;
 			jieshu_time = clock();
 			FPSNumber = miao_time / double(jieshu_time - kaishi_time);
@@ -355,6 +373,16 @@ namespace TOOL {
 			kaishi_time = clock();
 		}
 		else {
+			float Ltame = (float(clock() - zhenfu_time) / CLOCKS_PER_SEC) - FPStime;
+			zhenfu_time = clock();
+			Ltame = (Ltame < 0 ? -Ltame : Ltame);
+			if (LMax_FrameAmplitude < Ltame) {
+				LMax_FrameAmplitude = Ltame;
+			}
+			if (LMin_FrameAmplitude > Ltame) {
+				LMin_FrameAmplitude = Ltame;
+			}
+			FrameAmplitudeAccumulate += Ltame;
 			number_time++;
 		}
 	}

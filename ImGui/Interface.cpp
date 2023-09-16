@@ -699,6 +699,7 @@ namespace GAME {
 
 	void ImGuiInterFace::ImGuiShowFPS() {
 		ImGui::Text(u8"FPS: %f", TOOL::FPSNumber);
+		ImGui::Text(u8"FPS振幅: %f, Max: %f, Min: %f", TOOL::FrameAmplitude, TOOL::Max_FrameAmplitude, TOOL::Min_FrameAmplitude);
 		static int values_offset = 0;
 		static char overlay[32];
 		sprintf(overlay, u8"平均: %f", TOOL::Mean_values);

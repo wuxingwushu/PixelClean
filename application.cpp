@@ -629,7 +629,13 @@ namespace GAME {
 		m_angle = std::atan2((winwidth / 2) - CursorPosX, (winheight / 2) - CursorPosY) + 1.57f;//获取角度
 
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera.getViewMatrix(), mCamera.getProjectMatrix());
-		//mGamePlayer->mObjectCollision->SetAngle(m_angle);//设置玩家物理角度
+		huoqdedian *= -mCamera.getCameraPos().z / huoqdedian.z;
+		huoqdedian.x += mCamera.getCameraPos().x;
+		huoqdedian.y += mCamera.getCameraPos().y;
+
+		mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16, 0, mCurrentFrame);
+
+
 		mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle);//设置玩家物理角度
 
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
@@ -656,28 +662,48 @@ namespace GAME {
 		static double ArmsContinuityFire = 0;
 		ArmsContinuityFire += TOOL::FPStime;
 		static int zuojian;
+		static SquarePhysics::ObjectSufferForce LSObjectDecorator{ nullptr, {0,0} };
 		int Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || (ArmsContinuityFire > 0.2f)))
+		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || ((ArmsContinuityFire > 0.2f) && LSObjectDecorator.Object == nullptr)))
 		{
 			ArmsContinuityFire = 0;
-			glm::dvec2 Armsdain =  SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle);
-			mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
-			if (Global::MultiplePeopleMode) {//是否为多人模式
-				if (Global::ServerOrClient) {//服务器还是客户端
-					RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
-					BufferEventSingleData* LBufferEventSingleData;
-					for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
-					{
-						LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
-						LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
+			LSObjectDecorator = mSquarePhysics->GetGoods({ huoqdedian.x, huoqdedian.y });
+			if (LSObjectDecorator.Object != nullptr)
+			{
+				std::cout << "获取对象" << std::endl;
+			}else{
+				glm::dvec2 Armsdain = SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle);
+				mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
+				if (Global::MultiplePeopleMode) {//是否为多人模式
+					if (Global::ServerOrClient) {//服务器还是客户端
+						RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
+						BufferEventSingleData* LBufferEventSingleData;
+						for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
+						{
+							LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
+							LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
+						}
 					}
-				}
-				else {
-					client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
+					else {
+						client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
+					}
 				}
 			}
 		}
 		zuojian = Lzuojian;
+
+		//是否有受力对象
+		if (LSObjectDecorator.Object != nullptr) {
+			glm::vec2 LSArmOfForce = SquarePhysics::vec2angle(LSObjectDecorator.ArmOfForce, LSObjectDecorator.Object->GetAngle());
+			LSObjectDecorator.Object->ForceSolution(
+				LSArmOfForce,
+				glm::vec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) } * 10.0f,
+				TOOL::FPStime
+			);
+			if (Lzuojian != GLFW_PRESS) {
+				LSObjectDecorator.Object = nullptr;
+			}
+		}
 
 		mArms->BulletsEvent();
 		
@@ -710,12 +736,6 @@ namespace GAME {
 			}
 			TOOL::mTimer->StartEnd();
 		}
-		
-		huoqdedian *= -mCamera.getCameraPos().z / huoqdedian.z;
-		huoqdedian.x += mCamera.getCameraPos().x;
-		huoqdedian.y += mCamera.getCameraPos().y;
-
-		mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16, 0, mCurrentFrame);
 
 		//ImGui显示录制
 		if (Global::Monitor) {

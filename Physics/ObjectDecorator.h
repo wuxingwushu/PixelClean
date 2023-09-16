@@ -27,6 +27,8 @@ namespace SquarePhysics {
 
 		[[nodiscard]] constexpr float GetFrictionCoefficient() const noexcept { return mFrictionCoefficient; }
 
+		[[nodiscard]] glm::vec2 GetBarycenter() { return mBarycenter; }
+
 
 
 		
@@ -258,6 +260,7 @@ namespace SquarePhysics {
 			mSpeedBack[1] = (mSpeed.y > 0.0f);
 		}
 
+		//期望玩家物理角度
 		void PlayerTargetAngle(float TargetAngle) {
 			mTargetAngle = TargetAngle;
 			bool B = false;
@@ -286,9 +289,20 @@ namespace SquarePhysics {
 			mAngle = AngleFloatToAngleVec(mAngleFloat);
 		}
 
+		//受力解算
+		void ForceSolution(glm::vec2 ArmOfForce, glm::vec2 Force, float tiem) {
+			DecompositionForce LSDecompositionForce = CalculateDecompositionForce(ArmOfForce, Force);
+			float Angle = EdgeVecToCosAngleFloat(ArmOfForce) - EdgeVecToCosAngleFloat(LSDecompositionForce.Vertical);
+			float angletime = Modulus(ArmOfForce) * Modulus(LSDecompositionForce.Vertical) * tiem;
+			angletime = angletime * (sin(Angle) < 0 ? -1 : 1);
+			PlayerTargetAngle(GetAngleFloat() + angletime);
+			SetForce(LSDecompositionForce.Parallel);
+		}
+
 	
 		float		mQuality = 1.0f;				//质量（KG）
 		float		mFrictionCoefficient = 0.6f;	//摩檫力系数
+		glm::vec2	mBarycenter{ 0.0f, 0.0f };		//重心
 		
 		glm::vec2	mPos{ 0.0f, 0.0f };				//位置
 		glm::vec2	mAngle{ 0.0f, 0.0f };			//朝向角度
@@ -312,7 +326,7 @@ namespace SquarePhysics {
 		float		mTargetAngle = 0;				//目标角度
 		float		mAngleSpeed = 0;				//角速度
 		float		mTorque = 0.0f;					//扭矩
-		bool		mSpeedBack[2];					//用于判断速度方向反转
+		bool		mSpeedBack[2]{};				//用于判断速度方向反转
 
 
 		_DestroyModeCallback mDestroyModeCallback = nullptr;

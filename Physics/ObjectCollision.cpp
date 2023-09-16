@@ -25,9 +25,35 @@ namespace SquarePhysics {
 				if (mPixelAttributeS[x][y].Collision)
 				{
 					OutlinePointJudge(x,y);
+					mBarycenter.x += x;
+					mBarycenter.y += y;
 				}
 			}
 		}
+		float LSideLength = float(mSideLength) / 2;
+		mBarycenter.x /= mNumberX * mNumberY;
+		mBarycenter.y /= mNumberX * mNumberY;
+		mBarycenter.x += LSideLength;
+		mBarycenter.y += LSideLength;
+	}
+
+	void ObjectCollision::CalculationBarycenter() {
+		for (size_t x = 0; x < mNumberX; x++)
+		{
+			for (size_t y = 0; y < mNumberY; y++)
+			{
+				if (mPixelAttributeS[x][y].Collision)
+				{
+					mBarycenter.x += x;
+					mBarycenter.y += y;
+				}
+			}
+		}
+		float LSideLength = float(mSideLength) / 2;
+		mBarycenter.x /= mNumberX * mNumberY;
+		mBarycenter.y /= mNumberX * mNumberY;
+		mBarycenter.x += LSideLength;
+		mBarycenter.y += LSideLength;
 	}
 
 	void ObjectCollision::OutlinePointJudge(int x, int y) {
@@ -115,37 +141,5 @@ namespace SquarePhysics {
 			vec2angle((glm::vec2(End) - mPos), { mAngle.x, -mAngle.y })// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		);
 		return LCollisionInfo;
-	}
-
-	[[nodiscard]] CollisionInfo ObjectCollision::RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End) {
-		int dx = abs(End.x - Start.x);
-		int dy = abs(End.y - Start.y);
-		int sx = (Start.x < End.x) ? 1 : -1;
-		int sy = (Start.y < End.y) ? 1 : -1;
-		int err = dx - dy;
-		int e2;
-		while (true) {
-			if (GetFixedCollisionBool(Start)) {
-				return { true, Start };
-			}
-			if (Start.x == End.x && Start.y == End.y) {
-				return { false, Start };
-			}
-			e2 = 2 * err;
-			if (e2 > -dy) {
-				err -= dy;
-				Start.x += sx;
-			}
-			if (GetFixedCollisionBool(Start)) {
-				return { true, Start };
-			}
-			if (Start.x == End.x && Start.y == End.y) {
-				return { false, Start };
-			}
-			if (e2 < dx) {
-				err += dx;
-				Start.y += sy;
-			}
-		}
 	}
 }

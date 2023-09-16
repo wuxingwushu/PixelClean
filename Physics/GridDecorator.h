@@ -145,8 +145,39 @@ namespace SquarePhysics {
 		
 		//（输入是 Object 的 mPixelAttributeS 数组索引两个点，返回是 mPixelAttributeS 数组索引）
 		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End) {
-			assert(true && "RadialCollisionDetection Absence Reconfiguration");
-			return CollisionInfo{};
+			int dx = abs(End.x - Start.x);
+			int dy = abs(End.y - Start.y);
+			int sx = (Start.x < End.x) ? 1 : -1;
+			int sy = (Start.y < End.y) ? 1 : -1;
+			int err = dx - dy;
+			int e2;
+			while (true) {
+				if (GetFixedCollisionBool(Start)) {
+					//if (GetFixedCollisionBool({ Start.x - sx, Start.y }))
+					//	return { true, Start, 1.57f - (sx == 1 ? 0 : 3.14f) };
+					return { true, Start, 1.57f - (sy == 1 ? 3.14f : 0) };
+				}
+				if (Start.x == End.x && Start.y == End.y) {
+					return { false, Start, 0 };
+				}
+				e2 = 2 * err;
+				if (e2 > -dy) {
+					err -= dy;
+					Start.x += sx;
+				}
+				if (GetFixedCollisionBool(Start)) {
+					//if (GetFixedCollisionBool({ Start.x, Start.y - sy }))
+					//	return { true, Start, 0 + (sy == 1 ? 0 : 3.14f) };
+					return { true, Start, 0 + (sx == 1 ? 3.14f : 0) };
+				}
+				if (Start.x == End.x && Start.y == End.y) {
+					return { false, Start, 0 };
+				}
+				if (e2 < dx) {
+					err += dx;
+					Start.y += sy;
+				}
+			}
 		}
 
 		//像素边长

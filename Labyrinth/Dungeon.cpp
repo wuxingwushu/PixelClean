@@ -75,6 +75,7 @@ namespace GAME {
 				GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
 				if (LDungeon->Pointerkaiguan) {//开启HOST指针
 					LDungeon->Pointerkaiguan = false;
+					TOOL::mTimer->MomentTiming(u8"地图移动生成耗时 ");
 					LDungeon->LSMistPointer = (unsigned char*)LDungeon->WarfareMist->getHOSTImagePointer();
 					LDungeon->LSPointer = (int*)LDungeon->WallBool->getupdateBufferByMap();
 				}
@@ -446,6 +447,7 @@ namespace GAME {
 		WarfareMist->endHOSTImagePointer();
 		WallBool->endupdateBufferByMap();
 		Pointerkaiguan = true;
+		TOOL::mTimer->MomentEnd();
 	}
 
 	void Dungeon::DeleteMist() {

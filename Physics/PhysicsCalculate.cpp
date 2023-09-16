@@ -167,4 +167,48 @@ namespace SquarePhysics {
 		return Modulus(Force) * Length * sin(AngleA - AngleB);
 	}
 
+	//求解分解力
+	[[nodiscard]] DecompositionForce CalculateDecompositionForce(glm::vec2 angle, glm::vec2 force) {
+		float ObjectAngle = EdgeVecToCosAngleFloat(angle);//获得力臂角度
+		float Angle = ObjectAngle - EdgeVecToCosAngleFloat(force);//相差角度
+		float Long = SquarePhysics::Modulus(force);//力大小
+		float ParallelLong = Long * cos(Angle);//平行力大小
+		float VerticalLong = Long * sin(Angle);//垂直力大小
+		float CosL = cos(ObjectAngle);
+		float SinL = sin(ObjectAngle);
+		return { glm::vec2{ ParallelLong * CosL, ParallelLong * SinL }, glm::vec2{ VerticalLong * -SinL, VerticalLong * CosL } };//旋转到世界坐标轴
+	}
+
+	//计算两个向量的夹角
+	[[nodiscard]] float CalculateIncludedAngle(glm::vec2 V1, glm::vec2 V2) {
+		// 标准化向量
+		glm::vec2 normV1 = glm::normalize(V1);
+		glm::vec2 normV2 = glm::normalize(V2);
+
+		// 计算向量点乘
+		float dotProduct = glm::dot(normV1, normV2);
+
+		// 计算夹角（弧度）
+		float angleRad = glm::acos(dotProduct);
+
+		// 将弧度转换为角度（可选）
+		//float angleDeg = glm::degrees(angleRad);
+
+		return angleRad;
+	}
+
+	//计算扭力增加的角速度
+	float calculateRotationSpeed(float torque, glm::vec2 forceToCenter, float mass, float time) {
+		// 计算力臂
+		float leverArm = glm::length(forceToCenter);  // 受力点到重心的距离
+
+		// 计算角加速度
+		float angularAcceleration = torque / (mass * leverArm);
+
+		// 计算下一秒增加的旋转速度
+		float newRotationSpeed = angularAcceleration * time;
+
+		return newRotationSpeed;
+	}
+
 }

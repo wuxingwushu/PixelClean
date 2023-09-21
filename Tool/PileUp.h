@@ -25,7 +25,7 @@ public:
         }
         //memcpy(&mPileUp[Index], &Parameter, sizeof(T));
         mPileUp[Index] = Parameter;
-        Index++;
+        ++Index;
     };
 
     [[nodiscard]] T* pop() {
@@ -34,7 +34,7 @@ public:
             std::cout << "[PileUp]Error: Empty" << std::endl;
             return nullptr;
         }
-        Index--;
+        --Index;
         return &mPileUp[Index];
     }
 
@@ -52,7 +52,7 @@ public:
 
     [[nodiscard]] void pop__() {
         if (Index == 0)return;
-        Index--;
+        --Index;
     }
 
     [[nodiscard]] T GetIndex(unsigned int I) {

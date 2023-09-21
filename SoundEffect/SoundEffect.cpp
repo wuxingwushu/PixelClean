@@ -18,7 +18,7 @@ namespace GAME::SoundEffect {
 		TOOL::FilePath("./Resources", &SoundMp3, "mp3", "nullptr", nullptr);
 
 		mWaveS = new SoLoud::Wav * [SoundMp3.size()];
-		for (size_t i = 0; i < SoundMp3.size(); i++)
+		for (size_t i = 0; i < SoundMp3.size(); ++i)
 		{
 			mWaveS[i] = new SoLoud::Wav;
 			mWaveS[i]->load(("./Resources/" + SoundMp3[i] + ".mp3").c_str());
@@ -30,7 +30,7 @@ namespace GAME::SoundEffect {
 		TOOL::FilePath("./Resources", &SoundMidi, "mid", "nullptr", nullptr);
 
 		mMidiS = new SoLoud::Midi * [SoundMidi.size()];
-		for (size_t i = 0; i < SoundMidi.size(); i++)
+		for (size_t i = 0; i < SoundMidi.size(); ++i)
 		{
 			mMidiS[i] = new SoLoud::Midi;
 			mMidiS[i]->load(("./Resources/" + SoundMidi[i] + ".mid").c_str(), MidiFont);
@@ -89,7 +89,7 @@ namespace GAME::SoundEffect {
 		unsigned int SoundSize = SoundEffectsID->GetNumber();
 		if (SoundSize != 0) {
 			SoundStruct* SoundStructS = SoundEffectsID->Data();
-			for (size_t i = 0; i < SoundSize; i++)
+			for (size_t i = 0; i < SoundSize; ++i)
 			{
 				if (!mSoloud.isValidVoiceHandle(SoundStructS[i].Handle))
 				{
@@ -118,7 +118,7 @@ namespace GAME::SoundEffect {
 		unsigned int SoundSize = SoundEffectsID->GetNumber();
 		if (SoundSize != 0) {
 			SoundStruct* SoundStructS = SoundEffectsID->Data();
-			for (size_t i = 0; i < SoundSize; i++)
+			for (size_t i = 0; i < SoundSize; ++i)
 			{
 				mSoloud.setVolume(SoundStructS[i].Handle, Volume);//设置音量
 			}

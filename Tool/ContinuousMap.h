@@ -130,7 +130,7 @@ public:
         if (mDeleteCallback != nullptr) {//判断是否有销毁回调函数
             mDeleteCallback(*Get(key), mDeleteData);//调用对应的回调函数
         }
-        Number--;
+        --Number;
         unsigned int keyData = Dictionary[key];//获取要销毁的键
         if(keyData != Number){//判断不是在最后面
             //和最后一个的键交换位置
@@ -157,7 +157,7 @@ public:
     void TimeoutDetection() {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
-        for (size_t i = 0; i < Number; i++)
+        for (size_t i = 0; i < Number; ++i)
         {
             if ((time - TimeS[i]) > TimeoutTime) {//判断是否超时
                 if (mFlags & ContinuousMap_Debug) {
@@ -187,7 +187,7 @@ public:
     void UpDataWholeTime() {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
-        for (size_t i = 0; i < Number; i++)
+        for (size_t i = 0; i < Number; ++i)
         {
             TimeS[i] = time;
         }
@@ -217,15 +217,19 @@ public:
             Dictionary[key] = Number - 1;
             Dictionary[KeyS[Number - 1]] = keyData;
             std::swap<TKey>(KeyS[keyData], KeyS[Number - 1]);
-            std::swap<TData>(DataS[keyData], DataS[Number - 1]);
+            TData LSData = std::move(DataS[keyData]);
+            DataS[keyData] = std::move(DataS[Number - 1]);
+            DataS[Number - 1] = std::move(LSData);
+            LSData = TData{};//清空，防止函数结束释放时调用 ~析构（），导致资源被释放; 
+            //std::swap<TData>(DataS[keyData], DataS[Number - 1]);
             if (mFlags & ContinuousMap_Timeout) {
                 std::swap<clock_t>(TimeS[keyData], TimeS[Number - 1]);
             }
             if (mFlags & ContinuousMap_Pointer) {
                 assert(mPointerCallback != nullptr && "[Error]: mPointerCallback = nullptr !");
-                void* LPointer = mPointerData[keyData];
-                mPointerData[keyData] = mPointerData[Number - 1];
-                mPointerData[Number - 1] = LPointer;
+                void* LPointer = std::move(mPointerData[keyData]);
+                mPointerData[keyData] = std::move(mPointerData[Number - 1]);
+                mPointerData[Number - 1] = std::move(LPointer);
 
                 mPointerCallback(&DataS[keyData], mPointerData[keyData]);
                 mPointerCallback(&DataS[Number - 1], mPointerData[Number - 1]);

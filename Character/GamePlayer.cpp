@@ -29,9 +29,9 @@ namespace GAME {
 
 		mObjectCollision = new SquarePhysics::ObjectCollision(16, 16, 1);
 		mBrokenData = new bool[16 * 16];
-		for (size_t x = 0; x < 16; x++)
+		for (size_t x = 0; x < 16; ++x)
 		{
-			for (size_t y = 0; y < 16; y++)
+			for (size_t y = 0; y < 16; ++y)
 			{
 				mObjectCollision->GetPixelAttribute()[x][y].Collision = true;
 				mBrokenData[x * 16 + y] = true;
@@ -40,7 +40,7 @@ namespace GAME {
 		mObjectCollision->OutlineCalculate();//计算外骨架
 		mObjectCollision->SetOrigin(8, 8);//设置原点
 		mObjectCollision->SetPos({ X, Y });//设置位置
-		mObjectCollision->SetFrictionCoefficient(10.0f);//设置摩擦系数
+		mObjectCollision->SetFrictionCoefficient(1.0f);//设置摩擦系数
 		mObjectCollision->SetCollisionCallback(GamePlayerDestroyPixel, this);//设置回调函数
 		mSquarePhysics->AddObjectCollision(mObjectCollision);//添加玩家碰撞
 
@@ -78,7 +78,7 @@ namespace GAME {
 
 		mBufferCopyCommandPool = new VulKan::CommandPool(device);
 		mBufferCopyCommandBuffer = new VulKan::CommandBuffer*[mSwapChain->getImageCount()];
-		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
+		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
 		{
 			mBufferCopyCommandBuffer[i] = new VulKan::CommandBuffer(device, mBufferCopyCommandPool, true);
 		}
@@ -118,7 +118,7 @@ namespace GAME {
 		if (mDescriptorPool != nullptr) {
 			delete mDescriptorPool;
 		}
-		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
+		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
 		{
 			if (mBufferCopyCommandBuffer[i] != nullptr) {
 				delete mBufferCopyCommandBuffer[i];
@@ -141,7 +141,7 @@ namespace GAME {
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(mObjectCollision->GetPosX(), mObjectCollision->GetPosY(), 0.0f));//位移矩阵
 		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(mObjectCollision->GetAngleFloat() * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
 		if (mode) {
-			for (int i = 0; i < frameCount; i++) {
+			for (int i = 0; i < frameCount; ++i) {
 				mUniformParams[1]->mBuffers[i]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));
 			}
 		}
@@ -152,9 +152,9 @@ namespace GAME {
 
 	void GamePlayer::UpDataBroken(bool* Broken) {
 		GetPixelSPointer();
-		for (size_t x = 0; x < 16; x++)
+		for (size_t x = 0; x < 16; ++x)
 		{
-			for (size_t y = 0; y < 16; y++)
+			for (size_t y = 0; y < 16; ++y)
 			{
 				SetPixelS(x, y, Broken[x * 16 + y]);
 			}
@@ -240,7 +240,7 @@ namespace GAME {
 	}
 
 	void GamePlayer::InitCommandBuffer() {
-		for (size_t i = 0; i < 3; i++)
+		for (size_t i = 0; i < 3; ++i)
 		{
 			VkCommandBufferInheritanceInfo InheritanceInfo{};
 			InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;

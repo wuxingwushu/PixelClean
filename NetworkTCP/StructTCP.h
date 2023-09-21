@@ -82,10 +82,10 @@ struct RoleSynchronizationData {
 	evutil_socket_t Key;
 
 	~RoleSynchronizationData() {//在 ContinuousMap 中两个值交换时 std::swap<> 会 调用 ~析构() ,导致数据丢失
-		/*if (mBufferEventSingleData != nullptr) {
+		if (mBufferEventSingleData != nullptr) {
 			delete mBufferEventSingleData;
 			mBufferEventSingleData = nullptr;
-		}*/
+		}
 	}
 };
 

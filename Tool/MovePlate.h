@@ -37,7 +37,7 @@ public:
 		mOriginX(OriginX), mOriginY(OriginY)
 	{
 		mPlate = new PlateT*[mNumberX];
-		for (size_t i = 0; i < mNumberX; i++)
+		for (size_t i = 0; i < mNumberX; ++i)
 		{
 			mPlate[i] = new PlateT[mNumberY];
 		}
@@ -47,7 +47,7 @@ public:
 
 	~MovePlate()
 	{
-		for (size_t i = 0; i < mNumberX; i++)
+		for (size_t i = 0; i < mNumberX; ++i)
 		{
 			delete mPlate[i];
 		}
@@ -106,9 +106,9 @@ public:
 		else {//全部都要更新
 			mPosX += Info.X;
 			mPosY += Info.Y;
-			for (size_t Nx = 0; Nx < mNumberX; Nx++)
+			for (size_t Nx = 0; Nx < mNumberX; ++Nx)
 			{
-				for (size_t Ny = 0; Ny < mNumberY; Ny++)
+				for (size_t Ny = 0; Ny < mNumberY; ++Ny)
 				{
 					mDeleteCallback(&mPlate[Nx][Ny], mDeleteData);
 					mGenerateCallback(&mPlate[Nx][Ny], (Nx + mPosX - mOriginX), (Ny + mPosY - mOriginY), mGenerateData);
@@ -124,18 +124,18 @@ private:
 	//板块 X 的移动
 	void MovePlateX(int uX) {
 		if (uX > 0) {
-			for (size_t ix = 0; ix < uX; ix++)
+			for (size_t ix = 0; ix < uX; ++ix)
 			{
 				LPlateX[ix] = mPlate[ix];
 			}
-			for (size_t ix = 0; ix < (mNumberX - uX); ix++)
+			for (size_t ix = 0; ix < (mNumberX - uX); ++ix)
 			{
 				mPlate[ix] = mPlate[ix + uX];
 			}
-			for (size_t ix = (mNumberX - uX); ix < mNumberX; ix++)
+			for (size_t ix = (mNumberX - uX); ix < mNumberX; ++ix)
 			{
 				mPlate[ix] = LPlateX[ix - (mNumberX - uX)];
-				for (size_t iy = 0; iy < mNumberY; iy++)
+				for (size_t iy = 0; iy < mNumberY; ++iy)
 				{
 					mDeleteCallback(&mPlate[ix][iy], mDeleteData);
 					mGenerateCallback(&mPlate[ix][iy], (ix + mPosX - mOriginX), (iy + mPosY - mOriginY), mGenerateData);
@@ -143,18 +143,18 @@ private:
 			}
 		}
 		else {
-			for (size_t ix = 0; ix < -uX; ix++)
+			for (size_t ix = 0; ix < -uX; ++ix)
 			{
 				LPlateX[ix] = mPlate[mNumberX - ix - 1];
 			}
-			for (int ix = (mNumberX + uX - 1); ix >= 0; ix--)
+			for (int ix = (mNumberX + uX - 1); ix >= 0; --ix)
 			{
 				mPlate[ix-uX] = mPlate[ix];
 			}
-			for (size_t ix = 0; ix < -uX; ix++)
+			for (size_t ix = 0; ix < -uX; ++ix)
 			{
 				mPlate[ix] = LPlateX[ix];
-				for (size_t iy = 0; iy < mNumberY; iy++)
+				for (size_t iy = 0; iy < mNumberY; ++iy)
 				{
 					mDeleteCallback(&mPlate[ix][iy], mDeleteData);
 					mGenerateCallback(&mPlate[ix][iy], (ix + mPosX - mOriginX), (iy + mPosY - mOriginY), mGenerateData);
@@ -173,17 +173,17 @@ private:
 			wX = uX;
 		}
 		if (uY > 0) {
-			for (size_t ix = tX; ix < mNumberX + wX; ix++)
+			for (size_t ix = tX; ix < mNumberX + wX; ++ix)
 			{
-				for (size_t iy = 0; iy < uY; iy++)
+				for (size_t iy = 0; iy < uY; ++iy)
 				{
 					LPlateY[iy] = mPlate[ix][iy];
 				}
-				for (size_t iy = 0; iy < (mNumberY - uY); iy++)
+				for (size_t iy = 0; iy < (mNumberY - uY); ++iy)
 				{
 					mPlate[ix][iy] = mPlate[ix][iy + uY];
 				}
-				for (size_t iy = (mNumberY - uY); iy < mNumberY; iy++)
+				for (size_t iy = (mNumberY - uY); iy < mNumberY; ++iy)
 				{
 					mPlate[ix][iy] = LPlateY[iy - (mNumberY - uY)];
 					mDeleteCallback(&mPlate[ix][iy], mDeleteData);
@@ -192,17 +192,17 @@ private:
 			}
 		}
 		else {
-			for (size_t ix = tX; ix < mNumberX + wX; ix++)
+			for (size_t ix = tX; ix < mNumberX + wX; ++ix)
 			{
-				for (size_t iy = 0; iy < -uY; iy++)
+				for (size_t iy = 0; iy < -uY; ++iy)
 				{
 					LPlateY[iy] = mPlate[ix][mNumberY - iy - 1];
 				}
-				for (int iy = (mNumberY + uY - 1); iy >= 0; iy--)
+				for (int iy = (mNumberY + uY - 1); iy >= 0; --iy)
 				{
 					mPlate[ix][iy - uY] = mPlate[ix][iy];
 				}
-				for (size_t iy = 0; iy < -uY; iy++)
+				for (size_t iy = 0; iy < -uY; ++iy)
 				{
 					mPlate[ix][iy] = LPlateY[iy];
 					mDeleteCallback(&mPlate[ix][iy], mDeleteData);

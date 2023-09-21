@@ -22,7 +22,8 @@ public:
 		{
 			return;
 		}
-		mData[mNumber++] = data;
+		mData[mNumber] = data;
+		++mNumber;
 	}
 
 	void Delete(unsigned int index) {
@@ -30,7 +31,7 @@ public:
 		{
 			return;
 		}
-		mNumber--;
+		--mNumber;
 		mData[index] = mData[mNumber];
 	}
 

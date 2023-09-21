@@ -15,7 +15,7 @@ namespace SquarePhysics {
 			unsigned int y,
 			unsigned int SideLength);
 
-		~ObjectCollision();
+		virtual ~ObjectCollision();
 
 		
 

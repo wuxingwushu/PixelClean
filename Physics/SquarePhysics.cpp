@@ -1,5 +1,6 @@
 #include "SquarePhysics.h"
 #include <iostream>
+#include <vector>
 
 //VoxelPhysics
 //CheckPhysics
@@ -16,11 +17,11 @@ namespace SquarePhysics {
 
 	SquarePhysics::~SquarePhysics()
 	{
-		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
+		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); ++i)
 		{
 			delete *mObjectCollisionS->GetData(i);
 		}
-		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); i++)
+		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); ++i)
 		{
 			delete *mPixelCollisionS->GetData(i);
 		}
@@ -28,17 +29,10 @@ namespace SquarePhysics {
 		delete mPixelCollisionS;
 	}
 
-	void ObjectForce(ObjectCollision* ObjectA, ObjectCollision* ObjectB) {
-		glm::vec2 ForceA = ObjectA->GetForce();
-		glm::vec2 ForceB = ObjectB->GetForce();
-		ObjectA->SetForce((ForceA + ForceB) / 2.0f);
-		ObjectB->SetForce((ForceA + ForceB) / 2.0f);
-	}
-
 	ObjectSufferForce SquarePhysics::GetGoods(glm::vec2 pos) {
 		glm::vec2 Lpos;
 		ObjectCollision* LObjectDecorator = nullptr;
-		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
+		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); ++i)
 		{
 			LObjectDecorator = mObjectCollisionS->Data()[i];
 			Lpos = pos - LObjectDecorator->GetPos();
@@ -63,60 +57,64 @@ namespace SquarePhysics {
 		glm::dvec2 DStart, DEnd;
 		CollisionInfo LCollisionInfo;
 
+		glm::vec2 CoordinateDianJi{ 0, 0 };
+		glm::vec2 LiBi{ 0, 0 };
+		int CoordinateDianJiShu = 0;
 		
 		bool Once;
 
 		//玩家碰撞玩家
-		for (size_t i = 0; i < (mObjectCollisionS->GetNumber() - 1); i++)
+		for (size_t i = 0; i < (mObjectCollisionS->GetNumber() - 1); ++i)
 		{
 			LObject = ObjectNumberS[i];
 			Xpos = LObject->GetPos();//位置
-			for (size_t i2 = (i + 1); i2 < mObjectCollisionS->GetNumber(); i2++)
+			for (size_t i2 = (i + 1); i2 < mObjectCollisionS->GetNumber(); ++i2)
 			{
 				LObject2 = ObjectNumberS[i2];
-				Once = true;
+				Once = false;
 				if (Modulus(LObject->GetPos() - LObject2->GetPos()) < 22.7f) {//到了碰撞范围
-					for (size_t i3 = 0; i3 < LObject->GetOutlinePointSize(); i3++)
+					Deviation = LObject->GetPos() - LObject2->GetPos();
+					CoordinateDianJi = { 0, 0 };
+					LiBi = { 0, 0 };
+					CoordinateDianJiShu = 0;
+					for (size_t i3 = 0; i3 < LObject->GetOutlinePointSize(); ++i3)
 					{
 						Dian = vec2angle(LObject->GetOutlinePointSet(i3), LObject->GetAngle());//获取骨骼点
-						Deviation = LObject->GetPos() - LObject2->GetPos();
 						LCollisionInfo = LObject2->SquarePhysicsCoordinateSystemRadialCollisionDetection(Xpos, Xpos + Dian, Deviation);//获取碰撞点
 						if (LCollisionInfo.Collision) {
-							if (Once) {
-								Once = false;
-								ObjectForce(LObject, LObject2);
-								//std::cout << LObject2->GetForceX() << " - " << LObject2->GetForceY() << std::endl;
-							}
+							Once = true;
+							LiBi += Dian;
 							if (fabs(Deviation.x) < fabs(Deviation.y))//偏向玩家位置移动
 							{
-								DeviationDistance = (glm::dvec2(LCollisionInfo.Pos).y - Dian.y) - Xpos.y;
-								DeviationDistance /= 2;
-								Xpos.y += DeviationDistance;
-								LObject2->SetPos({ LObject2->GetPosX(), LObject2->GetPosY() - DeviationDistance });//设置位置
+								CoordinateDianJi.y += LCollisionInfo.Pos.y - Dian.y - Xpos.y;
 							}
-							else
-							{
-								DeviationDistance = (glm::dvec2(LCollisionInfo.Pos).x - Dian.x) - Xpos.x;
-								DeviationDistance /= 2;
-								Xpos.x += DeviationDistance;
-								LObject2->SetPos({ LObject2->GetPosX() - DeviationDistance, LObject2->GetPosY() });//设置位置
+							else {
+								CoordinateDianJi.x += LCollisionInfo.Pos.x - Dian.x - Xpos.x;
 							}
-							LObject->SetPos(Xpos);//设置位置
+							CoordinateDianJiShu++;
 						}
+					}
+					if (Once) {
+						CoordinateDianJi /= CoordinateDianJiShu;
+						LiBi /= CoordinateDianJiShu;
+						LObject->SetPos((CoordinateDianJi / 2.0f) + LObject->GetPos());
+						LObject2->SetPos((-CoordinateDianJi / 2.0f) + LObject2->GetPos());
+						LObject->ForceSolution((LiBi + LObject->GetPos()) - LObject2->GetPos(), LObject->GetSpeed() * 0.1f, 0);
+						LObject2->ForceSolution(LiBi, -LObject->GetSpeed() * 0.1f, 0);
 					}
 				}
 			}
 		}
 
 		//玩家对地图碰撞事件
-		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
+		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); ++i)
 		{
 			LObject = ObjectNumberS[i];
 			Jpos = LObject->GetPos();//久位置
 			LObject->FrameTimeStep(TimeStep, mTerrain->GetFrictionCoefficient(Jpos));//物理模拟
 			Xpos = LObject->GetPos();//新位置
 			Deviation = Xpos - Jpos;//移动方向和大小
-			for (size_t i2 = 0; i2 < LObject->GetOutlinePointSize(); i2++)
+			for (size_t i2 = 0; i2 < LObject->GetOutlinePointSize(); ++i2)
 			{
 				Dian = vec2angle(LObject->GetOutlinePointSet(i2), LObject->GetAngle());//获取骨骼点
 				Start = Jpos;//久位置的骨骼点位置
@@ -136,7 +134,6 @@ namespace SquarePhysics {
 						}
 						LObject->SetAngle(LObject->GetAngleFloat() + TorqueCalculate(Xpos, End, {0,-LObject->GetForceY()}) * 0.0001f);//角度
 						Speed.y = 0;
-						LObject->SetAccelerationY(0);
 						Xpos.y = glm::dvec2(LCollisionInfo.Pos).y - Dian.y;
 					}
 					else
@@ -147,7 +144,6 @@ namespace SquarePhysics {
 						}
 						LObject->SetAngle(LObject->GetAngleFloat() + TorqueCalculate(Xpos, End, { -LObject->GetForceX(), 0}) * 0.0001f);//角度
 						Speed.x = 0;
-						LObject->SetAccelerationX(0);
 						Xpos.x = glm::dvec2(LCollisionInfo.Pos).x - Dian.x;
 					}
 					LObject->SetSpeed(Speed);//设置速度
@@ -159,7 +155,7 @@ namespace SquarePhysics {
 		}
 
 		//子弹碰撞
-		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); i++)//遍历所有子弹
+		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); ++i)//遍历所有子弹
 		{
 			LPixel = PixelCollisionS[i];//子弹
 			Jpos = LPixel->GetPos();//现在位置
@@ -176,13 +172,18 @@ namespace SquarePhysics {
 				continue;
 			}
 
-			for (size_t i2 = 0; i2 < mObjectCollisionS->GetNumber(); i2++)
+			for (size_t i2 = 0; i2 < mObjectCollisionS->GetNumber(); ++i2)
 			{
 				LObject = ObjectNumberS[i2];
 				LCollisionInfo = LObject->RelativeCoordinateSystemRadialCollisionDetection(Jpos, Xpos);
 				if (LCollisionInfo.Collision)
 				{
-					LPixel->SetPos(Xpos);//设置为碰撞位置
+					//玩家受力
+					LObject->ForceSolution(
+						vec2angle(LCollisionInfo.Pos, LObject->GetAngle()),//力臂
+						LPixel->GetSpeedAngle() * (LPixel->GetSpeedFloat() * LPixel->GetQuality()),//力
+						TimeStep
+					);
 					if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LPixel, LObject, nullptr)) {
 						LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
 						mPixelCollisionS->Delete(i);//销毁对应的像素

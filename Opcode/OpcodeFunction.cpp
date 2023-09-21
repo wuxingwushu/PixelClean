@@ -8,10 +8,12 @@
 #include "../Labyrinth/Labyrinth.h"
 #include "../Character/Crowd.h"
 #include "../application.h"
+#include "../Arms/Arms.h"
 
 namespace Opcode {
 
 	//指令对象数据
+	GAME::Arms* OpArms = nullptr;
 	GAME::Labyrinth* OpLabyrinth = nullptr;
 	GAME::Crowd* OpCrowd = nullptr;
 	GAME::GamePlayer* OpGamePlayer = nullptr;
@@ -33,6 +35,7 @@ namespace Opcode {
 		AddCommand(ReplaceMap, "ReplaceMap", "ReplaceMap(int, int) 更换地图(X,Y 都要 >= 5 )");
 		AddCommand(SetMistSwitch, "SetMistSwitch", "SetMistSwitch(bool) 设置迷雾开关");
 		AddCommand(SetPipelineLinesMode, "SetPipelineLinesMode", "SetPipelineLinesMode(bool) 设置线框渲染开关");
+		AddCommand(ReplaceArms, "ReplaceArms", "ReplaceArms(int) 替换武器");
 	}
 
 	OpcodeMapping::~OpcodeMapping()
@@ -90,7 +93,7 @@ namespace Opcode {
 	void AddNPCS(Queue<const char*>* CodeS) {
 		if (CodeS->GetNumber() == 1) {
 			int S = OpConverter<int>(*CodeS->pop());
-			for (size_t i = 0; i < S; i++)
+			for (size_t i = 0; i < S; ++i)
 			{
 				glm::ivec2 pos = OpLabyrinth->GetLegitimateGeneratePos();
 				OpCrowd->AddNPC(pos.x, pos.y);
@@ -146,6 +149,18 @@ namespace Opcode {
 		{
 			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", clock() });
 			std::cout << "[Opcode][Error]: SetPipelineLinesMode Generate Error ! " << std::endl;
+		}
+	}
+
+	//更换武器
+	void ReplaceArms(Queue<const char*>* CodeS) {
+		if (CodeS->GetNumber() == 1) {
+			OpArms->SetArmsMode(GAME::AttackModeEnum(OpConverter<int>(*CodeS->pop())));
+		}
+		else
+		{
+			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: ReplaceArms Generate Error ! ", clock() });
+			std::cout << "[Opcode][Error]: ReplaceArms Generate Error ! " << std::endl;
 		}
 	}
 }

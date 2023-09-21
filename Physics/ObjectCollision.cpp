@@ -18,9 +18,9 @@ namespace SquarePhysics {
 
 	void ObjectCollision::OutlineCalculate() {
 		OutlinePointSize = 0;
-		for (size_t x = 0; x < mNumberX; x++)
+		for (size_t x = 0; x < mNumberX; ++x)
 		{
-			for (size_t y = 0; y < mNumberY; y++)
+			for (size_t y = 0; y < mNumberY; ++y)
 			{
 				if (mPixelAttributeS[x][y].Collision)
 				{
@@ -38,9 +38,9 @@ namespace SquarePhysics {
 	}
 
 	void ObjectCollision::CalculationBarycenter() {
-		for (size_t x = 0; x < mNumberX; x++)
+		for (size_t x = 0; x < mNumberX; ++x)
 		{
-			for (size_t y = 0; y < mNumberY; y++)
+			for (size_t y = 0; y < mNumberY; ++y)
 			{
 				if (mPixelAttributeS[x][y].Collision)
 				{

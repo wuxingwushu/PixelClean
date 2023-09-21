@@ -12,7 +12,7 @@ namespace GAME {
 	ParticlesSpecialEffect::~ParticlesSpecialEffect()
 	{
 		SpecialEffects* LmSpecialEffects = mSpecialEffects->Data();
-		for (size_t i = 0; i < mSpecialEffects->GetNumber(); i++)
+		for (size_t i = 0; i < mSpecialEffects->GetNumber(); ++i)
 		{
 			mParticleSystem->mParticle->add(Particle{ LmSpecialEffects[i].Pixel, LmSpecialEffects[i].Buffer });
 		}
@@ -39,7 +39,7 @@ namespace GAME {
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0.0f));
 		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(angle), glm::vec3(0.0f, 0.0f, 1.0f));
 		mUniform.mModelMatrix = glm::scale(mUniform.mModelMatrix, glm::vec3(LSpecialEffects.Zoom, LSpecialEffects.Zoom, 1.0f));//缩放矩阵
-		for (size_t i = 0; i < LSpecialEffects.Buffer->size(); i++)
+		for (size_t i = 0; i < LSpecialEffects.Buffer->size(); ++i)
 		{
 			(*LSpecialEffects.Buffer)[i]->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));//上传位置
 		}
@@ -49,7 +49,7 @@ namespace GAME {
 		SpecialEffects* LSpecialEffects = mSpecialEffects->GetData(index);//获取对应的粒子特效
 		ObjectUniform mUniform;
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -1.0f));
-		for (size_t i = 0; i < LSpecialEffects->Buffer->size(); i++)
+		for (size_t i = 0; i < LSpecialEffects->Buffer->size(); ++i)
 		{
 			(*LSpecialEffects->Buffer)[i]->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));//设置到看不见的位置
 		}
@@ -60,7 +60,7 @@ namespace GAME {
 	void ParticlesSpecialEffect::SpecialEffectsEvent(unsigned int Fndex, float time) {
 		SpecialEffects* LmSpecialEffects = mSpecialEffects->Data();//获取粒子特效数组
 		ObjectUniform mUniform;
-		for (size_t i = 0; i < mSpecialEffects->GetNumber(); i++)
+		for (size_t i = 0; i < mSpecialEffects->GetNumber(); ++i)
 		{
 			//更新位置，和大小
 			LmSpecialEffects[i].x += LmSpecialEffects[i].speed * time * cos(LmSpecialEffects[i].angle);

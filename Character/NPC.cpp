@@ -338,9 +338,8 @@ namespace GAME {
 	void NPC::Event(int Frame, float time) {
 		mTime += time;
 		FPSTime = time;
-		//mNPC->mPixelQueue->GetNumber() > 0;
 		
-		NPCFSM->Get()->process_event(S_Event{});
+		//NPCFSM->Get()->process_event(S_Event{});
 
 		//更新NPC损伤
 		mNPC->UpData();

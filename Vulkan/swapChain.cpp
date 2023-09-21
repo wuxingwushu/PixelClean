@@ -93,7 +93,7 @@ namespace VulKan {
 
 		//创建imageView
 		mSwapChainImageViews.resize(mImageCount);
-		for (int i = 0; i < mImageCount; ++i) {
+		for (unsigned int i = 0; i < mImageCount; ++i) {
 			mSwapChainImageViews[i] = createImageView(mSwapChainImages[i], mSwapChainFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 		}
 
@@ -107,7 +107,7 @@ namespace VulKan {
 		region.baseArrayLayer = 0;
 		region.layerCount = 1;
 
-		for (int i = 0; i < mImageCount; ++i) {
+		for (unsigned int i = 0; i < mImageCount; ++i) {
 			mDepthImages[i] = Image::createDepthImage(
 				mDevice,
 				mSwapChainExtent.width,

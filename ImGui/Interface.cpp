@@ -129,7 +129,7 @@ namespace GAME {
 
 		ImGuiCommandPoolS = new VulKan::CommandPool * [mFormatCount];
 		ImGuiCommandBufferS = new VulKan::CommandBuffer * [mFormatCount];
-		for (int i = 0; i < mFormatCount; i++)
+		for (int i = 0; i < mFormatCount; ++i)
 		{
 			ImGuiCommandPoolS[i] = new VulKan::CommandPool(mDevice);
 			ImGuiCommandBufferS[i] = new VulKan::CommandBuffer(mDevice, ImGuiCommandPoolS[i], true);
@@ -150,7 +150,7 @@ namespace GAME {
 			vkDestroyDescriptorPool(mDevice->getDevice(), g_DescriptorPool, nullptr);//销毁专门创建给ImGui用的DescriptorPool
 		}
 
-		for (int i = 0; i < mFormatCount; i++)
+		for (int i = 0; i < mFormatCount; ++i)
 		{
 			delete ImGuiCommandBufferS[i];
 			delete ImGuiCommandPoolS[i];
@@ -571,7 +571,7 @@ namespace GAME {
 		//ImGui::SetNextItemWidth(Global::mWidth - 18);
 		
 		if (PromptBool && ImGui::BeginListBox(" ", OpBoxsize)) {
-			for (int n = 0; n < Vvector.size(); n++)
+			for (int n = 0; n < Vvector.size(); ++n)
 			{
 				if (ImGui::Selectable(Vvector[n]->c_str(), PromptSelected == n)) {
 					PromptSelected = n;
@@ -622,7 +622,7 @@ namespace GAME {
 					LRoleMap = server::GetServer()->GetServerData();
 					LRoleData = LRoleMap->GetKeyData(0);
 					LUse = new LimitUse<ChatStrStruct*>(LChatStrStruct, LRoleMap->GetKeyNumber());
-					for (size_t i = 0; i < LRoleMap->GetKeyNumber(); i++)
+					for (size_t i = 0; i < LRoleMap->GetKeyNumber(); ++i)
 					{
 						LRoleData[i].mBufferEventSingleData->mStr->add(LUse);
 					}
@@ -680,7 +680,7 @@ namespace GAME {
 		float LHeight = Global::mHeight - 60.0f;
 		mChatBoxStr->InitData();
 		ChatBoxStr* LChatBoxStr;
-		for (size_t i = 0; i < mChatBoxStr->GetNumber(); i++)
+		for (size_t i = 0; i < mChatBoxStr->GetNumber(); ++i)
 		{
 			LChatBoxStr = mChatBoxStr->addData();
 			if ((i == (mChatBoxStr->GetNumber() - 1)) && ((clock() - LChatBoxStr->timr) > 10000)) {
@@ -724,7 +724,7 @@ namespace GAME {
 			ImGui::Text(u8"帧时间 ");
 			ImGui::TableNextColumn();
 			ImGui::Text(u8"%f", TOOL::FPStime);
-			for (int i = 0; i < TOOL::mTimer->Count; i++)
+			for (int i = 0; i < TOOL::mTimer->Count; ++i)
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
@@ -747,7 +747,7 @@ namespace GAME {
 				ImGui::TableNextColumn();
 				ImGui::Text("%3.3f %%", TOOL::mTimer->mTimerPercentageS[i]);
 			}
-			for (int i = 0; i < TOOL::mTimer->MomentCount; i++)
+			for (int i = 0; i < TOOL::mTimer->MomentCount; ++i)
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();

@@ -20,7 +20,7 @@ namespace GAME {
 		P[dian] = 0;
 		LSDungeon->wDungeon->WallBool->endupdateBufferByMap();
 		unsigned char* TP = (unsigned char*)LSDungeon->wDungeon->WarfareMist->getHOSTImagePointer();
-		for (size_t i = 0; i < 4; i++)
+		for (size_t i = 0; i < 4; ++i)
 		{
 			TP[dian * 4 + i] = pixelS[20][(y * 16 + x) * 4 + i] * (i == 3 ? 1 : 0.3f);
 		}
@@ -38,11 +38,11 @@ namespace GAME {
 			CollisionBool = true;
 		}
 		mT->mModel->mPixelTexture->updateBufferByMap((void*)pixelS[mT->mModel->Type], 16 * 16 * 4);
-		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ix++)
+		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ++ix)
 		{
-			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; iy++)
+			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; ++iy)
 			{
-				for (size_t i = 0; i < 4; i++)
+				for (size_t i = 0; i < 4; ++i)
 				{
 					LDungeon->LSMistPointer[((mT->mModel->MistPointerY * 16 + ix) * 16 * LDungeon->mNumberX * 4) + (mT->mModel->MistPointerX * 16 * 4) + (iy * 4) + i] = pixelS[mT->mModel->Type][(ix * 16 * 4) + (iy * 4) + i] * (i == 3 ? 1 : 0.3f);
 				}
@@ -50,9 +50,9 @@ namespace GAME {
 			}
 		}		
 		SquarePhysics::PixelAttribute** LSPixelAttribute = mT->mGridDecorator->GetPixelAttribute();
-		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ix++)
+		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ++ix)
 		{
-			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; iy++)
+			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; ++iy)
 			{
 				LSPixelAttribute[ix][iy].Collision = CollisionBool;
 			}
@@ -119,11 +119,11 @@ namespace GAME {
 
 		mMistUVBuffer = new VulKan::Buffer**[mNumberX];
 		mTextureAndBuffer = new TextureAndBuffer*[mNumberX];
-		for (size_t ix = 0; ix < mNumberX; ix++)
+		for (size_t ix = 0; ix < mNumberX; ++ix)
 		{
 			mMistUVBuffer[ix] = new VulKan::Buffer * [mNumberY];
 			mTextureAndBuffer[ix] = new TextureAndBuffer[mNumberY];
-			for (size_t iy = 0; iy < mNumberY; iy++)
+			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
 				float MistUVs[] = {
 					UVx * ix		+ UVpianX,	UVy * iy		+ UVpianY,
@@ -151,9 +151,9 @@ namespace GAME {
 
 		delete mPerlinNoise;
 
-		for (size_t ix = 0; ix < mNumberX; ix++)
+		for (size_t ix = 0; ix < mNumberX; ++ix)
 		{
-			for (size_t iy = 0; iy < mNumberY; iy++)
+			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
 				delete mMistDescriptorSet[ix][iy];
 				delete mMistUVBuffer[ix][iy];
@@ -177,7 +177,7 @@ namespace GAME {
 		delete mTextureAndBuffer;
 
 
-		for (size_t i = 0; i < wFrameCount; i++)
+		for (size_t i = 0; i < wFrameCount; ++i)
 		{
 			delete mMistCommandBuffer[i];
 			delete mCommandBuffer[i];
@@ -201,7 +201,7 @@ namespace GAME {
 		mCommandPool = new VulKan::CommandPool(wDevice);
 		mCommandBuffer = new VulKan::CommandBuffer*[wFrameCount];
 		mMistCommandBuffer = new VulKan::CommandBuffer*[wFrameCount];
-		for (size_t i = 0; i < wFrameCount; i++)
+		for (size_t i = 0; i < wFrameCount; ++i)
 		{
 			mMistCommandBuffer[i] = new VulKan::CommandBuffer(wDevice, mCommandPool, true);
 			mCommandBuffer[i] = new VulKan::CommandBuffer(wDevice, mCommandPool, true);
@@ -247,17 +247,17 @@ namespace GAME {
 		unsigned char* WarfareMistPointer = (unsigned char*)WarfareMist->getHOSTImagePointer();
 		int* WallBoolPointer = (int*)WallBool->getupdateBufferByMap();
 		mDungeonDestroyStruct = new DungeonDestroyStruct*[mNumberX];
-		for (int ix = 0; ix < mNumberX; ix++)
+		for (int ix = 0; ix < mNumberX; ++ix)
 		{
 			mDungeonDestroyStruct[ix] = new DungeonDestroyStruct[mNumberY];
 			mDescriptorSet[ix] = new VulKan::DescriptorSet*[mNumberY];
 			mMistDescriptorSet[ix] = new VulKan::DescriptorSet*[mNumberY];
-			for (int iy = 0; iy < mNumberY; iy++)
+			for (int iy = 0; iy < mNumberY; ++iy)
 			{
 				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3((ix - mMoveTerrain->OriginX + mMoveTerrain->GetGridSPosX()) * 16, (iy - mMoveTerrain->OriginY + mMoveTerrain->GetGridSPosY()) * 16, 0.0f));//位移矩阵
 				mTextureAndBuffer[ix][iy].mBufferS = VulKan::Buffer::createUniformBuffer(wDevice, sizeof(ObjectUniform));
 				mTextureAndBuffer[ix][iy].mBufferS->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));
-				for (size_t i = 0; i < wFrameCount; i++)
+				for (size_t i = 0; i < wFrameCount; ++i)
 				{
 					objectParam->mBuffers[i] = mTextureAndBuffer[ix][iy].mBufferS;
 				}
@@ -269,11 +269,11 @@ namespace GAME {
 					CollisionBool = true;
 				}
 				SquarePhysics::PixelAttribute** LSPixelAttribute = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator->GetPixelAttribute();
-				for (size_t ixx = 0; ixx < mSquareSideLength; ixx++)
+				for (size_t ixx = 0; ixx < mSquareSideLength; ++ixx)
 				{
-					for (size_t iyy = 0; iyy < mSquareSideLength; iyy++)
+					for (size_t iyy = 0; iyy < mSquareSideLength; ++iyy)
 					{
-						for (size_t i = 0; i < 4; i++)
+						for (size_t i = 0; i < 4; ++i)
 						{
 							WarfareMistPointer[((iy * 16 + ixx) * 16 * mNumberX * 4) + (ix * 16 * 4) + (iyy * 4) + i] = pixelS[mTextureAndBuffer[ix][iy].Type][(ixx * 16 * 4) + (iyy * 4) + i] * (i == 3 ? 1 : 0.3f);
 						}
@@ -295,7 +295,7 @@ namespace GAME {
 	}
 
 	void Dungeon::initCommandBuffer() {
-		for (size_t i = 0; i < wFrameCount; i++)
+		for (size_t i = 0; i < wFrameCount; ++i)
 		{
 			VkCommandBufferInheritanceInfo InheritanceInfo{};
 			InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
@@ -306,9 +306,9 @@ namespace GAME {
 			mCommandBuffer[i]->bindGraphicPipeline(wPipeline->getPipeline());//获得渲染管线
 			mCommandBuffer[i]->bindVertexBuffer({ mPositionBuffer->getBuffer(), mUVBuffer->getBuffer() });//获取顶点数据，UV值
 			mCommandBuffer[i]->bindIndexBuffer(mIndexBuffer->getBuffer());//获得顶点索引
-			for (size_t ix = 0; ix < mNumberX; ix++)
+			for (size_t ix = 0; ix < mNumberX; ++ix)
 			{
-				for (size_t iy = 0; iy < mNumberY; iy++)
+				for (size_t iy = 0; iy < mNumberY; ++iy)
 				{
 					mCommandBuffer[i]->bindDescriptorSet(wPipeline->getLayout(), mDescriptorSet[ix][iy]->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
 					mCommandBuffer[i]->drawIndex(mIndexDatasSize);//获取绘画物体的顶点个数
@@ -319,9 +319,9 @@ namespace GAME {
 			mMistCommandBuffer[i]->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);//开始录制二级指令
 			mMistCommandBuffer[i]->bindGraphicPipeline(wPipeline->getPipeline());//获得渲染管线
 			mMistCommandBuffer[i]->bindIndexBuffer(mIndexBuffer->getBuffer());//获得顶点索引
-			for (size_t ix = 0; ix < mNumberX; ix++)
+			for (size_t ix = 0; ix < mNumberX; ++ix)
 			{
-				for (size_t iy = 0; iy < mNumberY; iy++)
+				for (size_t iy = 0; iy < mNumberY; ++iy)
 				{
 					mMistCommandBuffer[i]->bindVertexBuffer({ mPositionBuffer->getBuffer(), mMistUVBuffer[ix][iy]->getBuffer()});//获取顶点数据，UV值
 					mMistCommandBuffer[i]->bindDescriptorSet(wPipeline->getLayout(), mMistDescriptorSet[ix][iy]->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
@@ -353,9 +353,9 @@ namespace GAME {
 		CalculateIndex = new VulKan::Buffer(wDevice, (mNumberX * mNumberY * 2 * 4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_SHARING_MODE_EXCLUSIVE);
 		
 		int* Index = (int*)CalculateIndex->getupdateBufferByMap();
-		for (size_t ix = 0; ix < mNumberX; ix++)
+		for (size_t ix = 0; ix < mNumberX; ++ix)
 		{
-			for (size_t iy = 0; iy < mNumberY; iy++)
+			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
 				Index[(iy * mNumberX + ix) * 2] = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel->MistPointerY;
 				Index[(iy * mNumberX + ix) * 2 + 1] = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel->MistPointerX;
@@ -423,9 +423,9 @@ namespace GAME {
 
 	void Dungeon::UpdataMistData() {
 		int* Index = (int*)CalculateIndex->getupdateBufferByMap();
-		for (size_t ix = 0; ix < mNumberX; ix++)
+		for (size_t ix = 0; ix < mNumberX; ++ix)
 		{
-			for (size_t iy = 0; iy < mNumberY; iy++)
+			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
 				Index[(iy * mNumberX + ix) * 2] = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel->MistPointerY;
 				Index[(iy * mNumberX + ix) * 2 + 1] = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel->MistPointerX;
@@ -433,12 +433,12 @@ namespace GAME {
 		}
 		CalculateIndex->endupdateBufferByMap();
 
-		for (size_t i = 0; i < MultithreadingGenerate.size(); i++)//等待全部线程任务结束
+		for (size_t i = 0; i < MultithreadingGenerate.size(); ++i)//等待全部线程任务结束
 		{
 			MultithreadingGenerate[i].wait();
 		}
 		MultithreadingGenerate.clear();//清空
-		for (size_t i = 0; i < MultithreadingPixelTexture.size(); i++)//提交所以上传贴图
+		for (size_t i = 0; i < MultithreadingPixelTexture.size(); ++i)//提交所以上传贴图
 		{
 			MultithreadingPixelTexture[i]->UpDataImage();
 		}

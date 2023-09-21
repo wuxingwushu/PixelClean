@@ -14,7 +14,7 @@ namespace VulKan {
 		const int BufferSize = CalculateStructS->size();
 		std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindingS;
 		DescriptorSetLayoutBindingS.resize(BufferSize);
-		for (size_t i = 0; i < BufferSize; i++)
+		for (size_t i = 0; i < BufferSize; ++i)
 		{
 			DescriptorSetLayoutBindingS[i].binding = i;
 			DescriptorSetLayoutBindingS[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -33,7 +33,7 @@ namespace VulKan {
 
 		std::vector<VkDescriptorPoolSize> descriptorPoolSize;
 		descriptorPoolSize.resize(BufferSize);
-		for (size_t i = 0; i < BufferSize; i++)
+		for (size_t i = 0; i < BufferSize; ++i)
 		{
 			descriptorPoolSize[i].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			descriptorPoolSize[i].descriptorCount = 1;
@@ -62,7 +62,7 @@ namespace VulKan {
 	
 		std::vector<VkWriteDescriptorSet> DescriptorSet;
 		DescriptorSet.resize(BufferSize);
-		for (size_t i = 0; i < BufferSize; i++)
+		for (size_t i = 0; i < BufferSize; ++i)
 		{
 			DescriptorSet[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			DescriptorSet[i].dstSet = mDescriptorSet; // write to this descriptor set.

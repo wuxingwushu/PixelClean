@@ -46,9 +46,9 @@ namespace GAME {
 	{
 		delete mParticle;
 
-		for (size_t i = 0; i < mNumber; i++)
+		for (size_t i = 0; i < mNumber; ++i)
 		{
-			for (size_t iu = 0; iu < mUniformParams[i].size(); iu++)
+			for (size_t iu = 0; iu < mUniformParams[i].size(); ++iu)
 			{
 				if (iu == 1)
 				{
@@ -73,7 +73,7 @@ namespace GAME {
 		delete mUVBuffer;
 		delete mIndexBuffer;
 
-		for (size_t i = 0; i < ThreadS; i++)
+		for (size_t i = 0; i < ThreadS; ++i)
 		{
 			delete mThreadCommandBufferS[i];
 			delete mThreadCommandPoolS[i];
@@ -94,13 +94,13 @@ namespace GAME {
 		ThreadS = frameCount;
 		mThreadCommandPoolS = new VulKan::CommandPool * [ThreadS];
 		mThreadCommandBufferS = new VulKan::CommandBuffer * [ThreadS];
-		for (int i = 0; i < (ThreadS); i++) {
+		for (int i = 0; i < (ThreadS); ++i) {
 			mThreadCommandPoolS[i] = new VulKan::CommandPool(device);
 			mThreadCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
 		}
 
 		ObjectUniform mUniform;
-		for (int x = 0; x < mNumber; x++)
+		for (int x = 0; x < mNumber; ++x)
 		{
 			PixelTextureS[x] = new PixelTexture(device, mThreadCommandPoolS[0], pixelS[1], 1, 1, 4, sampler);
 
@@ -146,7 +146,7 @@ namespace GAME {
 		//各种类型申请多少个
 		mDescriptorPool = new VulKan::DescriptorPool(device);
 		mDescriptorPool->build(mUniformParams[0], frameCount, (mNumber));
-		for (size_t x = 0; x < mNumber; x++)
+		for (size_t x = 0; x < mNumber; ++x)
 		{
 			//将申请的各种类型按照Layout绑定起来
 			mDescriptorSet[x] = new VulKan::DescriptorSet(device, mUniformParams[x], mDescriptorSetLayout, mDescriptorPool, frameCount);
@@ -157,15 +157,15 @@ namespace GAME {
 		std::vector<std::future<void>> pool;
 		int UpdateNumber = (mNumber) / (ThreadS / 3);
 		int UpdateNumber_yu = (mNumber) % (ThreadS / 3);
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < UpdateNumber_yu; j++) {
+		for (int i = 0; i < 3; ++i) {
+			for (int j = 0; j < UpdateNumber_yu; ++j) {
 				pool.push_back(TOOL::mThreadPool->enqueue(&ParticleSystem::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + j), (UpdateNumber + 1)));
 			}
-			for (int j = UpdateNumber_yu; j < (ThreadS / 3); j++) {
+			for (int j = UpdateNumber_yu; j < (ThreadS / 3); ++j) {
 				pool.push_back(TOOL::mThreadPool->enqueue(&ParticleSystem::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + UpdateNumber_yu), UpdateNumber));
 			}
 		}
-		for (int i = 0; i < (ThreadS); i++) {
+		for (int i = 0; i < (ThreadS); ++i) {
 			pool[i].wait();
 		}
 	}
@@ -184,7 +184,7 @@ namespace GAME {
 		commandbuffer->bindGraphicPipeline(mPipeline->getPipeline());//获得渲染管线
 		commandbuffer->bindVertexBuffer(getVertexBuffers());//获取顶点数据，UV值
 		commandbuffer->bindIndexBuffer(getIndexBuffer()->getBuffer());//获得顶点索引
-		for (int i = AddresShead; i < AddresShead + Count; i++) {
+		for (int i = AddresShead; i < AddresShead + Count; ++i) {
 			commandbuffer->bindDescriptorSet(mPipeline->getLayout(), mDescriptorSet[i]->getDescriptorSet(FrameCount));//获得 模型位置数据， 贴图数据，……
 			commandbuffer->drawIndex(getIndexCount());//获取绘画物体的顶点个数
 		}

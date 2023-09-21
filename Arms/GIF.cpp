@@ -10,7 +10,7 @@ namespace GAME {
 
 		mCommandPool = new VulKan::CommandPool*[mSwapChain->getImageCount()];
 		mCommandBuffer = new VulKan::CommandBuffer*[mSwapChain->getImageCount()];
-		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
+		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
 		{
 			mCommandPool[i] = new VulKan::CommandPool(device);
 			mCommandBuffer[i] = new VulKan::CommandBuffer(device, mCommandPool[i], true);
@@ -108,7 +108,7 @@ namespace GAME {
 	{
 		mUniform.mModelMatrix = Matrix;
 		if (mode) {
-			for (int i = 0; i < frameCount; i++) {
+			for (int i = 0; i < frameCount; ++i) {
 				mUniformParams[1]->mBuffers[i]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniformGIF));
 			}
 		}
@@ -119,13 +119,13 @@ namespace GAME {
 
 	void GIF::SetFrame(unsigned int frame, const int& frameCount) {
 		mUniform.zhen = frame;
-		for (int i = 0; i < frameCount; i++) {
+		for (int i = 0; i < frameCount; ++i) {
 			mUniformParams[1]->mBuffers[i]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniformGIF));
 		}
 	}
 
 	void GIF::UpDataCommandBuffer() {
-		for (size_t i = 0; i < 3; i++)
+		for (size_t i = 0; i < 3; ++i)
 		{
 			VkCommandBufferInheritanceInfo InheritanceInfo{};
 			InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;

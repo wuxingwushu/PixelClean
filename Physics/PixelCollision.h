@@ -11,7 +11,7 @@ namespace SquarePhysics {
 
 	public:
 		PixelCollision(unsigned int SideLength);
-		~PixelCollision();
+		virtual ~PixelCollision();
 
 		//设置回调
 		void SetCollisionCallback(_PixelCollisionCallback CollisionCallback, void* Data) {

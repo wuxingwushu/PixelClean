@@ -119,7 +119,7 @@ namespace TOOL {
 #ifdef TOOL_Convert
 	std::string StrTolower(std::string Str) {
 		std::string str;
-		for (size_t i = 0; i < Str.size(); i++)
+		for (size_t i = 0; i < Str.size(); ++i)
 		{
 			str += tolower(Str[i]);
 		}
@@ -129,7 +129,7 @@ namespace TOOL {
 	std::string StrName(std::string Str) {
 		size_t dianI = Str.size();
 		size_t xieI = 0;
-		for (size_t i = Str.size() - 1; i > 0; i--) {
+		for (size_t i = Str.size() - 1; i > 0; --i) {
 			if (Str[i] == '.') {
 				dianI = i - 1;
 			}
@@ -146,7 +146,7 @@ namespace TOOL {
 		std::string ModelFileName;
 		for (const auto& entry : std::filesystem::directory_iterator(path)) {
 			ModelFileName = entry.path().filename().string();//获取文件名字
-			for (size_t i = 0; i < ModelFileName.size(); i++)
+			for (size_t i = 0; i < ModelFileName.size(); ++i)
 			{
 				if ((ModelFileName[i] == '.') && (StrTolower(ModelFileName.substr(i + 1, ModelFileName.size() - i - 1)) == StrTolower(Suffix))) {
 					ModelFileName = ModelFileName.substr(0, i);
@@ -352,7 +352,7 @@ namespace TOOL {
 			Max_values = 0.0f;
 			Min_values = 10000.0f;
 			Mean_values = 0.0f;
-			for (int i = 0; i < values_number; i++) {
+			for (int i = 0; i < values_number; ++i) {
 				Mean_values += values[i];
 
 				if (values_number == i + 1) {
@@ -383,7 +383,7 @@ namespace TOOL {
 				LMin_FrameAmplitude = Ltame;
 			}
 			FrameAmplitudeAccumulate += Ltame;
-			number_time++;
+			++number_time;
 		}
 	}
 #endif

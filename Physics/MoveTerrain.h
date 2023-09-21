@@ -23,7 +23,7 @@ namespace SquarePhysics {
 			unsigned int SquareSideLength,
 			unsigned int SideLength
 		);
-		~MoveTerrain();
+		virtual ~MoveTerrain();
 
 		void SetCallback(_MoveTerrainGenerateCallback G, void* GData, _MoveTerrainDeleteCallback D, void* DData) {
 			mGridDecoratorS->SetCallback(G, GData, D, DData);
@@ -99,9 +99,9 @@ namespace SquarePhysics {
 		OriginX = mNumberX / 2;
 		OriginY = mNumberY / 2;
 		mGridDecoratorS = new MovePlate<RigidBodyAndModel>(mNumberX, mNumberY, mSquareSideLength, OriginX, OriginY);
-		for (size_t ix = 0; ix < mNumberX; ix++)
+		for (size_t ix = 0; ix < mNumberX; ++ix)
 		{
-			for (size_t iy = 0; iy < mNumberY; iy++)
+			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
 				mGridDecoratorS->GetPlate(ix, iy)->mGridDecorator = new GridDecorator(mSquareSideLength, mSquareSideLength, mSideLength);
 			}
@@ -111,9 +111,9 @@ namespace SquarePhysics {
 	template<typename ClassT>
 	MoveTerrain<ClassT>::~MoveTerrain()
 	{
-		for (size_t ix = 0; ix < mNumberX; ix++)
+		for (size_t ix = 0; ix < mNumberX; ++ix)
 		{
-			for (size_t iy = 0; iy < mNumberY; iy++)
+			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
 				delete mGridDecoratorS->GetPlate(ix, iy)->mGridDecorator;
 			}

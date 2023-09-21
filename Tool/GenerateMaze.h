@@ -37,9 +37,9 @@ public:
 		mPos2 = new PileUp<Pos>(4);
 
 		PileUp<Pos> mPos(X * Y);
-		for (size_t x = 0; x < WIDTH; x++)
+		for (size_t x = 0; x < WIDTH; ++x)
 		{
-			for (size_t y = 0; y < HEIGHT; y++)
+			for (size_t y = 0; y < HEIGHT; ++y)
 			{
 				block[x][y] = true;
 			}
@@ -74,15 +74,15 @@ public:
 		if (block == nullptr) {
 			NewBlock = true;
 			block = new bool* [WIDTH];
-			for (size_t i = 0; i < WIDTH; i++)
+			for (size_t i = 0; i < WIDTH; ++i)
 			{
 				block[i] = new bool[HEIGHT];
 			}
 		}
 
-		for (size_t x = 0; x < WIDTH; x++)
+		for (size_t x = 0; x < WIDTH; ++x)
 		{
-			for (size_t y = 0; y < HEIGHT; y++)
+			for (size_t y = 0; y < HEIGHT; ++y)
 			{
 				block[x][y] = true;
 			}
@@ -93,10 +93,10 @@ public:
 		TposX = WIDTH / 2;
 		TposY = HEIGHT / 2;
 		if (!(TposX % 2)) {
-			TposX--;
+			--TposX;
 		}
 		if (!(TposY % 2)) {
-			TposY--;
+			--TposY;
 		}
 		mPos->add(Pos{ TposX, TposY });
 
@@ -119,24 +119,24 @@ public:
 		int NY = ((HEIGHT / 2) * K) + 1;
 
 		int posNX, posNY;
-		for (size_t x = 0; x < NX; x++)
+		for (size_t x = 0; x < NX; ++x)
 		{
-			for (size_t y = 0; y < NY; y++)
+			for (size_t y = 0; y < NY; ++y)
 			{
 				posNX = (x / K) * 2;
 				if ((x % K) != 0) {
-					posNX++;
+					++posNX;
 				}
 				posNY = (y / K) * 2;
 				if ((y % K) != 0) {
-					posNY++;
+					++posNY;
 				}
 				mGenerateMazeCallback(x, y, block[posNX][posNY], mMazeData);
 			}
 		}
 
 		if (NewBlock) {
-			for (size_t i = 0; i < X; i++)
+			for (size_t i = 0; i < X; ++i)
 			{
 				delete[] block[i];
 			}

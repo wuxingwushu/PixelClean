@@ -14,15 +14,15 @@ namespace SquarePhysics {
 		{
 			if (Structure) {
 				mPixelAttributeS = new PixelAttribute * [mNumberX];
-				for (size_t i = 0; i < mNumberX; i++)
+				for (size_t i = 0; i < mNumberX; ++i)
 				{
 					mPixelAttributeS[i] = new PixelAttribute[mNumberY];
 				}
 			}
 		}
-		~GridDecorator() {
+		virtual ~GridDecorator() {
 			if (mPixelAttributeS != nullptr) {
-				for (size_t i = 0; i < mNumberX; i++)
+				for (size_t i = 0; i < mNumberX; ++i)
 				{
 					delete mPixelAttributeS[i];
 				}

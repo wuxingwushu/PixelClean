@@ -39,8 +39,8 @@ namespace SquarePhysics {
 
 	bool DestroyModeSquare(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
 		const int Range = 1;
-		for (int i = -Range; i <= Range; i++) {
-			for (int j = -Range; j <= Range; j++) {
+		for (int i = -Range; i <= Range; ++i) {
+			for (int j = -Range; j <= Range; ++j) {
 				mGrid->CollisionCallback(x + i, y + j, false);
 			}
 		}
@@ -49,8 +49,8 @@ namespace SquarePhysics {
 
 	bool DestroyModeSquareDA(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
 		const int Range = 5;
-		for (int i = -Range; i <= Range; i++) {
-			for (int j = -Range; j <= Range; j++) {
+		for (int i = -Range; i <= Range; ++i) {
+			for (int j = -Range; j <= Range; ++j) {
 				mGrid->CollisionCallback(x + i, y + j, false);
 			}
 		}

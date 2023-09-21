@@ -41,6 +41,12 @@ namespace VulKan {
 			mUniformParams[1]->mBuffers[Index]->updateBufferByMap(&mUniform, sizeof(ObjectUniform));
 		}
 
+		void SetPosAngle(float x, float y, float z, float anlge, int Index) {
+			mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+			mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(anlge * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
+			mUniformParams[1]->mBuffers[Index]->updateBufferByMap(&mUniform, sizeof(ObjectUniform));
+		}
+
 	private://模型变换矩阵
 		ObjectUniform mUniform{};
 

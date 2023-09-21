@@ -59,7 +59,19 @@ namespace GAME {
 
 	Crowd::~Crowd()
 	{
+		for (size_t i = 0; i < MapPlayerS->GetNumber(); ++i)
+		{
+			delete MapPlayerS->GetData()[i];
+		}
+		for (size_t i = 0; i < mNPCS->GetNumber(); ++i)
+		{
+			delete mNPCS->GetData()[i];
+		}
+		delete MapPlayerS;
+		delete mNPCS;
 
+		delete mNPCSynchronizationData;
+		delete mCommandPool;
 	}
 
 	GamePlayer* Crowd::GetGamePlayer(evutil_socket_t key) {
@@ -86,7 +98,7 @@ namespace GAME {
 	void Crowd::TimeoutDetection() {
 		MapPlayerS->TimeoutDetection();
 		GamePlayer** PlayerS = MapPlayerS->GetData();
-		for (size_t i = 0; i < MapPlayerS->GetNumber(); i++)
+		for (size_t i = 0; i < MapPlayerS->GetNumber(); ++i)
 		{
 			PlayerS[i]->UpData();//更新玩家伤痕
 		}
@@ -94,12 +106,12 @@ namespace GAME {
 
 	void Crowd::ReconfigurationCommandBuffer() {
 		GamePlayer** LGamePlayer = MapPlayerS->GetData();
-		for (size_t i = 0; i < MapPlayerS->GetNumber(); i++)
+		for (size_t i = 0; i < MapPlayerS->GetNumber(); ++i)
 		{
 			LGamePlayer[i]->InitCommandBuffer();
 		}
 		NPC** LNPC = mNPCS->GetData();
-		for (size_t i = 0; i < mNPCS->GetNumber(); i++)
+		for (size_t i = 0; i < mNPCS->GetNumber(); ++i)
 		{
 			LNPC[i]->InitCommandBuffer();
 		}
@@ -107,12 +119,12 @@ namespace GAME {
 
 	void Crowd::GetCommandBufferS(std::vector<VkCommandBuffer>* CommandBufferVector, unsigned int Format) {
 		GamePlayer** PlayerS = MapPlayerS->GetData();
-		for (size_t i = 0; i < MapPlayerS->GetNumber(); i++)
+		for (size_t i = 0; i < MapPlayerS->GetNumber(); ++i)
 		{
 			CommandBufferVector->push_back(PlayerS[i]->getCommandBuffer(Format));
 		}
 		NPC** LNPC = mNPCS->GetData();
-		for (size_t i = 0; i < mNPCS->GetNumber(); i++)
+		for (size_t i = 0; i < mNPCS->GetNumber(); ++i)
 		{
 			CommandBufferVector->push_back(LNPC[i]->getCommandBuffer(Format));
 		}
@@ -175,7 +187,7 @@ namespace GAME {
 
 	void Crowd::NPCEvent(int Format, float time) {
 		NPC** LNPC = mNPCS->GetData();
-		for (size_t i = 0; i < mNPCS->GetNumber(); i++)
+		for (size_t i = 0; i < mNPCS->GetNumber(); ++i)
 		{
 			if (LNPC[i]->GetDeathInBattle()) {
 				Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
@@ -194,7 +206,7 @@ namespace GAME {
 		NPC** LNPC = mNPCS->GetData();
 		int NumberLNPC = mNPCS->GetNumber();
 		evutil_socket_t LNPCkey;
-		for (size_t i = 0; i < NumberLNPC; i++)
+		for (size_t i = 0; i < NumberLNPC; ++i)
 		{
 			LNPCkey = LNPC[i]->GetKey();
 			delete LNPC[i];

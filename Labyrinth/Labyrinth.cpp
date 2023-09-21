@@ -18,7 +18,7 @@ namespace GAME {
 			if (Global::ServerOrClient) {
 				RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
 				BufferEventSingleData* LBufferEventSingleData;
-				for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
+				for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); ++i)
 				{
 					LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
 					LBufferEventSingleData->mLabyrinthPixel->add({ x,y,false });
@@ -57,14 +57,14 @@ namespace GAME {
 
 		BlockPixelS = new int [numberX * 16 * numberY * 16] {false};
 		BlockTypeS = new unsigned int* [numberX];
-		for (size_t i = 0; i < numberX; i++)
+		for (size_t i = 0; i < numberX; ++i)
 		{
 			BlockTypeS[i] = new unsigned int[numberY];
 		}
 
 		memcpy(BlockPixelS, PixelData, (numberX * numberY * 16 * 16 * sizeof(int)));
 		char* PBlockTypeData = (char*)BlockTypeData;
-		for (size_t i = 0; i < numberX; i++)
+		for (size_t i = 0; i < numberX; ++i)
 		{
 			memcpy(BlockTypeS[i], PBlockTypeData, (numberY * sizeof(unsigned int)));
 			PBlockTypeData = PBlockTypeData + (numberY * sizeof(unsigned int));
@@ -72,10 +72,10 @@ namespace GAME {
 
 		PixelWallNumber = new short* [numberX * 16];
 
-		for (size_t ix = 0; ix < (numberX * 16); ix++)
+		for (size_t ix = 0; ix < (numberX * 16); ++ix)
 		{
 			PixelWallNumber[ix] = new short[numberY * 16];
-			for (size_t iy = 0; iy < (numberY * 16); iy++)
+			for (size_t iy = 0; iy < (numberY * 16); ++iy)
 			{
 				PixelWallNumber[ix][iy] = 0;
 			}
@@ -114,7 +114,7 @@ namespace GAME {
 		BlockS = new bool* [numberX];
 		BlockPixelS = new int [numberX * 16 * numberY * 16] {false};
 		BlockTypeS = new unsigned int* [numberX];
-		for (size_t i = 0; i < numberX; i++)
+		for (size_t i = 0; i < numberX; ++i)
 		{
 			BlockS[i] = new bool[numberY];
 			BlockTypeS[i] = new unsigned int[numberY];
@@ -125,9 +125,9 @@ namespace GAME {
 			[](int x, int y, bool B, void* Lclass) {
 				Labyrinth* LLabyrinth = (Labyrinth*)Lclass;
 				LLabyrinth->BlockS[x][y] = B;
-				for (size_t ix = 0; ix < 16; ix++)
+				for (size_t ix = 0; ix < 16; ++ix)
 				{
-					for (size_t iy = 0; iy < 16; iy++)
+					for (size_t iy = 0; iy < 16; ++iy)
 					{
 						LLabyrinth->BlockPixelS[((x * 16 + ix) * (LLabyrinth->numberY * 16)) + (y * 16) + iy] = LLabyrinth->BlockS[x][y];
 					}
@@ -152,17 +152,17 @@ namespace GAME {
 
 		PixelWallNumber = new short* [numberX * 16];
 		
-		for (size_t ix = 0; ix < (numberX * 16); ix++)
+		for (size_t ix = 0; ix < (numberX * 16); ++ix)
 		{
 			PixelWallNumber[ix] = new short[numberY * 16];
-			for (size_t iy = 0; iy < (numberY * 16); iy++)
+			for (size_t iy = 0; iy < (numberY * 16); ++iy)
 			{
 				PixelWallNumber[ix][iy] = 0;
 			}
 		}
-		for (size_t ix = 0; ix < (numberX * 16); ix++)
+		for (size_t ix = 0; ix < (numberX * 16); ++ix)
 		{
-			for (size_t iy = 0; iy < (numberY * 16); iy++)
+			for (size_t iy = 0; iy < (numberY * 16); ++iy)
 			{
 				if (BlockPixelS[(ix * numberY * 16) + iy] == 1) {
 					PixelWallNumberAdd(ix, iy);
@@ -240,7 +240,7 @@ namespace GAME {
 	Labyrinth::~Labyrinth()
 	{
 		//销毁是否是墙壁
-		for (size_t i = 0; i < numberX; i++)
+		for (size_t i = 0; i < numberX; ++i)
 		{
 			delete[] BlockS[i];
 			delete[] BlockTypeS[i];
@@ -268,10 +268,10 @@ namespace GAME {
 		delete mMistDescriptorSet;
 		delete mDescriptorPool;
 
-		for (size_t i = 0; i < mUniformParams->size(); i++)
+		for (size_t i = 0; i < mUniformParams->size(); ++i)
 		{
 			if (i == 1) {
-				for (size_t ib = 0; ib < (*mUniformParams)[i]->mBuffers.size(); ib++)
+				for (size_t ib = 0; ib < (*mUniformParams)[i]->mBuffers.size(); ++ib)
 				{
 					delete (*mUniformParams)[i]->mBuffers[ib];
 				}
@@ -285,7 +285,7 @@ namespace GAME {
 		DeleteMist();
 
 		//销毁指令缓存 指令池
-		for (int i = 0; i < mFrameCount; i++) {
+		for (int i = 0; i < mFrameCount; ++i) {
 			delete mThreadCommandBufferS[i];
 			delete mMistCommandBufferS[i];
 			delete mThreadCommandPoolS[i];
@@ -312,7 +312,7 @@ namespace GAME {
 		mThreadCommandPoolS = new VulKan::CommandPool * [mFrameCount];
 		mThreadCommandBufferS = new VulKan::CommandBuffer * [mFrameCount];
 		mMistCommandBufferS = new VulKan::CommandBuffer * [mFrameCount];
-		for (int i = 0; i < (mFrameCount); i++) {
+		for (int i = 0; i < (mFrameCount); ++i) {
 			mThreadCommandPoolS[i] = new VulKan::CommandPool(device);
 			mThreadCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
 			mMistCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
@@ -323,13 +323,13 @@ namespace GAME {
 
 		SquarePhysics::PixelAttribute** LPixelAttribute = mFixedSizeTerrain->GetPixelAttribute();
 
-		for (size_t x = 0; x < numberX; x++)
+		for (size_t x = 0; x < numberX; ++x)
 		{
-			for (size_t y = 0; y < numberY; y++)
+			for (size_t y = 0; y < numberY; ++y)
 			{
-				for (size_t pX = 0; pX < 16; pX++)
+				for (size_t pX = 0; pX < 16; ++pX)
 				{
-					for (size_t pY = 0; pY < 16; pY++)
+					for (size_t pY = 0; pY < 16; ++pY)
 					{
 						if (BlockPixelS[(((x * 16) + pX) * (numberY * 16)) + ((y * 16) + pY)] == 1) {
 							memcpy(&mPixelS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))], 4);
@@ -411,15 +411,15 @@ namespace GAME {
 		std::vector<std::future<void>> pool;
 		int UpdateNumber = (numberX * numberY) / (mFrameCount / 3);
 		int UpdateNumber_yu = (numberX * numberY) % (mFrameCount / 3);
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < UpdateNumber_yu; j++) {
+		for (int i = 0; i < 3; ++i) {
+			for (int j = 0; j < UpdateNumber_yu; ++j) {
 				pool.push_back(TOOL::mThreadPool->enqueue(&Labyrinth::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + j), (UpdateNumber + 1)));
 			}
-			for (int j = UpdateNumber_yu; j < (mFrameCount / 3); j++) {
+			for (int j = UpdateNumber_yu; j < (mFrameCount / 3); ++j) {
 				pool.push_back(TOOL::mThreadPool->enqueue(&Labyrinth::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + UpdateNumber_yu), UpdateNumber));
 			}
 		}
-		for (int i = 0; i < (mFrameCount); i++) {
+		for (int i = 0; i < (mFrameCount); ++i) {
 			pool[i].wait();
 		}
 	}
@@ -457,9 +457,9 @@ namespace GAME {
 
 	bool Labyrinth::RangeLegitimate(int x, int y) {
 		bool Bool = true;
-		for (int ix = -1; ix <= 1; ix++)
+		for (int ix = -1; ix <= 1; ++ix)
 		{
-			for (int iy = -1; iy <= 1; iy++)
+			for (int iy = -1; iy <= 1; ++iy)
 			{
 				if (!(GetPixelWallNumber(x + ix, y + iy) <= 0)) {
 					Bool = false;
@@ -502,36 +502,36 @@ namespace GAME {
 	}
 
 	void Labyrinth::PixelWallNumberCalculate(int x, int y) {
-		for (int ix = -9; ix < 10; ix++)
+		for (int ix = -9; ix < 10; ++ix)
 		{
-			for (int iy = -9; iy < 10; iy++)
+			for (int iy = -9; iy < 10; ++iy)
 			{
 				if (GetPixel(x+ix,y+iy)) {
-					PixelWallNumber[x][y]++;
+					++PixelWallNumber[x][y];
 				}
 			}
 		}
 	}
 
 	void Labyrinth::PixelWallNumberAdd(int x, int y) {
-		for (int ix = -9; ix < 10; ix++)
+		for (int ix = -9; ix < 10; ++ix)
 		{
-			for (int iy = -9; iy < 10; iy++)
+			for (int iy = -9; iy < 10; ++iy)
 			{
 				if (GetPixelLegitimate(x + ix, y + iy)) {
-					PixelWallNumber[x + ix][y + iy]++;
+					++PixelWallNumber[x + ix][y + iy];
 				}
 			}
 		}
 	}
 
 	void Labyrinth::PixelWallNumberReduce(int x, int y) {
-		for (int ix = -9; ix < 10; ix++)
+		for (int ix = -9; ix < 10; ++ix)
 		{
-			for (int iy = -9; iy < 10; iy++)
+			for (int iy = -9; iy < 10; ++iy)
 			{
 				if (GetPixelLegitimate(x + ix, y + iy)) {
-					PixelWallNumber[x + ix][y + iy]--;
+					--PixelWallNumber[x + ix][y + iy];
 				}
 			}
 		}

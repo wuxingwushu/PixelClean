@@ -33,7 +33,7 @@ public:
             std::cout << "[Queue]Error: GoBeyond" << std::endl;
             return;
         }
-        mNumber++;
+        ++mNumber;
         mQueue[TailIndex] = Parameter;
         TailIndex = Max(TailIndex + 1);
     };
@@ -45,7 +45,7 @@ public:
             std::cout << "[Queue]Error: Empty" << std::endl;
             return nullptr;
         }
-        mNumber--;
+        --mNumber;
         T* Parameter = &mQueue[HeadIndex];
         HeadIndex = Max(HeadIndex + 1);
         return Parameter;

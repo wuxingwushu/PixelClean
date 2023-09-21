@@ -50,19 +50,19 @@ void SArmsSynchronize(bufferevent* be, void* Data) {
 	SynchronizeData* AData = (SynchronizeData*)Data;
 	SynchronizeBullet* BData = (SynchronizeBullet*)AData->Pointer;
 	unsigned char color[4] = { 0,255,0,125 };
-	for (size_t i = 0; i < AData->Size; i++)
+	for (size_t i = 0; i < AData->Size; ++i)
 	{
 		server::GetServer()->GetArms()->ShootBullets(BData[i].X, BData[i].Y, BData[i].angle, 500, BData[i].Type);
 	}
 	RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(bufferevent_getfd(be));
 	BufferEventSingleData* LBufferEventSingleData;
-	for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
+	for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); ++i)
 	{
 		if (LServerPos[i].Key == 0) {
 			continue;//排除服务器自己
 		}
 		LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
-		for (size_t j = 0; j < AData->Size; j++)
+		for (size_t j = 0; j < AData->Size; ++j)
 		{
 			LBufferEventSingleData->mSubmitBullet->add(BData[j]);
 		}
@@ -77,7 +77,7 @@ void SGamePlayerBroken(bufferevent* be, void* Data) {
 	DH.Key = 3;
 	DH.Size = sizeof(PlayerBroken) * server::GetServer()->GetServerData()->GetNumber();
 	bufferevent_write(be, &DH, sizeof(DataHeader));
-	for (size_t i = 0; i < server::GetServer()->GetServerData()->GetNumber(); i++)
+	for (size_t i = 0; i < server::GetServer()->GetServerData()->GetNumber(); ++i)
 	{
 		bufferevent_write(be, &LServerPos[i].Key, sizeof(evutil_socket_t));
 		bufferevent_write(be, LServerPos[i].mBufferEventSingleData->mBrokenData, 16*16);
@@ -103,7 +103,7 @@ void SInitLabyrinth(bufferevent* be, void* Data) {
 	bufferevent_write(be, &DH, sizeof(DataHeader));
 	bufferevent_write(be, &LLabyrinth->numberX, sizeof(int));
 	bufferevent_write(be, &LLabyrinth->numberY, sizeof(int));
-	for (size_t i = 0; i < LLabyrinth->numberX; i++)
+	for (size_t i = 0; i < LLabyrinth->numberX; ++i)
 	{
 		bufferevent_write(be, LLabyrinth->BlockTypeS[i], (LLabyrinth->numberY * sizeof(unsigned int)));
 	}
@@ -115,7 +115,7 @@ void SLabyrinthPixel(bufferevent* be, void* Data) {
 	SynchronizeData* AData = (SynchronizeData*)Data;
 	PixelState* BData = (PixelState*)AData->Pointer;
 	evutil_socket_t fd = bufferevent_getfd(be);
-	for (size_t i = 0; i < AData->Size; i++)
+	for (size_t i = 0; i < AData->Size; ++i)
 	{
 		if (server::GetServer()->GetLabyrinth()->GetPixel(BData[i].X, BData[i].Y) != BData[i].State) {
 			BData[i].State = !BData[i].State;
@@ -152,7 +152,7 @@ void SStrSend(bufferevent* be, void* Data) {
 	DataHeader DH;
 
 	unsigned int LNumder = LStrQueue->GetNumber();
-	for (size_t i = 0; i < LNumder; i++)
+	for (size_t i = 0; i < LNumder; ++i)
 	{
 		LLimitUse = *LStrQueue->pop();
 		DH.Key = 8;
@@ -187,7 +187,7 @@ void SStrReceive(bufferevent* be, void* Data) {
 	LChatStrStruct->str = NewChar;
 	LChatStrStruct->size = AData->Size;
 	LUse = new LimitUse<ChatStrStruct*>(LChatStrStruct, LRoleMap->GetNumber());
-	for (size_t i = 0; i < LRoleMap->GetKeyNumber(); i++)
+	for (size_t i = 0; i < LRoleMap->GetKeyNumber(); ++i)
 	{
 		LRoleData[i].mBufferEventSingleData->mStr->add(LUse);
 	}

@@ -73,10 +73,10 @@ namespace VulKan {
 		:wDevice(device)
 	{
 		const float Positions[] = {
-			-0.001f, -0.001f, 0.0f,
-			16.001f, -0.001f, 0.0f,
-			16.001f, 16.001f, 0.0f,
-			-0.001f, 16.001f, 0.0f,
+			-8.0f, -8.0f, 0.0f,
+			 8.0f, -8.0f, 0.0f,
+			 8.0f,  8.0f, 0.0f,
+			-8.0f,  8.0f, 0.0f,
 		};
 
 		const float UVs[] = {
@@ -105,12 +105,12 @@ namespace VulKan {
 
 		delete mPixelTexture;
 
-		for (size_t i = 0; i < wSwapChain->getImageCount(); i++)
+		for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
 		{
 			delete mUniformParams[1]->mBuffers[i];
 			delete mCommandBuffer[i];
 		}
-		for (size_t i = 0; i < mUniformParams.size(); i++)
+		for (size_t i = 0; i < mUniformParams.size(); ++i)
 		{
 			delete mUniformParams[i];
 		}
@@ -130,7 +130,7 @@ namespace VulKan {
 		mCommandPool = new VulKan::CommandPool(wDevice);
 		mPixelTexture = new GAME::PixelTexture(wDevice, mCommandPool, VisualPixelS, 16, 16, 4, sampler);
 		mCommandBuffer = new VulKan::CommandBuffer*[frameCount];
-		for (size_t i = 0; i < frameCount; i++)
+		for (size_t i = 0; i < frameCount; ++i)
 		{
 			mCommandBuffer[i] = new VulKan::CommandBuffer(wDevice, mCommandPool, true);
 		}
@@ -175,7 +175,7 @@ namespace VulKan {
 	}
 
 	void VisualEffect::initCommandBuffer() {
-		for (size_t i = 0; i < wSwapChain->getImageCount(); i++)
+		for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
 		{
 			VkCommandBufferInheritanceInfo InheritanceInfo{};
 			InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;

@@ -9,7 +9,7 @@ void CGamePlayerSynchronize(bufferevent* be, void* Data) {
 	GAME::GamePlayer* LPlayer;
 	SynchronizeData* LD = (SynchronizeData*)Data;
 	RoleSynchronizationData* LData = (RoleSynchronizationData*)LD->Pointer;
-	for (size_t i = 0; i < LD->Size; i++)
+	for (size_t i = 0; i < LD->Size; ++i)
 	{
 		px = client::GetClient()->GetClientData()->Get(LData[i].Key);
 		LPlayer = client::GetClient()->GetCrowd()->GetGamePlayer(LData[i].Key);
@@ -33,7 +33,7 @@ void CGamePlayerSynchronize(bufferevent* be, void* Data) {
 void CArmsSynchronize(bufferevent* be, void* Data) {
 	SynchronizeData* AData = (SynchronizeData*)Data;
 	SynchronizeBullet* BData = (SynchronizeBullet*)AData->Pointer;
-	for (size_t i = 0; i < AData->Size; i++)
+	for (size_t i = 0; i < AData->Size; ++i)
 	{
 		client::GetClient()->GetArms()->ShootBullets(BData[i].X, BData[i].Y, BData[i].angle, 500, BData[i].Type);
 	}
@@ -43,7 +43,7 @@ void CArmsSynchronize(bufferevent* be, void* Data) {
 void CGamePlayerBroken(bufferevent* be, void* Data) {
 	SynchronizeData* AData = (SynchronizeData*)Data;
 	PlayerBroken* BData = (PlayerBroken*)AData->Pointer;
-	for (size_t i = 0; i < (AData->Size - 1); i++)//去除最后一个自己
+	for (size_t i = 0; i < (AData->Size - 1); ++i)//去除最后一个自己
 	{
 		GAME::GamePlayer* LPlayer = client::GetClient()->GetCrowd()->GetGamePlayer(BData[i].Key);
 		LPlayer->UpDataBroken(BData[i].Broken);
@@ -82,7 +82,7 @@ void CInitLabyrinth(bufferevent* be, void* Data) {
 void CLabyrinthPixel(bufferevent* be, void* Data) {
 	SynchronizeData* AData = (SynchronizeData*)Data;
 	PixelState* BData = (PixelState*)AData->Pointer;
-	for (size_t i = 0; i < AData->Size; i++)
+	for (size_t i = 0; i < AData->Size; ++i)
 	{
 		client::GetClient()->GetLabyrinth()->mPixelQueue->add({ BData[i].X, BData[i].Y, BData[i].State });
 	}
@@ -94,7 +94,7 @@ void CNPCSSynchronize(bufferevent* be, void* Data) {
 	RoleSynchronizationData* BData = (RoleSynchronizationData*)AData->Pointer;
 	GAME::Crowd* LCrowd = client::GetClient()->GetCrowd();
 	GAME::NPC* LNPC = nullptr;
-	for (size_t i = 0; i < AData->Size; i++)
+	for (size_t i = 0; i < AData->Size; ++i)
 	{
 		LNPC = LCrowd->GetNPC(BData[i].Key);
 		LNPC->SetNPC(BData[i].X, BData[i].Y, BData[i].ang);
@@ -109,7 +109,7 @@ void CStrSend(bufferevent* be, void* Data) {
 	DataHeader DH;
 
 	unsigned int LNumder = LStrQueue->GetNumber();
-	for (size_t i = 0; i < LNumder; i++)
+	for (size_t i = 0; i < LNumder; ++i)
 	{
 		LLimitUse = *LStrQueue->pop();
 		DH.Key = 8;

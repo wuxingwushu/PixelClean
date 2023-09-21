@@ -67,7 +67,7 @@ public:
 		delete mNameS;
 		delete mTimeS;
 		delete mTimerS;
-		for (size_t i = 0; i < Count; i++)
+		for (size_t i = 0; i < Count; ++i)
 		{
 			if (mHeapBoolS[i])
 			{
@@ -95,15 +95,15 @@ public:
 				mTimeMin[Count] = 1000.0f;
 			}
 			mTimeS[Count] = 0;
-			mStackNumber++;
+			++mStackNumber;
 			mLabelStack[mStackNumber] = Count;
-			Count++;
+			++Count;
 			mTimeStack[mStackNumber] = clock();
 			
 		}
 		else
 		{
-			mStackNumber++;//堆++
+			++mStackNumber;//++堆
 			mLabelStack[mStackNumber] = mTimerMap[name];//获取数组标签
 			mTimeStack[mStackNumber] = clock();//获取当前时间
 		}
@@ -111,7 +111,7 @@ public:
 
 	void StartEnd() {
 		mTimeS[mLabelStack[mStackNumber]] += (clock() - mTimeStack[mStackNumber]);//当前时间 减去 开始时间 获取 耗时
-		mStackNumber--;//堆--
+		--mStackNumber;//--堆
 	}
 
 	void MomentTiming(const char* name) {
@@ -120,13 +120,13 @@ public:
 			mTimerMap.insert(std::make_pair(name, MomentCount));
 			mMomentNameS[MomentCount] = name;
 			mMomentTimerS[MomentCount] = 0;
-			mMomentStackNumber++;
+			++mMomentStackNumber;
 			mMomentLabelStack[mMomentStackNumber] = MomentCount;
-			MomentCount++;
+			++MomentCount;
 			mMomentTimeStack[mMomentStackNumber] = clock();
 		}
 		else {
-			mMomentStackNumber++;
+			++mMomentStackNumber;
 			mMomentLabelStack[mMomentStackNumber] = mTimerMap[name];
 			mMomentTimeStack[mMomentStackNumber] = clock();
 		}
@@ -134,7 +134,7 @@ public:
 
 	void MomentEnd() {
 		mMomentTimerS[mMomentLabelStack[mMomentStackNumber]] = clock() - mMomentTimeStack[mMomentStackNumber];
-		mMomentStackNumber--;
+		--mMomentStackNumber;
 	}
 
 	void RefreshTiming() {
@@ -142,7 +142,7 @@ public:
 		{
 			CyclesNumberTime = (clock() - CyclesNumberTime);
 			CyclesCount = 0;
-			for (size_t i = 0; i < Count; i++)
+			for (size_t i = 0; i < Count; ++i)
 			{
 				if (mHeapBoolS[i])
 				{
@@ -172,7 +172,7 @@ public:
 		}
 		else
 		{
-			CyclesCount++;
+			++CyclesCount;
 		}
 	}
 };

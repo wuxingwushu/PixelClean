@@ -84,7 +84,6 @@ namespace GAME {
 		default:
 			break;
 		}
-		mGamePlayer->GetObjectCollision()->SetForce(PlayerForce);//设置玩家受力
 	}
 
 
@@ -165,7 +164,7 @@ namespace GAME {
 	void Application::initGame() {
 		//生成Camera Buffer
 		mCameraVPMatricesBuffer.resize(mSwapChain->getImageCount());//每个GPU画布都要分配单独的 VkBuffer
-		for (int i = 0; i < mCameraVPMatricesBuffer.size(); i++) {
+		for (int i = 0; i < mCameraVPMatricesBuffer.size(); ++i) {
 			mCameraVPMatricesBuffer[i] = VulKan::Buffer::createUniformBuffer(mDevice, sizeof(VPMatrices), nullptr);
 		}
 
@@ -285,11 +284,14 @@ namespace GAME {
 		}
 
 		//给操作码对象赋值
+		Opcode::OpArms = mArms;
 		Opcode::OpLabyrinth = mLabyrinth;
 		Opcode::OpCrowd = mCrowd;
 		Opcode::OpGamePlayer = mGamePlayer;
 		Opcode::OpApplication = this;
 		Opcode::OpImGuiInterFace = InterFace;
+
+		mCrowd->AddNPC(-208, 60);
 	}
 
 	void Application::UninstallGame() {
@@ -529,7 +531,7 @@ namespace GAME {
 		mCamera.setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
 		mPipelineS->ReconfigurationPipelineS();
 
-		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
+		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
 		{
 			Global::MainCommandBufferS[i] = true;
 		}
@@ -633,11 +635,11 @@ namespace GAME {
 		huoqdedian.x += mCamera.getCameraPos().x;
 		huoqdedian.y += mCamera.getCameraPos().y;
 
-		mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16, 0, mCurrentFrame);
+		mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16 + 8, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16 + 8, 0, mCurrentFrame);
 
 
 		mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle);//设置玩家物理角度
-
+		mGamePlayer->GetObjectCollision()->SufferForce(PlayerForce);//设置玩家受力
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
 		TOOL::mTimer->StartEnd();
@@ -664,21 +666,19 @@ namespace GAME {
 		static int zuojian;
 		static SquarePhysics::ObjectSufferForce LSObjectDecorator{ nullptr, {0,0} };
 		int Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || ((ArmsContinuityFire > 0.2f) && LSObjectDecorator.Object == nullptr)))
+		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || ((ArmsContinuityFire > mArms->IntervalTime) && LSObjectDecorator.Object == nullptr)))
 		{
 			ArmsContinuityFire = 0;
 			LSObjectDecorator = mSquarePhysics->GetGoods({ huoqdedian.x, huoqdedian.y });
-			if (LSObjectDecorator.Object != nullptr)
+			if (LSObjectDecorator.Object == nullptr)
 			{
-				std::cout << "获取对象" << std::endl;
-			}else{
 				glm::dvec2 Armsdain = SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle);
-				mArms->ShootBullets(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
+				mArms->Shoot(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
 				if (Global::MultiplePeopleMode) {//是否为多人模式
 					if (Global::ServerOrClient) {//服务器还是客户端
 						RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
 						BufferEventSingleData* LBufferEventSingleData;
-						for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); i++)
+						for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); ++i)
 						{
 							LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
 							LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
@@ -697,9 +697,10 @@ namespace GAME {
 			glm::vec2 LSArmOfForce = SquarePhysics::vec2angle(LSObjectDecorator.ArmOfForce, LSObjectDecorator.Object->GetAngle());
 			LSObjectDecorator.Object->ForceSolution(
 				LSArmOfForce,
-				glm::vec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) } * 10.0f,
+				glm::vec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) },
 				TOOL::FPStime
 			);
+			mVisualEffect->SetPosAngle(LSObjectDecorator.Object->GetPosX(), LSObjectDecorator.Object->GetPosY(), 0, LSObjectDecorator.Object->GetAngleFloat(), mCurrentFrame);
 			if (Lzuojian != GLFW_PRESS) {
 				LSObjectDecorator.Object = nullptr;
 			}

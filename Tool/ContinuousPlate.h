@@ -27,7 +27,7 @@ public:
 		mNumberY = y;
 		mEdge = edge;
 		mPlate = new T * [mNumberX];
-		for (size_t i = 0; i < mNumberX; i++)
+		for (size_t i = 0; i < mNumberX; ++i)
 		{
 			mPlate[i] = new T[mNumberY];
 		}
@@ -55,7 +55,7 @@ public:
 
 	//析构
 	~ContinuousPlate() {
-		for (size_t i = 0; i < mNumberX; i++)
+		for (size_t i = 0; i < mNumberX; ++i)
 		{
 			delete mPlate[i];
 		}
@@ -100,9 +100,9 @@ public:
 		{
 			mX = (int(x) / mEdge);
 			mY = (int(y) / mEdge);
-			for (size_t Nx = 0; Nx < mNumberX; Nx++)
+			for (size_t Nx = 0; Nx < mNumberX; ++Nx)
 			{
-				for (size_t Ny = 0; Ny < mNumberY; Ny++)
+				for (size_t Ny = 0; Ny < mNumberY; ++Ny)
 				{
 					DeleteCallback(&mPlate[Nx][Ny], DeleteData);
 					GenerateCallback(&mPlate[Nx][Ny], (Nx + mX - mOriginX), (Ny + mY - mOriginY), GenerateData);
@@ -118,9 +118,9 @@ public:
 		int MX, MY;
 		if (uX > 0)
 		{
-			for (size_t x = 0; x < uX; x++)
+			for (size_t x = 0; x < uX; ++x)
 			{
-				for (size_t y = 0; y < mNumberY; y++)
+				for (size_t y = 0; y < mNumberY; ++y)
 				{
 					MX = moveX + x;
 					MY = moveY + y;
@@ -143,9 +143,9 @@ public:
 		}
 		else
 		{
-			for (size_t x = (mNumberX + uX); x < mNumberX; x++)
+			for (size_t x = (mNumberX + uX); x < mNumberX; ++x)
 			{
-				for (size_t y = 0; y < mNumberY; y++)
+				for (size_t y = 0; y < mNumberY; ++y)
 				{
 					MX = moveX + x;
 					MY = moveY + y;
@@ -173,9 +173,9 @@ public:
 		int MX, MY;
 		if (uY > 0)
 		{
-			for (size_t x = 0; x < mNumberX; x++)
+			for (size_t x = 0; x < mNumberX; ++x)
 			{
-				for (size_t y = 0; y < uY; y++)
+				for (size_t y = 0; y < uY; ++y)
 				{
 					MX = moveX + x;
 					MY = moveY + y;
@@ -198,9 +198,9 @@ public:
 		}
 		else
 		{
-			for (size_t x = 0; x < mNumberX; x++)
+			for (size_t x = 0; x < mNumberX; ++x)
 			{
-				for (size_t y = mNumberY + uY; y < mNumberY; y++)
+				for (size_t y = mNumberY + uY; y < mNumberY; ++y)
 				{
 					MX = moveX + x;
 					MY = moveY + y;

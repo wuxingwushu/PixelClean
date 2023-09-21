@@ -22,7 +22,7 @@ namespace Global {
 	extern unsigned int CommandBufferSize = 0;
 	bool* MainCommandBufferS = nullptr;
 	void MainCommandBufferUpdateRequest() {
-		for (size_t i = 0; i < CommandBufferSize; i++)
+		for (size_t i = 0; i < CommandBufferSize; ++i)
 		{
 			MainCommandBufferS[i] = true;
 		}

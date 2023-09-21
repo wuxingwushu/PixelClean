@@ -13,7 +13,7 @@ namespace SquarePhysics {
 			unsigned int y, 
 			unsigned int SideLength);
 
-		~FixedSizeTerrain();
+		virtual ~FixedSizeTerrain();
 
 
 

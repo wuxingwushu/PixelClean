@@ -5,6 +5,7 @@
 #include <iostream>
 
 namespace GAME {
+	class Arms;
 	class Labyrinth;
 	class Crowd;
 	class GamePlayer;
@@ -15,6 +16,7 @@ namespace GAME {
 namespace Opcode {
 
 	//指令对象数据
+	extern GAME::Arms* OpArms;
 	extern GAME::Labyrinth* OpLabyrinth;
 	extern GAME::Crowd* OpCrowd;
 	extern GAME::GamePlayer* OpGamePlayer;
@@ -91,4 +93,6 @@ namespace Opcode {
 	void SetMistSwitch(Queue<const char*>* CodeS);
 	//线框模式
 	void SetPipelineLinesMode(Queue<const char*>* CodeS);
+	//更换武器
+	void ReplaceArms(Queue<const char*>* CodeS);
 }

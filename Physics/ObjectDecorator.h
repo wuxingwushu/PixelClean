@@ -15,7 +15,7 @@ namespace SquarePhysics {
 
 		}
 
-		~ObjectDecorator() {
+		virtual ~ObjectDecorator() {
 
 		}
 		
@@ -66,7 +66,7 @@ namespace SquarePhysics {
 
 
 
-
+		//设置受力
 		void SetForce(glm::vec2 force) { 
 			mForce = force;
 			mForceFloat = Modulus(force);
@@ -74,11 +74,28 @@ namespace SquarePhysics {
 			mForceAngle = AngleFloatToAngleVec(mForceAngleFloat);
 		}
 
+		//设置受力
 		void SetForce(float angle, float Force) {
 			mForceFloat = Force;
 			mForceAngleFloat = angle;
 			mForceAngle = AngleFloatToAngleVec(angle);
 			mForce = mForceFloat * mForceAngle;
+		}
+
+		//受到的力
+		void SufferForce(glm::vec2 force) {
+			mForce += force;
+			mForceFloat = Modulus(force);
+			mForceAngleFloat = EdgeVecToCosAngleFloat(force);
+			mForceAngle = AngleFloatToAngleVec(mForceAngleFloat);
+		}
+
+		//受到的力
+		void SufferForce(float angle, float Force) {
+			mForce += AngleFloatToAngleVec(angle) * Force;
+			mForceFloat = Modulus(mForce);
+			mForceAngleFloat = EdgeVecToCosAngleFloat(mForce);
+			mForceAngle = AngleFloatToAngleVec(mForceAngleFloat);
 		}
 
 		[[nodiscard]] constexpr float GetForceX() const noexcept { return mForce.x; }
@@ -102,7 +119,7 @@ namespace SquarePhysics {
 
 		
 
-
+		//设置速度
 		void SetSpeed(glm::vec2 speed) { 
 			mSpeed = speed;
 			mSpeedFloat = Modulus(mSpeed);
@@ -110,6 +127,7 @@ namespace SquarePhysics {
 			mSpeedAngle = AngleFloatToAngleVec(mSpeedAngleFloat);
 		}
 
+		//设置速度
 		void SetSpeed(float speed, float angle) { 
 			mSpeedFloat = speed;
 			mSpeedAngleFloat = angle;
@@ -136,20 +154,6 @@ namespace SquarePhysics {
 
 
 
-		void SetAccelerationX(float X) {
-			mAcceleration.x = X;
-		}
-
-		void SetAccelerationY(float Y) {
-			mAcceleration.y = Y;
-		}
-
-		void SetAcceleration(glm::vec2 Acceleration) {
-			mAcceleration = Acceleration;
-		}
-
-
-
 		//破坏的回调函数
 		void SetDestroyModeCallback(_DestroyModeCallback DestroyModeCallback) {
 			mDestroyModeCallback = DestroyModeCallback;
@@ -166,40 +170,52 @@ namespace SquarePhysics {
 
 		//帧时间步长模拟
 		void FrameTimeStep(float TimeStep, float FrictionCoefficient){
-			glm::vec2 Resistance = mSpeedAngle * (mQuality * 9.8f * FrictionCoefficient * mFrictionCoefficient);//受到摩檫力
+			glm::vec2 Resistance = mSpeedAngle * ((mQuality * 9.8f * FrictionCoefficient * mFrictionCoefficient) + (mSpeedFloat * mSpeedFloat * 0.01f));//受到摩檫力
 
-			/*mPos += mSpeed * TimeStep;
-			if (mSpeedFloat != 0) {
-				if (mForce.x == 0) {
-					if (fabs(mSpeed.x) < 0.2f || (mSpeed.x > 0 != mSpeedBack[0])) {
-						SetSpeed({ 0,mSpeed.y });
-						mAcceleration.x = 0.0f;
-					}
-				}
-				if (mForce.y == 0) {
-					if (fabs(mSpeed.y) < 0.2f || (mSpeed.y > 0 != mSpeedBack[1])) {
-						SetSpeed({ mSpeed.x, 0 });
-						mAcceleration.y = 0.0f;
-					}
-				}
-				if (mSpeedFloat == 0) {
-					return;
-				}
+			mPos += mSpeed * TimeStep;//计算移动距离
+			//解算速度
+			if (mSpeedFloat != 0) {//速度不为 O
 				glm::vec2 LForce = mForce - Resistance;
-				mAcceleration += (LForce / mQuality) * TimeStep;
-				UpDataSpeedBack();
+				glm::vec2 mAcceleration = (LForce / mQuality);
+				//UpDataSpeedBack();
 				SetSpeed(mSpeed + (mAcceleration * TimeStep));
+				//SpeedReversalJudge();
 			}
 			else if(ModulusLength(Resistance) < ModulusLength(mForce))
 			{
 				glm::vec2 LForce = mForce - Resistance;
-				mAcceleration += (LForce / mQuality) * TimeStep;
-				UpDataSpeedBack();
+				glm::vec2 mAcceleration = (LForce / mQuality);
 				SetSpeed(mSpeed + (mAcceleration * TimeStep));
-			}*/
-			
+				//UpDataSpeedBack();
+			}
+			SetForce({ 0,0 });
 
-			if ((mForce.x != 0.0f) || (mForce.y != 0.0f)) {
+			float AngleAcceleration = 0;
+			float LTorque = (mQuality * 9.8f * FrictionCoefficient * mFrictionCoefficient) * mRadius + (mAngleSpeed * mAngleSpeed * 0.1f);
+			mAngleFloat += mAngleSpeed * TimeStep;//计算旋转角度
+			SetAngle(mAngleFloat);
+			//解算角速度
+			if (mAngleSpeed != 0) {//角速度不为 O
+				int ZF = (mAngleSpeed < 0 ? 1 : -1);
+				AngleAcceleration += ((LTorque * ZF + mTorque) / mQuality);
+				mAngleSpeed += AngleAcceleration * TimeStep;
+				if ((mAngleSpeed < 0 ? 1 : -1) != ZF) { mAngleSpeed = 0; }
+			}
+			else if (LTorque < fabs(mTorque) && mTorque != 0)
+			{
+				if (mTorque < 0) {
+					mTorque += LTorque;
+				}
+				else {
+					mTorque -= LTorque;
+				}
+				AngleAcceleration += mTorque / mQuality;
+				mAngleSpeed += AngleAcceleration * TimeStep;
+			}
+			mTorque = 0;
+
+
+			/*if ((mForce.x != 0.0f) || (mForce.y != 0.0f)) {
 				if ((mSpeed.x != 0.0f) || (mSpeed.y != 0.0f)) {
 					SetSpeed(mSpeed + (((mForce - Resistance) / mQuality) * TimeStep));
 					mPos += mSpeed * TimeStep;
@@ -229,7 +245,7 @@ namespace SquarePhysics {
 				{
 					return;
 				}
-			}
+			}*/
 		}
 
 		
@@ -293,11 +309,17 @@ namespace SquarePhysics {
 		void ForceSolution(glm::vec2 ArmOfForce, glm::vec2 Force, float tiem) {
 			DecompositionForce LSDecompositionForce = CalculateDecompositionForce(ArmOfForce, Force);
 			float Angle = EdgeVecToCosAngleFloat(ArmOfForce) - EdgeVecToCosAngleFloat(LSDecompositionForce.Vertical);
-			float angletime = Modulus(ArmOfForce) * Modulus(LSDecompositionForce.Vertical) * tiem;
+			float angletime = Modulus(ArmOfForce) * Modulus(LSDecompositionForce.Vertical);
 			angletime = angletime * (sin(Angle) < 0 ? -1 : 1);
-			PlayerTargetAngle(GetAngleFloat() + angletime);
-			SetForce(LSDecompositionForce.Parallel);
+			//PlayerTargetAngle(GetAngleFloat() + angletime);
+			SufferTorque(angletime);
+			SufferForce(LSDecompositionForce.Parallel);
 		}
+
+		void SetTorque(float Torque) { mTorque = Torque; }
+
+		void SufferTorque(float Torque) { mTorque += Torque; }
+
 
 	
 		float		mQuality = 1.0f;				//质量（KG）
@@ -317,15 +339,12 @@ namespace SquarePhysics {
 		float		mSpeedFloat = 0.0f;				//速度大小Float
 		glm::vec2	mSpeedAngle{ 0.0f, 0.0f };		//速度角度
 		float		mSpeedAngleFloat = 0.0f;		//速度角度Float
-		
-		glm::vec2	mAcceleration{ 0.0f, 0.0f };		//加速度
-		float		mAccelerationFloat = 0.0f;			//加速度大小Float
-		glm::vec2	mAccelerationAngle{ 0.0f, 0.0f };	//加速度角度
-		float		mAccelerationAngleFloat = 0.0f;		//加速度角度Float
+
+		float		mAngleSpeed = 0.0f;				//角速度
+		float		mTorque = 0.0f;					//扭矩
+		float		mRadius = 8.0f;					//半径
 
 		float		mTargetAngle = 0;				//目标角度
-		float		mAngleSpeed = 0;				//角速度
-		float		mTorque = 0.0f;					//扭矩
 		bool		mSpeedBack[2]{};				//用于判断速度方向反转
 
 

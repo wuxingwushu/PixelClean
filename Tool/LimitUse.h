@@ -17,7 +17,7 @@ public:
 
 	void Limit() {
 		if (mUseNumber != 0) {
-			mUseNumber--;
+			--mUseNumber;
 		}
 	}
 

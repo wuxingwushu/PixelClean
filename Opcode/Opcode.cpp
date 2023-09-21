@@ -8,10 +8,10 @@ namespace Opcode {
 		if (str.size() < 1) {
 			return str;
 		}
-		for (size_t i = 0; i < str.size() - 1; i++)
+		for (size_t i = 0; i < str.size() - 1; ++i)
 		{
 			if (str[i] == ' ') {
-				for (size_t x = i; x < str.size(); x++) {
+				for (size_t x = i; x < str.size(); ++x) {
 					if (str[x] != ' ') {
 						i++;
 						jie = x;
@@ -44,7 +44,7 @@ namespace Opcode {
 			std::vector<std::string> CodeBuffer;
 			Queue<const char*> CodeS(10);
 			Code = RemoveExcessiveSpaces(Code);//把间隔空格处理的只剩下一个
-			for (size_t i = 0; i < Code.size(); i++)
+			for (size_t i = 0; i < Code.size(); ++i)
 			{
 				if (Code[i] == ' ') {
 					CodeBuffer.push_back(Code.substr(0, i));//把内容提取出来
@@ -53,7 +53,7 @@ namespace Opcode {
 				}
 			}
 			CodeBuffer.push_back(Code);//把最后的指令加入
-			for (size_t i = 0; i < CodeBuffer.size(); i++)
+			for (size_t i = 0; i < CodeBuffer.size(); ++i)
 			{
 				CodeS.add(CodeBuffer[i].c_str());
 			}

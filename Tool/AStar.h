@@ -68,17 +68,17 @@ private:
 public:
     AStar(int Range, int Steps):mRange(Range), mSteps(Steps){
         visited = new int*[mRange*2];
-        for (size_t i = 0; i < mRange*2; i++)
+        for (size_t i = 0; i < mRange*2; ++i)
         {
             visited[i] = new int[mRange*2];
-            for (size_t j = 0; j < mRange*2; j++)
+            for (size_t j = 0; j < mRange*2; ++j)
             {
                 visited[i][j] = 0;
             }
         }
     }
     ~AStar() {
-        for (size_t j = 0; j < mRange*2; j++)
+        for (size_t j = 0; j < mRange*2; ++j)
         {
             delete visited[j];
         }
@@ -104,9 +104,9 @@ public:
         target.x -= start.x;
         target.y -= start.y;
         start = { 0,0 };
-        for (size_t i = 0; i < mRange*2; i++)
+        for (size_t i = 0; i < mRange*2; ++i)
         {
-            for (size_t j = 0; j < mRange*2; j++)
+            for (size_t j = 0; j < mRange*2; ++j)
             {
                 visited[i][j] = 0;
             }
@@ -135,8 +135,8 @@ public:
             if (visited[x + mRange][y + mRange] == 0) {
                 Count++;
                 visited[x + mRange][y + mRange] = 1;
-                for (int i = -1; i <= 1; i++) {
-                    for (int j = -1; j <= 1; j++) {
+                for (int i = -1; i <= 1; ++i) {
+                    for (int j = -1; j <= 1; ++j) {
                         if (i == 0 && j == 0)
                             continue;
 
@@ -205,8 +205,8 @@ public:
                         //获取路径
                         PathVector->push_back({ LStart.x + StartingPoint.x, LStart.y + StartingPoint.y });
                         //取周围最大的点
-                        for (int i = -1; i <= 1; i++) {
-                            for (int j = -1; j <= 1; j++) {
+                        for (int i = -1; i <= 1; ++i) {
+                            for (int j = -1; j <= 1; ++j) {
                                 if (i == 0 && j == 0)
                                     continue;
 

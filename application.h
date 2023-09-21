@@ -140,9 +140,9 @@ namespace GAME {
 		VulKan::PipelineS* mPipelineS{ nullptr }; //渲染管线集合
 
 		//ImGui
-		VulKan::CommandPool* mImGuuiCommandPool;
-		VulKan::CommandBuffer* mImGuuiCommandBuffers;
-		VulKan::RenderPass* mImGuuiRenderPass;
+		VulKan::CommandPool* mImGuuiCommandPool{ nullptr };
+		VulKan::CommandBuffer* mImGuuiCommandBuffers{ nullptr };
+		VulKan::RenderPass* mImGuuiRenderPass{ nullptr };
 
 
 
@@ -157,7 +157,7 @@ namespace GAME {
 
 		glm::vec2 PlayerForce{};//玩家移动受力
 		GamePlayer* mGamePlayer{ nullptr };//玩家
-		double CursorPosX, CursorPosY;//光标位置
+		double CursorPosX = 0, CursorPosY = 0;//光标位置
 	public:
 		unsigned int AttackType = 0;//攻击模式
 	private:
@@ -166,9 +166,9 @@ namespace GAME {
 		ParticleSystem* mParticleSystem = nullptr;//粒子系统
 		
 		
-		VPMatrices	mVPMatrices;//玩家变换矩阵（位置 角度）
-		Camera      mCamera;//定义的相机
-		std::vector<VulKan::Buffer*> mCameraVPMatricesBuffer;//GPU用的玩家变换矩阵（位置 角度）
+		VPMatrices	mVPMatrices{};//玩家变换矩阵（位置 角度）
+		Camera      mCamera{};//定义的相机
+		std::vector<VulKan::Buffer*> mCameraVPMatricesBuffer{};//GPU用的玩家变换矩阵（位置 角度）
 
 	public:
 		ImGuiInterFace* InterFace = nullptr; // ImGui 游戏界面都写这里面

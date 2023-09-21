@@ -24,7 +24,7 @@ namespace SquarePhysics {
 		//移除Object
 		void RemoveObjectCollision(ObjectCollision* LObjectCollision) {
 			ObjectCollision** ObjectCollisionS = mObjectCollisionS->Data();
-			for (size_t i = 0; i < mObjectCollisionS->GetNumber(); i++)
+			for (size_t i = 0; i < mObjectCollisionS->GetNumber(); ++i)
 			{
 				if (ObjectCollisionS[i] == LObjectCollision) {
 					mObjectCollisionS->Delete(i);
@@ -37,7 +37,7 @@ namespace SquarePhysics {
 		//移除Object
 		void RemovePixelCollision(PixelCollision* LPixelCollision) {
 			PixelCollision** PixelCollisionS = mPixelCollisionS->Data();
-			for (size_t i = 0; i < mPixelCollisionS->GetNumber(); i++)
+			for (size_t i = 0; i < mPixelCollisionS->GetNumber(); ++i)
 			{
 				if (PixelCollisionS[i] == LPixelCollision) {
 					mPixelCollisionS->Delete(i);

@@ -8,11 +8,11 @@
 
 
 
-namespace GAME {
+namespace VulKan {
 
 	class Texture {
 	public:
-		Texture(VulKan::Device* device, const VulKan::CommandPool* commandPool, const std::string &imageFilePath, VulKan::Sampler* sampler);
+		Texture(Device* device, const CommandPool* commandPool, const std::string &imageFilePath, Sampler* sampler);
 
 		~Texture();
 
@@ -23,8 +23,8 @@ namespace GAME {
 		[[nodiscard]] VkDescriptorImageInfo& getImageInfo() { return mImageInfo; }
 
 	private:
-		VulKan::Device* mDevice{ nullptr };
-		VulKan::Image* mImage{ nullptr };
+		Device* mDevice{ nullptr };
+		Image* mImage{ nullptr };
 		VkDescriptorImageInfo mImageInfo{};
 	};
 

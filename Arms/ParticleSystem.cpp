@@ -11,7 +11,7 @@ namespace GAME {
 
 		mUniformParams = new std::vector<VulKan::UniformParameter*>[mNumber];
 		mDescriptorSet = new VulKan::DescriptorSet*[mNumber];
-		PixelTextureS = new PixelTexture*[mNumber];
+		PixelTextureS = new VulKan::PixelTexture*[mNumber];
 
 
 		float mPositions[12] = {
@@ -102,7 +102,7 @@ namespace GAME {
 		ObjectUniform mUniform;
 		for (int x = 0; x < mNumber; ++x)
 		{
-			PixelTextureS[x] = new PixelTexture(device, mThreadCommandPoolS[0], pixelS[1], 1, 1, 4, sampler);
+			PixelTextureS[x] = new VulKan::PixelTexture(device, mThreadCommandPoolS[0], pixelS[1], 1, 1, 4, sampler);
 
 			VulKan::UniformParameter* vpParam = new VulKan::UniformParameter();
 			vpParam->mBinding = 0;
@@ -124,7 +124,7 @@ namespace GAME {
 			for (int i = 0; i < frameCount; ++i) {
 				VulKan::Buffer* buffer = VulKan::Buffer::createUniformBuffer(device, objectParam->mSize, nullptr);
 				objectParam->mBuffers.push_back(buffer);
-				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -10000.0f));
 				buffer->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));
 			}
 

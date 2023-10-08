@@ -1,53 +1,61 @@
 #pragma once
 
 #include "../base.h"
-#include "../VulKan/image.h"//����ͼƬ
-#include "../VulKan/sampler.h"//����ͼƬ������
+#include "../VulKan/image.h"
+#include "../VulKan/sampler.h"
 #include "../VulKan/device.h"
 #include "../VulKan/commandPool.h"
 
-namespace GAME {
+namespace VulKan {
 
 	class PixelTexture {
 	public:
 
 		PixelTexture(
-			VulKan::Device* device, 
-			const VulKan::CommandPool* commandPool, 
+			Device* device, 
+			const CommandPool* commandPool, 
 			const unsigned char* pixelS,
 			unsigned int texWidth, 
 			unsigned int texHeight, 
 			unsigned int ChannelsNumber,
-			VulKan::Sampler* sampler
+			Sampler* sampler
 		);
 
 		~PixelTexture();
 
-		void ModifyImage(size_t size, void* data);
-
-
-		[[nodiscard]] auto getImage() const { return mImage; }
-
-		//[[nodiscard]] auto getSampler() const { return mSampler; }
-
-		[[nodiscard]] VkDescriptorImageInfo& getImageInfo() { return mImageInfo; }
-
-		[[nodiscard]] void* getHOSTImagePointer() { return HOSTImage->getupdateBufferByMap(); }
-
-		void endHOSTImagePointer() { HOSTImage->endupdateBufferByMap(); }
-
-		[[nodiscard]] VkBuffer getHOSTImageBuffer() { return HOSTImage->getBuffer(); }
-
+		//上传完整图片数据到HOST缓存
 		void updateBufferByMap(void* data, size_t size) { HOSTImage->updateBufferByMap(data, size); }
 
+		//上传完整图片数据（更新到GPU）
+		void ModifyImage(size_t size, void* data);
+		
+		//将HOST缓存上传到GPU
 		void UpDataImage();
 
+		//统一上传
+		void SynchronizationUpDataImage();
+
+		//获取图片
+		[[nodiscard]] auto getImage() const { return mImage; }
+
+		//获取图片信息
+		[[nodiscard]] VkDescriptorImageInfo& getImageInfo() { return mImageInfo; }
+
+		//获取图片HOST缓存的指针
+		[[nodiscard]] void* getHOSTImagePointer() { return HOSTImage->getupdateBufferByMap(); }
+
+		//关闭HOST缓存的指针
+		void endHOSTImagePointer() { HOSTImage->endupdateBufferByMap(); }
+
+		//获取HOST缓存
+		[[nodiscard]] VkBuffer getHOSTImageBuffer() { return HOSTImage->getBuffer(); }
+
 	private:
-		VulKan::Device* mDevice{ nullptr };
-		VulKan::Image* mImage{ nullptr };
-		VulKan::Buffer* HOSTImage{ nullptr };
-		const VulKan::CommandPool* mCommandPool{ nullptr };
-		VulKan::CommandBuffer* mCommandBuffer{ nullptr };
+		Device* mDevice{ nullptr };
+		Image* mImage{ nullptr };
+		Buffer* HOSTImage{ nullptr };
+		const CommandPool* mCommandPool{ nullptr };
+		CommandBuffer* mCommandBuffer{ nullptr };
 		VkDescriptorImageInfo mImageInfo{};
 	};
 

@@ -13,7 +13,7 @@
 namespace GAME {
 
 	struct Particle {
-		PixelTexture* Pixel;
+		VulKan::PixelTexture* Pixel;
 		std::vector<VulKan::Buffer*>* Buffer;
 	};
 
@@ -69,7 +69,7 @@ namespace GAME {
 		VulKan::DescriptorPool* mDescriptorPool{ nullptr };//描述符池
 		std::vector<VulKan::UniformParameter*>* mUniformParams{ nullptr };
 		VulKan::DescriptorSet** mDescriptorSet{ nullptr };//位置 贴图 的数据
-		PixelTexture** PixelTextureS{ nullptr };//每块的贴图
+		VulKan::PixelTexture** PixelTextureS{ nullptr };//每块的贴图
 
 		VulKan::Buffer* mPositionBuffer{ nullptr };//点坐标
 		VulKan::Buffer* mUVBuffer{ nullptr };//点对应的UV

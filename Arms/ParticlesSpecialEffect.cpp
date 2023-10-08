@@ -48,7 +48,7 @@ namespace GAME {
 	void ParticlesSpecialEffect::DeleteSpecialEffects(unsigned int index) {
 		SpecialEffects* LSpecialEffects = mSpecialEffects->GetData(index);//获取对应的粒子特效
 		ObjectUniform mUniform;
-		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -1.0f));
+		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -10000.0f));
 		for (size_t i = 0; i < LSpecialEffects->Buffer->size(); ++i)
 		{
 			(*LSpecialEffects->Buffer)[i]->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));//设置到看不见的位置

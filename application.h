@@ -37,7 +37,7 @@
 #include "Labyrinth/Dungeon.h"
 
 #include "VulkanTool/VisualEffect.h"
-
+#include "VulkanTool/AuxiliaryVision.h"
 
 
 namespace GAME {
@@ -187,5 +187,6 @@ namespace GAME {
 		Dungeon* mDungeon = nullptr;//无限地图
 
 		VulKan::VisualEffect* mVisualEffect{ nullptr };//视觉效果
+		VulKan::AuxiliaryVision* mAuxiliaryVision{ nullptr };//辅助视觉
 	};
 }

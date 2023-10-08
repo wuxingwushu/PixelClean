@@ -45,7 +45,9 @@ namespace VulKan {
 
 		//向GPU上传临时数据
 		void updateBufferByMap(void *data, size_t size);//上传数据，（CPU可见的Buffer）
+		//获取HOST数据指针
 		void* getupdateBufferByMap();
+		//关闭HOST数据指针
 		void endupdateBufferByMap();
 		/********************************  生成单一模型  *************************************/
 		//我们创建的这个Buffer是CPU不可读的，所以不可以直接上传数据，所以做一个中间Buffer用来上传数据，上传完就销毁
@@ -75,10 +77,10 @@ namespace VulKan {
 
 	private://多线程临时储存数据
 		VkImage mDstImage{ VK_NULL_HANDLE };
-		VkImageLayout mDstImageLayout;
-		uint32_t mWidth;
-		uint32_t mHeight;
-		size_t mSize;
+		VkImageLayout mDstImageLayout{};
+		uint32_t mWidth{ 0 };
+		uint32_t mHeight{ 0 };
+		size_t mSize{ 0 };
 
 
 
@@ -90,7 +92,7 @@ namespace VulKan {
 
 	private:
 		VkBuffer mBuffer{ VK_NULL_HANDLE };//CPU端的内存描述
-		VmaAllocation mAllocation;// vma 的GPU内存描述
+		VmaAllocation mAllocation{};// vma 的GPU内存描述
 		//VkDeviceMemory mBufferMemory{ VK_NULL_HANDLE };//GPU端的内存描述，（废弃，专用 vma）
 		Device* mDevice{ nullptr };
 		VkDescriptorBufferInfo mBufferInfo{};

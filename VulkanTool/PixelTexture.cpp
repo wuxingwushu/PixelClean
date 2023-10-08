@@ -1,20 +1,20 @@
 #include "PixelTexture.h"
 
-namespace GAME {
+namespace VulKan {
 	PixelTexture::PixelTexture(
-		VulKan::Device* device, 
-		const VulKan::CommandPool* commandPool, 
+		Device* device, 
+		const CommandPool* commandPool, 
 		const unsigned char* pixelS,
 		unsigned int texWidth, 
 		unsigned int texHeight, 
 		unsigned int ChannelsNumber,
-		VulKan::Sampler* sampler
+		Sampler* sampler
 	) {
 		mDevice = device;
 		mCommandPool = commandPool;
-		mCommandBuffer = new VulKan::CommandBuffer(mDevice, mCommandPool);
+		mCommandBuffer = new CommandBuffer(mDevice, mCommandPool);
 
-		HOSTImage = new VulKan::Buffer(
+		HOSTImage = new Buffer(
 			mDevice, texWidth * texHeight * ChannelsNumber,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT

@@ -91,7 +91,7 @@ namespace SquarePhysics {
 							else {
 								CoordinateDianJi.x += LCollisionInfo.Pos.x - Dian.x - Xpos.x;
 							}
-							CoordinateDianJiShu++;
+							++CoordinateDianJiShu;
 						}
 					}
 					if (Once) {
@@ -133,7 +133,7 @@ namespace SquarePhysics {
 							LCollisionInfo.Pos.y += 1;//偏移
 						}
 						LObject->SetAngle(LObject->GetAngleFloat() + TorqueCalculate(Xpos, End, {0,-LObject->GetForceY()}) * 0.0001f);//角度
-						Speed.y = 0;
+						Speed.y = 0.1f * Speed.y;
 						Xpos.y = glm::dvec2(LCollisionInfo.Pos).y - Dian.y;
 					}
 					else
@@ -143,7 +143,7 @@ namespace SquarePhysics {
 							LCollisionInfo.Pos.x += 1;//偏移
 						}
 						LObject->SetAngle(LObject->GetAngleFloat() + TorqueCalculate(Xpos, End, { -LObject->GetForceX(), 0}) * 0.0001f);//角度
-						Speed.x = 0;
+						Speed.x = 0.1f * Speed.x;
 						Xpos.x = glm::dvec2(LCollisionInfo.Pos).x - Dian.x;
 					}
 					LObject->SetSpeed(Speed);//设置速度
@@ -161,13 +161,16 @@ namespace SquarePhysics {
 			Jpos = LPixel->GetPos();//现在位置
 			LPixel->FrameTimeStep(TimeStep, 0);//更新物理状态
 			Xpos = LPixel->GetPos();//新位置
-			LCollisionInfo = mTerrain->RadialCollisionDetection(Jpos, Xpos);//对地图碰撞进行判断
+			LCollisionInfo = mTerrain->RadialCollisionDetection(//对地图碰撞进行判断
+				{ (Jpos.x < 0 ? Jpos.x - 1 : Jpos.x), (Jpos.y < 0 ? Jpos.y - 1 : Jpos.y) },
+				{ (Xpos.x < 0 ? Xpos.x - 1 : Xpos.x), (Xpos.y < 0 ? Xpos.y - 1 : Xpos.y) }
+			);
 			if (LCollisionInfo.Collision) {//是否碰撞
 				LPixel->SetPos(LCollisionInfo.Pos);//设置为碰撞位置
 				if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LPixel, mTerrain, nullptr)) {
 					LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
 					mPixelCollisionS->Delete(i);//销毁对应的像素
-					i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
+					--i;//因为销毁了，I--，这样就不会少遍历对应的像素事件
 				}
 				continue;
 			}
@@ -188,7 +191,7 @@ namespace SquarePhysics {
 						LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
 						mPixelCollisionS->Delete(i);//销毁对应的像素
 						LObject->OutlineCalculate();//重新生成碰撞骨骼点
-						i--;//因为销毁了，I--，这样就不会少遍历对应的像素事件
+						--i;//因为销毁了，I--，这样就不会少遍历对应的像素事件
 					}
 					break;
 				}

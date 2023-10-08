@@ -54,6 +54,7 @@ namespace VulKan {
 
 		//纹理压缩 浮点数运算特性 多视口渲染
 		VkPhysicalDeviceFeatures deviceFeatures;
+		deviceFeatures.fillModeNonSolid = VK_TRUE; // 启用非实心填充模式
 		vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
 		if (deviceProp.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {//是否是独显，
@@ -134,6 +135,7 @@ namespace VulKan {
 		//填写逻辑设备创建信息
 		VkPhysicalDeviceFeatures deviceFeatures = {};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;//开启各向异性
+		deviceFeatures.geometryShader = VK_TRUE;//开启几何着色器
 
 		VkDeviceCreateInfo deviceCreateInfo = {};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

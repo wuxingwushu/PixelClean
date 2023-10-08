@@ -6,15 +6,27 @@ namespace VulKan {
 
 	typedef Pipeline* (*NewPipeline)(Pipeline* P, Device* D);
 
+	enum PipelineMods//要根据 PipelineS 构建 EstablishPipeline 顺序来；
+	{
+		MainMods = 0,
+		LineMods,
+		SpotMods
+	};
+
 	class PipelineS
 	{
 	public:
 		PipelineS(Device* Device, RenderPass* RenderPass);
 		~PipelineS();
 
+		void EstablishPipeline(NewPipeline F) {
+			mPipelineS.push_back(F(new Pipeline(mDevice, mRenderPass), mDevice));
+			mNewPipelineS.push_back(F);
+		};
+
 		void ReconfigurationPipelineS();
 
-		Pipeline* GetPipeline(unsigned int I) {
+		Pipeline* GetPipeline(PipelineMods I) {
 			return mPipelineS[I];
 		}
 

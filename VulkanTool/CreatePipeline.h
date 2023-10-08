@@ -5,4 +5,9 @@ namespace VulKan {
 
 	Pipeline* MainPipeline(Pipeline* Pipeline, Device* Device);
 
+	//画线
+	Pipeline* LinePipeline(Pipeline* Pipeline, Device* Device);
+
+	//画点
+	Pipeline* SpotPipeline(Pipeline* Pipeline, Device* Device);
 }

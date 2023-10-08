@@ -6,11 +6,11 @@ namespace GAME {
 		const VulKan::CommandPool* commandPool,
 		VulKan::Sampler* sampler
 	) {
-		mPixelTextureS = new PixelTexture* [TextureNumber];
+		mPixelTextureS = new VulKan::PixelTexture* [TextureNumber];
 
 		for (int i = 0; i < TextureNumber; i++)
 		{
-			mPixelTextureS[i] = new PixelTexture(device, commandPool, pixelS[i], 16, 16, 4, sampler);
+			mPixelTextureS[i] = new VulKan::PixelTexture(device, commandPool, pixelS[i], 16, 16, 4, sampler);
 		}
 	}
 

@@ -88,7 +88,7 @@ namespace GAME {
 		VulKan::Buffer* mIndexBuffer{ nullptr };
 		size_t mIndexDatasSize;
 
-		Texture* mtexture = nullptr; //贴图
+		VulKan::Texture* mtexture = nullptr; //贴图
 
 	private://描述模型   位置   贴图
 		std::vector<VulKan::UniformParameter*> mUniformParams;

@@ -179,7 +179,7 @@ namespace GAME {
 		VulKan::Sampler* sampler
 	)
 	{
-		mPixelTexture = new PixelTexture(device, commandPool, pixelS[textureID],16,16,4, sampler);
+		mPixelTexture = new VulKan::PixelTexture(device, commandPool, pixelS[textureID],16,16,4, sampler);
 		unsigned char* LTexturePointer = (unsigned char*)mPixelTexture->getHOSTImagePointer();
 		unsigned char Lcolor[4] = { 255,0,0,255 };
 		memcpy(&LTexturePointer[(16 * 4) * 14 + 8 * 4], Lcolor, 4);

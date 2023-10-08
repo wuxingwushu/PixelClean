@@ -13,7 +13,7 @@ namespace GAME {
 		float speed;
 		float angle;
 		float Zoom;
-		PixelTexture* Pixel;
+		VulKan::PixelTexture* Pixel;
 		std::vector<VulKan::Buffer*>* Buffer;
 	};
 

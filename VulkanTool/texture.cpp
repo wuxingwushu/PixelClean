@@ -3,9 +3,9 @@
 #define STB_IMAGE_IMPLEMENTATION//stb_image.h �ĺ궨��
 #include "../stb_image.h"
 
-namespace GAME {
+namespace VulKan {
 
-	Texture::Texture(VulKan::Device* device, const VulKan::CommandPool* commandPool, const std::string& imageFilePath, VulKan::Sampler* sampler) {
+	Texture::Texture(Device* device, const CommandPool* commandPool, const std::string& imageFilePath, Sampler* sampler) {
 		mDevice = device;
 
 		int texWidth, texHeight, texSize, texChannles;

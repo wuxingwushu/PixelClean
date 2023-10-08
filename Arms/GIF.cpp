@@ -56,7 +56,7 @@ namespace GAME {
 
 	void GIF::initUniformManager(const char* path, std::vector<VulKan::Buffer*> VPMstdBuffer, VulKan::Sampler* sampler) {
 
-		mtexture = new Texture(mDevice, mCommandPool[0], path, sampler);
+		mtexture = new VulKan::Texture(mDevice, mCommandPool[0], path, sampler);
 
 		VulKan::UniformParameter* vpParam = new VulKan::UniformParameter();
 		vpParam->mBinding = 0;

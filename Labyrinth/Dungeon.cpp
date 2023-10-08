@@ -243,7 +243,7 @@ namespace GAME {
 		//int(*arr2D)[5] = reinterpret_cast<int(*)[5]>(shucs);
 		mDescriptorSet = new VulKan::DescriptorSet**[mNumberX];
 		mMistDescriptorSet = new VulKan::DescriptorSet**[mNumberX];
-		WarfareMist = new GAME::PixelTexture(wDevice, mCommandPool, nullptr, mNumberX * 16, mNumberY * 16, 4, sampler);
+		WarfareMist = new VulKan::PixelTexture(wDevice, mCommandPool, nullptr, mNumberX * 16, mNumberY * 16, 4, sampler);
 		unsigned char* WarfareMistPointer = (unsigned char*)WarfareMist->getHOSTImagePointer();
 		int* WallBoolPointer = (int*)WallBool->getupdateBufferByMap();
 		mDungeonDestroyStruct = new DungeonDestroyStruct*[mNumberX];
@@ -262,7 +262,7 @@ namespace GAME {
 					objectParam->mBuffers[i] = mTextureAndBuffer[ix][iy].mBufferS;
 				}
 				mTextureAndBuffer[ix][iy].Type = GetNoise(ix - mMoveTerrain->OriginX + mMoveTerrain->GetGridSPosX(), iy - mMoveTerrain->OriginY + mMoveTerrain->GetGridSPosY());
-				mTextureAndBuffer[ix][iy].mPixelTexture = new GAME::PixelTexture(wDevice, mCommandPool, pixelS[mTextureAndBuffer[ix][iy].Type], 16, 16, 4, sampler);
+				mTextureAndBuffer[ix][iy].mPixelTexture = new VulKan::PixelTexture(wDevice, mCommandPool, pixelS[mTextureAndBuffer[ix][iy].Type], 16, 16, 4, sampler);
 
 				bool CollisionBool = false;
 				if (mTextureAndBuffer[ix][iy].Type > (TextureNumber / 2)) {

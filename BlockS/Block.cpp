@@ -90,7 +90,7 @@ namespace GAME {
 	void Block::initUniformManager(
 		VulKan::Device* device,
 		const VulKan::CommandPool* commandPool,
-		int frameCount, PixelTexture* texturepath,
+		int frameCount, VulKan::PixelTexture* texturepath,
 		const VkDescriptorSetLayout mDescriptorSetLayout,
 		std::vector<VulKan::Buffer*> VPMstdBuffer,
 		VulKan::Sampler* sampler

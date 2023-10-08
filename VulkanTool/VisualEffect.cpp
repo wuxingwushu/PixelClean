@@ -128,7 +128,7 @@ namespace VulKan {
 		VulKan::Sampler* sampler//图片采样器
 	) {
 		mCommandPool = new VulKan::CommandPool(wDevice);
-		mPixelTexture = new GAME::PixelTexture(wDevice, mCommandPool, VisualPixelS, 16, 16, 4, sampler);
+		mPixelTexture = new VulKan::PixelTexture(wDevice, mCommandPool, VisualPixelS, 16, 16, 4, sampler);
 		mCommandBuffer = new VulKan::CommandBuffer*[frameCount];
 		for (size_t i = 0; i < frameCount; ++i)
 		{

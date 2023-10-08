@@ -151,7 +151,7 @@ namespace GAME {
 		VulKan::DescriptorPool* mDescriptorPool{ nullptr };//描述符池
 		std::vector<VulKan::UniformParameter*>* mUniformParams = nullptr;
 		
-		PixelTexture* PixelTextureS{ nullptr };//每块的贴图
+		VulKan::PixelTexture* PixelTextureS{ nullptr };//每块的贴图
 		VulKan::DescriptorSet* mDescriptorSet{ nullptr };//位置 贴图 的数据
 
 		
@@ -187,7 +187,7 @@ namespace GAME {
 		std::vector<VulKan::CalculateStruct> CalculateBufferS;
 
 
-		PixelTexture* WarfareMist{ nullptr };//每块的贴图
+		VulKan::PixelTexture* WarfareMist{ nullptr };//每块的贴图
 		VulKan::DescriptorSet* mMistDescriptorSet{ nullptr };//位置 角度  射线颜色 的数据
 
 		miwustruct wymiwustruct{};

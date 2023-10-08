@@ -350,9 +350,9 @@ namespace GAME {
 			}
 		}
 
-		PixelTextureS = new PixelTexture(device, mThreadCommandPoolS[0], mPixelS, numberX * 16, numberY * 16, 4, sampler);
+		PixelTextureS = new VulKan::PixelTexture(device, mThreadCommandPoolS[0], mPixelS, numberX * 16, numberY * 16, 4, sampler);
 		
-		WarfareMist = new PixelTexture(device, mThreadCommandPoolS[0], mMistS, numberX * 16, numberY * 16, 4, sampler);
+		WarfareMist = new VulKan::PixelTexture(device, mThreadCommandPoolS[0], mMistS, numberX * 16, numberY * 16, 4, sampler);
 
 		delete[] mPixelS;
 		delete[] mMistS;

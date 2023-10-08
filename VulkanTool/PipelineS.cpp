@@ -7,8 +7,9 @@ namespace VulKan {
 		mDevice = Device;
 		mRenderPass = RenderPass;
 
-		mPipelineS.push_back(MainPipeline(new Pipeline(Device, RenderPass), Device));
-		mNewPipelineS.push_back(MainPipeline);
+		EstablishPipeline(MainPipeline);
+		EstablishPipeline(LinePipeline);
+		EstablishPipeline(SpotPipeline);
 	}
 
 	PipelineS::~PipelineS() {

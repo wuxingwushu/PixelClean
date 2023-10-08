@@ -30,7 +30,7 @@ namespace GAME {
 
 	struct TextureAndBuffer {
 		VulKan::Buffer* mBufferS = nullptr;
-		PixelTexture* mPixelTexture = nullptr;
+		VulKan::PixelTexture* mPixelTexture = nullptr;
 		unsigned int Type = 0;
 		unsigned int MistPointerX = 0;
 		unsigned int MistPointerY = 0;
@@ -103,7 +103,7 @@ namespace GAME {
 
 		bool Pointerkaiguan = true;
 		unsigned char* LSMistPointer = nullptr;
-		PixelTexture* WarfareMist{ nullptr };			//每块的贴图
+		VulKan::PixelTexture* WarfareMist{ nullptr };			//每块的贴图
 		VulKan::Buffer* WallBool{ nullptr };//储存碰撞(是否是墙壁)
 		void UpdataMistData();
 		int pianX = 0;
@@ -111,7 +111,7 @@ namespace GAME {
 
 
 		std::vector<std::future<void>> MultithreadingGenerate;
-		std::vector<PixelTexture*>MultithreadingPixelTexture;
+		std::vector<VulKan::PixelTexture*>MultithreadingPixelTexture;
 	private://迷雾
 		//初始化战争迷雾
 		void InitMist();

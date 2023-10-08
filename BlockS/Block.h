@@ -21,7 +21,7 @@ namespace GAME {
 			VulKan::Device* device, //设备
 			const VulKan::CommandPool* commandPool, //指令池
 			int frameCount, //GPU画布的数量
-			PixelTexture* texturepath, //贴图
+			VulKan::PixelTexture* texturepath, //贴图
 			const VkDescriptorSetLayout mDescriptorSetLayout,//渲染管线要的提交内容
 			std::vector<VulKan::Buffer*> VPMstdBuffer,//玩家相机的变化矩阵 
 			VulKan::Sampler* sampler//图片采样器

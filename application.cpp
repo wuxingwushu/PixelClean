@@ -174,11 +174,11 @@ namespace GAME {
 			mDevice,
 			mCommandPool,
 			mSwapChain->getImageCount(),
-			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
+			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
 			mCameraVPMatricesBuffer,
 			mSampler
 		);
-		mParticleSystem->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
+		mParticleSystem->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
 
 		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleSystem, 1000);
 
@@ -190,13 +190,18 @@ namespace GAME {
 		mArms = new Arms(mParticleSystem, 1000);
 		mArms->SetSpecialEffect(mParticlesSpecialEffect);
 		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
-
-		
 	}
 
 	void Application::LoadingGame() {
 		float mGamePlayerPosX = mCamera.getCameraPos().x;
 		float mGamePlayerPosY = mCamera.getCameraPos().y;
+
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
+		mAuxiliaryVision->initUniformManager(
+			mSwapChain->getImageCount(),
+			mCameraVPMatricesBuffer
+		);
+		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
 		if (Global::GameMode) {
 			//生成迷宫
@@ -205,11 +210,11 @@ namespace GAME {
 			mLabyrinth->initUniformManager(
 				mDevice,
 				mSwapChain->getImageCount(),
-				mPipelineS->GetPipeline(0)->DescriptorSetLayout,
+				mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
 				&mCameraVPMatricesBuffer,
 				mSampler
 			);
-			mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
+			mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
 
 			glm::ivec2 Lpos = mLabyrinth->GetLegitimateGeneratePos();
 			mGamePlayerPosX = Lpos.x;
@@ -221,42 +226,49 @@ namespace GAME {
 			mDungeon = new Dungeon(mDevice, 50, 30, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
 			mDungeon->initUniformManager(
 				mSwapChain->getImageCount(),
-				mPipelineS->GetPipeline(0)->DescriptorSetLayout,
+				mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
 				mCameraVPMatricesBuffer,
 				mSampler
 			);
-			mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
+			mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
 		}
 		
 		mVisualEffect = new VulKan::VisualEffect(mDevice);
 		mVisualEffect->initUniformManager(
 			mSwapChain->getImageCount(),
-			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
+			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
 			mCameraVPMatricesBuffer,
 			mSampler
 		);
-		mVisualEffect->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(0));
+		mVisualEffect->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
 
 		//创建多人玩家
-		mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer, mLabyrinth);
+		mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer, mLabyrinth);
 		mCrowd->SteSquarePhysics(mSquarePhysics);
 		mCrowd->SetArms(mArms);
 
 
 		//创建玩家
-		mGamePlayer = new GamePlayer(mDevice, mPipelineS->GetPipeline(0), mSwapChain, mRenderPass, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
+		mGamePlayer = new GamePlayer(mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods), mSwapChain, mRenderPass, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
 		mGamePlayer->initUniformManager(
 			mDevice,
 			mCommandPool,
 			mSwapChain->getImageCount(),
 			10,
-			mPipelineS->GetPipeline(0)->DescriptorSetLayout,
+			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
 			mCameraVPMatricesBuffer,
 			mSampler
 		);
 		mGamePlayer->InitCommandBuffer();
 
-
+		VulKan::AuxiliaryForceData* ALine = mAuxiliaryVision->GetContinuousForce()->New(mGamePlayer->GetObjectCollision()->GetForcePointer());
+		ALine->pos = mGamePlayer->GetObjectCollision()->GetPosPointer();
+		ALine->Force = mGamePlayer->GetObjectCollision()->GetForcePointer();
+		ALine->Color = { 0, 0, 1.0f, 1.0f };
+		ALine = mAuxiliaryVision->GetContinuousForce()->New(mGamePlayer->GetObjectCollision()->GetSpeedPointer());
+		ALine->pos = mGamePlayer->GetObjectCollision()->GetPosPointer();
+		ALine->Force = mGamePlayer->GetObjectCollision()->GetSpeedPointer();
+		ALine->Color = { 0, 1.0f, 0, 1.0f };
 
 		if (Global::MultiplePeopleMode)
 		{
@@ -295,6 +307,7 @@ namespace GAME {
 	}
 
 	void Application::UninstallGame() {
+		delete mAuxiliaryVision;
 		if (Global::GameMode) {
 			delete mLabyrinth;
 			mLabyrinth = nullptr;
@@ -306,7 +319,7 @@ namespace GAME {
 		delete mCrowd;
 		delete mGamePlayer;
 		delete mVisualEffect;
-		
+
 		mGamePlayer = nullptr;
 		mCrowd = nullptr;
 		mVisualEffect = nullptr;
@@ -537,12 +550,17 @@ namespace GAME {
 		}
 
 		if (mGamePlayer != nullptr) {
-			//mLabyrinth->ThreadUpdateCommandBuffer();
 			//mGIF->UpDataCommandBuffer();
+			mAuxiliaryVision->initCommandBuffer();
 			mGamePlayer->InitCommandBuffer();
 			mCrowd->ReconfigurationCommandBuffer();
-			mDungeon->initCommandBuffer();
 			mVisualEffect->initCommandBuffer();
+			if (Global::GameMode) {
+				mLabyrinth->ThreadUpdateCommandBuffer();
+			}else {
+				mDungeon->initCommandBuffer();
+			}
+			
 		}
 		
 
@@ -640,6 +658,7 @@ namespace GAME {
 
 		mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle);//设置玩家物理角度
 		mGamePlayer->GetObjectCollision()->SufferForce(PlayerForce);//设置玩家受力
+		mAuxiliaryVision->UpDataLine();
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
 		TOOL::mTimer->StartEnd();
@@ -700,12 +719,21 @@ namespace GAME {
 				glm::vec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) },
 				TOOL::FPStime
 			);
+			mAuxiliaryVision->AddLine(
+				LSArmOfForce + LSObjectDecorator.Object->GetPos(),
+				huoqdedian,
+				{ 1.0f, 0, 0, 1.0f }
+			);
+			mAuxiliaryVision->AddSpot(
+				LSArmOfForce + LSObjectDecorator.Object->GetPos(),
+				{ 0, 0, 1.0f, 1.0f }
+			);
 			mVisualEffect->SetPosAngle(LSObjectDecorator.Object->GetPosX(), LSObjectDecorator.Object->GetPosY(), 0, LSObjectDecorator.Object->GetAngleFloat(), mCurrentFrame);
 			if (Lzuojian != GLFW_PRESS) {
 				LSObjectDecorator.Object = nullptr;
 			}
 		}
-
+		
 		mArms->BulletsEvent();
 		
 		mCrowd->TimeoutDetection();//检测玩家更新情况
@@ -804,6 +832,8 @@ namespace GAME {
 		if (!Global::GameMode) mVisualEffect->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 
 		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
+
+		mAuxiliaryVision->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 	}
 
 	void Application::Render() {

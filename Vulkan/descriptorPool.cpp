@@ -29,17 +29,19 @@ namespace VulKan {
 
 		//描述每一种uniform都有多少个
 		std::vector<VkDescriptorPoolSize> poolSizes{};
-
-		VkDescriptorPoolSize uniformBufferSize{};
-		uniformBufferSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uniformBufferSize.descriptorCount = uniformBufferCount * frameCount * shuliang;
-		poolSizes.push_back(uniformBufferSize);
-
-		VkDescriptorPoolSize textureSize{};
-		textureSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		textureSize.descriptorCount = textureCount * frameCount * shuliang;//这边的size是指，有多少个descriptor
-		poolSizes.push_back(textureSize);
-
+		if (uniformBufferCount != 0) {
+			VkDescriptorPoolSize uniformBufferSize{};
+			uniformBufferSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			uniformBufferSize.descriptorCount = uniformBufferCount * frameCount * shuliang;
+			poolSizes.push_back(uniformBufferSize);
+		}
+		if (textureCount != 0) {
+			VkDescriptorPoolSize textureSize{};
+			textureSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			textureSize.descriptorCount = textureCount * frameCount * shuliang;//这边的size是指，有多少个descriptor
+			poolSizes.push_back(textureSize);
+		}
+		
 		//创建pool
 		VkDescriptorPoolCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

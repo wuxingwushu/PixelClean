@@ -12,4 +12,14 @@ mkdir Spv
 
 .\..\glslangValidator.exe  -V DungeonWarfareMist.comp -o Spv/DungeonWarfareMist.spv
 
+.\..\glslangValidator.exe  -V LineShader.vert -o Spv/LineShaderV.spv
+
+.\..\glslangValidator.exe  -V LineShader.frag -o Spv/LineShaderF.spv
+
+.\..\glslangValidator.exe  -V SpotShader.vert -o Spv/SpotShaderV.spv
+
+.\..\glslangValidator.exe  -V SpotShader.frag -o Spv/SpotShaderF.spv
+
+.\..\glslangValidator.exe  -V SpotNormal.geom -o Spv/SpotNormal.spv
+
 pause

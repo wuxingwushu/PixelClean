@@ -42,7 +42,8 @@ namespace SquarePhysics {
 
 		[[nodiscard]] float GetPosY() { return mPos.y; }
 
-		[[nodiscard]] glm::vec2 GetPos() { return mPos; }
+		[[nodiscard]] constexpr glm::vec2 GetPos() const noexcept { return mPos; }
+		[[nodiscard]] constexpr glm::vec2* GetPosPointer() noexcept { return &mPos; }
 
 
 
@@ -107,6 +108,7 @@ namespace SquarePhysics {
 		[[nodiscard]] constexpr float GetForceAngleY() const noexcept { return mForceAngle.y; }
 
 		[[nodiscard]] constexpr glm::vec2 GetForce() const noexcept { return mForce; }
+		[[nodiscard]] constexpr glm::vec2* GetForcePointer() noexcept { return &mForce; }
 
 		[[nodiscard]] constexpr float GetForceFloat() const noexcept { return mForceFloat; }
 
@@ -145,6 +147,7 @@ namespace SquarePhysics {
 		[[nodiscard]] constexpr float GetSpeedAngleY() const noexcept { return mSpeedAngle.y; }
 
 		[[nodiscard]] constexpr glm::vec2 GetSpeed() const noexcept { return mSpeed; }
+		[[nodiscard]] constexpr glm::vec2* GetSpeedPointer() noexcept { return &mSpeed; }
 
 		[[nodiscard]] constexpr float GetSpeedFloat() const noexcept { return mSpeedFloat; }
 
@@ -177,16 +180,13 @@ namespace SquarePhysics {
 			if (mSpeedFloat != 0) {//速度不为 O
 				glm::vec2 LForce = mForce - Resistance;
 				glm::vec2 mAcceleration = (LForce / mQuality);
-				//UpDataSpeedBack();
 				SetSpeed(mSpeed + (mAcceleration * TimeStep));
-				//SpeedReversalJudge();
 			}
 			else if(ModulusLength(Resistance) < ModulusLength(mForce))
 			{
 				glm::vec2 LForce = mForce - Resistance;
 				glm::vec2 mAcceleration = (LForce / mQuality);
 				SetSpeed(mSpeed + (mAcceleration * TimeStep));
-				//UpDataSpeedBack();
 			}
 			SetForce({ 0,0 });
 
@@ -213,39 +213,6 @@ namespace SquarePhysics {
 				mAngleSpeed += AngleAcceleration * TimeStep;
 			}
 			mTorque = 0;
-
-
-			/*if ((mForce.x != 0.0f) || (mForce.y != 0.0f)) {
-				if ((mSpeed.x != 0.0f) || (mSpeed.y != 0.0f)) {
-					SetSpeed(mSpeed + (((mForce - Resistance) / mQuality) * TimeStep));
-					mPos += mSpeed * TimeStep;
-				}
-				else
-				{
-					if (ModulusLength(Resistance) < ModulusLength(mForce))
-					{
-						SetSpeed(mSpeed + (((mForce - Resistance) / mQuality) * TimeStep));
-						mPos += mSpeed * TimeStep;
-					}
-					else
-					{
-						return;
-					}
-				}
-			}
-			else {
-				if (mSpeedFloat < 0.2f) {
-					SetSpeed({ 0,0 });
-				}
-				if ((mSpeed.x != 0.0f) || (mSpeed.y != 0.0f)) {
-					SetSpeed(mSpeed - ((Resistance / mQuality) * TimeStep * 1.5f));
-					mPos += mSpeed * TimeStep;
-				}
-				else
-				{
-					return;
-				}
-			}*/
 		}
 
 		
@@ -311,7 +278,6 @@ namespace SquarePhysics {
 			float Angle = EdgeVecToCosAngleFloat(ArmOfForce) - EdgeVecToCosAngleFloat(LSDecompositionForce.Vertical);
 			float angletime = Modulus(ArmOfForce) * Modulus(LSDecompositionForce.Vertical);
 			angletime = angletime * (sin(Angle) < 0 ? -1 : 1);
-			//PlayerTargetAngle(GetAngleFloat() + angletime);
 			SufferTorque(angletime);
 			SufferForce(LSDecompositionForce.Parallel);
 		}

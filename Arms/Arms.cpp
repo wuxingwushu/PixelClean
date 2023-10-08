@@ -76,7 +76,7 @@ namespace GAME {
 			}
 		);
 		ObjectUniform mUniform;
-		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -1.0f));
+		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -10000.0f));
 		for (size_t i = 0; i < mBullet->Get(index)->Buffer->size(); ++i)
 		{
 			(*mBullet->Get(index)->Buffer)[i]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));//设置到看不见的位置

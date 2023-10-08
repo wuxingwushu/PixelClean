@@ -22,3 +22,8 @@
 #define	DungeonWarfareMist_spv	"./shaders/DungeonWarfareMist.spv"
 #define GifFrag					"./shaders/GifFragShaderF.spv"
 #define GifVert					"./shaders/GifFragShaderV.spv"
+#define LineF_spv				"./shaders/LineShaderF.spv"
+#define LineV_spv				"./shaders/LineShaderV.spv"
+#define SpotNormal_spv			"./shaders/SpotNormal.spv"
+#define SpotF_spv				"./shaders/SpotShaderF.spv"
+#define SpotV_spv				"./shaders/SpotShaderV.spv"

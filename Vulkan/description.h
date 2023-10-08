@@ -16,8 +16,8 @@ namespace VulKan {
 		VkShaderStageFlagBits	mStage;
 
 		std::vector<Buffer*> mBuffers{};
-		GAME::Texture* mTexture{ nullptr };
-		GAME::PixelTexture* mPixelTexture{ nullptr };
+		Texture* mTexture{ nullptr };
+		PixelTexture* mPixelTexture{ nullptr };
 	};
 
 }

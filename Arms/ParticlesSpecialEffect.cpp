@@ -11,10 +11,9 @@ namespace GAME {
 
 	ParticlesSpecialEffect::~ParticlesSpecialEffect()
 	{
-		SpecialEffects* LmSpecialEffects = mSpecialEffects->Data();
-		for (size_t i = 0; i < mSpecialEffects->GetNumber(); ++i)
+		for (auto& i : *mSpecialEffects)
 		{
-			mParticleSystem->mParticle->add(Particle{ LmSpecialEffects[i].Pixel, LmSpecialEffects[i].Buffer });
+			mParticleSystem->mParticle->add(Particle{ i.Pixel, i.Buffer });
 		}
 		delete mSpecialEffects;
 	}
@@ -39,9 +38,9 @@ namespace GAME {
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0.0f));
 		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(angle), glm::vec3(0.0f, 0.0f, 1.0f));
 		mUniform.mModelMatrix = glm::scale(mUniform.mModelMatrix, glm::vec3(LSpecialEffects.Zoom, LSpecialEffects.Zoom, 1.0f));//缩放矩阵
-		for (size_t i = 0; i < LSpecialEffects.Buffer->size(); ++i)
+		for (auto i : *LSpecialEffects.Buffer)
 		{
-			(*LSpecialEffects.Buffer)[i]->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));//上传位置
+			i->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));//上传位置
 		}
 	}
 
@@ -49,9 +48,9 @@ namespace GAME {
 		SpecialEffects* LSpecialEffects = mSpecialEffects->GetData(index);//获取对应的粒子特效
 		ObjectUniform mUniform;
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -10000.0f));
-		for (size_t i = 0; i < LSpecialEffects->Buffer->size(); ++i)
+		for (auto i : *LSpecialEffects->Buffer)
 		{
-			(*LSpecialEffects->Buffer)[i]->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));//设置到看不见的位置
+			i->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));//设置到看不见的位置
 		}
 		mParticleSystem->mParticle->add(Particle{ LSpecialEffects->Pixel, LSpecialEffects->Buffer });//将粒子归还给粒子系统
 		mSpecialEffects->Delete(index);//销毁对应的粒子
@@ -60,7 +59,7 @@ namespace GAME {
 	void ParticlesSpecialEffect::SpecialEffectsEvent(unsigned int Fndex, float time) {
 		SpecialEffects* LmSpecialEffects = mSpecialEffects->Data();//获取粒子特效数组
 		ObjectUniform mUniform;
-		for (size_t i = 0; i < mSpecialEffects->GetNumber(); ++i)
+		for (auto i = 0; i < mSpecialEffects->GetNumber(); ++i)
 		{
 			//更新位置，和大小
 			LmSpecialEffects[i].x += LmSpecialEffects[i].speed * time * cos(LmSpecialEffects[i].angle);

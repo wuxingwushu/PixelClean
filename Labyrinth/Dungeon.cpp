@@ -49,12 +49,11 @@ namespace GAME {
 				LDungeon->LSPointer[((mT->mModel->MistPointerY * 16 + ix) * 16 * LDungeon->mNumberX) + (mT->mModel->MistPointerX * 16) + iy] = CollisionBool;
 			}
 		}		
-		SquarePhysics::PixelAttribute** LSPixelAttribute = mT->mGridDecorator->GetPixelAttribute();
 		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ++ix)
 		{
 			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; ++iy)
 			{
-				LSPixelAttribute[ix][iy].Collision = CollisionBool;
+				mT->mGridDecorator->at({ ix,iy })->Collision = CollisionBool;
 			}
 		}
 	}
@@ -268,7 +267,6 @@ namespace GAME {
 				if (mTextureAndBuffer[ix][iy].Type > (TextureNumber / 2)) {
 					CollisionBool = true;
 				}
-				SquarePhysics::PixelAttribute** LSPixelAttribute = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator->GetPixelAttribute();
 				for (size_t ixx = 0; ixx < mSquareSideLength; ++ixx)
 				{
 					for (size_t iyy = 0; iyy < mSquareSideLength; ++iyy)
@@ -278,7 +276,7 @@ namespace GAME {
 							WarfareMistPointer[((iy * 16 + ixx) * 16 * mNumberX * 4) + (ix * 16 * 4) + (iyy * 4) + i] = pixelS[mTextureAndBuffer[ix][iy].Type][(ixx * 16 * 4) + (iyy * 4) + i] * (i == 3 ? 1 : 0.3f);
 						}
 						WallBoolPointer[((((iy * 16) + ixx) * mNumberX * 16) + (ix * 16) + iyy)] = CollisionBool;
-						LSPixelAttribute[ixx][iyy].Collision = CollisionBool;
+						mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator->at({ ixx,iyy })->Collision = CollisionBool;
 					}
 				}
 				mDungeonDestroyStruct[ix][iy] = { &mTextureAndBuffer[ix][iy], this };
@@ -433,14 +431,22 @@ namespace GAME {
 		}
 		CalculateIndex->endupdateBufferByMap();
 
-		for (size_t i = 0; i < MultithreadingGenerate.size(); ++i)//等待全部线程任务结束
+		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
 		{
-			MultithreadingGenerate[i].wait();
+			i.wait();
 		}
 		MultithreadingGenerate.clear();//清空
-		for (size_t i = 0; i < MultithreadingPixelTexture.size(); ++i)//提交所以上传贴图
+		//统一上传
+		mCalculate->GetCommandBuffer()->begin();
+		for (auto i : MultithreadingPixelTexture)//提交所有上传贴图
 		{
-			MultithreadingPixelTexture[i]->UpDataImage();
+			i->RecordingInstructions(mCalculate->GetCommandBuffer());
+		}
+		mCalculate->GetCommandBuffer()->end();
+		mCalculate->GetCommandBuffer()->submitSync(wDevice->getGraphicQueue(), VK_NULL_HANDLE);
+		for (auto i : MultithreadingPixelTexture)//提交所以上传贴图
+		{
+			i->EndInstructions();
 		}
 		MultithreadingPixelTexture.clear();//清空
 		//关闭HOST指针

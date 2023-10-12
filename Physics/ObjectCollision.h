@@ -38,7 +38,7 @@ namespace SquarePhysics {
 			{
 				return false;
 			}
-			return mPixelAttributeS[x][y].Collision;
+			return at({x,y})->Collision;
 		}
 
 		//计算重心

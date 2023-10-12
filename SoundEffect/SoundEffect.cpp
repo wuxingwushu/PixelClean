@@ -115,13 +115,9 @@ namespace GAME::SoundEffect {
 	}
 
 	void SoundEffect::SetVolume(float Volume) {
-		unsigned int SoundSize = SoundEffectsID->GetNumber();
-		if (SoundSize != 0) {
-			SoundStruct* SoundStructS = SoundEffectsID->Data();
-			for (size_t i = 0; i < SoundSize; ++i)
-			{
-				mSoloud.setVolume(SoundStructS[i].Handle, Volume);//设置音量
-			}
+		for (auto& SoundSize : *SoundEffectsID)
+		{
+			mSoloud.setVolume(SoundSize.Handle, Volume);//设置音量
 		}
 	}
 }

@@ -38,7 +38,7 @@
 
 #include "VulkanTool/VisualEffect.h"
 #include "VulkanTool/AuxiliaryVision.h"
-
+#include "Tool/JPS.h"
 
 namespace GAME {
 	class Application{
@@ -188,5 +188,6 @@ namespace GAME {
 
 		VulKan::VisualEffect* mVisualEffect{ nullptr };//视觉效果
 		VulKan::AuxiliaryVision* mAuxiliaryVision{ nullptr };//辅助视觉
+		JPS* JPSPathfinding = nullptr;
 	};
 }

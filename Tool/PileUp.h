@@ -1,4 +1,5 @@
 #pragma once
+#include "Iterator.h"
 
 template <typename T>
 class PileUp
@@ -61,5 +62,13 @@ public:
 
     void ClearAll() {
         Index = 0;
+    }
+
+    Iterator<T> begin() {
+        return Iterator<T>(mPileUp);
+    }
+
+    Iterator<T> end() {
+        return Iterator<T>(mPileUp + Index);
     }
 };

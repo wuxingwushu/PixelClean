@@ -59,13 +59,13 @@ namespace GAME {
 
 	Crowd::~Crowd()
 	{
-		for (size_t i = 0; i < MapPlayerS->GetNumber(); ++i)
+		for (auto i : *MapPlayerS)
 		{
-			delete MapPlayerS->GetData()[i];
+			delete i;
 		}
-		for (size_t i = 0; i < mNPCS->GetNumber(); ++i)
+		for (auto i : *mNPCS)
 		{
-			delete mNPCS->GetData()[i];
+			delete i;
 		}
 		delete MapPlayerS;
 		delete mNPCS;
@@ -105,28 +105,24 @@ namespace GAME {
 	}
 
 	void Crowd::ReconfigurationCommandBuffer() {
-		GamePlayer** LGamePlayer = MapPlayerS->GetData();
-		for (size_t i = 0; i < MapPlayerS->GetNumber(); ++i)
+		for (auto i : *MapPlayerS)
 		{
-			LGamePlayer[i]->InitCommandBuffer();
+			i->InitCommandBuffer();
 		}
-		NPC** LNPC = mNPCS->GetData();
-		for (size_t i = 0; i < mNPCS->GetNumber(); ++i)
+		for (auto i : *mNPCS)
 		{
-			LNPC[i]->InitCommandBuffer();
+			i->InitCommandBuffer();
 		}
 	}
 
 	void Crowd::GetCommandBufferS(std::vector<VkCommandBuffer>* CommandBufferVector, unsigned int Format) {
-		GamePlayer** PlayerS = MapPlayerS->GetData();
-		for (size_t i = 0; i < MapPlayerS->GetNumber(); ++i)
+		for (auto i : *MapPlayerS)
 		{
-			CommandBufferVector->push_back(PlayerS[i]->getCommandBuffer(Format));
+			CommandBufferVector->push_back(i->getCommandBuffer(Format));
 		}
-		NPC** LNPC = mNPCS->GetData();
-		for (size_t i = 0; i < mNPCS->GetNumber(); ++i)
+		for (auto i : *mNPCS)
 		{
-			CommandBufferVector->push_back(LNPC[i]->getCommandBuffer(Format));
+			CommandBufferVector->push_back(i->getCommandBuffer(Format));
 		}
 	}
 
@@ -203,13 +199,11 @@ namespace GAME {
 	}
 
 	void Crowd::KillAll() {
-		NPC** LNPC = mNPCS->GetData();
-		int NumberLNPC = mNPCS->GetNumber();
 		evutil_socket_t LNPCkey;
-		for (size_t i = 0; i < NumberLNPC; ++i)
+		for (auto i : *mNPCS)
 		{
-			LNPCkey = LNPC[i]->GetKey();
-			delete LNPC[i];
+			LNPCkey = i->GetKey();
+			delete i;
 			mNPCS->Delete(LNPCkey);
 			mNPCSynchronizationData->Delete(LNPCkey);
 		}

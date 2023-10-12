@@ -65,6 +65,22 @@ private:
     float calculateH(int x, int y, int targetX, int targetY) {
         return fabs(x - targetX) + fabs(y - targetY);
     }
+
+    AStarNode* NewAStarNode(int _x, int _y, float _g, float _h, AStarNode* _parent) {
+#ifdef AStar_MemoryPool
+        return mMemoryPool.newElement(_x, _y, _g, _h, _parent);
+#else
+        return new AStarNode(_x, _y, _g, _h, _parent);
+#endif
+    }
+
+    void DeleteAStarNode(AStarNode* _parent) {
+#ifdef AStar_MemoryPool
+        mMemoryPool.deleteElement(_parent);
+#else
+        delete _parent;
+#endif
+    }
 public:
     AStar(int Range, int Steps):mRange(Range), mSteps(Steps){
         visited = new int*[mRange*2];
@@ -113,12 +129,8 @@ public:
         }
 
         AStarNode* DAStarNode;
-
-#ifdef AStar_MemoryPool
-        AStarNode* LAStarNode = mMemoryPool.newElement(start.x, start.y, 0.0f, calculateH(start.x, start.y, target.x, target.y), nullptr);
-#else
-        AStarNode* LAStarNode = new AStarNode(start.x, start.y, 0.0f, calculateH(start.x, start.y, target.x, target.y), nullptr);
-#endif
+        AStarNode* LAStarNode = NewAStarNode(start.x, start.y, 0.0f, calculateH(start.x, start.y, target.x, target.y), nullptr);
+        
         int x, newX;
         int y, newY;
         int Count = 0;
@@ -146,11 +158,7 @@ public:
                         if (isValid(newX, newY) && visited[newX + mRange][newY + mRange] == 0) {
                             float newG = LAStarNode->g + (i == 0 && j == 0) ? 1.0f : 1.414f;
                             float newH = calculateH(newX, newY, target.x, target.y);
-#ifdef AStar_MemoryPool
-                            LAStarNode->pChild.push_back(mMemoryPool.newElement(newX, newY, newG, newH, LAStarNode));
-#else
-                            LAStarNode->pChild.push_back(new AStarNode(newX, newY, newG, newH, LAStarNode));
-#endif
+                            LAStarNode->pChild.push_back(NewAStarNode(newX, newY, newG, newH, LAStarNode));
                         }
                     }
                 }
@@ -161,7 +169,7 @@ public:
 
             if (LAStarNode->pChild.size() != 0) {
                 //取最小代价的子节点
-                DAStarNode = LAStarNode->pChild[LAStarNode->pChild.size() - 1];
+                DAStarNode = LAStarNode->pChild.back();
                 //删除最小代价节点
                 LAStarNode->pChild.pop_back();
                 //当前点移动到这个最小代价点
@@ -179,22 +187,15 @@ public:
                         //遍历走过的点
                         visited[LAStarNode->x + mRange][LAStarNode->y + mRange] = ++Count;
                         //销毁所有子节点
-                        for (size_t i = 0; i < LAStarNode->pChild.size(); i++)
+                        for (auto i : LAStarNode->pChild)
                         {
-#ifdef AStar_MemoryPool
-                            mMemoryPool.deleteElement(LAStarNode->pChild[i]);
-#else
-                            delete LAStarNode->pChild[i];
-#endif
+                            DeleteAStarNode(i);
                         }
                         DAStarNode = LAStarNode;
                         //获取父节点
                         LAStarNode = LAStarNode->parent;
-#ifdef AStar_MemoryPool //销毁自身
-                        mMemoryPool.deleteElement(DAStarNode);
-#else
-                        delete DAStarNode;
-#endif
+                        //销毁自身
+                        DeleteAStarNode(DAStarNode);
                     }
 
                     StartingPoint.x -= mRange;
@@ -229,11 +230,7 @@ public:
             {
                 DAStarNode = LAStarNode;
                 LAStarNode = LAStarNode->parent;
-#ifdef AStar_MemoryPool
-                mMemoryPool.deleteElement(DAStarNode);
-#else
-                delete DAStarNode;
-#endif
+                DeleteAStarNode(DAStarNode);
             }
 
         } while (LAStarNode != nullptr);

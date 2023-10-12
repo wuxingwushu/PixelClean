@@ -17,13 +17,13 @@ namespace SquarePhysics {
 
 	SquarePhysics::~SquarePhysics()
 	{
-		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); ++i)
+		for (auto i : *mObjectCollisionS)
 		{
-			delete *mObjectCollisionS->GetData(i);
+			delete i;
 		}
-		for (size_t i = 0; i < mPixelCollisionS->GetNumber(); ++i)
+		for (auto i : *mPixelCollisionS)
 		{
-			delete *mPixelCollisionS->GetData(i);
+			delete i;
 		}
 		delete mObjectCollisionS;
 		delete mPixelCollisionS;
@@ -31,10 +31,8 @@ namespace SquarePhysics {
 
 	ObjectSufferForce SquarePhysics::GetGoods(glm::vec2 pos) {
 		glm::vec2 Lpos;
-		ObjectCollision* LObjectDecorator = nullptr;
-		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); ++i)
+		for (auto LObjectDecorator : *mObjectCollisionS)
 		{
-			LObjectDecorator = mObjectCollisionS->Data()[i];
 			Lpos = pos - LObjectDecorator->GetPos();
 			Lpos = vec2angle(Lpos, -LObjectDecorator->GetAngleFloat());
 			if (LObjectDecorator->GetFixedCollisionBool(Lpos)) {
@@ -107,9 +105,9 @@ namespace SquarePhysics {
 		}
 
 		//玩家对地图碰撞事件
-		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); ++i)
+		for (auto i : *mObjectCollisionS)
 		{
-			LObject = ObjectNumberS[i];
+			LObject = i;
 			Jpos = LObject->GetPos();//久位置
 			LObject->FrameTimeStep(TimeStep, mTerrain->GetFrictionCoefficient(Jpos));//物理模拟
 			Xpos = LObject->GetPos();//新位置
@@ -175,9 +173,9 @@ namespace SquarePhysics {
 				continue;
 			}
 
-			for (size_t i2 = 0; i2 < mObjectCollisionS->GetNumber(); ++i2)
+			for (auto DDQLObject : *mObjectCollisionS)
 			{
-				LObject = ObjectNumberS[i2];
+				LObject = DDQLObject;
 				LCollisionInfo = LObject->RelativeCoordinateSystemRadialCollisionDetection(Jpos, Xpos);
 				if (LCollisionInfo.Collision)
 				{

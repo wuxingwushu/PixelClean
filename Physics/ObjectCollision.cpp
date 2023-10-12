@@ -22,7 +22,7 @@ namespace SquarePhysics {
 		{
 			for (size_t y = 0; y < mNumberY; ++y)
 			{
-				if (mPixelAttributeS[x][y].Collision)
+				if (at({x,y})->Collision)
 				{
 					OutlinePointJudge(x,y);
 					mBarycenter.x += x;
@@ -30,9 +30,10 @@ namespace SquarePhysics {
 				}
 			}
 		}
-		float LSideLength = float(mSideLength) / 2;
-		mBarycenter.x /= mNumberX * mNumberY;
-		mBarycenter.y /= mNumberX * mNumberY;
+		float LSideLength = mNumberX * mNumberY;
+		mBarycenter.x /= LSideLength;
+		mBarycenter.y /= LSideLength;
+		LSideLength = float(mSideLength) / 2;
 		mBarycenter.x += LSideLength;
 		mBarycenter.y += LSideLength;
 	}
@@ -42,16 +43,17 @@ namespace SquarePhysics {
 		{
 			for (size_t y = 0; y < mNumberY; ++y)
 			{
-				if (mPixelAttributeS[x][y].Collision)
+				if (at({ x,y })->Collision)
 				{
 					mBarycenter.x += x;
 					mBarycenter.y += y;
 				}
 			}
 		}
-		float LSideLength = float(mSideLength) / 2;
-		mBarycenter.x /= mNumberX * mNumberY;
-		mBarycenter.y /= mNumberX * mNumberY;
+		float LSideLength = mNumberX * mNumberY;
+		mBarycenter.x /= LSideLength;
+		mBarycenter.y /= LSideLength;
+		LSideLength = float(mSideLength) / 2;
 		mBarycenter.x += LSideLength;
 		mBarycenter.y += LSideLength;
 	}

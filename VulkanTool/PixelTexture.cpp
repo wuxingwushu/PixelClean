@@ -106,4 +106,44 @@ namespace VulKan {
 		HOSTImage->updateBufferByMap(data, size);
 		UpDataImage();
 	}
+
+	void PixelTexture::RecordingInstructions(CommandBuffer* CommandBuffer) {
+		VkImageSubresourceRange region{};
+		region.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+		region.baseArrayLayer = 0;
+		region.layerCount = 1;
+
+		region.baseMipLevel = 0;
+		region.levelCount = 1;
+
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			region,
+			mCommandPool
+		);
+
+		CommandBuffer->copyBufferToImage(HOSTImage->getBuffer(), mImage->getImage(), mImage->getLayout(), mImage->getWidth(), mImage->getHeight());
+	}
+
+	void PixelTexture::EndInstructions() {
+		VkImageSubresourceRange region{};
+		region.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+		region.baseArrayLayer = 0;
+		region.layerCount = 1;
+
+		region.baseMipLevel = 0;
+		region.levelCount = 1;
+
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			region,
+			mCommandPool
+		);
+	}
 }

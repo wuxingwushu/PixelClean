@@ -13,21 +13,17 @@ namespace SquarePhysics {
 			: mNumberX(x), mNumberY(y), mSideLength(SideLength)
 		{
 			if (Structure) {
-				mPixelAttributeS = new PixelAttribute * [mNumberX];
-				for (size_t i = 0; i < mNumberX; ++i)
-				{
-					mPixelAttributeS[i] = new PixelAttribute[mNumberY];
-				}
+				mPixelAttributeS = new PixelAttribute[mNumberX * mNumberY];
 			}
 		}
 		virtual ~GridDecorator() {
 			if (mPixelAttributeS != nullptr) {
-				for (size_t i = 0; i < mNumberX; ++i)
-				{
-					delete mPixelAttributeS[i];
-				}
 				delete mPixelAttributeS;
 			}
+		}
+
+		PixelAttribute* at(glm::ivec2 pos) {
+			return &mPixelAttributeS[pos.x * mNumberY + pos.y];
 		}
 
 		//设置原点
@@ -44,7 +40,7 @@ namespace SquarePhysics {
 
 
 
-		[[nodiscard]] PixelAttribute** GetPixelAttribute() { return mPixelAttributeS; }
+		//[[nodiscard]] PixelAttribute** GetPixelAttribute() { return mPixelAttributeS; }
 
 
 		//设置某个点
@@ -59,10 +55,10 @@ namespace SquarePhysics {
 			{
 				return false;
 			}
-			if (mPixelAttributeS[pos.x][pos.y].Collision == Bool) {
+			if (at(pos)->Collision == Bool) {
 				return false;
 			}
-			mPixelAttributeS[pos.x][pos.y].Collision = Bool;
+			at(pos)->Collision = Bool;
 			return true;
 		}
 
@@ -77,7 +73,7 @@ namespace SquarePhysics {
 			{
 				return false;
 			}
-			return mPixelAttributeS[pos.x][pos.y].Collision;
+			return at(pos)->Collision;
 		}
 
 		//获取某个像素带点的摩檫力系数
@@ -92,7 +88,7 @@ namespace SquarePhysics {
 			{
 				return 1.0f;
 			}
-			return mPixelAttributeS[pos.x][pos.y].FrictionCoefficient;
+			return at(pos)->FrictionCoefficient;
 		}
 
 		//判断点是否出界
@@ -188,7 +184,7 @@ namespace SquarePhysics {
 		//大小
 		unsigned int mNumberX = 0;
 		unsigned int mNumberY = 0;
-		PixelAttribute** mPixelAttributeS{ nullptr };//点数据
+		PixelAttribute* mPixelAttributeS{ nullptr };//点数据
 
 		//回调函数指针
 		_TerrainCollisionCallback mCollisionCallback = nullptr;

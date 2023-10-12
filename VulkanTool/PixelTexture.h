@@ -50,6 +50,11 @@ namespace VulKan {
 		//获取HOST缓存
 		[[nodiscard]] VkBuffer getHOSTImageBuffer() { return HOSTImage->getBuffer(); }
 
+		//************ 延迟上传
+		void RecordingInstructions(CommandBuffer* CommandBuffer);
+
+		void EndInstructions();
+
 	private:
 		Device* mDevice{ nullptr };
 		Image* mImage{ nullptr };

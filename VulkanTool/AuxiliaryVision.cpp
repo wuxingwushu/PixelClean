@@ -100,24 +100,22 @@ namespace VulKan {
 	void AuxiliaryVision::UpDataLine() {
 		//线
 		AuxiliaryLine* LP = (AuxiliaryLine*)AuxiliaryLineS->getupdateBufferByMap();
-		AuxiliaryLineData* LD = ContinuousAuxiliaryLine->GetData();
-		for (size_t i = 0; i < ContinuousAuxiliaryLine->GetNumber(); ++i)
+		for (auto& i : *ContinuousAuxiliaryLine)
 		{
-			LP->Pos = { *LD[i].Head, 0.0f};
-			LP->Color = LD[i].Color;
+			LP->Pos = { *i.Head, 0.0f};
+			LP->Color = i.Color;
 			++LP;
-			LP->Pos = { *LD[i].Tail, 0.0f };
-			LP->Color = LD[i].Color;
+			LP->Pos = { *i.Tail, 0.0f };
+			LP->Color = i.Color;
 			++LP;
 		}
-		AuxiliaryForceData* LF = ContinuousAuxiliaryForce->GetData();
-		for (size_t i = 0; i < ContinuousAuxiliaryForce->GetNumber(); ++i)
+		for (auto& i : *ContinuousAuxiliaryForce)
 		{
-			LP->Pos = { *LF[i].pos, 0.0f };
-			LP->Color = LF[i].Color;
+			LP->Pos = { *i.pos, 0.0f };
+			LP->Color = i.Color;
 			++LP;
-			LP->Pos = { (*LF[i].pos + *LF[i].Force), 0.0f };
-			LP->Color = LF[i].Color;
+			LP->Pos = { (*i.pos + *i.Force), 0.0f };
+			LP->Color = i.Color;
 			++LP;
 		}
 		int shu = LineVertex.size();
@@ -140,11 +138,10 @@ namespace VulKan {
 		//点
 		LP = (AuxiliaryLine*)AuxiliarySpotS->getupdateBufferByMap();
 		shu = ContinuousAuxiliarySpot->GetNumber();
-		AuxiliarySpotData* LS = ContinuousAuxiliarySpot->GetData();
-		for (size_t i = 0; i < ContinuousAuxiliarySpot->GetNumber(); i++)
+		for (auto& i : *ContinuousAuxiliarySpot)
 		{
-			LP->Pos = { *LS[i].pos, 0.0f };
-			LP->Color = LS[i].Color;
+			LP->Pos = { *i.pos, 0.0f };
+			LP->Color = i.Color;
 			++LP;
 		}
 		shu += SpotVertex.size();

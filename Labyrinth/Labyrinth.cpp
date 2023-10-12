@@ -321,7 +321,7 @@ namespace GAME {
 		unsigned char* mPixelS = new unsigned char[numberX * 16 * numberY * 16 * 4];
 		unsigned char* mMistS = new unsigned char[numberX * 16 * numberY * 16 * 4];
 
-		SquarePhysics::PixelAttribute** LPixelAttribute = mFixedSizeTerrain->GetPixelAttribute();
+		//SquarePhysics::PixelAttribute** LPixelAttribute = mFixedSizeTerrain->GetPixelAttribute();
 
 		for (size_t x = 0; x < numberX; ++x)
 		{
@@ -335,7 +335,7 @@ namespace GAME {
 							memcpy(&mPixelS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))], 4);
 							MixColors(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))]);
 							//memcpy(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))], 4);
-							LPixelAttribute[x * 16 + pX][y * 16 + pY].Collision = true;
+							mFixedSizeTerrain->at({ x * 16 + pX, y * 16 + pY })->Collision = true;
 						}else{
 							/*if (BlockTypeS[x][y] >= TextureNumber) {
 								std::cout << "Error: BlockTypeS > " << TextureNumber << "。  BlockTypeS = " << BlockTypeS[x][y] << std::endl;
@@ -343,7 +343,7 @@ namespace GAME {
 							memcpy(&mPixelS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))], 4);
 							MixColors(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))]);
 							//memcpy(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))], 4);
-							LPixelAttribute[x * 16 + pX][y * 16 + pY].Collision = false;
+							mFixedSizeTerrain->at({ x * 16 + pX, y * 16 + pY })->Collision = false;
 						}
 					}
 				}

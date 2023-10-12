@@ -33,7 +33,7 @@ namespace GAME {
 		{
 			for (size_t y = 0; y < 16; ++y)
 			{
-				mObjectCollision->GetPixelAttribute()[x][y].Collision = true;
+				mObjectCollision->at({ x,y })->Collision = true;
 				mBrokenData[x * 16 + y] = true;
 			}
 		}

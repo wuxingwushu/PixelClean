@@ -2,6 +2,7 @@
 #include <map>
 #include <time.h>
 #include <iostream>
+#include "Iterator.h"
 
 typedef const int ContinuousMapFlags;
 enum ContinuousMapFlags_
@@ -240,6 +241,14 @@ public:
 
     [[nodiscard]] TKey GetIndexKey(unsigned i) {
         return KeyS[i];
+    }
+
+    Iterator<TData> begin() {
+        return Iterator<TData>(DataS);
+    }
+
+    Iterator<TData> end() {
+        return Iterator<TData>(DataS + Number);
     }
 
     //获取除 Key 以外 Data 数量

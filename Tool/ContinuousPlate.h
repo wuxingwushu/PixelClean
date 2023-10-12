@@ -11,7 +11,7 @@ private:
 	unsigned int mEdge;//移动多少距离，板块跟着移动
 	unsigned int mNumberX, mNumberY;//板块数量
 	unsigned int mOriginX = 0, mOriginY = 0;//将那个板块设为原点
-	T** mPlate;//板块
+	T* mPlate;//板块
 
 	int moveX = 0, moveY = 0;//板块移动
 
@@ -20,17 +20,17 @@ private:
 	_DeleteCallback DeleteCallback = nullptr;//销毁回调函数
 	void* DeleteData = nullptr;
 
+	T* at(unsigned int x, unsigned int y) {
+		return &mPlate[x * mNumberY + y];
+	}
+
 public:
 	//创建连续板块，板块大小 X，Y， 板块间距 Edge
 	ContinuousPlate(unsigned int x, unsigned int y, unsigned int edge) {
 		mNumberX = x;
 		mNumberY = y;
 		mEdge = edge;
-		mPlate = new T * [mNumberX];
-		for (size_t i = 0; i < mNumberX; ++i)
-		{
-			mPlate[i] = new T[mNumberY];
-		}
+		mPlate = new T[mNumberX * mNumberY];
 	}
 
 	//设置起始位置
@@ -55,11 +55,7 @@ public:
 
 	//析构
 	~ContinuousPlate() {
-		for (size_t i = 0; i < mNumberX; ++i)
-		{
-			delete mPlate[i];
-		}
-		delete mPlate;
+		delete[] mPlate;
 	}
 
 	//获取那个板块
@@ -74,7 +70,7 @@ public:
 		{
 			MY -= mNumberY;
 		}
-		return &mPlate[MX][MY];
+		return at(MX,MY);
 	}
 
 	//更新当前监测位置，判断是否需要移动板块，返回板块是否移动信息
@@ -104,8 +100,8 @@ public:
 			{
 				for (size_t Ny = 0; Ny < mNumberY; ++Ny)
 				{
-					DeleteCallback(&mPlate[Nx][Ny], DeleteData);
-					GenerateCallback(&mPlate[Nx][Ny], (Nx + mX - mOriginX), (Ny + mY - mOriginY), GenerateData);
+					DeleteCallback(at(Nx, Ny), DeleteData);
+					GenerateCallback(at(Nx, Ny), (Nx + mX - mOriginX), (Ny + mY - mOriginY), GenerateData);
 				}
 			}
 			UpDataBool = true;
@@ -132,8 +128,8 @@ public:
 					{
 						MY -= mNumberY;
 					}
-					DeleteCallback(&mPlate[MX][MY], DeleteData);
-					GenerateCallback(&mPlate[MX][MY], (x + mX - mOriginX), (y + mY - mOriginY), GenerateData);
+					DeleteCallback(at(MX, MY), DeleteData);
+					GenerateCallback(at(MX, MY), (x + mX - mOriginX), (y + mY - mOriginY), GenerateData);
 				}
 			}
 			moveX += uX;
@@ -157,8 +153,8 @@ public:
 					{
 						MY -= mNumberY;
 					}
-					DeleteCallback(&mPlate[MX][MY], DeleteData);
-					GenerateCallback(&mPlate[MX][MY], (x + mX - mOriginX), (y + mY - mOriginY), GenerateData);
+					DeleteCallback(at(MX, MY), DeleteData);
+					GenerateCallback(at(MX, MY), (x + mX - mOriginX), (y + mY - mOriginY), GenerateData);
 				}
 			}
 			moveX += uX;
@@ -187,8 +183,8 @@ public:
 					{
 						MY -= mNumberY;
 					}
-					DeleteCallback(&mPlate[MX][MY], DeleteData);
-					GenerateCallback(&mPlate[MX][MY], (x + mX - mOriginX), (y + mY - mOriginY), GenerateData);
+					DeleteCallback(at(MX, MY), DeleteData);
+					GenerateCallback(at(MX, MY), (x + mX - mOriginX), (y + mY - mOriginY), GenerateData);
 				}
 			}
 			moveY += uY;
@@ -212,8 +208,8 @@ public:
 					{
 						MY -= mNumberY;
 					}
-					DeleteCallback(&mPlate[MX][MY], DeleteData);
-					GenerateCallback(&mPlate[MX][MY], (x + mX - mOriginX), (y + mY - mOriginY), GenerateData);
+					DeleteCallback(at(MX, MY), DeleteData);
+					GenerateCallback(at(MX, MY), (x + mX - mOriginX), (y + mY - mOriginY), GenerateData);
 				}
 			}
 			moveY += uY;

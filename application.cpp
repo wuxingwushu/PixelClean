@@ -192,6 +192,11 @@ namespace GAME {
 		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
 	}
 
+	bool JPSGetWall(int x, int y, void* P) {
+		Labyrinth* LLabyrinth = (Labyrinth*)P;
+		return LLabyrinth->GetPixelWallNumber(x, y) <= 0;
+	}
+
 	void Application::LoadingGame() {
 		float mGamePlayerPosX = mCamera.getCameraPos().x;
 		float mGamePlayerPosY = mCamera.getCameraPos().y;
@@ -215,6 +220,9 @@ namespace GAME {
 				mSampler
 			);
 			mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
+
+			JPSPathfinding = new JPS(160, 10000);
+			JPSPathfinding->SetObstaclesCallback(JPSGetWall, mLabyrinth);
 
 			glm::ivec2 Lpos = mLabyrinth->GetLegitimateGeneratePos();
 			mGamePlayerPosX = Lpos.x;
@@ -732,6 +740,37 @@ namespace GAME {
 			if (Lzuojian != GLFW_PRESS) {
 				LSObjectDecorator.Object = nullptr;
 			}
+		}
+
+		static glm::ivec2 beang{ 0 }, end{ 0 };
+		static std::vector<JPSVec2> JPSPath;
+		//点击左键
+		if (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+			beang = { huoqdedian.x, huoqdedian.y };
+		}
+		//点击右键
+		static int fangzhifanfuvhufa;
+		int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+		if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan) {
+			end = { huoqdedian.x, huoqdedian.y };
+			JPSPath.clear();
+			JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath);
+		}
+		fangzhifanfuvhufa = Leftan;
+		mAuxiliaryVision->AddSpot(
+			beang,
+			{ 0, 1.0f, 0, 1.0f }
+		);
+		mAuxiliaryVision->AddSpot(
+			end,
+			{ 1.0f, 0, 0, 1.0f }
+		);
+		for (auto i : JPSPath)
+		{
+			mAuxiliaryVision->AddSpot(
+				{ i.x , i.y },
+				{ 0, 0, 1.0f, 1.0f }
+			);
 		}
 		
 		mArms->BulletsEvent();

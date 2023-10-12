@@ -1,4 +1,5 @@
 #pragma once
+#include "Iterator.h"
 
 template <typename TData>
 class ContinuousData
@@ -33,6 +34,21 @@ public:
 		}
 		--mNumber;
 		mData[index] = mData[mNumber];
+	}
+
+
+	void Delete(TData* Pointer) {
+		--mNumber;
+		*Pointer = mData[mNumber];
+	}
+
+
+	Iterator<TData> begin() {
+		return Iterator<TData>(mData);
+	}
+
+	Iterator<TData> end() {
+		return Iterator<TData>(mData + mNumber);
 	}
 
 	[[nodiscard]] constexpr TData* Data() const noexcept {

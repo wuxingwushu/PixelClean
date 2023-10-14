@@ -164,7 +164,7 @@ namespace GAME {
 	void Application::initGame() {
 		//生成Camera Buffer
 		mCameraVPMatricesBuffer.resize(mSwapChain->getImageCount());//每个GPU画布都要分配单独的 VkBuffer
-		for (int i = 0; i < mCameraVPMatricesBuffer.size(); ++i) {
+		for (auto i = 0; i < mCameraVPMatricesBuffer.size(); ++i) {
 			mCameraVPMatricesBuffer[i] = VulKan::Buffer::createUniformBuffer(mDevice, sizeof(VPMatrices), nullptr);
 		}
 
@@ -192,8 +192,13 @@ namespace GAME {
 		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
 	}
 
-	bool JPSGetWall(int x, int y, void* P) {
+	bool LabyrinthGetWall(int x, int y, void* P) {
 		Labyrinth* LLabyrinth = (Labyrinth*)P;
+		return LLabyrinth->GetPixelWallNumber(x, y) <= 0;
+	}
+
+	bool DungeonGetWall(int x, int y, void* P) {
+		Dungeon* LLabyrinth = (Dungeon*)P;
 		return LLabyrinth->GetPixelWallNumber(x, y) <= 0;
 	}
 
@@ -208,6 +213,9 @@ namespace GAME {
 		);
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
+		//测试寻路
+		JPSPathfinding = new JPS(300, 10000);
+		AStarPathfinding = new AStar(300, 10000);
 		if (Global::GameMode) {
 			//生成迷宫
 			mLabyrinth = new Labyrinth(mSquarePhysics);
@@ -221,8 +229,8 @@ namespace GAME {
 			);
 			mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
 
-			JPSPathfinding = new JPS(160, 10000);
-			JPSPathfinding->SetObstaclesCallback(JPSGetWall, mLabyrinth);
+			JPSPathfinding->SetObstaclesCallback(LabyrinthGetWall, mLabyrinth);
+			AStarPathfinding->SetObstaclesCallback(LabyrinthGetWall, mLabyrinth);
 
 			glm::ivec2 Lpos = mLabyrinth->GetLegitimateGeneratePos();
 			mGamePlayerPosX = Lpos.x;
@@ -239,6 +247,9 @@ namespace GAME {
 				mSampler
 			);
 			mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
+
+			JPSPathfinding->SetObstaclesCallback(DungeonGetWall, mDungeon);
+			AStarPathfinding->SetObstaclesCallback(DungeonGetWall, mDungeon);
 		}
 		
 		mVisualEffect = new VulKan::VisualEffect(mDevice);
@@ -315,6 +326,8 @@ namespace GAME {
 	}
 
 	void Application::UninstallGame() {
+		delete JPSPathfinding;
+		delete AStarPathfinding;
 		delete mAuxiliaryVision;
 		if (Global::GameMode) {
 			delete mLabyrinth;
@@ -636,9 +649,6 @@ namespace GAME {
 	}
 
 	void Application::GameLoop() {
-
-		
-
 		if(Global::MultiplePeopleMode && !Global::ServerOrClient)
 		{
 			mCrowd->NPCTimeoutDetection();
@@ -666,7 +676,7 @@ namespace GAME {
 
 		mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle);//设置玩家物理角度
 		mGamePlayer->GetObjectCollision()->SufferForce(PlayerForce);//设置玩家受力
-		mAuxiliaryVision->UpDataLine();
+		mAuxiliaryVision->Begin();
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
 		TOOL::mTimer->StartEnd();
@@ -727,13 +737,14 @@ namespace GAME {
 				glm::vec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) },
 				TOOL::FPStime
 			);
-			mAuxiliaryVision->AddLine(
-				LSArmOfForce + LSObjectDecorator.Object->GetPos(),
+			mAuxiliaryVision->Line(
+				{ LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0 },
+				{ 1.0f, 0, 0, 1.0f },
 				huoqdedian,
-				{ 1.0f, 0, 0, 1.0f }
+				{ 0, 1.0f, 0, 1.0f }
 			);
-			mAuxiliaryVision->AddSpot(
-				LSArmOfForce + LSObjectDecorator.Object->GetPos(),
+			mAuxiliaryVision->Spot(
+				{ LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0 },
 				{ 0, 0, 1.0f, 1.0f }
 			);
 			mVisualEffect->SetPosAngle(LSObjectDecorator.Object->GetPosX(), LSObjectDecorator.Object->GetPosY(), 0, LSObjectDecorator.Object->GetAngleFloat(), mCurrentFrame);
@@ -744,34 +755,81 @@ namespace GAME {
 
 		static glm::ivec2 beang{ 0 }, end{ 0 };
 		static std::vector<JPSVec2> JPSPath;
+		static std::vector<AStarVec2> AStarPath;
+		static bool JPSPathBool = true;	
 		//点击左键
 		if (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
 			beang = { huoqdedian.x, huoqdedian.y };
+			int xpiany = (mDungeon->mMoveTerrain->OriginX - mDungeon->mMoveTerrain->GetGridSPosX()) * 16;
+			int ypiany = (mDungeon->mMoveTerrain->OriginY - mDungeon->mMoveTerrain->GetGridSPosY()) * 16;
+			std::cout << beang.x + xpiany << " - " << beang.y + xpiany << std::endl;
 		}
 		//点击右键
 		static int fangzhifanfuvhufa;
 		int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
 		if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan) {
 			end = { huoqdedian.x, huoqdedian.y };
+
+			if (JPSPathBool) {
+				JPSPathBool = false;
+				VulKan::StaticAuxiliaryData* P = mAuxiliaryVision->GetContinuousStaticLine()->Get(&JPSPath);
+				P->Pointer = &JPSPath;
+				P->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
+					std::vector<JPSVec2>* DataP = (std::vector<JPSVec2>*)D;
+					for (auto& i : *DataP)
+					{
+						if ((i != (*DataP)[0]) && (i != DataP->back())) {
+							P->Pos = { i.x, i.y, 0 };
+							P->Color = { 0, 0, 1.0f, 1.0f };
+							++P;
+						}
+						P->Pos = { i.x, i.y, 0 };
+						P->Color = { 0, 0, 1.0f, 1.0f };
+						++P;
+					}
+					return (DataP->size() * 2) - 2;
+					};
+			}
+			AStarPath.clear();
 			JPSPath.clear();
-			JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath);
+			if (Global::GameMode) {
+				TOOL::mTimer->MomentTiming("AStar寻路耗时");
+				AStarPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &AStarPath);
+				TOOL::mTimer->MomentEnd();
+				TOOL::mTimer->MomentTiming("JPS寻路耗时");
+				JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath);
+				TOOL::mTimer->MomentEnd();
+			}
+			else {
+				int xpiany = (mDungeon->mMoveTerrain->OriginX - mDungeon->mMoveTerrain->GetGridSPosX()) * 16;
+				int ypiany = (mDungeon->mMoveTerrain->OriginY - mDungeon->mMoveTerrain->GetGridSPosY()) * 16;
+				TOOL::mTimer->MomentTiming("AStar寻路耗时");
+				AStarPathfinding->FindPath({ beang.x + xpiany, beang.y + ypiany }, { end.x + xpiany, end.y + ypiany }, &AStarPath);
+				TOOL::mTimer->MomentEnd();
+				TOOL::mTimer->MomentTiming("JPS寻路耗时");
+				JPSPathfinding->FindPath({ beang.x + xpiany, beang.y + ypiany }, { end.x + xpiany, end.y + ypiany }, &JPSPath);
+				TOOL::mTimer->MomentEnd();
+
+				for (size_t i = 0; i < JPSPath.size(); i++)
+				{
+					JPSPath[i].x -= xpiany;
+					JPSPath[i].y -= ypiany;
+				}
+			}
+			
+			VulKan::StaticAuxiliaryData* P = mAuxiliaryVision->GetContinuousStaticLine()->Get(&JPSPath);
+			P->Size = JPSPath.size();
+			mAuxiliaryVision->OpenStaticLineUpData();
 		}
 		fangzhifanfuvhufa = Leftan;
-		mAuxiliaryVision->AddSpot(
-			beang,
+		mAuxiliaryVision->Spot(
+			{ beang, 0 },
 			{ 0, 1.0f, 0, 1.0f }
 		);
-		mAuxiliaryVision->AddSpot(
-			end,
+		mAuxiliaryVision->Spot(
+			{ end, 0 },
 			{ 1.0f, 0, 0, 1.0f }
 		);
-		for (auto i : JPSPath)
-		{
-			mAuxiliaryVision->AddSpot(
-				{ i.x , i.y },
-				{ 0, 0, 1.0f, 1.0f }
-			);
-		}
 		
 		mArms->BulletsEvent();
 		
@@ -792,8 +850,9 @@ namespace GAME {
 			TOOL::mTimer->StartEnd();
 		}
 		else {
-			if (mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY()).UpData) {
-				mDungeon->UpdataMistData();
+			MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
+			if (LMovePlateInfo.UpData) {
+				mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);
 			}
 			//战争迷雾
 			TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
@@ -804,6 +863,8 @@ namespace GAME {
 			}
 			TOOL::mTimer->StartEnd();
 		}
+
+		mAuxiliaryVision->End();
 
 		//ImGui显示录制
 		if (Global::Monitor) {

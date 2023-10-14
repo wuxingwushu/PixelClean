@@ -114,11 +114,15 @@ public:
 
     //开始寻路
     void FindPath(AStarVec2 start, AStarVec2 target, std::vector<AStarVec2>* PathVector) {
-        //开始寻路
-        mPathfindingCompleted = false;
-        StartingPoint = start;
+        //目标地点合法性
         target.x -= start.x;
         target.y -= start.y;
+        StartingPoint = start;
+        if (!isValid(target.x, target.y)) {
+            return;
+        }
+        //开始寻路
+        mPathfindingCompleted = false;
         start = { 0,0 };
         for (size_t i = 0; i < mRange*2; ++i)
         {

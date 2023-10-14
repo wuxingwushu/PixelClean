@@ -189,5 +189,6 @@ namespace GAME {
 		VulKan::VisualEffect* mVisualEffect{ nullptr };//视觉效果
 		VulKan::AuxiliaryVision* mAuxiliaryVision{ nullptr };//辅助视觉
 		JPS* JPSPathfinding = nullptr;
+		AStar* AStarPathfinding = nullptr;
 	};
 }

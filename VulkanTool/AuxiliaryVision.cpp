@@ -9,13 +9,14 @@ namespace VulKan {
 	{
 		//线段
 		AuxiliaryLineS = new Buffer(
-			wDevice, sizeof(AuxiliaryLine) * Number * 2,
+			wDevice, sizeof(AuxiliarySpot) * Number * 2,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 		ContinuousAuxiliaryLine = new ContinuousMap<glm::vec2*, AuxiliaryLineData>(Number);
 		ContinuousAuxiliaryForce = new ContinuousMap<glm::vec2*, AuxiliaryForceData>(Number);
-		AuxiliaryLine* LP = (AuxiliaryLine*)AuxiliaryLineS->getupdateBufferByMap();
+		StaticContinuousAuxiliaryLine = new ContinuousMap<void*, StaticAuxiliaryData>(Number, ContinuousMap_New);
+		AuxiliarySpot* LP = (AuxiliarySpot*)AuxiliaryLineS->getupdateBufferByMap();
 		for (size_t i = 0; i < (Number * 2); ++i)
 		{
 			LP[i].Pos = { i, i, -10000.0f };
@@ -24,12 +25,13 @@ namespace VulKan {
 		AuxiliaryLineS->endupdateBufferByMap();
 		//点
 		AuxiliarySpotS = new Buffer(
-			wDevice, sizeof(AuxiliaryLine) * Number,
+			wDevice, sizeof(AuxiliarySpot) * Number,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 		ContinuousAuxiliarySpot = new ContinuousMap<glm::vec2*, AuxiliarySpotData>(Number);
-		LP = (AuxiliaryLine*)AuxiliarySpotS->getupdateBufferByMap();
+		StaticContinuousAuxiliarySpot = new ContinuousMap<void*, StaticAuxiliaryData>(Number, ContinuousMap_New);
+		LP = (AuxiliarySpot*)AuxiliarySpotS->getupdateBufferByMap();
 		for (size_t i = 0; i < Number; ++i)
 		{
 			LP[i].Pos = { i, i, -10000.0f };
@@ -40,6 +42,27 @@ namespace VulKan {
 
 	AuxiliaryVision::~AuxiliaryVision()
 	{
+		//线段
+		delete AuxiliaryLineS;
+		delete ContinuousAuxiliaryLine;
+		delete ContinuousAuxiliaryForce;
+		delete StaticContinuousAuxiliaryLine;
+
+		//点
+		delete AuxiliarySpotS;
+		delete ContinuousAuxiliarySpot;
+		delete StaticContinuousAuxiliarySpot;
+
+		//资源
+		for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
+		{
+			delete mCommandBuffer[i];
+		}
+		delete mCommandBuffer;
+		delete mDescriptorSetLine;
+		delete mDescriptorSetSpot;
+		delete mDescriptorPool;
+		delete mCommandPool;
 	}
 
 	//初始化描述符
@@ -97,69 +120,114 @@ namespace VulKan {
 		}
 	}
 
-	void AuxiliaryVision::UpDataLine() {
+	void AuxiliaryVision::Begin() {
 		//线
-		AuxiliaryLine* LP = (AuxiliaryLine*)AuxiliaryLineS->getupdateBufferByMap();
+		LinePointerHOST = (AuxiliarySpot*)AuxiliaryLineS->getupdateBufferByMap();
+		//静态
+		if (StaticLineUpData) {
+			StaticLineUpData = false;
+			LineNumber = 0;
+			for (auto& i : *StaticContinuousAuxiliaryLine) {
+				if (i.Size != 0) {
+					LineNumber += i.Function(LinePointerHOST, i.Pointer, i.Size);
+					LinePointerHOST += LineNumber;
+				}
+			}
+			StaticLineDeviation = LineNumber;
+		}
+		else {
+			LineNumber = StaticLineDeviation;
+			LinePointerHOST += LineNumber;
+		}
+		//动态
 		for (auto& i : *ContinuousAuxiliaryLine)
 		{
-			LP->Pos = { *i.Head, 0.0f};
-			LP->Color = i.Color;
-			++LP;
-			LP->Pos = { *i.Tail, 0.0f };
-			LP->Color = i.Color;
-			++LP;
+			LinePointerHOST->Pos = { *i.Head, 0.0f};
+			LinePointerHOST->Color = i.Color;
+			++LinePointerHOST;
+			LinePointerHOST->Pos = { *i.Tail, 0.0f };
+			LinePointerHOST->Color = i.Color;
+			++LinePointerHOST;
 		}
 		for (auto& i : *ContinuousAuxiliaryForce)
 		{
-			LP->Pos = { *i.pos, 0.0f };
-			LP->Color = i.Color;
-			++LP;
-			LP->Pos = { (*i.pos + *i.Force), 0.0f };
-			LP->Color = i.Color;
-			++LP;
+			LinePointerHOST->Pos = { *i.pos, 0.0f };
+			LinePointerHOST->Color = i.Color;
+			++LinePointerHOST;
+			LinePointerHOST->Pos = { (*i.pos + *i.Force), 0.0f };
+			LinePointerHOST->Color = i.Color;
+			++LinePointerHOST;
 		}
-		int shu = LineVertex.size();
+		LineNumber += ((ContinuousAuxiliaryLine->GetNumber() + ContinuousAuxiliaryForce->GetNumber()) * 2);
+		//一次性
+		LineNumber += LineVertex.size();
 		while (LineVertex.size() != 0)
 		{
-			*LP = LineVertex.back();
-			++LP;
+			*LinePointerHOST = LineVertex.back();
+			++LinePointerHOST;
 			LineVertex.pop_back();
 		}
-		shu += ((ContinuousAuxiliaryLine->GetNumber() + ContinuousAuxiliaryForce->GetNumber()) * 2);
-		if (LineMax > shu) {
-			for (size_t i = shu; i <= LineMax; ++i)
-			{
-				LP->Pos.z = -10000.0f;
-				++LP;
-			}
-		}
-		LineMax = shu;
-		AuxiliaryLineS->endupdateBufferByMap();
+		
 		//点
-		LP = (AuxiliaryLine*)AuxiliarySpotS->getupdateBufferByMap();
-		shu = ContinuousAuxiliarySpot->GetNumber();
+		SpotPointerHOST = (AuxiliarySpot*)AuxiliarySpotS->getupdateBufferByMap();
+		//静态
+		if (StaticSpotUpData) {
+			StaticSpotUpData = false;
+			SpotNumber = 0;
+			for (auto& i : *StaticContinuousAuxiliarySpot) {
+				if (i.Size != 0) {
+					LineNumber += i.Function(LinePointerHOST, i.Pointer, i.Size);
+					LinePointerHOST += LineNumber;
+				}
+			}
+			StaticSpotDeviation = SpotNumber;
+		}
+		else {
+			SpotNumber = StaticSpotDeviation;
+			SpotPointerHOST += SpotNumber;
+		}
+		//动态
+		SpotNumber += ContinuousAuxiliarySpot->GetNumber();
 		for (auto& i : *ContinuousAuxiliarySpot)
 		{
-			LP->Pos = { *i.pos, 0.0f };
-			LP->Color = i.Color;
-			++LP;
+			SpotPointerHOST->Pos = { *i.pos, 0.0f };
+			SpotPointerHOST->Color = i.Color;
+			++SpotPointerHOST;
 		}
-		shu += SpotVertex.size();
+		//一次性
+		SpotNumber += SpotVertex.size();
 		while (SpotVertex.size() != 0)
 		{
-			*LP = SpotVertex.back();
-			++LP;
+			*SpotPointerHOST = SpotVertex.back();
+			++SpotPointerHOST;
 			SpotVertex.pop_back();
 		}
-		if (SpotMax > shu) {
-			for (size_t i = shu; i <= SpotMax; ++i)
-			{
-				LP->Pos.z = -10000.0f;
-				++LP;
-			}
-		}
-		SpotMax = shu;
-		AuxiliarySpotS->endupdateBufferByMap();
 	}
 
+	void AuxiliaryVision::End() {
+		//线段多余
+		LineNumber += ((ContinuousAuxiliaryLine->GetNumber() + ContinuousAuxiliaryForce->GetNumber()) * 2);
+		if (LineMax > LineNumber) {
+			for (size_t i = LineNumber; i <= LineMax; ++i)
+			{
+				LinePointerHOST->Pos.z = -10000.0f;
+				++LinePointerHOST;
+			}
+		}
+		LineMax = LineNumber;
+		AuxiliaryLineS->endupdateBufferByMap();
+		LinePointerHOST = nullptr;
+
+		//点多余
+		if (SpotMax > SpotNumber) {
+			for (size_t i = SpotNumber; i <= SpotMax; ++i)
+			{
+				SpotPointerHOST->Pos.z = -10000.0f;
+				++SpotPointerHOST;
+			}
+		}
+		SpotMax = SpotNumber;
+		AuxiliarySpotS->endupdateBufferByMap();
+		SpotPointerHOST = nullptr;
+	}
 }

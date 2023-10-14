@@ -10,7 +10,7 @@
 
 namespace VulKan {
 
-	struct AuxiliaryLine
+	struct AuxiliarySpot
 	{
 		glm::vec3 Pos{};
 		glm::vec4 Color{};
@@ -36,6 +36,17 @@ namespace VulKan {
 		glm::vec4 Color{};
 	};
 
+
+	typedef unsigned int (*AuxiliaryDataHandle)(AuxiliarySpot* P, void* D, unsigned int Size);
+	struct StaticAuxiliaryData
+	{
+		void* Pointer = nullptr;
+		unsigned int Size = 0;
+		AuxiliaryDataHandle Function = nullptr;
+	};
+
+	
+
 	class AuxiliaryVision
 	{
 	public:
@@ -48,44 +59,93 @@ namespace VulKan {
 			std::vector<Buffer*> VPMstdBuffer//玩家相机的变化矩阵 
 		);
 
+		//初次录制 CommandBuffer
 		void RecordingCommandBuffer(RenderPass* R, SwapChain* S) {
 			wRenderPass = R;
 			wSwapChain = S;
 			initCommandBuffer();
 		}
 
+		//刷新 CommandBuffer
 		void initCommandBuffer();
 
+		//获取某帧的 CommandBuffer
 		void GetCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			Vector->push_back(mCommandBuffer[F]->getCommandBuffer());
 		}
 
-		void UpDataLine();
+		//开始录制辅助视觉
+		void Begin();
 
+		//画线
+		void Line(glm::vec3 Vertex1, glm::vec4 color1, glm::vec3 Vertex2, glm::vec4 color2) {
+			LinePointerHOST->Pos = Vertex1;
+			LinePointerHOST->Color = color1;
+			++LinePointerHOST;
+			LinePointerHOST->Pos = Vertex2;
+			LinePointerHOST->Color = color2;
+			++LinePointerHOST;
+			LineNumber += 2;
+		};
+
+		//画点
+		void Spot(glm::vec3 pos, glm::vec4 color) {
+			SpotPointerHOST->Pos = pos;
+			SpotPointerHOST->Color = color;
+			++SpotPointerHOST;
+			++SpotNumber;
+		};
+
+		//结束录制辅助视觉
+		void End();
+
+		//一次性线段（录制外使用）
+		void AddLine(glm::vec3 Vertex1, glm::vec3 Vertex2, glm::vec4 color) {
+			LineVertex.push_back({ Vertex1, color });
+			LineVertex.push_back({ Vertex2, color });
+		};
+		//一次性点（录制外使用）
+		void AddSpot(glm::vec3 pos, glm::vec4 color) {
+			SpotVertex.push_back({ pos, color });
+		};
+
+		//动态线段
 		auto GetContinuousLine() { return ContinuousAuxiliaryLine; }
+		//动态线段（力）
 		auto GetContinuousForce() { return ContinuousAuxiliaryForce; }
-		void AddLine(glm::vec2 Vertex1, glm::vec2 Vertex2, glm::vec4 color) {
-			LineVertex.push_back({ { Vertex1, 0.0f }, color });
-			LineVertex.push_back({ { Vertex2, 0.0f }, color });
-		};
-		void AddSpot(glm::vec2 pos, glm::vec4 color) {
-			SpotVertex.push_back({ { pos, 0.0f }, color });
-		};
+		//动态点
+		auto GetContinuousSpot() { return ContinuousAuxiliarySpot; }
+
+		//静态线段
+		auto GetContinuousStaticLine() { return StaticContinuousAuxiliaryLine; }
+		//静态点
+		auto GetContinuousStaticSpot() { return StaticContinuousAuxiliarySpot; }
+		//静态数据更新
+		void OpenStaticSpotUpData() { StaticSpotUpData = true; }
+		void OpenStaticLineUpData() { StaticLineUpData = true; }
 	private://线段
+		AuxiliarySpot* LinePointerHOST = nullptr;
+		unsigned int LineNumber = 0;//当前帧的数量
 		unsigned int LineMax = 0;//上一帧的数量
-		ContinuousMap<glm::vec2*, AuxiliaryLineData>* ContinuousAuxiliaryLine = nullptr;//两点连线
-		ContinuousMap<glm::vec2*, AuxiliaryForceData>* ContinuousAuxiliaryForce = nullptr;//点上的向量
-		std::vector<AuxiliaryLine> LineVertex;//单纯的位置连线（一次性）
+		ContinuousMap<glm::vec2*, AuxiliaryLineData>* ContinuousAuxiliaryLine = nullptr;//两点连线（动态）
+		ContinuousMap<glm::vec2*, AuxiliaryForceData>* ContinuousAuxiliaryForce = nullptr;//点上的向量（动态）
+		ContinuousMap<void*, StaticAuxiliaryData>* StaticContinuousAuxiliaryLine = nullptr;//线段集（静态）
+		bool StaticLineUpData = false;//静态线段是否需要更新
+		unsigned int StaticLineDeviation = 0;//静态数据偏移量
+		std::vector<AuxiliarySpot> LineVertex{};//单纯的位置连线（一次性）
 		Buffer* AuxiliaryLineS{ nullptr };//线段缓存
 	private://点
+		AuxiliarySpot* SpotPointerHOST = nullptr;
+		unsigned int SpotNumber = 0;//当前帧的数量
 		unsigned int SpotMax = 0;//上一帧的数量
-		ContinuousMap<glm::vec2*, AuxiliarySpotData>* ContinuousAuxiliarySpot = nullptr;//点集
-		std::vector<AuxiliaryLine> SpotVertex;//单纯的位置点（一次性）
+		ContinuousMap<glm::vec2*, AuxiliarySpotData>* ContinuousAuxiliarySpot = nullptr;//点集（动态）
+		ContinuousMap<void*, StaticAuxiliaryData>* StaticContinuousAuxiliarySpot = nullptr;//点集（静态）
+		bool StaticSpotUpData = false;//静态点是否需要更新
+		unsigned int StaticSpotDeviation = 0;//静态数据偏移量
+		std::vector<AuxiliarySpot> SpotVertex{};//单纯的位置点（一次性）
 		Buffer* AuxiliarySpotS{ nullptr };//点缓存
 
 	private:
-		std::vector<UniformParameter*> mUniformParams{};
-
 		DescriptorPool* mDescriptorPool{ nullptr };
 		DescriptorSet* mDescriptorSetLine{ nullptr };
 		DescriptorSet* mDescriptorSetSpot{ nullptr };

@@ -13,6 +13,15 @@ namespace GAME {
 		DungeonDestroyStruct* LSDungeon = (DungeonDestroyStruct*)wClass;
 		int* LSP = (int*)LSDungeon->wTextureAndBuffer->mPixelTexture->getHOSTImagePointer();
 		Destroy(LSP, x, y, Bool);
+		for (size_t ix = 0; ix < LSDungeon->wDungeon->mNumberX; ++ix)
+		{
+			for (size_t iy = 0; iy < LSDungeon->wDungeon->mNumberY; ++iy)
+			{
+				if (LSDungeon->wDungeon->mMoveTerrain->GetRigidBodyAndModel(ix,iy)->mModel == LSDungeon->wTextureAndBuffer) {
+					LSDungeon->wDungeon->PixelWallNumberReduce(x + (ix * 16), y + (iy * 16));
+				}
+			}
+		}
 		LSDungeon->wTextureAndBuffer->mPixelTexture->endHOSTImagePointer();
 		LSDungeon->wTextureAndBuffer->mPixelTexture->UpDataImage();
 		unsigned int dian = ((LSDungeon->wTextureAndBuffer->MistPointerY * LSDungeon->wDungeon->mSquareSideLength + y) * LSDungeon->wDungeon->mNumberX * LSDungeon->wDungeon->mSquareSideLength + (LSDungeon->wTextureAndBuffer->MistPointerX * LSDungeon->wDungeon->mSquareSideLength + x));
@@ -246,6 +255,7 @@ namespace GAME {
 		unsigned char* WarfareMistPointer = (unsigned char*)WarfareMist->getHOSTImagePointer();
 		int* WallBoolPointer = (int*)WallBool->getupdateBufferByMap();
 		mDungeonDestroyStruct = new DungeonDestroyStruct*[mNumberX];
+		short* qiangshulaingData = new short[16 * 16 * mNumberX * mNumberY];
 		for (int ix = 0; ix < mNumberX; ++ix)
 		{
 			mDungeonDestroyStruct[ix] = new DungeonDestroyStruct[mNumberY];
@@ -279,6 +289,10 @@ namespace GAME {
 						mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator->at({ ixx,iyy })->Collision = CollisionBool;
 					}
 				}
+
+				mTextureAndBuffer[ix][iy].PixelWallNumber = qiangshulaingData;
+				qiangshulaingData += 16 * 16;
+
 				mDungeonDestroyStruct[ix][iy] = { &mTextureAndBuffer[ix][iy], this };
 				mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator->SetCollisionCallback(DungeonDestroy, &mDungeonDestroyStruct[ix][iy]);
 				textureParam->mPixelTexture = mTextureAndBuffer[ix][iy].mPixelTexture;
@@ -290,6 +304,15 @@ namespace GAME {
 		WallBool->endupdateBufferByMap();
 		WarfareMist->endHOSTImagePointer();
 		WarfareMist->UpDataImage();
+
+		for (size_t ix = 0; ix < mNumberX; ++ix)
+		{
+			for (size_t iy = 0; iy < mNumberY; ++iy)
+			{
+				TOOL::mThreadPool->enqueue(&Dungeon::BlockPixelWallNumber, this, ix, iy);
+				//BlockPixelWallNumber(ix, iy);
+			}
+		}
 	}
 
 	void Dungeon::initCommandBuffer() {
@@ -419,7 +442,49 @@ namespace GAME {
 		);
 	}
 
-	void Dungeon::UpdataMistData() {
+	void Dungeon::UpdataMistData(int x, int y) {
+		if (x > 0) {
+			x = x + 1;
+			for (size_t ix = mNumberX - x; ix < mNumberX; ++ix)
+			{
+				for (size_t iy = 0; iy < mNumberY; ++iy)
+				{
+					TOOL::mThreadPool->enqueue(&Dungeon::BlockPixelWallNumber, this, ix, iy);
+				}
+			}
+		}
+		else {
+			x -= x - 1;
+			for (size_t ix = 0; ix < x; ++ix)
+			{
+				for (size_t iy = 0; iy < mNumberY; ++iy)
+				{
+					TOOL::mThreadPool->enqueue(&Dungeon::BlockPixelWallNumber, this, ix, iy);
+				}
+			}
+		}
+		if (y > 0) {
+			y = y + 1;
+			int A = (x < 0 ? -x : 0), B = (x > 0 ? mNumberX - x : 0);
+			for (size_t iy = mNumberY - y; iy < mNumberY; ++iy)
+			{
+				for (size_t ix = A; ix < B; ++ix)
+				{
+					TOOL::mThreadPool->enqueue(&Dungeon::BlockPixelWallNumber, this, ix, iy);
+				}
+			}
+		}
+		else {
+			y -= y - 1;
+			int A = (x < 0 ? -x : 0), B = (x > 0 ? mNumberX - x : 0);
+			for (size_t iy = 0; iy < y; ++iy)
+			{
+				for (size_t ix = A; ix < B; ++ix)
+				{
+					TOOL::mThreadPool->enqueue(&Dungeon::BlockPixelWallNumber, this, ix, iy);
+				}
+			}
+		}
 		int* Index = (int*)CalculateIndex->getupdateBufferByMap();
 		for (size_t ix = 0; ix < mNumberX; ++ix)
 		{

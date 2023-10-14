@@ -10,7 +10,8 @@ namespace VulKan {
 	{
 		MainMods = 0,
 		LineMods,
-		SpotMods
+		SpotMods,
+		GifMods
 	};
 
 	class PipelineS

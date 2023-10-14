@@ -34,6 +34,7 @@ namespace GAME {
 		unsigned int Type = 0;
 		unsigned int MistPointerX = 0;
 		unsigned int MistPointerY = 0;
+		short* PixelWallNumber = nullptr;//周围墙壁数量
 	};
 
 	class Dungeon;
@@ -89,6 +90,72 @@ namespace GAME {
 			return mPerlinNoise->noise(x * 0.05f, y * 0.05f, 0.5) * TextureNumber;
 		}
 
+		//********** AI寻路地图 *************
+		//获取对于墙壁数量指针
+		short* GetPixelWallPointer(int x, int y) {
+			return &(mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)]);
+		}
+		short GetPixelWallNumber(int x, int y) {
+			if ((x >= 0) && (x < (mNumberX * 16)) && (y >= 0) && (y < (mNumberY * 16))) {
+				return mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)];
+			}
+			else {
+				return 255;
+			}
+			
+		}
+		//计算点附近的墙壁数量
+		void PixelWallNumberCalculate(short* PixelWallNumber, int x, int y) {
+			int posX, posY;
+			int Range1A = (x < 9 ? -x : -9), Range1B = ((x + 10) > (mNumberX * 16) ? ((mNumberX * 16) - x) : 10);
+			int Range2A = (y < 9 ? -y : -9), Range2B = ((y + 10) > (mNumberY * 16) ? ((mNumberY * 16) - y) : 10);
+			*PixelWallNumber = 0;
+			for (int ix = Range1A; ix < Range1B; ++ix)
+			{
+				posX = x + ix;
+				for (int iy = Range2A; iy < Range2B; ++iy)
+				{
+					posY = y + iy;
+					if (mMoveTerrain->GetRigidBodyAndModel(posX / 16, posY / 16)->mGridDecorator->GetFixedCollisionBool({ posX % 16, posY % 16 })) {
+						++(*PixelWallNumber);
+					}
+				}
+			}
+		}
+
+		void PixelWallNumberReduce(int x, int y) {
+			int posX, posY;
+			int Range1A = (x < 9 ? -x : -9), Range1B = ((x + 10) > (mNumberX * 16) ? ((mNumberX * 16) - x) : 10);
+			int Range2A = (y < 9 ? -y : -9), Range2B = ((y + 10) > (mNumberY * 16) ? ((mNumberY * 16) - y) : 10);
+			short* LData;
+			for (int ix = Range1A; ix < Range1B; ++ix)
+			{
+				posX = x + ix;
+				for (int iy = Range2A; iy < Range2B; ++iy)
+				{
+					posY = y + iy;
+					LData = GetPixelWallPointer(posX, posY);
+					if (*LData > 0) {
+						--(*LData);
+					}
+				}
+			}
+		}
+
+		void BlockPixelWallNumber(int x, int y) {
+			x = x * 16;
+			y = y * 16;
+			for (size_t ix = 0; ix < 16; ++ix)
+			{
+				for (size_t iy = 0; iy < 16; ++iy)
+				{
+					PixelWallNumberCalculate(GetPixelWallPointer(x + ix, y + iy), x + ix, y + iy);
+				}
+			}
+		}
+
+
+
 	public://破坏
 		const unsigned int mNumberX;
 		const unsigned int mNumberY;
@@ -105,7 +172,7 @@ namespace GAME {
 		unsigned char* LSMistPointer = nullptr;
 		VulKan::PixelTexture* WarfareMist{ nullptr };			//每块的贴图
 		VulKan::Buffer* WallBool{ nullptr };//储存碰撞(是否是墙壁)
-		void UpdataMistData();
+		void UpdataMistData(int x, int y);
 		int pianX = 0;
 		int pianY = 0;
 
@@ -151,9 +218,9 @@ namespace GAME {
 
 		VulKan::CommandPool*mCommandPool{ nullptr };		//指令池
 		VulKan::CommandBuffer** mCommandBuffer{ nullptr };	//指令缓存
-
+	public:
 		SquarePhysics::MoveTerrain<TextureAndBuffer>* mMoveTerrain{ nullptr };//地图物理模型
-
+	private:
 		DungeonDestroyStruct** mDungeonDestroyStruct{ nullptr };
 	private://储存数据
 		VulKan::Device* wDevice{ nullptr };

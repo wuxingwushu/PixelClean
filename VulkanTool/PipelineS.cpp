@@ -10,6 +10,7 @@ namespace VulKan {
 		EstablishPipeline(MainPipeline);
 		EstablishPipeline(LinePipeline);
 		EstablishPipeline(SpotPipeline);
+		EstablishPipeline(GIFPipeline);
 	}
 
 	PipelineS::~PipelineS() {

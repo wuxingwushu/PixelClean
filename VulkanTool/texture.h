@@ -22,6 +22,8 @@ namespace VulKan {
 
 		[[nodiscard]] VkDescriptorImageInfo& getImageInfo() { return mImageInfo; }
 
+		[[nodiscard]] VkDescriptorImageInfo* getImageInfoP() { return &mImageInfo; }
+
 	private:
 		Device* mDevice{ nullptr };
 		Image* mImage{ nullptr };

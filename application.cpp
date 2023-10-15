@@ -246,7 +246,7 @@ namespace GAME {
 				mCameraVPMatricesBuffer,
 				mSampler
 			);
-			mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
+			mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods), mPipelineS->GetPipeline(VulKan::PipelineMods::GifMods));
 
 			JPSPathfinding->SetObstaclesCallback(DungeonGetWall, mDungeon);
 			AStarPathfinding->SetObstaclesCallback(DungeonGetWall, mDungeon);
@@ -850,9 +850,17 @@ namespace GAME {
 			TOOL::mTimer->StartEnd();
 		}
 		else {
+			static float UpDataGIFTime = 0;
+			UpDataGIFTime += TOOL::FPStime;
+			if (UpDataGIFTime > 0.1f) {
+				UpDataGIFTime = 0;
+				mDungeon->UpDataGIF();
+			}
 			MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
 			if (LMovePlateInfo.UpData) {
 				mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);
+				//mDungeon->initCommandBuffer();
+				Global::MainCommandBufferUpdateRequest();
 			}
 			//战争迷雾
 			TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
@@ -918,7 +926,10 @@ namespace GAME {
 		
 
 		if (Global::GameMode) { mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i); }
-		else { mDungeon->GetCommandBuffer(&ThreadCommandBufferS, Format_i); }
+		else { 
+			mDungeon->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
+			mDungeon->GetGIFCommandBuffer(&ThreadCommandBufferS, Format_i);
+		}
 
 		mParticleSystem->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 		//加到显示数组中

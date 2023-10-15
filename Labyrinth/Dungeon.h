@@ -13,6 +13,8 @@
 #include "../BlockS/PixelS.h"
 #include "../VulkanTool/Calculate.h"
 #include "../GlobalVariable.h"
+#include "../Tool/BlockData.h"
+#include "../GlobalStructural.h"
 
 namespace GAME {
 
@@ -35,6 +37,7 @@ namespace GAME {
 		unsigned int MistPointerX = 0;
 		unsigned int MistPointerY = 0;
 		short* PixelWallNumber = nullptr;//周围墙壁数量
+		VulKan::DescriptorSet* mGIFDescriptorSet = nullptr;//GIF
 	};
 
 	class Dungeon;
@@ -61,10 +64,11 @@ namespace GAME {
 
 		void initCommandBuffer();
 
-		void RecordingCommandBuffer(VulKan::RenderPass* R, VulKan::SwapChain* S, VulKan::Pipeline* P) {
+		void RecordingCommandBuffer(VulKan::RenderPass* R, VulKan::SwapChain* S, VulKan::Pipeline* P, VulKan::Pipeline* GifP) {
 			wRenderPass = R;
 			wSwapChain = S;
 			wPipeline = P;
+			wGIFPipeline = GifP;
 			initCommandBuffer();
 		}
 
@@ -80,7 +84,7 @@ namespace GAME {
 			return mMoveTerrain->UpDataPos(x, y);
 		}
 
-		SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* GetTerrain(float x, float y){
+		SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* GetTerrain(float x, float y) {
 			return mMoveTerrain->CalculateGetRigidBodyAndModel(x, y);
 		}
 
@@ -102,7 +106,7 @@ namespace GAME {
 			else {
 				return 255;
 			}
-			
+
 		}
 		//计算点附近的墙壁数量
 		void PixelWallNumberCalculate(short* PixelWallNumber, int x, int y) {
@@ -154,12 +158,86 @@ namespace GAME {
 			}
 		}
 
+	public://GIF
+		enum GIFCommandBufferState
+		{
+			NotEnabled = 0,		//未启用
+			Enabled,			//启用
+			RequestUpdate,		//请求更新
+			Release				//释放
+		};
 
+		struct BlockCommandBuffer
+		{
+			VulKan::CommandBuffer** mCommandBuffer = nullptr;
+			GIFCommandBufferState State = NotEnabled;
+		};
 
+		struct BlockGifData
+		{
+			VulKan::DescriptorSet* mDescriptorSet = nullptr;
+			VulKan::Buffer* mBuffer = nullptr;
+
+			bool operator<(const BlockGifData& other)
+			{
+				return mDescriptorSet < other.mDescriptorSet;
+			}
+
+			bool operator==(const BlockGifData& other) const {
+				return mDescriptorSet == other.mDescriptorSet;
+			}
+		};
+
+		struct Compared {
+			bool operator()(const BlockGifData& a, const BlockGifData& b) const {
+				return a.mDescriptorSet < b.mDescriptorSet;
+			}
+		};
+
+		BlockData<BlockGifData, BlockCommandBuffer, Compared>* mBlockData = nullptr;
+
+		VulKan::Pipeline* wGIFPipeline = nullptr;
+		VulKan::Buffer* mGIFUV = nullptr;
+		VulKan::Texture* mGIFTexture = nullptr;
+		unsigned int mGIFBlockNumber = 0;
+		VulKan::DescriptorPool* mGIFDescriptorPool{ nullptr };//描述符池
+		VulKan::CommandPool** mGIFCommandPool{ nullptr };		//指令池
+		BlockCommandBuffer* mGIFBlockCommandBuffer{ nullptr };
+
+		void GetGIFCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
+			for (size_t i = 0; i < mBlockData->GetApplyNumber(); i++)
+			{
+				Vector->push_back(mBlockData->GetBlockDataS()[i]->mHandle->mCommandBuffer[F]->getCommandBuffer());
+			}
+		}
+
+		void UpDataGIF() {
+			ObjectUniformGIF* mUniform;
+			BlockData<BlockGifData, BlockCommandBuffer, Compared>::BlockDataT* Pointer;
+			for (size_t i = 0; i < mBlockData->GetApplyNumber(); i++)
+			{
+				Pointer = mBlockData->GetBlockDataS()[i];
+				for (size_t i2 = 0; i2 < Pointer->mNumber; i2++)
+				{
+					mUniform = (ObjectUniformGIF*)Pointer->DataS[i2].mBuffer->getupdateBufferByMap();
+					++mUniform->zhen;
+					if (mUniform->zhen > 24) {
+						mUniform->zhen = 0;
+					}
+					Pointer->DataS[i2].mBuffer->endupdateBufferByMap();
+				}
+			}
+		}
+
+		void UpDataGIFCommandBuffer();
+
+		VulKan::DescriptorSet* AddGIF(VulKan::Buffer* buffer, VulKan::Texture* texture);
+
+		void popGIF(BlockGifData data);
 	public://破坏
 		const unsigned int mNumberX;
 		const unsigned int mNumberY;
-		
+
 		int* LSPointer = nullptr;//贴图数据指针
 		void Destroy(int x, int y, bool Bool);//贴图修改
 
@@ -193,19 +271,19 @@ namespace GAME {
 		VulKan::Buffer* CalculateIndex{ nullptr };//计算UV像素位置索引
 		//渲染
 		VulKan::Buffer*** mMistUVBuffer{ nullptr };		//模型UV缓存
-		
+
 		VulKan::DescriptorSet*** mMistDescriptorSet{ nullptr };//指令录制用的数据
 		VulKan::CommandBuffer** mMistCommandBuffer{ nullptr };
-		
+
 	private:
-		
+
 		PerlinNoise* mPerlinNoise = nullptr;
 
 		VulKan::Buffer* mPositionBuffer{ nullptr };	//模型点缓存
 		VulKan::Buffer* mUVBuffer{ nullptr };		//模型UV缓存
 		VulKan::Buffer* mIndexBuffer{ nullptr };	//模型顶点索引缓存
 		size_t mIndexDatasSize{ 0 };				//顶点数量
-		
+
 
 		//获取  顶点和UV  VkBuffer数组
 		[[nodiscard]] std::vector<VkBuffer> getVertexBuffers() const {
@@ -216,7 +294,7 @@ namespace GAME {
 		VulKan::DescriptorSet*** mDescriptorSet{ nullptr };//指令录制用的数据
 		TextureAndBuffer** mTextureAndBuffer{ nullptr };//描述符Buffer 和 贴图
 
-		VulKan::CommandPool*mCommandPool{ nullptr };		//指令池
+		VulKan::CommandPool* mCommandPool{ nullptr };		//指令池
 		VulKan::CommandBuffer** mCommandBuffer{ nullptr };	//指令缓存
 	public:
 		SquarePhysics::MoveTerrain<TextureAndBuffer>* mMoveTerrain{ nullptr };//地图物理模型
@@ -228,6 +306,8 @@ namespace GAME {
 		VulKan::Pipeline* wPipeline{ nullptr };
 		VulKan::SwapChain* wSwapChain{ nullptr };
 		SquarePhysics::SquarePhysics* wSquarePhysics{ nullptr };
+		VkDescriptorSetLayout wDescriptorSetLayout;
+		std::vector<VulKan::Buffer*> wVPMstdBuffer;//玩家相机的变化矩阵
 	};
 
 }

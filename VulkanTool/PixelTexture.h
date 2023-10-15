@@ -40,6 +40,7 @@ namespace VulKan {
 
 		//获取图片信息
 		[[nodiscard]] VkDescriptorImageInfo& getImageInfo() { return mImageInfo; }
+		[[nodiscard]] VkDescriptorImageInfo* getImageInfoP() { return &mImageInfo; }
 
 		//获取图片HOST缓存的指针
 		[[nodiscard]] void* getHOSTImagePointer() { return HOSTImage->getupdateBufferByMap(); }

@@ -3,6 +3,7 @@
 #include "../Vulkan/description.h"
 #include "../Vulkan/descriptorSet.h"
 #include "../Vulkan/swapChain.h"
+#include "../GlobalStructural.h"
 
 namespace GAME {
 	class GifPipeline
@@ -20,17 +21,6 @@ namespace GAME {
 		VulKan::Pipeline* mPipeline = nullptr;
 		VulKan::RenderPass* mRenderPass = nullptr;
 	};
-
-	struct ObjectUniformGIF {
-		glm::mat4 mModelMatrix;
-		float chuang = 0.0f;
-		unsigned int zhen = 0;
-
-		ObjectUniformGIF() {
-			mModelMatrix = glm::mat4(1.0f);
-		}
-	};
-
 
 	class GIF
 	{

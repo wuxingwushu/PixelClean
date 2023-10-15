@@ -14,6 +14,7 @@ struct SynchronizeBullet {
 	unsigned int Type;//那种子弹
 };
 
+//字符串
 struct ChatStrStruct {
 	char* str = nullptr;
 	unsigned int size = 0;
@@ -22,5 +23,16 @@ struct ChatStrStruct {
 		if (str != nullptr) {
 			delete str;
 		}
+	}
+};
+
+//Gif 描述符
+struct ObjectUniformGIF {
+	glm::mat4 mModelMatrix;
+	float chuang = 0.0f;
+	unsigned int zhen = 0;
+
+	ObjectUniformGIF() {
+		mModelMatrix = glm::mat4(1.0f);
 	}
 };

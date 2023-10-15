@@ -8,10 +8,11 @@ namespace VulKan {
 		const VkDescriptorSetLayout layout,
 		const DescriptorPool* pool,
 		int frameCount
-	) {
-		mDescriptorPool = pool;
-		mDevice = device;
-
+	) :
+		mDevice(device),
+		mDescriptorPool(pool),
+		wFrameCount(frameCount)
+	{
 		std::vector<VkDescriptorSetLayout> layouts(frameCount, layout);
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -24,9 +25,10 @@ namespace VulKan {
 			throw std::runtime_error("Error: failed to allocate descriptor sets");
 		}
 
+		mDescriptorSize = params.size();
+
 		for (int i = 0; i < frameCount; ++i) {
-			//对每个DescriptorSet，我们需要把params里面的描述信息，写入其中
-			std::vector<VkWriteDescriptorSet> descriptorSetWrites{};
+			std::vector<VkWriteDescriptorSet> LSdescriptorSetWrites;
 			for (const auto& param : params) {
 				VkWriteDescriptorSet descriptorSetWrite{};
 				descriptorSetWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -39,8 +41,7 @@ namespace VulKan {
 				if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
 					descriptorSetWrite.pBufferInfo = &param->mBuffers[i]->getBufferInfo();
 				}
-
-				if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+				else if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
 					if (param->mTexture == nullptr) {
 						descriptorSetWrite.pImageInfo = &param->mPixelTexture->getImageInfo();
 					}
@@ -50,10 +51,24 @@ namespace VulKan {
 					
 				}
 
-				descriptorSetWrites.push_back(descriptorSetWrite);
+				LSdescriptorSetWrites.push_back(descriptorSetWrite);
 			}
+			descriptorSetWrites.push_back(LSdescriptorSetWrites);
 
-			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(descriptorSetWrites.size()), descriptorSetWrites.data(), 0, nullptr);
+			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(LSdescriptorSetWrites.size()), LSdescriptorSetWrites.data(), 0, nullptr);
+			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(descriptorSetWrites[i].size()), descriptorSetWrites[i].data(), 0, nullptr);
+		}
+	}
+
+	void DescriptorSet::UpDataPicture(unsigned int Index, VkDescriptorImageInfo* ImageInfo) {
+		for (auto DescriptorSetWrites : descriptorSetWrites) {
+			for (size_t i = 0; i < DescriptorSetWrites.size(); i++)
+			{
+				if (DescriptorSetWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+					DescriptorSetWrites[i].pImageInfo = ImageInfo;
+				}
+			}
+			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(DescriptorSetWrites.size()), DescriptorSetWrites.data(), 0, nullptr);
 		}
 	}
 

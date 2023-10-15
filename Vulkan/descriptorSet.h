@@ -28,10 +28,17 @@ namespace VulKan {
 
 		~DescriptorSet();
 
+		//更新绑定的图片
+		void UpDataPicture(unsigned int Index, VkDescriptorImageInfo* ImageInfo);
+
 		[[nodiscard]] auto getDescriptorSet(int frameCount) const { return mDescriptorSets[frameCount]; }
 
 	private:
+		unsigned int wFrameCount = 0;
+		unsigned int mDescriptorSize = 0;
 		const DescriptorPool* mDescriptorPool;
+		//对每个DescriptorSet，我们需要把params里面的描述信息，写入其中
+		std::vector<std::vector<VkWriteDescriptorSet>> descriptorSetWrites{};
 		std::vector<VkDescriptorSet> mDescriptorSets{};
 		Device* mDevice{ nullptr };
 	};

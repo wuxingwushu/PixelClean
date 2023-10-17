@@ -71,35 +71,12 @@ namespace VulKan {
 	}
 
 	void PixelTexture::UpDataImage() {
-		VkImageSubresourceRange region{};
-		region.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-		region.baseArrayLayer = 0;
-		region.layerCount = 1;
-
-		region.baseMipLevel = 0;
-		region.levelCount = 1;
-
-		mImage->setImageLayout(
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			region,
-			mCommandPool
-		);
-
 		mCommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+		RewritableDataType(mCommandBuffer);
 		mCommandBuffer->copyBufferToImage(HOSTImage->getBuffer(), mImage->getImage(), mImage->getLayout(), mImage->getWidth(), mImage->getHeight());
+		RewriteDataTypeOptimization(mCommandBuffer);
 		mCommandBuffer->end();
 		mCommandBuffer->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
-
-		mImage->setImageLayout(
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			region,
-			mCommandPool
-		);
 	}
 
 	void PixelTexture::ModifyImage(size_t size, void* data) {
@@ -107,7 +84,7 @@ namespace VulKan {
 		UpDataImage();
 	}
 
-	void PixelTexture::RecordingInstructions(CommandBuffer* CommandBuffer) {
+	void PixelTexture::RewritableDataType(CommandBuffer* CommandBuffer) {
 		VkImageSubresourceRange region{};
 		region.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -122,13 +99,16 @@ namespace VulKan {
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			region,
-			mCommandPool
+			mCommandPool,
+			CommandBuffer
 		);
+	}
 
+	void PixelTexture::UpDataPicture(CommandBuffer* CommandBuffer) {
 		CommandBuffer->copyBufferToImage(HOSTImage->getBuffer(), mImage->getImage(), mImage->getLayout(), mImage->getWidth(), mImage->getHeight());
 	}
 
-	void PixelTexture::EndInstructions() {
+	void PixelTexture::RewriteDataTypeOptimization(CommandBuffer* CommandBuffer) {
 		VkImageSubresourceRange region{};
 		region.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -143,7 +123,8 @@ namespace VulKan {
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			region,
-			mCommandPool
+			mCommandPool,
+			CommandBuffer
 		);
 	}
 }

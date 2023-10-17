@@ -74,7 +74,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Info.ini 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs.json ${PROJECT_SOURCE_DIR}/.vs)# 设置的DLL文件路径
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders/Spv ${CMAKE_CURRENT_BINARY_DIR}/shaders) # 拷贝shaders
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./SoundEffect/Resources ${CMAKE_CURRENT_BINARY_DIR}/Resources)# 拷贝音效
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/004.png ${CMAKE_CURRENT_BINARY_DIR})# 测试图片
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Labyrinth/Texture ${CMAKE_CURRENT_BINARY_DIR}/Texture)# 测试图片
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ImGui/Minecraft_AE.ttf ${CMAKE_CURRENT_BINARY_DIR})# 字体
 
 add_subdirectory(Vulkan)

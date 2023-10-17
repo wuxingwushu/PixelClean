@@ -39,7 +39,12 @@ namespace GAME {
 	void GenerateBlock(SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* mT, int x, int y, void* Data) {
 		GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
 		ObjectUniformGIF LUniform;
-		LUniform.chuang = 1.0f / 24;
+		mT->mModel->Type = LDungeon->GetNoise(x, y);
+		if (mT->mModel->Type == 20) {
+			GAME::TextureLibrary::TextureToUVInfo TUinfo = LDungeon->wTextureLibrary->GetTextureUV("004_24");
+			mT->mModel->mGIFDescriptorSet = LDungeon->AddGIF(mT->mModel->mBufferS, TUinfo.mTexture, TUinfo.mUV);
+			LUniform.chuang = 1.0f / TUinfo.X;
+		}
 		LUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x * 16, y * 16, 0.0f));//位移矩阵
 		mT->mModel->mBufferS->updateBufferByMap((void*)&LUniform, sizeof(ObjectUniformGIF));
 		bool CollisionBool = false;
@@ -87,18 +92,14 @@ namespace GAME {
 					LDungeon->LSMistPointer = (unsigned char*)LDungeon->WarfareMist->getHOSTImagePointer();
 					LDungeon->LSPointer = (int*)LDungeon->WallBool->getupdateBufferByMap();
 				}
-				mT->mModel->Type = LDungeon->GetNoise(x, y);
 				LDungeon->MultithreadingGenerate.push_back(TOOL::mThreadPool->enqueue(&GenerateBlock, mT, x, y, Data));
 				LDungeon->MultithreadingPixelTexture.push_back(mT->mModel->mPixelTexture);
-				if (mT->mModel->Type == 20) {
-					mT->mModel->mGIFDescriptorSet = LDungeon->AddGIF(mT->mModel->mBufferS, LDungeon->mGIFTexture);
-				}
 			},
 			this,
 			[](SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* mT, void* Data) {
 				GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
 				if (mT->mModel->Type == 20) {
-					LDungeon->popGIF({ mT->mModel->mGIFDescriptorSet, mT->mModel->mBufferS });
+					LDungeon->popGIF({ mT->mModel->mGIFDescriptorSet, nullptr, nullptr });
 				}
 			},
 			this
@@ -158,6 +159,35 @@ namespace GAME {
 	{
 		DeleteMist();
 
+		/******* GIF *******/
+
+		for (size_t i = 0; i < mBlockData->GetApplyNumber(); i++)
+		{
+			for (size_t id = 0; id < mBlockData->GetBlockDataS()[i]->mNumber; id++)
+			{
+				delete mBlockData->GetBlockDataS()[i]->DataS[id].mDescriptorSet;
+			}
+		}
+		delete mBlockData;
+		
+		
+		for (size_t i = 0; i < mGIFBlockNumber; i++)
+		{
+			for (size_t id = 0; id < wFrameCount; id++)
+			{
+				delete mGIFBlockCommandBuffer[i].mCommandBuffer[id];
+			}
+			delete mGIFBlockCommandBuffer[i].mCommandBuffer;
+			delete mGIFBlockCommandBuffer[i].mMutex;
+			delete mGIFBlockCommandBuffer[i].mGIFDescriptorPool;
+			delete mGIFCommandPool[i];
+		}
+		delete mGIFBlockCommandBuffer;
+		delete mGIFCommandPool;
+
+
+		/*******************/
+
 		delete mMoveTerrain;
 
 		delete mPositionBuffer;
@@ -205,9 +235,32 @@ namespace GAME {
 		delete mCommandPool;
 	}
 
+	void Dungeon::GIFCommandBuffer(BlockData<BlockGifData, BlockCommandBuffer>::BlockDataT* Pointer) {
+		VkCommandBufferInheritanceInfo InheritanceInfo{};
+		InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+		InheritanceInfo.renderPass = wRenderPass->getRenderPass();
+
+		for (size_t id = 0; id < wFrameCount; ++id)
+		{
+			InheritanceInfo.framebuffer = wSwapChain->getFrameBuffer(id);
+			VulKan::CommandBuffer* CommandBufferL = Pointer->mHandle->mCommandBuffer[id];
+
+			CommandBufferL->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);//开始录制二级指令
+			CommandBufferL->bindGraphicPipeline(wGIFPipeline->getPipeline());//获得渲染管线
+			CommandBufferL->bindIndexBuffer(mIndexBuffer->getBuffer());//获得顶点索引
+			for (size_t idd = 0; idd < Pointer->mNumber; idd++)
+			{
+				CommandBufferL->bindVertexBuffer({ mPositionBuffer->getBuffer(), Pointer->DataS[idd].mBufferUV->getBuffer() });//获取顶点数据，UV值
+				CommandBufferL->bindDescriptorSet(wGIFPipeline->getLayout(), Pointer->DataS[idd].mDescriptorSet->getDescriptorSet(id));//获得 模型位置数据， 贴图数据，……
+				CommandBufferL->drawIndex(mIndexDatasSize);//获取绘画物体的顶点个数
+			}
+			CommandBufferL->end();
+		}
+	}
+
 	void Dungeon::UpDataGIFCommandBuffer() {
-		BlockData<BlockGifData, BlockCommandBuffer, Compared>::BlockDataT** PointerInfo = mBlockData->GetBlockDataS();
-		BlockData<BlockGifData, BlockCommandBuffer, Compared>::BlockDataT* Pointer;
+		BlockData<BlockGifData, BlockCommandBuffer>::BlockDataT** PointerInfo = mBlockData->GetBlockDataS();
+		BlockData<BlockGifData, BlockCommandBuffer>::BlockDataT* Pointer;
 		for (size_t i = 0; i < mBlockData->GetApplyNumber(); i++)
 		{
 			Pointer = *PointerInfo;
@@ -215,27 +268,7 @@ namespace GAME {
 			
 			if (Pointer->mNumber != 0) {
 				if (Pointer->mHandle->State == GIFCommandBufferState::RequestUpdate) {
-					VkCommandBufferInheritanceInfo InheritanceInfo{};
-					InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-					InheritanceInfo.renderPass = wRenderPass->getRenderPass();
-
-					for (size_t id = 0; id < wFrameCount; ++id)
-					{
-						InheritanceInfo.framebuffer = wSwapChain->getFrameBuffer(id);
-						VulKan::CommandBuffer* CommandBufferL = Pointer->mHandle->mCommandBuffer[id];
-
-						CommandBufferL->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);//开始录制二级指令
-						CommandBufferL->bindGraphicPipeline(wGIFPipeline->getPipeline());//获得渲染管线
-						CommandBufferL->bindVertexBuffer({ mPositionBuffer->getBuffer(), mGIFUV->getBuffer() });//获取顶点数据，UV值
-						CommandBufferL->bindIndexBuffer(mIndexBuffer->getBuffer());//获得顶点索引
-						for (size_t idd = 0; idd < Pointer->mNumber; idd++)
-						{
-							CommandBufferL->bindDescriptorSet(wGIFPipeline->getLayout(), Pointer->DataS[idd].mDescriptorSet->getDescriptorSet(id));//获得 模型位置数据， 贴图数据，……
-							CommandBufferL->drawIndex(mIndexDatasSize);//获取绘画物体的顶点个数
-						}
-						CommandBufferL->end();
-					}
-
+					MultithreadingGenerate.push_back(TOOL::mThreadPool->enqueue(&Dungeon::GIFCommandBuffer, this, Pointer));
 				}
 				Pointer->mHandle->State = GIFCommandBufferState::Enabled;
 			}
@@ -245,7 +278,7 @@ namespace GAME {
 		}
 	}
 
-	VulKan::DescriptorSet* Dungeon::AddGIF(VulKan::Buffer* buffer, VulKan::Texture* texture) {
+	VulKan::DescriptorSet* Dungeon::AddGIF(VulKan::Buffer* buffer, VulKan::Texture* texture, VulKan::Buffer* bufferUV) {
 		std::vector<VulKan::UniformParameter*> mUniformParams;
 		VulKan::UniformParameter vpParam;
 		vpParam.mBinding = 0;
@@ -277,23 +310,27 @@ namespace GAME {
 		textureParam.mTexture = texture;
 		mUniformParams.push_back(&textureParam);
 
-		VulKan::DescriptorSet* LDescriptorSet = new VulKan::DescriptorSet(wDevice, mUniformParams, wDescriptorSetLayout, mGIFDescriptorPool, wFrameCount);
-
-		BlockData<BlockGifData, BlockCommandBuffer, Compared>::BlockDataT* info = mBlockData->add({ LDescriptorSet, buffer });
-		info->mHandle->State = GIFCommandBufferState::RequestUpdate;
-		return LDescriptorSet;
+		BlockData<BlockGifData, BlockCommandBuffer>::BlockDataInfo info = mBlockData->DelayRegistration();
+		info.mBlockDataT->DataS[info.mIndex].mDescriptorSet = new VulKan::DescriptorSet(wDevice, mUniformParams, wDescriptorSetLayout, info.mBlockDataT->mHandle->mGIFDescriptorPool, wFrameCount, info.mBlockDataT->mHandle->mMutex);
+		mBlockData->Registration(info);
+		info.mBlockDataT->DataS[info.mIndex].mBuffer = buffer;
+		info.mBlockDataT->DataS[info.mIndex].mBufferUV = bufferUV;
+		info.mBlockDataT->mHandle->State = GIFCommandBufferState::RequestUpdate;
+		return info.mBlockDataT->DataS[info.mIndex].mDescriptorSet;
 	}
 
 	void Dungeon::popGIF(BlockGifData data) {
-		BlockData<BlockGifData, BlockCommandBuffer, Compared>::BlockDataT* info = mBlockData->pop(data);
-		info->mHandle->State = GIFCommandBufferState::RequestUpdate;
-		for (size_t i = info->mNumber; i < 10; i++)
-		{
-			if (info->DataS[i].mDescriptorSet != nullptr) {
-				delete info->DataS[i].mDescriptorSet;
-				info->DataS[i].mDescriptorSet = nullptr;
-			}
-		}
+		mBlockData->DelayPop(data);
+	}
+
+	void GIFAdd(Dungeon::BlockGifData* data, Dungeon::BlockCommandBuffer* H, void* Class) {
+
+	}
+
+	void GIFPop(Dungeon::BlockGifData* data, Dungeon::BlockCommandBuffer* H, void* Class) {
+		delete data->mDescriptorSet;
+		data->mDescriptorSet = nullptr;
+		H->State = Dungeon::GIFCommandBufferState::RequestUpdate;
 	}
 
 	//初始化描述符
@@ -301,11 +338,13 @@ namespace GAME {
 		int frameCount, //GPU画布的数量
 		const VkDescriptorSetLayout mDescriptorSetLayout,//渲染管线要的提交内容
 		std::vector<VulKan::Buffer*> VPMstdBuffer,//玩家相机的变化矩阵 
-		VulKan::Sampler* sampler//图片采样器
+		VulKan::Sampler* sampler,//图片采样器
+		TextureLibrary* textureLibrary
 	) {
 		wFrameCount = frameCount;
 		wVPMstdBuffer = VPMstdBuffer;
 		wDescriptorSetLayout = mDescriptorSetLayout;
+		wTextureLibrary = textureLibrary;
 		mCommandPool = new VulKan::CommandPool(wDevice);
 		mCommandBuffer = new VulKan::CommandBuffer * [wFrameCount];
 		mMistCommandBuffer = new VulKan::CommandBuffer * [wFrameCount];
@@ -314,32 +353,7 @@ namespace GAME {
 			mMistCommandBuffer[i] = new VulKan::CommandBuffer(wDevice, mCommandPool, true);
 			mCommandBuffer[i] = new VulKan::CommandBuffer(wDevice, mCommandPool, true);
 		}
-		//GIF
-		int Bsize = ((mNumberX * mNumberY) / 10) + (((mNumberX * mNumberY) % 10) != 0 ? 1 : 0);
-		mGIFCommandPool = new VulKan::CommandPool*[Bsize];
-		mGIFBlockCommandBuffer = new BlockCommandBuffer[Bsize];
-		for (size_t i = 0; i < Bsize; i++)
-		{
-			mGIFCommandPool[i] = new VulKan::CommandPool(wDevice);
-			mGIFBlockCommandBuffer[i].mCommandBuffer = new VulKan::CommandBuffer*[wFrameCount];
-			for (size_t id = 0; id < wFrameCount; id++)
-			{
-				mGIFBlockCommandBuffer[i].mCommandBuffer[id] = new VulKan::CommandBuffer(wDevice, mGIFCommandPool[i], true);
-			}
-			
-		}
 
-		mBlockData = new BlockData<BlockGifData, BlockCommandBuffer, Compared>(mNumberX * mNumberY, 10, mGIFBlockCommandBuffer);
-
-		float mUVs[] = {
-			0.0f,1.0f,
-			(1.0f / 24),1.0f,
-			(1.0f / 24),0.0f,
-			0.0f,0.0f,
-		};
-
-		mGIFUV = VulKan::Buffer::createVertexBuffer(wDevice, 8 * sizeof(float), mUVs);
-		mGIFTexture = new VulKan::Texture(wDevice, mCommandPool, "./004.png", sampler);
 
 		InitMist();
 
@@ -370,11 +384,29 @@ namespace GAME {
 		textureParam->mPixelTexture = nullptr;
 		mUniformParams.push_back(textureParam);
 
+		//GIF
+		mGIFBlockNumber = ((mNumberX * mNumberY) / 10) + (((mNumberX * mNumberY) % 10) != 0 ? 1 : 0);
+		mGIFCommandPool = new VulKan::CommandPool * [mGIFBlockNumber];
+		mGIFBlockCommandBuffer = new BlockCommandBuffer[mGIFBlockNumber];
+		for (size_t i = 0; i < mGIFBlockNumber; ++i)
+		{
+			mGIFCommandPool[i] = new VulKan::CommandPool(wDevice);
+			mGIFBlockCommandBuffer[i].mGIFDescriptorPool = new VulKan::DescriptorPool(wDevice);
+			mGIFBlockCommandBuffer[i].mGIFDescriptorPool->build(mUniformParams, wFrameCount, 10);
+			mGIFBlockCommandBuffer[i].mCommandBuffer = new VulKan::CommandBuffer * [wFrameCount];
+			mGIFBlockCommandBuffer[i].mMutex = new std::mutex;
+			for (size_t id = 0; id < wFrameCount; ++id)
+			{
+				mGIFBlockCommandBuffer[i].mCommandBuffer[id] = new VulKan::CommandBuffer(wDevice, mGIFCommandPool[i], true);
+			}
+		}
+
+		mBlockData = new BlockData<BlockGifData, BlockCommandBuffer>(mNumberX * mNumberY, 10, mGIFBlockCommandBuffer);
+		mBlockData->SetCallback(GIFAdd, GIFPop, this);
+
 		//各种类型申请多少个
 		mDescriptorPool = new VulKan::DescriptorPool(wDevice);
-		mGIFDescriptorPool = new VulKan::DescriptorPool(wDevice);
 		mDescriptorPool->build(mUniformParams, wFrameCount, mNumberX * mNumberY * 2);
-		mGIFDescriptorPool->build(mUniformParams, wFrameCount, mNumberX * mNumberY * 2);
 		ObjectUniformGIF mUniform;
 		mUniform.chuang = 1.0f / 24;
 		//int(*arr2D)[5] = reinterpret_cast<int(*)[5]>(shucs);
@@ -409,7 +441,8 @@ namespace GAME {
 					CollisionBool = true;
 				}
 				if (mTextureAndBuffer[ix][iy].Type == 20) {
-					mTextureAndBuffer[ix][iy].mGIFDescriptorSet = AddGIF(mTextureAndBuffer[ix][iy].mBufferS, mGIFTexture);
+					GAME::TextureLibrary::TextureToUVInfo TUinfo = wTextureLibrary->GetTextureUV("004_24");
+					mTextureAndBuffer[ix][iy].mGIFDescriptorSet = AddGIF(mTextureAndBuffer[ix][iy].mBufferS, TUinfo.mTexture, TUinfo.mUV);
 				}
 				for (size_t ixx = 0; ixx < mSquareSideLength; ++ixx)
 				{
@@ -459,6 +492,11 @@ namespace GAME {
 		InheritanceInfo.renderPass = wRenderPass->getRenderPass();
 
 		UpDataGIFCommandBuffer();
+		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
+		{
+			i.wait();
+		}
+		MultithreadingGenerate.clear();//清空
 
 		for (size_t i = 0; i < wFrameCount; ++i)
 		{
@@ -541,22 +579,7 @@ namespace GAME {
 		wymiwustruct.angel = -ang;
 		information->updateBufferByMap(&wymiwustruct, sizeof(Dungeonmiwustruct));
 
-		VkImageSubresourceRange region{};
-		region.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-		region.baseArrayLayer = 0;
-		region.layerCount = 1;
-
-		region.baseMipLevel = 0;
-		region.levelCount = 1;
-
-		WarfareMist->getImage()->setImageLayout(
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			region,
-			mCommandPool
-		);
+		
 
 		VkBufferCopy copyInfo{};
 		copyInfo.size = (mNumberX * mNumberY * 16 * 16 * 4);
@@ -564,6 +587,7 @@ namespace GAME {
 		mCalculate->begin();
 		mCalculate->GetCommandBuffer()->copyBufferToBuffer(WarfareMist->getHOSTImageBuffer(), jihsuanTP->getBuffer(), 1, { copyInfo });//获取原数据
 		vkCmdDispatch(mCalculate->GetCommandBuffer()->getCommandBuffer(), (uint32_t)ceil((wymiwustruct.size) / float(64)), 1, 1);//分配计算单元开始计算
+		WarfareMist->RewritableDataType(mCalculate->GetCommandBuffer());
 		mCalculate->GetCommandBuffer()->copyBufferToImage(//将计算的迷雾结果更新到图片上
 			jihsuanTP->getBuffer(),
 			WarfareMist->getImage()->getImage(),
@@ -571,20 +595,12 @@ namespace GAME {
 			WarfareMist->getImage()->getWidth(),
 			WarfareMist->getImage()->getHeight()
 		);
+		WarfareMist->RewriteDataTypeOptimization(mCalculate->GetCommandBuffer());
 		mCalculate->end();
 		mCalculate->GetCommandBuffer()->submitSync(wDevice->getGraphicQueue(), VK_NULL_HANDLE);
-
-		WarfareMist->getImage()->setImageLayout(
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			region,
-			mCommandPool
-		);
 	}
 
-	void Dungeon::UpdataMistData(int x, int y) {
-		UpDataGIFCommandBuffer();
+	void Dungeon::UpdateAIPathfindingBlock(int x, int y) {
 		if (x > 0) {
 			x = x + 1;
 			for (size_t ix = mNumberX - x; ix < mNumberX; ++ix)
@@ -627,13 +643,20 @@ namespace GAME {
 				}
 			}
 		}
+	}
+
+	void Dungeon::UpdataMistData(int x, int y) {
 		int* Index = (int*)CalculateIndex->getupdateBufferByMap();
+		int A;
+		TextureAndBuffer* info;
 		for (size_t ix = 0; ix < mNumberX; ++ix)
 		{
 			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
-				Index[(iy * mNumberX + ix) * 2] = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel->MistPointerY;
-				Index[(iy * mNumberX + ix) * 2 + 1] = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel->MistPointerX;
+				A = (iy * mNumberX + ix) * 2;
+				info = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel;
+				Index[A] = info->MistPointerY;
+				Index[++A] = info->MistPointerX;
 			}
 		}
 		CalculateIndex->endupdateBufferByMap();
@@ -643,19 +666,27 @@ namespace GAME {
 			i.wait();
 		}
 		MultithreadingGenerate.clear();//清空
+		mBlockData->WholePop();
+		UpDataGIFCommandBuffer();
+		TOOL::mThreadPool->enqueue(&Dungeon::UpdateAIPathfindingBlock, this, x, y);
+		TOOL::mTimer->MomentTiming(u8"上传图片耗时");
 		//统一上传
 		mCalculate->GetCommandBuffer()->begin();
 		for (auto i : MultithreadingPixelTexture)//提交所有上传贴图
 		{
-			i->RecordingInstructions(mCalculate->GetCommandBuffer());
+			i->RewritableDataType(mCalculate->GetCommandBuffer());
+			i->UpDataPicture(mCalculate->GetCommandBuffer());
+			i->RewriteDataTypeOptimization(mCalculate->GetCommandBuffer());
 		}
 		mCalculate->GetCommandBuffer()->end();
 		mCalculate->GetCommandBuffer()->submitSync(wDevice->getGraphicQueue(), VK_NULL_HANDLE);
-		for (auto i : MultithreadingPixelTexture)//提交所以上传贴图
-		{
-			i->EndInstructions();
-		}
 		MultithreadingPixelTexture.clear();//清空
+		TOOL::mTimer->MomentEnd();
+		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
+		{
+			i.wait();
+		}
+		MultithreadingGenerate.clear();//清空
 		//关闭HOST指针
 		WarfareMist->endHOSTImagePointer();
 		WallBool->endupdateBufferByMap();

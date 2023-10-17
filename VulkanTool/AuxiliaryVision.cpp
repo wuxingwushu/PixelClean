@@ -97,23 +97,23 @@ namespace VulKan {
 	}
 
 	void AuxiliaryVision::initCommandBuffer() {
+		VkCommandBufferInheritanceInfo InheritanceInfo{};
+		InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+		InheritanceInfo.renderPass = wRenderPass->getRenderPass();
 		for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
 		{
-			VkCommandBufferInheritanceInfo InheritanceInfo{};
-			InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-			InheritanceInfo.renderPass = wRenderPass->getRenderPass();
 			InheritanceInfo.framebuffer = wSwapChain->getFrameBuffer(i);
 
 			mCommandBuffer[i]->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);//开始录制二级指令
-			//线
-			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::LineMods)->getPipeline());//获得渲染管线
-			mCommandBuffer[i]->bindVertexBuffer({ AuxiliaryLineS->getBuffer()});
-			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::LineMods)->getLayout(), mDescriptorSetLine->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
-			mCommandBuffer[i]->draw(Number);//获取绘画物体的顶点个数
 			//点
 			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::SpotMods)->getPipeline());//获得渲染管线
 			mCommandBuffer[i]->bindVertexBuffer({ AuxiliarySpotS->getBuffer() });
 			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::SpotMods)->getLayout(), mDescriptorSetSpot->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
+			mCommandBuffer[i]->draw(Number);//获取绘画物体的顶点个数
+			//线
+			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::LineMods)->getPipeline());//获得渲染管线
+			mCommandBuffer[i]->bindVertexBuffer({ AuxiliaryLineS->getBuffer() });
+			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::LineMods)->getLayout(), mDescriptorSetLine->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
 			mCommandBuffer[i]->draw(Number);//获取绘画物体的顶点个数
 
 			mCommandBuffer[i]->end();
@@ -176,8 +176,8 @@ namespace VulKan {
 			SpotNumber = 0;
 			for (auto& i : *StaticContinuousAuxiliarySpot) {
 				if (i.Size != 0) {
-					LineNumber += i.Function(LinePointerHOST, i.Pointer, i.Size);
-					LinePointerHOST += LineNumber;
+					SpotNumber += i.Function(SpotPointerHOST, i.Pointer, i.Size);
+					SpotPointerHOST += SpotNumber;
 				}
 			}
 			StaticSpotDeviation = SpotNumber;
@@ -206,7 +206,6 @@ namespace VulKan {
 
 	void AuxiliaryVision::End() {
 		//线段多余
-		LineNumber += ((ContinuousAuxiliaryLine->GetNumber() + ContinuousAuxiliaryForce->GetNumber()) * 2);
 		if (LineMax > LineNumber) {
 			for (size_t i = LineNumber; i <= LineMax; ++i)
 			{

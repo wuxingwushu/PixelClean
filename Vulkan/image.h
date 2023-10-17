@@ -54,7 +54,8 @@ namespace VulKan {
 			VkPipelineStageFlags srcStageMask, 
 			VkPipelineStageFlags dstStageMask,
 			VkImageSubresourceRange subresrouceRange,
-			const CommandPool* commandPool
+			const CommandPool* commandPool,
+			CommandBuffer* wCommandBuffer = nullptr
 			);
 
 		//多线程设置ImageLayout

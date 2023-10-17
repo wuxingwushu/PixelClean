@@ -7,7 +7,8 @@ namespace VulKan {
 		const std::vector<UniformParameter*> params,
 		const VkDescriptorSetLayout layout,
 		const DescriptorPool* pool,
-		int frameCount
+		int frameCount,
+		std::mutex* wMutex
 	) :
 		mDevice(device),
 		mDescriptorPool(pool),
@@ -19,12 +20,21 @@ namespace VulKan {
 		allocInfo.descriptorPool = pool->getPool();
 		allocInfo.descriptorSetCount = frameCount;
 		allocInfo.pSetLayouts = layouts.data();
-
+		
 		mDescriptorSets.resize(frameCount);
-		if (vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data()) != VK_SUCCESS) {
-			throw std::runtime_error("Error: failed to allocate descriptor sets");
+		if (wMutex != nullptr) {
+			wMutex->lock();
+			if (vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data()) != VK_SUCCESS) {
+				throw std::runtime_error("Error: failed to allocate descriptor sets");
+			}
+			wMutex->unlock();
 		}
-
+		else {
+			if (vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data()) != VK_SUCCESS) {
+				throw std::runtime_error("Error: failed to allocate descriptor sets");
+			}
+		}
+		
 		mDescriptorSize = params.size();
 
 		for (int i = 0; i < frameCount; ++i) {
@@ -56,7 +66,6 @@ namespace VulKan {
 			descriptorSetWrites.push_back(LSdescriptorSetWrites);
 
 			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(LSdescriptorSetWrites.size()), LSdescriptorSetWrites.data(), 0, nullptr);
-			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(descriptorSetWrites[i].size()), descriptorSetWrites[i].data(), 0, nullptr);
 		}
 	}
 

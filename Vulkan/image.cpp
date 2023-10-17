@@ -227,7 +227,8 @@ namespace VulKan {
 		VkPipelineStageFlags srcStageMask,
 		VkPipelineStageFlags dstStageMask,
 		VkImageSubresourceRange subresrouceRange,
-		const CommandPool* commandPool
+		const CommandPool* commandPool,
+		CommandBuffer* wCommandBuffer
 	) {
 		VkImageMemoryBarrier imageMemoryBarrier{};
 		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -284,15 +285,20 @@ namespace VulKan {
 
 		mLayout = newLayout;
 
-		LayoutcommandBuffer = new CommandBuffer(mDevice, commandPool);
-		LayoutcommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);//这个指令只执行一次，
-		LayoutcommandBuffer->transferImageLayout(imageMemoryBarrier, srcStageMask, dstStageMask);
-		LayoutcommandBuffer->end();
-		LayoutcommandBuffer->submitSync(mDevice->getGraphicQueue());//执行这个指令
+		if (wCommandBuffer == nullptr) {
+			LayoutcommandBuffer = new CommandBuffer(mDevice, commandPool);
+			LayoutcommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);//这个指令只执行一次，
+			LayoutcommandBuffer->transferImageLayout(imageMemoryBarrier, srcStageMask, dstStageMask);
+			LayoutcommandBuffer->end();
+			LayoutcommandBuffer->submitSync(mDevice->getGraphicQueue());//执行这个指令
 
-		if (LayoutcommandBuffer != VK_NULL_HANDLE) { 
-			delete LayoutcommandBuffer; 
-			LayoutcommandBuffer = VK_NULL_HANDLE; 
+			if (LayoutcommandBuffer != VK_NULL_HANDLE) {
+				delete LayoutcommandBuffer;
+				LayoutcommandBuffer = VK_NULL_HANDLE;
+			}
+		}
+		else {
+			wCommandBuffer->transferImageLayout(imageMemoryBarrier, srcStageMask, dstStageMask);
 		}
 	}
 

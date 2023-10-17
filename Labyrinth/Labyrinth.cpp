@@ -597,22 +597,6 @@ namespace GAME {
 		wymiwustruct.angel = ang;
 		information->updateBufferByMap(&wymiwustruct, sizeof(miwustruct));
 
-		VkImageSubresourceRange region{};
-		region.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-		region.baseArrayLayer = 0;
-		region.layerCount = 1;
-
-		region.baseMipLevel = 0;
-		region.levelCount = 1;
-
-		WarfareMist->getImage()->setImageLayout(
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			region,
-			mThreadCommandPoolS[0]
-		);
 
 		VkBufferCopy copyInfo{};
 		copyInfo.size = (numberX * numberY * 16 * 16 * 4);
@@ -620,6 +604,7 @@ namespace GAME {
 		mCalculate->begin();
 		mCalculate->GetCommandBuffer()->copyBufferToBuffer(WarfareMist->getHOSTImageBuffer(), jihsuanTP->getBuffer(), 1, { copyInfo });//获取原数据
 		vkCmdDispatch(mCalculate->GetCommandBuffer()->getCommandBuffer(), (uint32_t)ceil((wymiwustruct.size) / float(64)), 1, 1);//分配计算单元开始计算
+		WarfareMist->RewritableDataType(mCalculate->GetCommandBuffer());
 		mCalculate->GetCommandBuffer()->copyBufferToImage(//将计算的迷雾结果更新到图片上
 			jihsuanTP->getBuffer(),
 			WarfareMist->getImage()->getImage(),
@@ -627,16 +612,9 @@ namespace GAME {
 			WarfareMist->getImage()->getWidth(),
 			WarfareMist->getImage()->getHeight()
 		);
+		WarfareMist->RewriteDataTypeOptimization(mCalculate->GetCommandBuffer());
 		mCalculate->end();
 		mCalculate->GetCommandBuffer()->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
-
-		WarfareMist->getImage()->setImageLayout(
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			region,
-			mThreadCommandPoolS[0]
-		);
 	}
 
 

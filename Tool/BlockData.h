@@ -1,7 +1,7 @@
 #pragma once
 #include <map>
 
-template<class DataT, class Handle, class Compare>
+template<class DataT, class Handle>
 class BlockData
 {
 public:
@@ -10,6 +10,11 @@ public:
 		int mNumber = 0;			//数据有效数量
 		DataT* DataS = nullptr;		//数据
 		Handle* mHandle = nullptr;	//这些数据对于的引用对象
+
+		//获得空数据索引
+		unsigned int add() {
+			return mNumber++;
+		}
 
 		//添加数据
 		unsigned int add(DataT data) {
@@ -24,7 +29,6 @@ public:
 			return DataS[Index];
 		}
 	};
-private:
 
 	//数据对于的索引信息
 	struct BlockDataInfo
@@ -32,11 +36,20 @@ private:
 		unsigned int mIndex;	//第几个数据
 		BlockDataT* mBlockDataT;//数据在那个区块
 	};
+private:
+	typedef void (*_Callback)(DataT* data, Handle* handle,void* ptr);//销毁 添加函数类型
 
+	_Callback AddCallback = nullptr;
+	_Callback PopCallback = nullptr;
+	void* CallbackClass = nullptr;
+
+	std::vector<DataT> DelayPopData;
+	std::vector<DataT> DelayAddData;
+	std::mutex mMutex;					// 互斥锁
 	unsigned int mMax;					//数据最大
 	unsigned int mBlockSize;			//区块数据数量
 	BlockDataT* mBlockDataTS = nullptr;	//区块
-	std::map<DataT, BlockDataInfo, Compare> Dictionary;	//索引对应数据
+	std::map<DataT, BlockDataInfo> Dictionary;	//索引对应数据
 	DataT* mData = nullptr;				//全部数据
 
 	unsigned int mAvailableNumber = 0;			//没有饱和的区块数量
@@ -63,6 +76,7 @@ private:
 		}
 	}
 public:
+	//	数据总量，一个区块的数据量，一个区块的控制器
 	BlockData(unsigned int Size, unsigned int BlockSize, Handle* HandleS)
 		:mMax(Size), mBlockSize(BlockSize)
 	{
@@ -90,9 +104,75 @@ public:
 		delete mBlockDataAtWorkS;
 	}
 
-	BlockDataT* add(DataT data) {
+	//设置回调函数
+	void SetCallback(_Callback _add, _Callback _pop, void* _Class) {
+		AddCallback = _add;
+		PopCallback = _pop;
+		CallbackClass = _Class;
+	}
+
+	//延迟注册数据
+	BlockDataInfo DelayRegistration() {
+		std::lock_guard<std::mutex> lock(mMutex);  // 加锁
+		unsigned int Index = mBlockDataAvailableS[mAvailableNumber - 1]->add();
+		if (Index == 0) {
+			Increase(mBlockDataAvailableS[mAvailableNumber - 1]);
+		}
+		if (mBlockDataAvailableS[mAvailableNumber - 1]->mNumber == mBlockSize) {
+			return { Index, mBlockDataAvailableS[--mAvailableNumber] };
+		}
+		return { Index, mBlockDataAvailableS[mAvailableNumber - 1] };
+	}
+
+	//注册
+	void Registration(BlockDataInfo info) {
+		std::lock_guard<std::mutex> lock(mMutex);  // 加锁
+		Dictionary[info.mBlockDataT->DataS[info.mIndex]] = info;
+	}
+
+	//延迟添加（线程安全）
+	void DelayAddMutex(DataT data) {
+		std::lock_guard<std::mutex> lock(mMutex);  // 加锁
+		DelayAddData.push_back(data);
+	}
+
+	//延迟添加
+	void DelayAdd(DataT data) {
+		DelayAddData.push_back(data);
+	}
+
+	//添加全部延迟数据
+	void WholeAdd() {
+		for (auto data : DelayAddData)
+		{
+			add(data);
+		}
+		DelayAddData.clear();
+	}
+
+	//延迟弹出（线程安全）
+	void DelayPopMutex(DataT data) {
+		std::lock_guard<std::mutex> lock(mMutex);  // 加锁
+		DelayPopData.push_back(data);
+	}
+
+	//延迟弹出
+	void DelayPop(DataT data) {
+		DelayPopData.push_back(data);
+	}
+
+	//弹出全部延迟数据
+	void WholePop() {
+		for (auto data : DelayPopData)
+		{
+			pop(data);
+		}
+		DelayPopData.clear();
+	}
+
+	//添加数据
+	void add(DataT data) {
 		unsigned int Index = mBlockDataAvailableS[mAvailableNumber - 1]->add(data);
-		//Dictionary.insert(std::make_pair(data, BlockDataInfo{ Index, mBlockDataAvailableS[mAvailableNumber - 1] }));
 		Dictionary[data] = BlockDataInfo{ Index, mBlockDataAvailableS[mAvailableNumber - 1] };
 		if (Index == 0) {
 			Increase(mBlockDataAvailableS[mAvailableNumber - 1]);
@@ -100,14 +180,15 @@ public:
 		if (mBlockDataAvailableS[mAvailableNumber - 1]->mNumber == mBlockSize) {
 			return mBlockDataAvailableS[--mAvailableNumber];
 		}
-		return mBlockDataAvailableS[mAvailableNumber - 1];
+		AddCallback(&mBlockDataAvailableS[mAvailableNumber - 1]->DataS[Index], mBlockDataAvailableS[mAvailableNumber - 1], CallbackClass);
 	}
 
-	BlockDataT* pop(DataT data) {
+	//弹出数据
+	void pop(DataT data) {
 		if (Dictionary.find(data) != Dictionary.end())//判断是否存在键
 		{
 			BlockDataInfo info = Dictionary[data];
-			
+			PopCallback(&info.mBlockDataT->DataS[info.mIndex], info.mBlockDataT->mHandle, CallbackClass);
 			if (info.mBlockDataT->mNumber == mBlockSize) {//因为要弹出，所有添加到未饱和状态
 				mBlockDataAvailableS[mAvailableNumber++] = info.mBlockDataT;
 			}
@@ -123,7 +204,6 @@ public:
 				Dictionary[T] = { info.mIndex, i };
 			}
 			Dictionary.erase(data);
-			return info.mBlockDataT;
 		}
 	}
 

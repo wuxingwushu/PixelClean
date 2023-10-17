@@ -190,6 +190,9 @@ namespace GAME {
 		mArms = new Arms(mParticleSystem, 1000);
 		mArms->SetSpecialEffect(mParticlesSpecialEffect);
 		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
+
+		//GIF库
+		mTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Texture/");
 	}
 
 	bool LabyrinthGetWall(int x, int y, void* P) {
@@ -244,7 +247,8 @@ namespace GAME {
 				mSwapChain->getImageCount(),
 				mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
 				mCameraVPMatricesBuffer,
-				mSampler
+				mSampler,
+				mTextureLibrary
 			);
 			mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods), mPipelineS->GetPipeline(VulKan::PipelineMods::GifMods));
 
@@ -740,7 +744,7 @@ namespace GAME {
 			mAuxiliaryVision->Line(
 				{ LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0 },
 				{ 1.0f, 0, 0, 1.0f },
-				huoqdedian,
+				{ huoqdedian.x, huoqdedian.y, 0 },
 				{ 0, 1.0f, 0, 1.0f }
 			);
 			mAuxiliaryVision->Spot(
@@ -756,13 +760,12 @@ namespace GAME {
 		static glm::ivec2 beang{ 0 }, end{ 0 };
 		static std::vector<JPSVec2> JPSPath;
 		static std::vector<AStarVec2> AStarPath;
-		static bool JPSPathBool = true;	
 		//点击左键
 		if (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
 			beang = { huoqdedian.x, huoqdedian.y };
-			int xpiany = (mDungeon->mMoveTerrain->OriginX - mDungeon->mMoveTerrain->GetGridSPosX()) * 16;
-			int ypiany = (mDungeon->mMoveTerrain->OriginY - mDungeon->mMoveTerrain->GetGridSPosY()) * 16;
-			std::cout << beang.x + xpiany << " - " << beang.y + xpiany << std::endl;
+			//int xpiany = (mDungeon->mMoveTerrain->OriginX - mDungeon->mMoveTerrain->GetGridSPosX()) * 16;
+			//int ypiany = (mDungeon->mMoveTerrain->OriginY - mDungeon->mMoveTerrain->GetGridSPosY()) * 16;
+			//std::cout << beang.x + xpiany << " - " << beang.y + xpiany << std::endl;
 		}
 		//点击右键
 		static int fangzhifanfuvhufa;
@@ -770,26 +773,6 @@ namespace GAME {
 		if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan) {
 			end = { huoqdedian.x, huoqdedian.y };
 
-			if (JPSPathBool) {
-				JPSPathBool = false;
-				VulKan::StaticAuxiliaryData* P = mAuxiliaryVision->GetContinuousStaticLine()->Get(&JPSPath);
-				P->Pointer = &JPSPath;
-				P->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
-					std::vector<JPSVec2>* DataP = (std::vector<JPSVec2>*)D;
-					for (auto& i : *DataP)
-					{
-						if ((i != (*DataP)[0]) && (i != DataP->back())) {
-							P->Pos = { i.x, i.y, 0 };
-							P->Color = { 0, 0, 1.0f, 1.0f };
-							++P;
-						}
-						P->Pos = { i.x, i.y, 0 };
-						P->Color = { 0, 0, 1.0f, 1.0f };
-						++P;
-					}
-					return (DataP->size() * 2) - 2;
-					};
-			}
 			AStarPath.clear();
 			JPSPath.clear();
 			if (Global::GameMode) {
@@ -815,10 +798,45 @@ namespace GAME {
 					JPSPath[i].x -= xpiany;
 					JPSPath[i].y -= ypiany;
 				}
+				for (size_t i = 0; i < AStarPath.size(); i++)
+				{
+					AStarPath[i].x -= xpiany;
+					AStarPath[i].y -= ypiany;
+				}
 			}
-			
+			VulKan::StaticAuxiliaryData* PA = mAuxiliaryVision->GetContinuousStaticSpot()->Get(&AStarPath);
+			PA->Size = AStarPath.size();
+			PA->Pointer = &AStarPath;
+			PA->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
+				std::vector<AStarVec2>* DataP = (std::vector<AStarVec2>*)D;
+				for (auto& i : *DataP)
+				{
+					P->Pos = { i.x, i.y, 0 };
+					P->Color = { 0, 1.0f, 0, 1.0f };
+					++P;
+				}
+				return DataP->size();
+				};
+			mAuxiliaryVision->OpenStaticSpotUpData();
+
 			VulKan::StaticAuxiliaryData* P = mAuxiliaryVision->GetContinuousStaticLine()->Get(&JPSPath);
 			P->Size = JPSPath.size();
+			P->Pointer = &JPSPath;
+			P->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
+				std::vector<JPSVec2>* DataP = (std::vector<JPSVec2>*)D;
+				for (auto& i : *DataP)
+				{
+					if ((i != (*DataP)[0]) && (i != DataP->back())) {
+						P->Pos = { i.x, i.y, 0 };
+						P->Color = { 0, 0, 1.0f, 1.0f };
+						++P;
+					}
+					P->Pos = { i.x, i.y, 0 };
+					P->Color = { 0, 0, 1.0f, 1.0f };
+					++P;
+				}
+				return (DataP->size() * 2) - 2;
+				};
 			mAuxiliaryVision->OpenStaticLineUpData();
 		}
 		fangzhifanfuvhufa = Leftan;
@@ -859,7 +877,6 @@ namespace GAME {
 			MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
 			if (LMovePlateInfo.UpData) {
 				mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);
-				//mDungeon->initCommandBuffer();
 				Global::MainCommandBufferUpdateRequest();
 			}
 			//战争迷雾

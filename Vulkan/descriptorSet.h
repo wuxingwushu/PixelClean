@@ -23,7 +23,8 @@ namespace VulKan {
 			const std::vector<UniformParameter*> params,
 			const VkDescriptorSetLayout layout,
 			const DescriptorPool* pool,
-			int frameCount
+			int frameCount,
+			std::mutex* wMutex = nullptr
 		);
 
 		~DescriptorSet();

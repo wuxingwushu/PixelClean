@@ -15,6 +15,7 @@
 #include "../GlobalVariable.h"
 #include "../Tool/BlockData.h"
 #include "../GlobalStructural.h"
+#include "TextureLibrary.h"
 
 namespace GAME {
 
@@ -59,11 +60,14 @@ namespace GAME {
 			int frameCount, //GPU画布的数量
 			const VkDescriptorSetLayout mDescriptorSetLayout,//渲染管线要的提交内容
 			std::vector<VulKan::Buffer*> VPMstdBuffer,//玩家相机的变化矩阵 
-			VulKan::Sampler* sampler//图片采样器
+			VulKan::Sampler* sampler,//图片采样器
+			TextureLibrary* textureLibrary
 		);
 
+		//录制全部 CommandBuffer
 		void initCommandBuffer();
 
+		//初次录制全部 CommandBuffer
 		void RecordingCommandBuffer(VulKan::RenderPass* R, VulKan::SwapChain* S, VulKan::Pipeline* P, VulKan::Pipeline* GifP) {
 			wRenderPass = R;
 			wSwapChain = S;
@@ -72,33 +76,42 @@ namespace GAME {
 			initCommandBuffer();
 		}
 
+		//获取地图 CommandBuffer
 		void GetCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			Vector->push_back(mCommandBuffer[F]->getCommandBuffer());
 		}
 
+		//获取迷雾 CommandBuffer
 		void GetMistCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			Vector->push_back(mMistCommandBuffer[F]->getCommandBuffer());
 		}
 
+		//根据输入的位置对区块位置进行更新
 		MovePlateInfo UpPos(float x, float y) {
 			return mMoveTerrain->UpDataPos(x, y);
 		}
 
+		//根据世界坐标获取对于的区块
 		SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* GetTerrain(float x, float y) {
 			return mMoveTerrain->CalculateGetRigidBodyAndModel(x, y);
 		}
 
 		unsigned int wFrameCount{ 0 };//帧缓冲数
 
+		//获取柏林噪声
 		unsigned int GetNoise(double x, double y) {
 			return mPerlinNoise->noise(x * 0.05f, y * 0.05f, 0.5) * TextureNumber;
 		}
 
-		//********** AI寻路地图 *************
+		//******************************* AI寻路地图 *******************************
+
+		void UpdateAIPathfindingBlock(int x, int y);
+		
 		//获取对于墙壁数量指针
 		short* GetPixelWallPointer(int x, int y) {
 			return &(mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)]);
 		}
+		//获取对于墙壁数量
 		short GetPixelWallNumber(int x, int y) {
 			if ((x >= 0) && (x < (mNumberX * 16)) && (y >= 0) && (y < (mNumberY * 16))) {
 				return mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)];
@@ -127,6 +140,7 @@ namespace GAME {
 			}
 		}
 
+		//删除像素时对周围的有墙壁的数-1
 		void PixelWallNumberReduce(int x, int y) {
 			int posX, posY;
 			int Range1A = (x < 9 ? -x : -9), Range1B = ((x + 10) > (mNumberX * 16) ? ((mNumberX * 16) - x) : 10);
@@ -146,6 +160,7 @@ namespace GAME {
 			}
 		}
 
+		//计算一个区块所有像素的墙壁数
 		void BlockPixelWallNumber(int x, int y) {
 			x = x * 16;
 			y = y * 16;
@@ -159,27 +174,31 @@ namespace GAME {
 		}
 
 	public://GIF
+		// GIF CommandBuffer 状态
 		enum GIFCommandBufferState
 		{
 			NotEnabled = 0,		//未启用
 			Enabled,			//启用
 			RequestUpdate,		//请求更新
-			Release				//释放
 		};
 
+		//一个 GIF 区块 的控制器
 		struct BlockCommandBuffer
 		{
+			std::mutex* mMutex = nullptr;
+			VulKan::DescriptorPool* mGIFDescriptorPool{ nullptr };	//描述符池
 			VulKan::CommandBuffer** mCommandBuffer = nullptr;
 			GIFCommandBufferState State = NotEnabled;
 		};
 
+		//一个 GIF 的数据
 		struct BlockGifData
 		{
 			VulKan::DescriptorSet* mDescriptorSet = nullptr;
 			VulKan::Buffer* mBuffer = nullptr;
+			VulKan::Buffer* mBufferUV = nullptr;
 
-			bool operator<(const BlockGifData& other)
-			{
+			bool operator<(const BlockGifData& other) const {
 				return mDescriptorSet < other.mDescriptorSet;
 			}
 
@@ -188,22 +207,15 @@ namespace GAME {
 			}
 		};
 
-		struct Compared {
-			bool operator()(const BlockGifData& a, const BlockGifData& b) const {
-				return a.mDescriptorSet < b.mDescriptorSet;
-			}
-		};
+		BlockData<BlockGifData, BlockCommandBuffer>* mBlockData = nullptr;//GIF的区块数据
 
-		BlockData<BlockGifData, BlockCommandBuffer, Compared>* mBlockData = nullptr;
-
-		VulKan::Pipeline* wGIFPipeline = nullptr;
-		VulKan::Buffer* mGIFUV = nullptr;
-		VulKan::Texture* mGIFTexture = nullptr;
-		unsigned int mGIFBlockNumber = 0;
-		VulKan::DescriptorPool* mGIFDescriptorPool{ nullptr };//描述符池
+		VulKan::Pipeline* wGIFPipeline = nullptr;	//储存的 GIF Pipeline
+		TextureLibrary* wTextureLibrary = nullptr;	//储存的 GIF 库
+		unsigned int mGIFBlockNumber = 0;						//GIF区块数量
 		VulKan::CommandPool** mGIFCommandPool{ nullptr };		//指令池
-		BlockCommandBuffer* mGIFBlockCommandBuffer{ nullptr };
+		BlockCommandBuffer* mGIFBlockCommandBuffer{ nullptr };	//GIF区块 CommandBuffer
 
+		//获取动图 CommandBuffer
 		void GetGIFCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			for (size_t i = 0; i < mBlockData->GetApplyNumber(); i++)
 			{
@@ -211,9 +223,10 @@ namespace GAME {
 			}
 		}
 
+		//更新 GIF动画 到下一帧
 		void UpDataGIF() {
 			ObjectUniformGIF* mUniform;
-			BlockData<BlockGifData, BlockCommandBuffer, Compared>::BlockDataT* Pointer;
+			BlockData<BlockGifData, BlockCommandBuffer>::BlockDataT* Pointer;
 			for (size_t i = 0; i < mBlockData->GetApplyNumber(); i++)
 			{
 				Pointer = mBlockData->GetBlockDataS()[i];
@@ -229,10 +242,14 @@ namespace GAME {
 			}
 		}
 
+		//更新需要更新的 GIF区块 CommandBuffer
 		void UpDataGIFCommandBuffer();
+		void GIFCommandBuffer(BlockData<BlockGifData, BlockCommandBuffer>::BlockDataT* Pointer);
 
-		VulKan::DescriptorSet* AddGIF(VulKan::Buffer* buffer, VulKan::Texture* texture);
+		//添加 GIF
+		VulKan::DescriptorSet* AddGIF(VulKan::Buffer* buffer, VulKan::Texture* texture, VulKan::Buffer* bufferUV);
 
+		//删除 GIF
 		void popGIF(BlockGifData data);
 	public://破坏
 		const unsigned int mNumberX;

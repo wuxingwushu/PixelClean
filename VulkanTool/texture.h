@@ -14,6 +14,10 @@ namespace VulKan {
 	public:
 		Texture(Device* device, const CommandPool* commandPool, const std::string &imageFilePath, Sampler* sampler);
 
+		Texture(Device* device, const CommandPool* commandPool, Sampler* sampler, void* imageData, int Width, int Height);
+
+		void InitTexture(void* imageData, int Width, int Height);
+
 		~Texture();
 
 		[[nodiscard]] auto getImage() const { return mImage; }
@@ -25,9 +29,10 @@ namespace VulKan {
 		[[nodiscard]] VkDescriptorImageInfo* getImageInfoP() { return &mImageInfo; }
 
 	private:
-		Device* mDevice{ nullptr };
+		Device* wDevice{ nullptr };
 		Image* mImage{ nullptr };
 		VkDescriptorImageInfo mImageInfo{};
+		const CommandPool* wCommandPool{ nullptr };
 	};
 
 }

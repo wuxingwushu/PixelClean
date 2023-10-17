@@ -52,9 +52,14 @@ namespace VulKan {
 		[[nodiscard]] VkBuffer getHOSTImageBuffer() { return HOSTImage->getBuffer(); }
 
 		//************ 延迟上传
-		void RecordingInstructions(CommandBuffer* CommandBuffer);
+		//改变数据类型（可写）
+		void RewritableDataType(CommandBuffer* CommandBuffer);
+		
+		//上传数据
+		void UpDataPicture(CommandBuffer* CommandBuffer);
 
-		void EndInstructions();
+		//改变数据类型（GPU数据优化）
+		void RewriteDataTypeOptimization(CommandBuffer* CommandBuffer = nullptr);
 
 	private:
 		Device* mDevice{ nullptr };

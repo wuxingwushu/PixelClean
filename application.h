@@ -190,5 +190,8 @@ namespace GAME {
 		VulKan::AuxiliaryVision* mAuxiliaryVision{ nullptr };//辅助视觉
 		JPS* JPSPathfinding = nullptr;
 		AStar* AStarPathfinding = nullptr;
+
+		//GIF库
+		TextureLibrary* mTextureLibrary{ nullptr };
 	};
 }

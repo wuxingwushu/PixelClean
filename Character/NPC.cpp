@@ -1,6 +1,7 @@
 #include "NPC.h"
 #include "../Tool/Tool.h"
 #include <functional>
+#include "../GlobalVariable.h"
 
 namespace GAME {
 
@@ -48,6 +49,7 @@ namespace GAME {
 					boost::sml::state<C_Chasing> +boost::sml::on_entry<boost::sml::_> / [] { std::cout << "进入 追击 状态!" << std::endl; },
 					boost::sml::state<C_Chasing> +boost::sml::event<S_Patrol> = boost::sml::state<C_Patrol>,//巡逻
 					boost::sml::state<C_Chasing> +boost::sml::event<S_Attack> = boost::sml::state<C_Attack>,//攻击
+					boost::sml::state<C_Chasing> +boost::sml::event<S_Injury> = boost::sml::state<C_Injury>,//受伤
 					//攻击
 					boost::sml::state<C_Attack> +boost::sml::event<S_Event>[std::bind(&NPC::Attack, mNpc)],
 					boost::sml::state<C_Attack> +boost::sml::on_entry<boost::sml::_> / [] { std::cout << "进入 攻击 状态!" << std::endl; },
@@ -71,9 +73,9 @@ namespace GAME {
 	class FSM
 	{
 	public:
-		FSM(boost::sml::sm<NPC_StateMachine> LNPCFSM) : NPCFSM(LNPCFSM) {};
+		FSM(boost::sml::sm<NPC_StateMachine, std::tuple<>> LNPCFSM) : NPCFSM(LNPCFSM) {};
 		
-		boost::sml::sm<NPC_StateMachine> NPCFSM;
+		boost::sml::sm<NPC_StateMachine, std::tuple<>> NPCFSM;
 
 		auto Get() {
 			return &NPCFSM;
@@ -84,32 +86,32 @@ namespace GAME {
 
 
 	bool AStarGetWall(int x, int y, void* P) {
-		Labyrinth* LLabyrinth = (Labyrinth*)P;
-		return LLabyrinth->GetPixelWallNumber(x, y) <= 0;
+		PathfindingDecorator* Pathfinding = (PathfindingDecorator*)P;
+		return Pathfinding->GetPixelWallNumber(x, y);
 	}
-
-	NPC::NPC(GamePlayer* npc, Labyrinth* Labyrinth, Arms* arms)
+	
+	NPC::NPC(GamePlayer* npc, PathfindingDecorator* pathfinding, Arms* arms)
 	{
 		mNPC = npc;
-		mLabyrinth = Labyrinth;
+		wPathfinding = pathfinding;
 		wArms = arms;
 		mNPC->GetObjectCollision()->SetAngle(0.01f);
-		mAStar = new AStar(mRange, 5000);
-		mAStar->SetObstaclesCallback(AStarGetWall, mLabyrinth);
+		mJPS = new JPS(mRange, 50000);
+		mJPS->SetObstaclesCallback(AStarGetWall, wPathfinding);
 
 		//歪门邪道 生成状态机
 		NPC_StateMachine NFSM(this);
-		NPCFSM = new FSM(boost::sml::sm<NPC_StateMachine>(NFSM));
+		NPCFSM = new FSM(boost::sml::sm<NPC_StateMachine, std::tuple<>>(NFSM));
 	}
 
 	NPC::~NPC()
 	{
 		delete NPCFSM;
 		delete mNPC;
-		while (!mAStar->GetPathfindingCompleted()) {//等待多线程任务结束
+		while (!mJPS->GetPathfindingCompleted()) {//等待多线程任务结束
 			std::cout << "~NPC() AStar 等待线程结束" << std::endl;
 		}
-		delete mAStar;
+		delete mJPS;
 	}
 
 	void NPC::SetNPC(int x, int y, float angle) {
@@ -125,19 +127,26 @@ namespace GAME {
 
 		//玩家相对NPC位置角度
 		wanjiaAngle = SquarePhysics::EdgeVecToCosAngleFloat(glm::vec2{ Global::GamePlayerX - pos.x, Global::GamePlayerY - pos.y });
-		if (fabs(wanjiaAngle - mNPC->GetObjectCollision()->GetAngleFloat()) < 0.785f) {
+		float AngleCha = wanjiaAngle - mNPC->GetObjectCollision()->GetAngleFloat();
+		if (AngleCha > 3.14f) {
+			AngleCha -= 6.28f;
+		}
+		if (AngleCha < -3.14f) {
+			AngleCha += 6.28f;
+		}
+		if (fabs(AngleCha) < 0.785f) {
 			flags |= SensoryMessages_VisualField;//在视野范围内
 
 			//射线检测
-			SquarePhysics::CollisionInfo LInfo = mLabyrinth->mFixedSizeTerrain->RadialCollisionDetection(pos, { Global::GamePlayerX, Global::GamePlayerY });
+			SquarePhysics::CollisionInfo LInfo = wPathfinding->RadialCollisionDetection(pos.x, pos.y, Global::GamePlayerX, Global::GamePlayerY);
 			if (!LInfo.Collision) {//在视野范围内，且可以看到玩家
 				mSuspicious = true;
-				mSuspiciousPos = { int(LInfo.Pos.x), int(LInfo.Pos.y) };
+				mSuspiciousPos = { Global::GamePlayerX, Global::GamePlayerY };
 				flags |= SensoryMessages_Visible;
 			}
 		}
 
-		if (fabs(Global::GamePlayerX - pos.x) < mRange && fabs(Global::GamePlayerY - pos.y) < mRange)//玩家在范围内
+		if (fabs((Global::GamePlayerX - pos.x) < AttackRange) && (fabs(Global::GamePlayerY - pos.y) < AttackRange))//玩家在范围内
 		{
 			flags |= SensoryMessages_Range;
 		}
@@ -148,14 +157,16 @@ namespace GAME {
 	void NPC::Pathfinding() {
 		glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
 
-		if (mAStar->GetPathfindingCompleted() && //寻路可以用调用（防止反复调用）
+		if (mJPS->GetPathfindingCompleted() && //寻路可以用调用（防止反复调用）
 			LPath.size() <= 20 && //路径小于多少时
 			mTime >= mPathfindingCycle && //时间间隔
-			fabs(Global::GamePlayerX - pos.x) < mRange && fabs(Global::GamePlayerY - pos.y) < mRange//玩家在范围内
+			fabs(Global::GamePlayerX - pos.x) < AttackRange && fabs(Global::GamePlayerY - pos.y) < AttackRange//玩家在范围内
 			) {
 			//std::cout << "开始寻路" << std::endl;
 			LPath.clear();
-			TOOL::mThreadPool->enqueue(&AStar::FindPath, mAStar, AStarVec2{ int(pos.x), int(pos.y) }, AStarVec2{ Global::GamePlayerX, Global::GamePlayerY }, &LPath);
+			TOOL::mThreadPool->enqueue(&JPS::FindPath, mJPS, JPSVec2{ int(pos.x), int(pos.y) }, JPSVec2{ Global::GamePlayerX, Global::GamePlayerY }, &LPath,
+				JPSVec2{ wPathfinding->PathfindingDecoratorDeviationX, wPathfinding->PathfindingDecoratorDeviationY }
+			);
 			hsuldad = 0;
 			mTime = 0;
 			return;
@@ -194,29 +205,30 @@ namespace GAME {
 	//巡逻
 	bool NPC::Patrol() {
 		int flags = GetSensoryMessages();
-		if (mNPC->mPixelQueue->GetNumber() > 0) {//如果受伤
+		if (!(flags & SensoryMessages_Visible) && mNPC->mPixelQueue->GetNumber() > 0) {//如果受伤
 			mTime = 0.0;
 			NPCFSM->Get()->process_event(S_Injury{});
 			return true;
 		}
 		if (flags & SensoryMessages_Visible) {//是否可见
 			if (flags & SensoryMessages_Range) {//是否在范围内
-				mTime = mPathfindingCycle + 1.0f;
-				NPCFSM->Get()->process_event(S_Chasing{});
+				NPCFSM->Get()->process_event(S_Attack{});
 				return true;
 			}
 			else {
-				NPCFSM->Get()->process_event(S_Attack{});
+				mTime = mPathfindingCycle + 1.0f;
+				NPCFSM->Get()->process_event(S_Chasing{});
 				return true;
 			}
 		}
 		
 		glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
 		glm::vec2 Lpos = pos + qianjinfang;
-		if (mLabyrinth->GetPixelWallNumber(Lpos.x, Lpos.y) <= 0) {
-			mNPC->GetObjectCollision()->SetPos(pos + (qianjinfang * 0.1f));
+		if (wPathfinding->GetPixelWallNumber(Lpos.x + wPathfinding->PathfindingDecoratorDeviationX, Lpos.y + wPathfinding->PathfindingDecoratorDeviationY)) {
+			//mNPC->GetObjectCollision()->SetPos(pos + (qianjinfang * 0.1f));
 			float YAngle = SquarePhysics::EdgeVecToCosAngleFloat(qianjinfang);
-			mNPC->GetObjectCollision()->SetAngle(YAngle);
+			mNPC->GetObjectCollision()->ExpectSpeed(100, YAngle, FPSTime);
+			mNPC->GetObjectCollision()->PlayerTargetAngle(YAngle);
 		}
 		else {
 			switch (rand()%4)
@@ -246,12 +258,12 @@ namespace GAME {
 	bool NPC::Attack() {
 		int flags = GetSensoryMessages();
 		if ((flags & SensoryMessages_Range) && (flags & SensoryMessages_Visible)) {
-			mNPC->GetObjectCollision()->SetAngle(wanjiaAngle);
+			mNPC->GetObjectCollision()->PlayerTargetAngle(wanjiaAngle);
 			if (mTime > 0.5f) {
 				mTime = 0.0;
 				glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
-				pos += SquarePhysics::vec2angle(glm::vec2{ 9.0f, 0.0f }, wanjiaAngle);
-				wArms->ShootBullets(pos.x, pos.y, wanjiaAngle, 500, 0);
+				pos += SquarePhysics::vec2angle(glm::vec2{ 9.0f, 0.0f }, mNPC->GetObjectCollision()->GetAngleFloat());
+				wArms->ShootBullets(pos.x, pos.y, mNPC->GetObjectCollision()->GetAngleFloat(), 500, 0);
 			}
 		}
 		else {
@@ -281,52 +293,90 @@ namespace GAME {
 
 	//追击
 	bool NPC::GoToLocation() {
-		
 		int flags = GetSensoryMessages();
 		if ((flags & SensoryMessages_Range) && (flags & SensoryMessages_Visible)) {
 			NPCFSM->Get()->process_event(S_Attack{});
 			return true;
 		}
+
+		if (!(flags & SensoryMessages_Visible) && (mNPC->mPixelQueue->GetNumber() > 0)) {//如果受伤
+			mTime = 0.0;
+			NPCFSM->Get()->process_event(S_Injury{});
+			return true;
+		}
 		
 
-		if (mAStar->GetPathfindingCompleted()) {
+		if (mJPS->GetPathfindingCompleted()) {
 			glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
 
 			if (mSuspicious && mTime > mPathfindingCycle) {
-
+				mSuspicious = false;
 				glm::vec2 zhuipos = { mSuspiciousPos.x - pos.x, mSuspiciousPos.y - pos.y };
 				while (fabs(zhuipos.x) > mRange || fabs(zhuipos.y) > mRange)
 				{
 					zhuipos /= 2.0f;
+					mSuspicious = true;
 				}
 				zhuipos += pos;
-				mSuspicious = false;
 				LPath.clear();
-				TOOL::mThreadPool->enqueue(&AStar::FindPath, mAStar, AStarVec2{ int(pos.x), int(pos.y) }, AStarVec2{ int(zhuipos.x), int(zhuipos.y) }, &LPath);
+				TOOL::mThreadPool->enqueue(&JPS::FindPath, mJPS, JPSVec2{ int(pos.x), int(pos.y) }, JPSVec2{ int(zhuipos.x), int(zhuipos.y) }, &LPath,
+					JPSVec2{ wPathfinding->PathfindingDecoratorDeviationX, wPathfinding->PathfindingDecoratorDeviationY }
+				);
 				hsuldad = 0;
 				mTime = 0;
 				return true;
 			}
 			
-			if (LPath.size() > 2) {//沿着路径前进
-				glm::vec2 yiPOS = { (LPath[LPath.size() - 2].x - LPath[LPath.size() - 1].x) , (LPath[LPath.size() - 2].y - LPath[LPath.size() - 1].y) };
-				yiPOS = pos + (yiPOS * 0.1f);
-				hsuldad++;
-				if (hsuldad >= 10) {
-					hsuldad = 0;
-					LPath.pop_back();
+			if (LPath.size() > 0) {//沿着路径前进
+				//glm::vec2 yiPOS = { (LPath[LPath.size() - 2].x - LPath[LPath.size() - 1].x) , (LPath[LPath.size() - 2].y - LPath[LPath.size() - 1].y) };
+				//yiPOS = pos + (yiPOS * 0.1f);
+				//hsuldad++;
+				//if (hsuldad >= 10) {
+				//	hsuldad = 0;
+				//	LPath.pop_back();
+				//}
+
+				////玩家相对NPC位置角度
+				//float YAngle = SquarePhysics::EdgeVecToCosAngleFloat(glm::vec2{ mSuspiciousPos.x - pos.x, mSuspiciousPos.y - pos.y });
+
+				////mNPC->mObjectCollision->SetForce(yiPOS * 100.0f);
+				//mNPC->GetObjectCollision()->SetAngle(YAngle);
+				//mNPC->GetObjectCollision()->SetPos(yiPOS);
+				//mNPC->GetObjectCollision()->SetSpeed(0, 0);
+				JPSVec2 yiPOS = LPath.back();
+				JPSVec2 DeviationPOS = yiPOS - JPSVec2{ int(pos.x), int(pos.y)};
+				if ((fabs(DeviationPOS.x) < 9) && (fabs(DeviationPOS.y) < 9)) {
+					if (LPath.size() > 1) {
+						LPath.pop_back();
+						yiPOS = LPath.back();
+					}
+					else {
+						LPath.clear();
+						if (mSuspicious) {
+							mSuspicious = false;
+							glm::vec2 zhuipos = { mSuspiciousPos.x - pos.x, mSuspiciousPos.y - pos.y };
+							while (fabs(zhuipos.x) > mRange || fabs(zhuipos.y) > mRange)
+							{
+								zhuipos /= 2.0f;
+								mSuspicious = true;
+							}
+							zhuipos += pos;
+							TOOL::mThreadPool->enqueue(&JPS::FindPath, mJPS, JPSVec2{ int(pos.x), int(pos.y) }, JPSVec2{ int(zhuipos.x), int(zhuipos.y) }, &LPath,
+								JPSVec2{ wPathfinding->PathfindingDecoratorDeviationX, wPathfinding->PathfindingDecoratorDeviationY }
+							);
+							hsuldad = 0;
+							mTime = 0;
+							return true;
+						}
+					}
 				}
-
-				//玩家相对NPC位置角度
-				float YAngle = SquarePhysics::EdgeVecToCosAngleFloat(glm::vec2{ mSuspiciousPos.x - pos.x, mSuspiciousPos.y - pos.y });
-
-				//mNPC->mObjectCollision->SetForce(yiPOS * 100.0f);
-				mNPC->GetObjectCollision()->SetAngle(YAngle);
-				mNPC->GetObjectCollision()->SetPos(yiPOS);
-				mNPC->GetObjectCollision()->SetSpeed(0, 0);
+				float YAngle = SquarePhysics::EdgeVecToCosAngleFloat(glm::vec2{ yiPOS.x - pos.x, yiPOS.y - pos.y });
+				mNPC->GetObjectCollision()->PlayerTargetAngle(YAngle);
+				mNPC->GetObjectCollision()->ExpectSpeed(200, YAngle, FPSTime);
+				//mNPC->GetObjectCollision()->SufferForce(YAngle, 100);
 			}
 			else {
-				NPCFSM->Get()->process_event(S_Patrol{});
+				if (!(flags & SensoryMessages_Visible))NPCFSM->Get()->process_event(S_Patrol{});
 			}
 		}
 		return true;
@@ -339,12 +389,12 @@ namespace GAME {
 		mTime += time;
 		FPSTime = time;
 		
-		//NPCFSM->Get()->process_event(S_Event{});
+		NPCFSM->Get()->process_event(S_Event{});
 
 		//更新NPC损伤
 		mNPC->UpData();
 		//更新模型位置
-		mNPC->setGamePlayerMatrix(Frame);
+		mNPC->setGamePlayerMatrix(time, Frame);
 	}
 
 }

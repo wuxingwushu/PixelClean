@@ -104,6 +104,10 @@ public:
 		delete mBlockDataAtWorkS;
 	}
 
+	DataT* Data() {
+		return mData;
+	}
+
 	//设置回调函数
 	void SetCallback(_Callback _add, _Callback _pop, void* _Class) {
 		AddCallback = _add;

@@ -26,9 +26,31 @@ struct ChatStrStruct {
 	}
 };
 
+struct VPMatrices {
+	glm::mat4 mViewMatrix;
+	glm::mat4 mProjectionMatrix;
+
+	VPMatrices() {
+		mViewMatrix = glm::mat4(1.0f);
+		mProjectionMatrix = glm::mat4(1.0f);
+	}
+};
+
+struct ObjectUniform {
+	glm::mat4 mModelMatrix;
+	glm::vec3 StrikeColour = { 1.0f, 0.0f, 0.0f };
+	float StrikeState = 0;
+
+	ObjectUniform() {
+		mModelMatrix = glm::mat4(1.0f);
+	}
+};
+
 //Gif 描述符
 struct ObjectUniformGIF {
 	glm::mat4 mModelMatrix;
+	glm::vec3 StrikeColour = { 1.0f, 0.0f, 0.0f };
+	float StrikeState = 0;
 	float chuang = 0.0f;
 	unsigned int zhen = 0;
 

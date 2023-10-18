@@ -24,6 +24,8 @@
 
 #include "../VulkanTool/Calculate.h"
 
+#include "PathfindingDecorator.h"
+
 struct miwustruct {
 	unsigned int size;
 	int x;
@@ -35,7 +37,7 @@ struct miwustruct {
 
 
 namespace GAME {
-	class Labyrinth
+	class Labyrinth : public PathfindingDecorator
 	{
 	public:
 		Labyrinth(SquarePhysics::SquarePhysics* squarePhysics);
@@ -130,8 +132,14 @@ namespace GAME {
 		unsigned int** BlockTypeS = nullptr;
 
 		short** PixelWallNumber = nullptr;// 附近 17 * 17 的墙壁的数量
+		/*******************************************************/
 		//获取点附近的墙壁数量
-		short GetPixelWallNumber(int x, int y);
+		virtual bool GetPixelWallNumber(int x, int y);
+		//射线检测
+		virtual SquarePhysics::CollisionInfo RadialCollisionDetection(int x, int y, int Ex, int Ey) {
+			return mFixedSizeTerrain->RadialCollisionDetection({ x,y }, { Ex,Ey });
+		};
+		/*******************************************************/
 		//计算点附近的墙壁数量
 		void PixelWallNumberCalculate(int x, int y);
 		//将 17 * 17 范围的点都加 1

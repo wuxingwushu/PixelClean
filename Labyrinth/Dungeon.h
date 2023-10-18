@@ -17,6 +17,8 @@
 #include "../GlobalStructural.h"
 #include "TextureLibrary.h"
 
+#include "PathfindingDecorator.h"
+
 namespace GAME {
 
 	class PixelTexture;
@@ -48,7 +50,7 @@ namespace GAME {
 		Dungeon* wDungeon = nullptr;
 	};
 
-	class Dungeon
+	class Dungeon : public PathfindingDecorator
 	{
 	public:
 
@@ -111,16 +113,21 @@ namespace GAME {
 		short* GetPixelWallPointer(int x, int y) {
 			return &(mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)]);
 		}
+		/*******************************************************/
 		//获取对于墙壁数量
-		short GetPixelWallNumber(int x, int y) {
+		virtual bool GetPixelWallNumber(int x, int y) {
 			if ((x >= 0) && (x < (mNumberX * 16)) && (y >= 0) && (y < (mNumberY * 16))) {
-				return mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)];
+				return mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)] <= 0;
 			}
 			else {
-				return 255;
+				return false;
 			}
-
 		}
+		//射线检测
+		virtual SquarePhysics::CollisionInfo RadialCollisionDetection(int x, int y, int Ex, int Ey) {
+			return mMoveTerrain->RadialCollisionDetection({ x,y }, { Ex,Ey });
+		};
+		/*******************************************************/
 		//计算点附近的墙壁数量
 		void PixelWallNumberCalculate(short* PixelWallNumber, int x, int y) {
 			int posX, posY;
@@ -164,11 +171,21 @@ namespace GAME {
 		void BlockPixelWallNumber(int x, int y) {
 			x = x * 16;
 			y = y * 16;
+			unsigned int posX, posY;
+			bool B;
 			for (size_t ix = 0; ix < 16; ++ix)
 			{
+				posX = x + ix;
+				B = ((posX >= 8) || (posX <= ((mNumberX * 16) - 8)));
 				for (size_t iy = 0; iy < 16; ++iy)
 				{
-					PixelWallNumberCalculate(GetPixelWallPointer(x + ix, y + iy), x + ix, y + iy);
+					posY = y + iy;
+					if (B && ((posY >= 8) || (posY <= ((mNumberY * 16) - 8)))) {
+						PixelWallNumberCalculate(GetPixelWallPointer(posX, posY), posX, posY);
+					}
+					else {
+						*GetPixelWallPointer(posX, posY) = 1;
+					}
 				}
 			}
 		}

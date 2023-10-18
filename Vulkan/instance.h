@@ -1,6 +1,11 @@
 #pragma once
+#include <vector>
+#include <vulkan/vulkan.h>//VulKan API
 
-#include "../base.h"
+//开启的测试模式
+const std::vector<const char*> validationLayers = {
+	"VK_LAYER_KHRONOS_validation"//测试类型
+};
 
 namespace VulKan {
 	

@@ -1,16 +1,6 @@
 #pragma once
-
-#include "../base.h"
-#include "device.h"
 #include "commandBuffer.h"
-#include "commandPool.h"
 
-
-struct PixelDian {
-	unsigned int yi;
-	unsigned int size;
-	unsigned char* Pixel;
-};
 
 namespace VulKan {
 

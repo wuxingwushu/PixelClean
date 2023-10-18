@@ -20,7 +20,7 @@ namespace GAME {
 			VulKan::RenderPass* RenderPass,
 			VulKan::Sampler* Sampler,
 			std::vector<VulKan::Buffer*> CameraVPMatricesBuffer,
-			Labyrinth* labyrinth
+			PathfindingDecorator* pathfinding
 		);
 
 		~Crowd();
@@ -75,7 +75,7 @@ namespace GAME {
 
 	private:
 		//储存用来生成玩家
-		Labyrinth* mLabyrinth = nullptr;
+		PathfindingDecorator* wPathfinding = nullptr;
 		unsigned int mSize = 0;
 		VulKan::Device* mDevice = nullptr;
 		VulKan::CommandPool* mCommandPool = nullptr;

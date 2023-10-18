@@ -1,5 +1,6 @@
 #include "ParticleSystem.h"
 #include "../BlockS/PixelS.h"
+#include "../GlobalStructural.h"
 
 namespace GAME {
 	ParticleSystem::ParticleSystem(VulKan::Device* device, int Number)

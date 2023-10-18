@@ -137,6 +137,16 @@ namespace SquarePhysics {
 			mSpeed = mSpeedAngle * mSpeedFloat;
 		}
 
+		//期望速度
+		void ExpectSpeed(float speed, float angle, float time) {
+			glm::vec2 Lspeed = speed * AngleFloatToAngleVec(angle);
+			Lspeed -= mSpeed;
+			mSpeed += Lspeed * time;
+			mSpeedFloat = Modulus(mSpeed);
+			mSpeedAngleFloat = EdgeVecToCosAngleFloat(mSpeed);
+			mSpeedAngle = AngleFloatToAngleVec(mSpeedAngleFloat);
+		}
+
 
 		[[nodiscard]] constexpr float GetSpeedX() const noexcept { return mSpeed.x; }
 
@@ -173,7 +183,10 @@ namespace SquarePhysics {
 
 		//帧时间步长模拟
 		void FrameTimeStep(float TimeStep, float FrictionCoefficient){
-			glm::vec2 Resistance = mSpeedAngle * ((mQuality * 9.8f * FrictionCoefficient * mFrictionCoefficient) + (mSpeedFloat * mSpeedFloat * 0.01f));//受到摩檫力
+			glm::vec2 Resistance = { 0, 0};
+			if (mFrictionCoefficient != 0) {
+				Resistance = mSpeedAngle * ((mQuality * 9.8f * FrictionCoefficient * mFrictionCoefficient) + (mSpeedFloat * mSpeedFloat * 0.01f));//受到摩檫力
+			}
 
 			mPos += mSpeed * TimeStep;//计算移动距离
 			//解算速度

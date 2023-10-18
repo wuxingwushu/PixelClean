@@ -490,14 +490,14 @@ namespace GAME {
 		return true;
 	}
 
-	short Labyrinth::GetPixelWallNumber(int x, int y) {
+	bool Labyrinth::GetPixelWallNumber(int x, int y) {
 		x += mOriginX;
 		y += mOriginY;
 		if (GetPixelLegitimate(x,y)) {
-			return PixelWallNumber[x][y];
+			return PixelWallNumber[x][y] <= 0;
 		}
 		else {
-			return 255;
+			return false;
 		}
 	}
 

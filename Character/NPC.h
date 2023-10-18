@@ -1,8 +1,8 @@
 #pragma once
 #include "GamePlayer.h"
-#include "../Labyrinth/Labyrinth.h"
+#include "../Labyrinth/PathfindingDecorator.h"
 #include "../Tool/ContinuousData.h"
-#include "../Tool/AStar.h"
+#include "../Tool/JPS.h"
 #include "../Tool/sml.hpp"
 #include "../Arms/Arms.h"
 
@@ -16,14 +16,14 @@ namespace GAME {
 		SensoryMessages_None			= 0,
 		SensoryMessages_VisualField		= 1 << 0,//在视野范围内
 		SensoryMessages_Visible			= 1 << 1,//可见
-		SensoryMessages_Range			= 1 << 2,//距离范围
+		SensoryMessages_Range			= 1 << 2,//攻击范围内
 	};
 
 
 	class NPC
 	{
 	public:
-		NPC(GamePlayer* npc, Labyrinth* Labyrinth, Arms* arms);
+		NPC(GamePlayer* npc, PathfindingDecorator* pathfinding, Arms* arms);
 		~NPC();
 
 		void Event(int Frame, float time);
@@ -71,9 +71,10 @@ namespace GAME {
 
 	private:
 		glm::vec2 qianjinfang = {1,0};
-		int mRange = 160;//寻路范围
+		int AttackRange = 90;
+		int mRange = 300;//寻路范围
 		GamePlayer* mNPC = nullptr;//玩家模型
-		Labyrinth* mLabyrinth = nullptr;//地图，用于寻路
+		PathfindingDecorator* wPathfinding = nullptr;//地图，用于寻路
 		Arms* wArms = nullptr;//武器
 
 		
@@ -81,13 +82,13 @@ namespace GAME {
 		float FPSTime = 0;
 		float mTime = 0.0f;//当前间隔多久
 		const float mPathfindingCycle = 2.0f;//寻路最小周期
-		std::vector<AStarVec2> LPath;//寻路路径
+		std::vector<JPSVec2> LPath;//寻路路径
 
 		float wanjiaAngle = 0.0f;//NPC到玩家的角度
 		bool mSuspicious = false;//是否有可疑位置
-		AStarVec2 mSuspiciousPos{};//可疑位置
+		JPSVec2 mSuspiciousPos{};//可疑位置
 
-		AStar* mAStar = nullptr;//A星寻路
+		JPS* mJPS = nullptr;//A星寻路
 	};
 
 }

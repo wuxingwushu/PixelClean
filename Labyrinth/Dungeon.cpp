@@ -646,6 +646,9 @@ namespace GAME {
 	}
 
 	void Dungeon::UpdataMistData(int x, int y) {
+		PathfindingDecoratorDeviationX = (mMoveTerrain->OriginX - mMoveTerrain->GetGridSPosX()) * 16;
+		PathfindingDecoratorDeviationY = (mMoveTerrain->OriginY - mMoveTerrain->GetGridSPosY()) * 16;
+
 		int* Index = (int*)CalculateIndex->getupdateBufferByMap();
 		int A;
 		TextureAndBuffer* info;

@@ -16,6 +16,8 @@ layout(binding = 0) uniform VPMatrices {
 
 layout(binding = 1) uniform ObjectUniform {
 	mat4 mModelMatrix;
+	vec3 StrikeColour;
+	float StrikeState;
 	float chuang;
 	uint zhen;
 }objectUBO;

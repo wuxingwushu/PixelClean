@@ -44,10 +44,6 @@
 #include <vulkan/vulkan.h>//VulKan API
 
 
-
-//#define VMA_DEBUG_MARGIN 16//边距（Margins）https://blog.csdn.net/weixin_50523841/article/details/122506850
-#include "vk_mem_alloc.h"//内存分配器，宏声明 放在了 device.cpp 当中去了，引用的时候要放在CPP当中用要不然会报错（反复定义）
-
 //#define VLD_FORCE_ENABLE //VLD_FORCE_ENABLE宏定义是为了Release版本也能生成报告
 //#include "vld.h"//内存泄露检测
 
@@ -63,32 +59,3 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
-
-
-
-//开启的测试模式
-const std::vector<const char*> validationLayers = {
-	"VK_LAYER_KHRONOS_validation"//测试类型
-};
-
-
-struct VPMatrices {
-	glm::mat4 mViewMatrix;
-	glm::mat4 mProjectionMatrix;
-
-	VPMatrices() {
-		mViewMatrix = glm::mat4(1.0f);
-		mProjectionMatrix = glm::mat4(1.0f);
-	}
-};
-
-struct ObjectUniform {
-	glm::mat4 mModelMatrix;
-
-	ObjectUniform() {
-		mModelMatrix = glm::mat4(1.0f);
-	}
-};
-
-

@@ -6,6 +6,7 @@
 #include "../Vulkan/swapChain.h"
 #include "../Vulkan/renderPass.h"
 #include "PixelTexture.h"
+#include "../GlobalStructural.h"
 
 namespace VulKan {
 

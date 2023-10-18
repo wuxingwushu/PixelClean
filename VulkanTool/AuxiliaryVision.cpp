@@ -1,4 +1,5 @@
 #include "AuxiliaryVision.h"
+#include "../GlobalStructural.h"
 
 namespace VulKan {
 

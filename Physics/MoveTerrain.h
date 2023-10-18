@@ -60,6 +60,13 @@ namespace SquarePhysics {
 
 		//路径碰撞判断
 		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
+		[[nodiscard]] bool GetFixedCollisionBoolRadial(glm::ivec2 pos) {
+			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->GetPlate(pos.x / mSquareSideLength, pos.y / mSquareSideLength);
+			if (LRigidBodyAndModel != nullptr) {
+				return LRigidBodyAndModel->mGridDecorator->GetFixedCollisionBool({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
+			}
+			return true;
+		}
 		/************************  写完  ************************/
 
 		
@@ -124,6 +131,9 @@ namespace SquarePhysics {
 	template<typename ClassT>
 	[[nodiscard]] CollisionInfo MoveTerrain<ClassT>::RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End)
 	{
+		glm::ivec2 Deviation = { mGridDecoratorS->GetPlateX(), mGridDecoratorS->GetPlateY() };
+		Start += Deviation;
+		End += Deviation;
 		int dx = abs(End.x - Start.x);
 		int dy = abs(End.y - Start.y);
 		int sx = (Start.x < End.x) ? 1 : -1;
@@ -131,22 +141,22 @@ namespace SquarePhysics {
 		int err = dx - dy;
 		int e2;
 		while (true) {
-			if (GetFixedCollisionBool(Start)) {
-				return { true, Start, 1.57f - (sx == 1 ? 0 : 3.14f)};
+			if (GetFixedCollisionBoolRadial(Start)) {
+				return { true, Start - Deviation, 1.57f - (sx == 1 ? 0 : 3.14f)};
 			}
 			if (Start.x == End.x && Start.y == End.y) {
-				return { false, Start, 0 };
+				return { false, Start - Deviation, 0 };
 			}
 			e2 = 2 * err;
 			if (e2 > -dy) {
 				err -= dy;
 				Start.x += sx;
 			}
-			if (GetFixedCollisionBool(Start)) {
-				return { true, Start, 0 + (sy == 1 ? 0 : 3.14f) };
+			if (GetFixedCollisionBoolRadial(Start)) {
+				return { true, Start - Deviation, 0 + (sy == 1 ? 0 : 3.14f) };
 			}
 			if (Start.x == End.x && Start.y == End.y) {
-				return { false, Start, 0 };
+				return { false, Start - Deviation, 0 };
 			}
 			if (e2 < dx) {
 				err += dx;

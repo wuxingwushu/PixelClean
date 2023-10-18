@@ -131,12 +131,18 @@ namespace GAME {
 		delete mObjectCollision;
 	}
 
-	void GamePlayer::setGamePlayerMatrix(const int& frameCount, bool mode)
+	void GamePlayer::setGamePlayerMatrix(float time, const int& frameCount, bool mode)
 	{
 		if (mSynchronizationData != nullptr) {
 			mSynchronizationData->X = mObjectCollision->GetPosX();
 			mSynchronizationData->Y = mObjectCollision->GetPosY();
 			mSynchronizationData->ang = mObjectCollision->GetAngleFloat();
+		}
+		if (mUniform.StrikeState > 0) {
+			mUniform.StrikeState -= 0.5f * time;
+			if (mUniform.StrikeState < 0) {
+				mUniform.StrikeState = 0;
+			}
 		}
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(mObjectCollision->GetPosX(), mObjectCollision->GetPosY(), 0.0f));//位移矩阵
 		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(mObjectCollision->GetAngleFloat() * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -274,6 +280,7 @@ namespace GAME {
 		}
 		else {
 			memset(&TexturePointer[(x * 16 + y) * 4 + 3], 0, 1);
+			mUniform.StrikeState = 0.5f;
 			if (GetCrucial(x, y)) {
 				DeathInBattle = true;
 			}

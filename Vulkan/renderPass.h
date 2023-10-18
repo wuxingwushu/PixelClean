@@ -1,6 +1,4 @@
 #pragma once
-
-#include "../base.h"
 #include "device.h"
 
 //用于汇集所有要渲染的物体，然后一次性提交渲染

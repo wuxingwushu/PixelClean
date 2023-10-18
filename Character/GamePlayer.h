@@ -52,7 +52,7 @@ namespace GAME {
 		//更新描述符，模型位置
 		//mode = false 模式：持续更新位置（运动） [ 变换矩阵，那个GPU画布 ];
 		//mode = true  模式：一次设置位置（静止） [ 变换矩阵，GPU画布数量，true ];
-		void setGamePlayerMatrix(const int& frameCount, bool mode = false);
+		void setGamePlayerMatrix(float time, const int& frameCount, bool mode = false);
 
 		//获取  顶点和UV  VkBuffer数组
 		[[nodiscard]] std::vector<VkBuffer> getVertexBuffers() const {

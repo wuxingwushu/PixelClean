@@ -31,6 +31,12 @@ public:
 	int GetPosX() { return mPosX; }
 	int GetPosY() { return mPosY; }
 
+	int GetPlateX() { return (mOriginX - mPosX) * mEdge; }
+	int GetPlateY() { return (mOriginY - mPosY) * mEdge; }
+
+	int GetCalculatePosX(int x) { return (x / mEdge) - mPosX + mOriginX; }
+	int GetCalculatePosY(int y) { return (y / mEdge) - mPosY + mOriginY; }
+
 	constexpr MovePlate(const unsigned int NumberX, const unsigned int NumberY, const unsigned int Edge,
 		const unsigned int OriginX = 0, const unsigned int OriginY = 0) :
 		mNumberX(NumberX), mNumberY(NumberY), mEdge(Edge),

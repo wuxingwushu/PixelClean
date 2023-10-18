@@ -34,7 +34,7 @@ namespace GAME {
 		VulKan::RenderPass* RenderPass,
 		VulKan::Sampler* Sampler,
 		std::vector<VulKan::Buffer*> CameraVPMatricesBuffer,
-		Labyrinth* labyrinth
+		PathfindingDecorator* pathfinding
 	) :
 		mSize(size),
 		mDevice(Device),
@@ -43,7 +43,7 @@ namespace GAME {
 		mRenderPass(RenderPass),
 		mSampler(Sampler),
 		mCameraVPMatricesBuffer(CameraVPMatricesBuffer),
-		mLabyrinth(labyrinth)
+		wPathfinding(pathfinding)
 	{
 		NPCID = size;
 		MapPlayerS = new ContinuousMap<evutil_socket_t, GamePlayer*>(size, ContinuousMap_Timeout);
@@ -145,7 +145,7 @@ namespace GAME {
 			LRole->mBufferEventSingleData = new BufferEventSingleData(100);
 			LGamePlayer->SetRoleSynchronizationData(LRole);
 			NPC** LNPC = mNPCS->New(key);
-			*LNPC = new NPC(LGamePlayer, mLabyrinth, wArms);
+			*LNPC = new NPC(LGamePlayer, wPathfinding, wArms);
 
 			mNPCSynchronizationData->SetPointerData(key, LGamePlayer);
 
@@ -173,7 +173,7 @@ namespace GAME {
 		LRole->mBufferEventSingleData = new BufferEventSingleData(100);
 		LGamePlayer->SetRoleSynchronizationData(LRole);
 		NPC** LNPC = mNPCS->New(NPCID);
-		*LNPC = new NPC(LGamePlayer, mLabyrinth, wArms);
+		*LNPC = new NPC(LGamePlayer, wPathfinding, wArms);
 
 		mNPCSynchronizationData->SetPointerData(NPCID, LGamePlayer);
 

@@ -1,4 +1,6 @@
 #include "instance.h"
+#include  "../Tool/Tool.h"
+#include <GLFW/glfw3.h>
 
 namespace VulKan {
 	//validation layer 回调函数

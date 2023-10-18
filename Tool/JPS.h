@@ -551,8 +551,10 @@ public:
     }
 
     //开始寻路
-    void FindPath(JPSVec2 start, JPSVec2 target, std::vector<JPSVec2>* PathVector) {
+    void FindPath(JPSVec2 start, JPSVec2 target, std::vector<JPSVec2>* PathVector, JPSVec2 deviation = { 0, 0 }) {
         //目标地点合法性
+        target += deviation;
+        start += deviation;
         TargetPosition = target - start;
         StartingPoint = start;
         if (!isValid(TargetPosition.x, TargetPosition.y)) {
@@ -613,6 +615,7 @@ public:
             }
         } while (LSDEJPSNode != nullptr);
         if (LSDEJPSNode != nullptr) {
+            StartingPoint -= deviation;
             PathVector->push_back({ ParentJPSNode->x + StartingPoint.x, ParentJPSNode->y + StartingPoint.y });
             if (ParentJPSNode->parent->pChild.size() != 0) {
                 bool cf = true;

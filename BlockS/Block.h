@@ -4,6 +4,7 @@
 #include "../Vulkan/device.h"
 #include "../Vulkan/descriptorSet.h"
 #include "../Vulkan/description.h"
+#include "../GlobalStructural.h"
 
 namespace GAME {
 	

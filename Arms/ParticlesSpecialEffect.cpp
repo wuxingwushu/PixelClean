@@ -1,4 +1,5 @@
 #include "ParticlesSpecialEffect.h"
+#include "../GlobalStructural.h"
 
 
 namespace GAME {

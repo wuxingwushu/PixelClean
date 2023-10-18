@@ -69,13 +69,19 @@ namespace VulKan {
 		}
 	}
 
-	void DescriptorSet::UpDataPicture(unsigned int Index, VkDescriptorImageInfo* ImageInfo) {
+	void DescriptorSet::UpDataImagePicture(unsigned int Index, VkDescriptorImageInfo* ImageInfo) {
 		for (auto DescriptorSetWrites : descriptorSetWrites) {
-			for (size_t i = 0; i < DescriptorSetWrites.size(); i++)
-			{
-				if (DescriptorSetWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-					DescriptorSetWrites[i].pImageInfo = ImageInfo;
-				}
+			if (DescriptorSetWrites[Index].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+				DescriptorSetWrites[Index].pImageInfo = ImageInfo;
+			}
+			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(DescriptorSetWrites.size()), DescriptorSetWrites.data(), 0, nullptr);
+		}
+	}
+
+	void DescriptorSet::UpDataBufferPicture(unsigned int Index, VkDescriptorBufferInfo* BufferInfo) {
+		for (auto DescriptorSetWrites : descriptorSetWrites) {
+			if (DescriptorSetWrites[Index].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+				DescriptorSetWrites[Index].pBufferInfo = BufferInfo;
 			}
 			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(DescriptorSetWrites.size()), DescriptorSetWrites.data(), 0, nullptr);
 		}

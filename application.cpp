@@ -197,12 +197,12 @@ namespace GAME {
 
 	bool LabyrinthGetWall(int x, int y, void* P) {
 		Labyrinth* LLabyrinth = (Labyrinth*)P;
-		return LLabyrinth->GetPixelWallNumber(x, y) <= 0;
+		return LLabyrinth->GetPixelWallNumber(x, y);
 	}
 
 	bool DungeonGetWall(int x, int y, void* P) {
 		Dungeon* LLabyrinth = (Dungeon*)P;
-		return LLabyrinth->GetPixelWallNumber(x, y) <= 0;
+		return LLabyrinth->GetPixelWallNumber(x, y);
 	}
 
 	void Application::LoadingGame() {
@@ -242,7 +242,7 @@ namespace GAME {
 		else {
 			mGamePlayerPosX = -160;
 			mGamePlayerPosY = 0;
-			mDungeon = new Dungeon(mDevice, 50, 30, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
+			mDungeon = new Dungeon(mDevice, 100, 60, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
 			mDungeon->initUniformManager(
 				mSwapChain->getImageCount(),
 				mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
@@ -266,7 +266,12 @@ namespace GAME {
 		mVisualEffect->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
 
 		//创建多人玩家
-		mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer, mLabyrinth);
+		if (Global::GameMode) {
+			mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer, mLabyrinth);
+		}
+		else {
+			mCrowd = new Crowd(100, mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods), mSwapChain, mRenderPass, mSampler, mCameraVPMatricesBuffer, mDungeon);
+		}
 		mCrowd->SteSquarePhysics(mSquarePhysics);
 		mCrowd->SetArms(mArms);
 
@@ -700,7 +705,7 @@ namespace GAME {
 
 		
 		
-		mGamePlayer->setGamePlayerMatrix(mCurrentFrame);
+		mGamePlayer->setGamePlayerMatrix(TOOL::FPStime, mCurrentFrame);
 
 		static double ArmsContinuityFire = 0;
 		ArmsContinuityFire += TOOL::FPStime;
@@ -784,25 +789,12 @@ namespace GAME {
 				TOOL::mTimer->MomentEnd();
 			}
 			else {
-				int xpiany = (mDungeon->mMoveTerrain->OriginX - mDungeon->mMoveTerrain->GetGridSPosX()) * 16;
-				int ypiany = (mDungeon->mMoveTerrain->OriginY - mDungeon->mMoveTerrain->GetGridSPosY()) * 16;
 				TOOL::mTimer->MomentTiming("AStar寻路耗时");
-				AStarPathfinding->FindPath({ beang.x + xpiany, beang.y + ypiany }, { end.x + xpiany, end.y + ypiany }, &AStarPath);
+				AStarPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &AStarPath, { mDungeon->PathfindingDecoratorDeviationX, mDungeon->PathfindingDecoratorDeviationY });
 				TOOL::mTimer->MomentEnd();
 				TOOL::mTimer->MomentTiming("JPS寻路耗时");
-				JPSPathfinding->FindPath({ beang.x + xpiany, beang.y + ypiany }, { end.x + xpiany, end.y + ypiany }, &JPSPath);
+				JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath, { mDungeon->PathfindingDecoratorDeviationX, mDungeon->PathfindingDecoratorDeviationY });
 				TOOL::mTimer->MomentEnd();
-
-				for (size_t i = 0; i < JPSPath.size(); i++)
-				{
-					JPSPath[i].x -= xpiany;
-					JPSPath[i].y -= ypiany;
-				}
-				for (size_t i = 0; i < AStarPath.size(); i++)
-				{
-					AStarPath[i].x -= xpiany;
-					AStarPath[i].y -= ypiany;
-				}
 			}
 			VulKan::StaticAuxiliaryData* PA = mAuxiliaryVision->GetContinuousStaticSpot()->Get(&AStarPath);
 			PA->Size = AStarPath.size();

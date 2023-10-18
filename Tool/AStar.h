@@ -113,8 +113,12 @@ public:
     }
 
     //开始寻路
-    void FindPath(AStarVec2 start, AStarVec2 target, std::vector<AStarVec2>* PathVector) {
+    void FindPath(AStarVec2 start, AStarVec2 target, std::vector<AStarVec2>* PathVector, AStarVec2 deviation = { 0, 0 }) {
         //目标地点合法性
+        start.x += deviation.x;
+        start.y += deviation.y;
+        target.x += deviation.x;
+        target.y += deviation.y;
         target.x -= start.x;
         target.y -= start.y;
         StartingPoint = start;
@@ -204,6 +208,8 @@ public:
 
                     StartingPoint.x -= mRange;
                     StartingPoint.y -= mRange;
+                    StartingPoint.x -= deviation.x;
+                    StartingPoint.y -= deviation.y;
                     //是否到终点
                     while (visited[LStart.x][LStart.y] != Count)
                     {

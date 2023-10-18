@@ -1,6 +1,4 @@
 #pragma once
-
-#include "../base.h"
 #include "device.h"
 #include "description.h"
 

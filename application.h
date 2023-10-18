@@ -39,6 +39,7 @@
 #include "VulkanTool/VisualEffect.h"
 #include "VulkanTool/AuxiliaryVision.h"
 #include "Tool/JPS.h"
+#include "Tool/AStar.h"
 
 namespace GAME {
 	class Application{

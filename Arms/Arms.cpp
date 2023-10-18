@@ -2,6 +2,7 @@
 #include "../SoundEffect/SoundEffect.h"
 #include "../GlobalVariable.h"
 #include "../Physics/DestroyMode.h"
+#include "../GlobalStructural.h"
 
 
 namespace GAME {

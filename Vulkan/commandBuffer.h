@@ -1,8 +1,5 @@
 #pragma once
-
-#include "../base.h"
 #include "commandPool.h"
-#include "device.h"
 
 namespace VulKan {
 

@@ -1,8 +1,5 @@
 #pragma once
-
-#include "../base.h"
 #include "device.h"
-#include "description.h"
 #include "descriptorSetLayout.h"
 #include "descriptorPool.h"
 
@@ -30,7 +27,8 @@ namespace VulKan {
 		~DescriptorSet();
 
 		//更新绑定的图片
-		void UpDataPicture(unsigned int Index, VkDescriptorImageInfo* ImageInfo);
+		void UpDataImagePicture(unsigned int Index, VkDescriptorImageInfo* ImageInfo);
+		void UpDataBufferPicture(unsigned int Index, VkDescriptorBufferInfo* BufferInfo);
 
 		[[nodiscard]] auto getDescriptorSet(int frameCount) const { return mDescriptorSets[frameCount]; }
 

@@ -1,7 +1,4 @@
 #pragma once
-
-#include "../base.h"
-#include "device.h"
 #include "window.h"
 #include "windowSurface.h"
 #include "renderPass.h"

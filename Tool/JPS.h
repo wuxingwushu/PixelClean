@@ -64,7 +64,7 @@ struct JPSNode : public JPSVec2 {
     JPSNode* parent = nullptr;      //父节点
     std::vector<JPSNode*> pChild{}; //子节点
     JPSDirection Direction;
-    JPSNode(int _x, int _y, int _g, int _h, JPSNode* _parent, JPSDirection direction) : JPSVec2{_x, _y}, g(_g), h(_h), parent(_parent), Direction(direction) {
+    inline JPSNode(int _x, int _y, int _g, int _h, JPSNode* _parent, JPSDirection direction) : JPSVec2{_x, _y}, g(_g), h(_h), parent(_parent), Direction(direction) {
         f = g + h;
     }
 
@@ -127,13 +127,13 @@ private:
 #endif
 
     //位置是否合法
-    bool Legitimacy(int x, int y) {
+    inline bool Legitimacy(int x, int y) {
         if (x >= -mRange && x < mRange && y >= -mRange && y < mRange) { return true; }
         else { return false; }
     }
 
     //调用回调函数
-    bool isValid(int x, int y) {
+    inline bool isValid(int x, int y) {
         if (Legitimacy(x, y)) {
             return mObstaclesCallback(x + StartingPoint.x, y + StartingPoint.y, mDataPointer);
         }
@@ -141,15 +141,15 @@ private:
     }
 
     //计算代价
-    int calculateH(int x, int y) {
+    inline int calculateH(int x, int y) {
         return fabs(x - TargetPosition.x) + fabs(y - TargetPosition.y);
     }
-    int calculateH(JPSVec2 pos) {
+    inline int calculateH(JPSVec2 pos) {
         return fabs(pos.x - TargetPosition.x) + fabs(pos.y - TargetPosition.x);
     }
 
     //创建JPSNode
-    JPSNode* NewJPSNode(JPSVec2 pos, int _g, int _h, JPSNode* _parent, JPSDirection direction) {
+    inline JPSNode* NewJPSNode(JPSVec2 pos, int _g, int _h, JPSNode* _parent, JPSDirection direction) {
 #ifdef JPS_MemoryPool
         return mMemoryPool.newElement(pos.x, pos.y, _g, _h, _parent, direction);
 #else
@@ -158,7 +158,7 @@ private:
     }
 
     //销毁JPSNode
-    void DeleteJPSNode(JPSNode* _parent) {
+    inline void DeleteJPSNode(JPSNode* _parent) {
 #ifdef JPS_MemoryPool
         mMemoryPool.deleteElement(_parent);
 #else
@@ -167,7 +167,7 @@ private:
     }
 
     //判断是否到终点
-    bool EndPointJudge(JPSVec2 pos) {
+    inline bool EndPointJudge(JPSVec2 pos) {
         bool BJ = pos.x == TargetPosition.x && pos.y == TargetPosition.y;
         if (BJ) {
             Finish = true;
@@ -571,10 +571,10 @@ public:
         if (GetDirectionLegitimate(CurrentPosition, JPSDirection::LowerLeft ))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x - 1, CurrentPosition.y - 1), LSDEJPSNode, JPSDirection::LowerLeft));
         if (GetDirectionLegitimate(CurrentPosition, JPSDirection::UpperRight))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x + 1, CurrentPosition.y + 1), LSDEJPSNode, JPSDirection::UpperRight));
         if (GetDirectionLegitimate(CurrentPosition, JPSDirection::LowerRight))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x + 1, CurrentPosition.y - 1), LSDEJPSNode, JPSDirection::LowerRight));
-        //if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Upper))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x, CurrentPosition.y + 1), LSDEJPSNode, JPSDirection::Upper));
-        //if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Lower))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x, CurrentPosition.y - 1), LSDEJPSNode, JPSDirection::Lower));
-        //if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Left ))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x - 1, CurrentPosition.y), LSDEJPSNode, JPSDirection::Left ));
-        //if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Right))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x + 1, CurrentPosition.y), LSDEJPSNode, JPSDirection::Right));
+        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Upper))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x, CurrentPosition.y + 1), LSDEJPSNode, JPSDirection::Upper));
+        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Lower))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x, CurrentPosition.y - 1), LSDEJPSNode, JPSDirection::Lower));
+        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Left ))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x - 1, CurrentPosition.y), LSDEJPSNode, JPSDirection::Left ));
+        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Right))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x + 1, CurrentPosition.y), LSDEJPSNode, JPSDirection::Right));
         
         NodeSort(LSDEJPSNode);
 

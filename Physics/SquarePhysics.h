@@ -6,6 +6,7 @@
 #include "MoveTerrain.h"				//固定大小的网格地图群
 #include "ObjectCollision.h"			//固定大小的网格（动态）（物理模块）
 #include "PixelCollision.h"				//格子物理（动态）（物理模块）
+#include "GridDictionary.h"				//
 #include "../Tool/ContinuousData.h"		//动态连续储存
 
 

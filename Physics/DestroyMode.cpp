@@ -21,13 +21,14 @@ namespace SquarePhysics {
 		}
 	}
 
-	bool DestroyModePixel(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
+	bool DestroyModePixel(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
+		std::cout << Angle << std::endl;
 		mGrid->CollisionCallback(x, y, false);
 
 		return true;
 	}
 
-	bool DestroyModeCross(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
+	bool DestroyModeCross(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
 		mGrid->CollisionCallback(x, y, false);
 		mGrid->CollisionCallback(x + 1, y, false);
 		mGrid->CollisionCallback(x, y + 1, false);
@@ -37,7 +38,7 @@ namespace SquarePhysics {
 		return true;
 	}
 
-	bool DestroyModeSquare(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
+	bool DestroyModeSquare(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
 		const int Range = 1;
 		for (int i = -Range; i <= Range; ++i) {
 			for (int j = -Range; j <= Range; ++j) {
@@ -47,7 +48,7 @@ namespace SquarePhysics {
 		return true;
 	}
 
-	bool DestroyModeSquareDA(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
+	bool DestroyModeSquareDA(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
 		const int Range = 5;
 		for (int i = -Range; i <= Range; ++i) {
 			for (int j = -Range; j <= Range; ++j) {

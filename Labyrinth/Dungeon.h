@@ -79,29 +79,29 @@ namespace GAME {
 		}
 
 		//获取地图 CommandBuffer
-		void GetCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
+		inline void GetCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			Vector->push_back(mCommandBuffer[F]->getCommandBuffer());
 		}
 
 		//获取迷雾 CommandBuffer
-		void GetMistCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
+		inline void GetMistCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			Vector->push_back(mMistCommandBuffer[F]->getCommandBuffer());
 		}
 
 		//根据输入的位置对区块位置进行更新
-		MovePlateInfo UpPos(float x, float y) {
+		inline MovePlateInfo UpPos(float x, float y) {
 			return mMoveTerrain->UpDataPos(x, y);
 		}
 
 		//根据世界坐标获取对于的区块
-		SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* GetTerrain(float x, float y) {
+		inline SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* GetTerrain(float x, float y) {
 			return mMoveTerrain->CalculateGetRigidBodyAndModel(x, y);
 		}
 
 		unsigned int wFrameCount{ 0 };//帧缓冲数
 
 		//获取柏林噪声
-		unsigned int GetNoise(double x, double y) {
+		inline unsigned int GetNoise(double x, double y) {
 			return mPerlinNoise->noise(x * 0.05f, y * 0.05f, 0.5) * TextureNumber;
 		}
 
@@ -110,13 +110,13 @@ namespace GAME {
 		void UpdateAIPathfindingBlock(int x, int y);
 		
 		//获取对于墙壁数量指针
-		short* GetPixelWallPointer(int x, int y) {
+		inline short* GetPixelWallPointer(int x, int y) {
 			return &(mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)]);
 		}
 		/*******************************************************/
 		//获取对于墙壁数量
-		virtual bool GetPixelWallNumber(int x, int y) {
-			if ((x >= 0) && (x < (mNumberX * 16)) && (y >= 0) && (y < (mNumberY * 16))) {
+		inline virtual bool GetPixelWallNumber(unsigned int x, unsigned int y) {
+			if ((x < (mNumberX * 16)) && (y < (mNumberY * 16))) {
 				return mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)] <= 0;
 			}
 			else {
@@ -233,7 +233,7 @@ namespace GAME {
 		BlockCommandBuffer* mGIFBlockCommandBuffer{ nullptr };	//GIF区块 CommandBuffer
 
 		//获取动图 CommandBuffer
-		void GetGIFCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
+		inline void GetGIFCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			for (size_t i = 0; i < mBlockData->GetApplyNumber(); i++)
 			{
 				Vector->push_back(mBlockData->GetBlockDataS()[i]->mHandle->mCommandBuffer[F]->getCommandBuffer());

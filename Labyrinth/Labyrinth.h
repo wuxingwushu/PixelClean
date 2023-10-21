@@ -81,12 +81,12 @@ namespace GAME {
 		}
 
 		//获取地图
-		void GetCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
+		inline void GetCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			Vector->push_back(mThreadCommandBufferS[F]->getCommandBuffer());
 		};
 
 		//获取迷雾
-		void GetMistCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
+		inline void GetMistCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
 			Vector->push_back(mMistCommandBufferS[F]->getCommandBuffer());
 		};
 		
@@ -134,7 +134,16 @@ namespace GAME {
 		short** PixelWallNumber = nullptr;// 附近 17 * 17 的墙壁的数量
 		/*******************************************************/
 		//获取点附近的墙壁数量
-		virtual bool GetPixelWallNumber(int x, int y);
+		virtual inline bool GetPixelWallNumber(unsigned int x, unsigned int y) {
+			x += mOriginX;
+			y += mOriginY;
+			if ((x < (numberX * 16)) && (y < (numberY * 16))) {
+				return PixelWallNumber[x][y] <= 0;
+			}
+			else {
+				return false;
+			}
+		}
 		//射线检测
 		virtual SquarePhysics::CollisionInfo RadialCollisionDetection(int x, int y, int Ex, int Ey) {
 			return mFixedSizeTerrain->RadialCollisionDetection({ x,y }, { Ex,Ey });

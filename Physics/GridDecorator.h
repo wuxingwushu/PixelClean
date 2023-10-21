@@ -22,7 +22,7 @@ namespace SquarePhysics {
 			}
 		}
 
-		PixelAttribute* at(glm::ivec2 pos) {
+		inline PixelAttribute* at(glm::ivec2 pos) {
 			return &mPixelAttributeS[pos.x * mNumberY + pos.y];
 		}
 
@@ -32,9 +32,9 @@ namespace SquarePhysics {
 			OriginY = y;
 		}
 
-		[[nodiscard]] unsigned int GetObjectX() { return mNumberX; }
+		[[nodiscard]] inline unsigned int GetObjectX() { return mNumberX; }
 
-		[[nodiscard]] unsigned int GetObjectY() { return mNumberY; }
+		[[nodiscard]] inline unsigned int GetObjectY() { return mNumberY; }
 
 
 

@@ -125,20 +125,38 @@ namespace VulKan {
 		//线
 		LinePointerHOST = (AuxiliarySpot*)AuxiliaryLineS->getupdateBufferByMap();
 		//静态
-		if (StaticLineUpData) {
-			StaticLineUpData = false;
-			LineNumber = 0;
-			for (auto& i : *StaticContinuousAuxiliaryLine) {
-				if (i.Size != 0) {
-					LineNumber += i.Function(LinePointerHOST, i.Pointer, i.Size);
-					LinePointerHOST += LineNumber;
-				}
+		if (StaticLineVertexUpData) {
+			StaticLineVertexUpData = false;
+			StaticLineUpData = true;
+			StaticLineVertexDeviation = 0;
+			for (auto L : StaticLineVertex)
+			{
+				*LinePointerHOST = L;
+				++LinePointerHOST;
+				++StaticLineVertexDeviation;
 			}
-			StaticLineDeviation = LineNumber;
+			LineNumber = StaticLineVertexDeviation;
 		}
 		else {
-			LineNumber = StaticLineDeviation;
-			LinePointerHOST += LineNumber;
+			LineNumber = StaticLineVertexDeviation;
+			LinePointerHOST += StaticLineVertexDeviation;
+		}
+		if (StaticLineUpData) {
+			StaticLineUpData = false;
+			int Number;
+			StaticLineDeviation = 0;
+			for (auto& i : *StaticContinuousAuxiliaryLine) {
+				if (i.Size != 0) {
+					Number = i.Function(LinePointerHOST, i.Pointer, i.Size);
+					StaticLineDeviation += Number;
+					LinePointerHOST += Number;
+				}
+			}
+			LineNumber += StaticLineDeviation;
+		}
+		else {
+			LineNumber += StaticLineDeviation;
+			LinePointerHOST += StaticLineDeviation;
 		}
 		//动态
 		for (auto& i : *ContinuousAuxiliaryLine)
@@ -172,19 +190,37 @@ namespace VulKan {
 		//点
 		SpotPointerHOST = (AuxiliarySpot*)AuxiliarySpotS->getupdateBufferByMap();
 		//静态
-		if (StaticSpotUpData) {
-			StaticSpotUpData = false;
-			SpotNumber = 0;
-			for (auto& i : *StaticContinuousAuxiliarySpot) {
-				if (i.Size != 0) {
-					SpotNumber += i.Function(SpotPointerHOST, i.Pointer, i.Size);
-					SpotPointerHOST += SpotNumber;
-				}
+		if (StaticSpotVertexUpData) {
+			StaticSpotVertexUpData = false;
+			StaticSpotUpData = true;
+			StaticSpotVertexDeviation = 0;
+			for (auto S : StaticSpotVertex)
+			{
+				*SpotPointerHOST = S;
+				++SpotPointerHOST;
+				++StaticSpotVertexDeviation;
 			}
-			StaticSpotDeviation = SpotNumber;
+			SpotNumber = StaticSpotVertexDeviation;
 		}
 		else {
-			SpotNumber = StaticSpotDeviation;
+			SpotNumber = StaticSpotVertexDeviation;
+			SpotPointerHOST += StaticSpotVertexDeviation;
+		}
+		if (StaticSpotUpData) {
+			StaticSpotUpData = false;
+			StaticSpotDeviation = 0;
+			int Number;
+			for (auto& i : *StaticContinuousAuxiliarySpot) {
+				if (i.Size != 0) {
+					Number = i.Function(SpotPointerHOST, i.Pointer, i.Size);
+					StaticSpotDeviation += Number;
+					SpotPointerHOST += Number;
+				}
+			}
+			SpotNumber += StaticSpotDeviation;
+		}
+		else {
+			SpotNumber += StaticSpotDeviation;
 			SpotPointerHOST += SpotNumber;
 		}
 		//动态

@@ -490,17 +490,6 @@ namespace GAME {
 		return true;
 	}
 
-	bool Labyrinth::GetPixelWallNumber(int x, int y) {
-		x += mOriginX;
-		y += mOriginY;
-		if (GetPixelLegitimate(x,y)) {
-			return PixelWallNumber[x][y] <= 0;
-		}
-		else {
-			return false;
-		}
-	}
-
 	void Labyrinth::PixelWallNumberCalculate(int x, int y) {
 		for (int ix = -9; ix < 10; ++ix)
 		{

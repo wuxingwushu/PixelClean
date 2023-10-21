@@ -16,24 +16,6 @@ namespace GAME {
 			abort();
 	}
 
-	glm::vec3 get_ray_direction(int mouse_x, int mouse_y, int screen_width, int screen_height, glm::mat4 view_matrix, glm::mat4 projection_matrix) {
-		// 计算归一化设备坐标
-		float x = (2.0f * mouse_x) / screen_width - 1.0f;
-		float y = 1.0f - (2.0f * mouse_y) / screen_height;
-
-		// 计算齐次裁剪坐标
-		glm::vec4 clip_coords(x, y, -1.0f, 1.0f);
-
-		// 转换到相机坐标系下
-		glm::vec4 eye_coords = glm::inverse(projection_matrix) * clip_coords;
-		eye_coords = glm::vec4(eye_coords.x, eye_coords.y, -1.0f, 0.0f);
-
-		// 转换到世界坐标系下
-		glm::vec4 world_coords = glm::inverse(view_matrix) * eye_coords;
-		glm::vec3 ray_direction = glm::normalize(glm::vec3(world_coords));
-		return ray_direction;
-	}
-
 	Application::Application() {
 	}
 
@@ -61,29 +43,12 @@ namespace GAME {
 
 	//相机的鼠标事件
 	void Application::onMouseMove(double xpos, double ypos) {
-		mCamera.onMouseMove(xpos, ypos);
+		mGameMods->MouseMove(xpos, ypos);
 	}
 
 	//相机的键盘事件
 	void Application::onKeyDown(CAMERA_MOVE moveDirection) {
-		int lidaxiao = 100;
-		switch (moveDirection)
-		{
-		case CAMERA_MOVE::MOVE_LEFT:
-			PlayerForce.x -= lidaxiao;
-			break;
-		case CAMERA_MOVE::MOVE_RIGHT:
-			PlayerForce.x += lidaxiao;
-			break;
-		case CAMERA_MOVE::MOVE_FRONT:
-			PlayerForce.y += lidaxiao;
-			break;
-		case CAMERA_MOVE::MOVE_BACK:
-			PlayerForce.y -= lidaxiao;
-			break;
-		default:
-			break;
-		}
+		mGameMods->KeyDown(moveDirection);
 	}
 
 
@@ -92,13 +57,10 @@ namespace GAME {
 		//mWindow = new VulKan::Window(mWidth, mHeight, false, false);
 		//mWindow->setApp(shared_from_this());//把 application 本体指针传给 Window ，便于调用 Camera
 		//设置摄像机   位置，朝向（后面两个 vec3 来决定）
-		mCamera.lookAt(glm::vec3(20.0f, 20.0f, 400.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mCamera = new Camera();
+		mCamera->lookAt(glm::vec3(20.0f, 20.0f, 400.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		//设置Perpective
-		mCamera.setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
-		//设置摄像机移动速度
-		mCamera.setSpeed(0.5f);
-		mCamera.setSpeedX(0.5f);
-		mCamera.setSpeedY(0.5f);
+		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
 	}
 
 	//初始化Vulkan
@@ -131,6 +93,8 @@ namespace GAME {
 			mCommandBuffers[i] = new VulKan::CommandBuffer(mDevice, mCommandPool);//创建主指令缓存
 			Global::MainCommandBufferS[i] = true;
 		}
+
+		wThreadCommandBufferS = &ThreadCommandBufferS;
 
 		createSyncObjects();//创建信号量（用于渲染同步）
 	}
@@ -206,8 +170,8 @@ namespace GAME {
 	}
 
 	void Application::LoadingGame() {
-		float mGamePlayerPosX = mCamera.getCameraPos().x;
-		float mGamePlayerPosY = mCamera.getCameraPos().y;
+		float mGamePlayerPosX = mCamera->getCameraPos().x;
+		float mGamePlayerPosY = mCamera->getCameraPos().y;
 
 		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
 		mAuxiliaryVision->initUniformManager(
@@ -242,7 +206,7 @@ namespace GAME {
 		else {
 			mGamePlayerPosX = -160;
 			mGamePlayerPosY = 0;
-			mDungeon = new Dungeon(mDevice, 100, 60, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
+			mDungeon = new Dungeon(mDevice, 50, 30, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
 			mDungeon->initUniformManager(
 				mSwapChain->getImageCount(),
 				mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
@@ -569,9 +533,9 @@ namespace GAME {
 		mImGuuiRenderPass->~RenderPass();
 		createRenderPass();
 		mSwapChain->createFrameBuffers(mRenderPass);
-		//InterFace->~ImGuiInterFace();
 		//InterFace->StructureImGuiInterFace();
-		mCamera.setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
+		//InterFace->~ImGuiInterFace();
+		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
 		mPipelineS->ReconfigurationPipelineS();
 
 		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
@@ -579,9 +543,9 @@ namespace GAME {
 			Global::MainCommandBufferS[i] = true;
 		}
 
-		if (mGamePlayer != nullptr) {
+		if (mGameMods != nullptr) {
 			//mGIF->UpDataCommandBuffer();
-			mAuxiliaryVision->initCommandBuffer();
+			/*mAuxiliaryVision->initCommandBuffer();
 			mGamePlayer->InitCommandBuffer();
 			mCrowd->ReconfigurationCommandBuffer();
 			mVisualEffect->initCommandBuffer();
@@ -589,8 +553,8 @@ namespace GAME {
 				mLabyrinth->ThreadUpdateCommandBuffer();
 			}else {
 				mDungeon->initCommandBuffer();
-			}
-			
+			}*/
+			mGameMods->GameRecordCommandBuffers();
 		}
 		
 
@@ -611,12 +575,15 @@ namespace GAME {
 				
 				if (Global::GameResourceLoadingBool) {
 					Global::GameResourceLoadingBool = false;
-					LoadingGame();
+					//LoadingGame();
+					mGameMods = new UnlimitednessMap(*this);
 				}
 
 				if (Global::GameResourceUninstallBool) {
 					Global::GameResourceUninstallBool = false;
-					UninstallGame();
+					//UninstallGame();
+					delete mGameMods;
+					mGameMods = nullptr;
 				}
 
 				if (InterFace->GetInterfaceIndexes() == InterFaceEnum_::ViceInterface_Enum && Global::MultiplePeopleMode && !Global::ServerOrClient) {
@@ -626,6 +593,7 @@ namespace GAME {
 			else {
 				TOOL::mTimer->StartTiming(u8"游戏逻辑 ", true);
 				mWindow->processEvent();//监听键盘
+				mGameMods->GameLoop(mCurrentFrame);
 				GameLoop();
 				TOOL::mTimer->StartEnd();
 
@@ -658,230 +626,230 @@ namespace GAME {
 	}
 
 	void Application::GameLoop() {
-		if(Global::MultiplePeopleMode && !Global::ServerOrClient)
-		{
-			mCrowd->NPCTimeoutDetection();
-		}
-		else
-		{
-			mCrowd->NPCEvent(mCurrentFrame, TOOL::FPStime);
-		}
-		
-		Global::GamePlayerX = mGamePlayer->GetObjectCollision()->GetPosX();
-		Global::GamePlayerY = mGamePlayer->GetObjectCollision()->GetPosY();
+		//if(Global::MultiplePeopleMode && !Global::ServerOrClient)
+		//{
+		//	mCrowd->NPCTimeoutDetection();
+		//}
+		//else
+		//{
+		//	mCrowd->NPCEvent(mCurrentFrame, TOOL::FPStime);
+		//}
+		//
+		//Global::GamePlayerX = mGamePlayer->GetObjectCollision()->GetPosX();
+		//Global::GamePlayerY = mGamePlayer->GetObjectCollision()->GetPosY();
 
 		int winwidth, winheight;
 		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
-		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
-		m_angle = std::atan2((winwidth / 2) - CursorPosX, (winheight / 2) - CursorPosY) + 1.57f;//获取角度
+		//glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
+		//m_angle = std::atan2((winwidth / 2) - CursorPosX, (winheight / 2) - CursorPosY) + 1.57f;//获取角度
 
-		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera.getViewMatrix(), mCamera.getProjectMatrix());
-		huoqdedian *= -mCamera.getCameraPos().z / huoqdedian.z;
-		huoqdedian.x += mCamera.getCameraPos().x;
-		huoqdedian.y += mCamera.getCameraPos().y;
+		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
+		huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
+		huoqdedian.x += mCamera->getCameraPos().x;
+		huoqdedian.y += mCamera->getCameraPos().y;
 
-		mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16 + 8, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16 + 8, 0, mCurrentFrame);
+		//mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16 + 8, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16 + 8, 0, mCurrentFrame);
 
 
-		mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle);//设置玩家物理角度
-		mGamePlayer->GetObjectCollision()->SufferForce(PlayerForce);//设置玩家受力
-		mAuxiliaryVision->Begin();
-		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
-		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
-		TOOL::mTimer->StartEnd();
+		//mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle);//设置玩家物理角度
+		//mGamePlayer->GetObjectCollision()->SufferForce(PlayerForce);//设置玩家受力
+		//mAuxiliaryVision->Begin();
+		//TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
+		//mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
+		//TOOL::mTimer->StartEnd();
 
-		
+		//
 
-		m_angle = mGamePlayer->GetObjectCollision()->GetAngleFloat();
+		//m_angle = mGamePlayer->GetObjectCollision()->GetAngleFloat();
 
-		mGamePlayer->UpData();//更新玩家伤痕
-		mCamera.setCameraPos(mGamePlayer->GetObjectCollision()->GetPos());
+		//mGamePlayer->UpData();//更新玩家伤痕
+		//mCamera.setCameraPos(mGamePlayer->GetObjectCollision()->GetPos());//设置玩家位置
 
-		mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);
+		//mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);
 
-		mVPMatrices.mViewMatrix = mCamera.getViewMatrix();//获取ViewMatrix数据
-		mVPMatrices.mProjectionMatrix = mCamera.getProjectMatrix();//获取ProjectionMatrix数据
-		mCameraVPMatricesBuffer[mCurrentFrame]->updateBufferByMap((void*)(&mVPMatrices), sizeof(VPMatrices));//更新Camera变换矩阵
+		//mVPMatrices.mViewMatrix = mCamera.getViewMatrix();//获取ViewMatrix数据
+		//mVPMatrices.mProjectionMatrix = mCamera.getProjectMatrix();//获取ProjectionMatrix数据
+		//mCameraVPMatricesBuffer[mCurrentFrame]->updateBufferByMap((void*)(&mVPMatrices), sizeof(VPMatrices));//更新Camera变换矩阵
 
-		
-		
-		mGamePlayer->setGamePlayerMatrix(TOOL::FPStime, mCurrentFrame);
+		//
+		//
+		//mGamePlayer->setGamePlayerMatrix(TOOL::FPStime, mCurrentFrame);
 
-		static double ArmsContinuityFire = 0;
-		ArmsContinuityFire += TOOL::FPStime;
-		static int zuojian;
-		static SquarePhysics::ObjectSufferForce LSObjectDecorator{ nullptr, {0,0} };
-		int Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-		if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || ((ArmsContinuityFire > mArms->IntervalTime) && LSObjectDecorator.Object == nullptr)))
-		{
-			ArmsContinuityFire = 0;
-			LSObjectDecorator = mSquarePhysics->GetGoods({ huoqdedian.x, huoqdedian.y });
-			if (LSObjectDecorator.Object == nullptr)
-			{
-				glm::dvec2 Armsdain = SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle);
-				mArms->Shoot(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
-				if (Global::MultiplePeopleMode) {//是否为多人模式
-					if (Global::ServerOrClient) {//服务器还是客户端
-						RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
-						BufferEventSingleData* LBufferEventSingleData;
-						for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); ++i)
-						{
-							LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
-							LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
-						}
-					}
-					else {
-						client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
-					}
-				}
-			}
-		}
-		zuojian = Lzuojian;
+		//static double ArmsContinuityFire = 0;
+		//ArmsContinuityFire += TOOL::FPStime;
+		//static int zuojian;
+		//static SquarePhysics::ObjectSufferForce LSObjectDecorator{ nullptr, {0,0} };
+		//int Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+		//if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || ((ArmsContinuityFire > mArms->IntervalTime) && LSObjectDecorator.Object == nullptr)))
+		//{
+		//	ArmsContinuityFire = 0;
+		//	LSObjectDecorator = mSquarePhysics->GetGoods({ huoqdedian.x, huoqdedian.y });
+		//	if (LSObjectDecorator.Object == nullptr)
+		//	{
+		//		glm::dvec2 Armsdain = SquarePhysics::vec2angle(glm::dvec2{ 9.0f, 0.0f }, m_angle);
+		//		mArms->Shoot(mCamera.getCameraPos().x + Armsdain.x, mCamera.getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
+		//		if (Global::MultiplePeopleMode) {//是否为多人模式
+		//			if (Global::ServerOrClient) {//服务器还是客户端
+		//				RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
+		//				BufferEventSingleData* LBufferEventSingleData;
+		//				for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); ++i)
+		//				{
+		//					LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
+		//					LBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
+		//				}
+		//			}
+		//			else {
+		//				client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->add({ float(mCamera.getCameraPos().x + Armsdain.x), float(mCamera.getCameraPos().y + Armsdain.y), m_angle, AttackType });
+		//			}
+		//		}
+		//	}
+		//}
+		//zuojian = Lzuojian;
 
-		//是否有受力对象
-		if (LSObjectDecorator.Object != nullptr) {
-			glm::vec2 LSArmOfForce = SquarePhysics::vec2angle(LSObjectDecorator.ArmOfForce, LSObjectDecorator.Object->GetAngle());
-			LSObjectDecorator.Object->ForceSolution(
-				LSArmOfForce,
-				glm::vec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) },
-				TOOL::FPStime
-			);
-			mAuxiliaryVision->Line(
-				{ LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0 },
-				{ 1.0f, 0, 0, 1.0f },
-				{ huoqdedian.x, huoqdedian.y, 0 },
-				{ 0, 1.0f, 0, 1.0f }
-			);
-			mAuxiliaryVision->Spot(
-				{ LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0 },
-				{ 0, 0, 1.0f, 1.0f }
-			);
-			mVisualEffect->SetPosAngle(LSObjectDecorator.Object->GetPosX(), LSObjectDecorator.Object->GetPosY(), 0, LSObjectDecorator.Object->GetAngleFloat(), mCurrentFrame);
-			if (Lzuojian != GLFW_PRESS) {
-				LSObjectDecorator.Object = nullptr;
-			}
-		}
+		////是否有受力对象
+		//if (LSObjectDecorator.Object != nullptr) {
+		//	glm::vec2 LSArmOfForce = SquarePhysics::vec2angle(LSObjectDecorator.ArmOfForce, LSObjectDecorator.Object->GetAngle());
+		//	LSObjectDecorator.Object->ForceSolution(
+		//		LSArmOfForce,
+		//		glm::vec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) },
+		//		TOOL::FPStime
+		//	);
+		//	mAuxiliaryVision->Line(
+		//		{ LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0 },
+		//		{ 1.0f, 0, 0, 1.0f },
+		//		{ huoqdedian.x, huoqdedian.y, 0 },
+		//		{ 0, 1.0f, 0, 1.0f }
+		//	);
+		//	mAuxiliaryVision->Spot(
+		//		{ LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0 },
+		//		{ 0, 0, 1.0f, 1.0f }
+		//	);
+		//	mVisualEffect->SetPosAngle(LSObjectDecorator.Object->GetPosX(), LSObjectDecorator.Object->GetPosY(), 0, LSObjectDecorator.Object->GetAngleFloat(), mCurrentFrame);
+		//	if (Lzuojian != GLFW_PRESS) {
+		//		LSObjectDecorator.Object = nullptr;
+		//	}
+		//}
 
-		static glm::ivec2 beang{ 0 }, end{ 0 };
-		static std::vector<JPSVec2> JPSPath;
-		static std::vector<AStarVec2> AStarPath;
-		//点击左键
-		if (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-			beang = { huoqdedian.x, huoqdedian.y };
-			//int xpiany = (mDungeon->mMoveTerrain->OriginX - mDungeon->mMoveTerrain->GetGridSPosX()) * 16;
-			//int ypiany = (mDungeon->mMoveTerrain->OriginY - mDungeon->mMoveTerrain->GetGridSPosY()) * 16;
-			//std::cout << beang.x + xpiany << " - " << beang.y + xpiany << std::endl;
-		}
-		//点击右键
-		static int fangzhifanfuvhufa;
-		int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
-		if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan) {
-			end = { huoqdedian.x, huoqdedian.y };
+		//static glm::ivec2 beang{ 0 }, end{ 0 };
+		//static std::vector<JPSVec2> JPSPath;
+		//static std::vector<AStarVec2> AStarPath;
+		////点击左键
+		//if (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+		//	beang = { huoqdedian.x, huoqdedian.y };
+		//	//int xpiany = (mDungeon->mMoveTerrain->OriginX - mDungeon->mMoveTerrain->GetGridSPosX()) * 16;
+		//	//int ypiany = (mDungeon->mMoveTerrain->OriginY - mDungeon->mMoveTerrain->GetGridSPosY()) * 16;
+		//	//std::cout << beang.x + xpiany << " - " << beang.y + xpiany << std::endl;
+		//}
+		////点击右键
+		//static int fangzhifanfuvhufa;
+		//int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+		//if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan) {
+		//	end = { huoqdedian.x, huoqdedian.y };
+		//	//mGamePlayer->GetObjectCollision()->SetPos(mGamePlayer->GetObjectCollision()->GetPos() + glm::vec2{ 16 , -16});
+		//	AStarPath.clear();
+		//	JPSPath.clear();
+		//	if (Global::GameMode) {
+		//		TOOL::mTimer->MomentTiming("AStar寻路耗时");
+		//		AStarPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &AStarPath);
+		//		TOOL::mTimer->MomentEnd();
+		//		TOOL::mTimer->MomentTiming("JPS寻路耗时");
+		//		JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath);
+		//		TOOL::mTimer->MomentEnd();
+		//	}
+		//	else {
+		//		TOOL::mTimer->MomentTiming("AStar寻路耗时");
+		//		AStarPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &AStarPath, { mDungeon->PathfindingDecoratorDeviationX, mDungeon->PathfindingDecoratorDeviationY });
+		//		TOOL::mTimer->MomentEnd();
+		//		TOOL::mTimer->MomentTiming("JPS寻路耗时");
+		//		JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath, { mDungeon->PathfindingDecoratorDeviationX, mDungeon->PathfindingDecoratorDeviationY });
+		//		TOOL::mTimer->MomentEnd();
+		//	}
+		//	VulKan::StaticAuxiliaryData* PA = mAuxiliaryVision->GetContinuousStaticSpot()->Get(&AStarPath);
+		//	PA->Size = AStarPath.size();
+		//	PA->Pointer = &AStarPath;
+		//	PA->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
+		//		std::vector<AStarVec2>* DataP = (std::vector<AStarVec2>*)D;
+		//		for (auto& i : *DataP)
+		//		{
+		//			P->Pos = { i.x, i.y, 0 };
+		//			P->Color = { 0, 1.0f, 0, 1.0f };
+		//			++P;
+		//		}
+		//		return DataP->size();
+		//		};
+		//	mAuxiliaryVision->OpenStaticSpotUpData();
 
-			AStarPath.clear();
-			JPSPath.clear();
-			if (Global::GameMode) {
-				TOOL::mTimer->MomentTiming("AStar寻路耗时");
-				AStarPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &AStarPath);
-				TOOL::mTimer->MomentEnd();
-				TOOL::mTimer->MomentTiming("JPS寻路耗时");
-				JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath);
-				TOOL::mTimer->MomentEnd();
-			}
-			else {
-				TOOL::mTimer->MomentTiming("AStar寻路耗时");
-				AStarPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &AStarPath, { mDungeon->PathfindingDecoratorDeviationX, mDungeon->PathfindingDecoratorDeviationY });
-				TOOL::mTimer->MomentEnd();
-				TOOL::mTimer->MomentTiming("JPS寻路耗时");
-				JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath, { mDungeon->PathfindingDecoratorDeviationX, mDungeon->PathfindingDecoratorDeviationY });
-				TOOL::mTimer->MomentEnd();
-			}
-			VulKan::StaticAuxiliaryData* PA = mAuxiliaryVision->GetContinuousStaticSpot()->Get(&AStarPath);
-			PA->Size = AStarPath.size();
-			PA->Pointer = &AStarPath;
-			PA->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
-				std::vector<AStarVec2>* DataP = (std::vector<AStarVec2>*)D;
-				for (auto& i : *DataP)
-				{
-					P->Pos = { i.x, i.y, 0 };
-					P->Color = { 0, 1.0f, 0, 1.0f };
-					++P;
-				}
-				return DataP->size();
-				};
-			mAuxiliaryVision->OpenStaticSpotUpData();
+		//	VulKan::StaticAuxiliaryData* P = mAuxiliaryVision->GetContinuousStaticLine()->Get(&JPSPath);
+		//	P->Size = JPSPath.size();
+		//	P->Pointer = &JPSPath;
+		//	P->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
+		//		std::vector<JPSVec2>* DataP = (std::vector<JPSVec2>*)D;
+		//		for (auto& i : *DataP)
+		//		{
+		//			if ((i != (*DataP)[0]) && (i != DataP->back())) {
+		//				P->Pos = { i.x, i.y, 0 };
+		//				P->Color = { 0, 0, 1.0f, 1.0f };
+		//				++P;
+		//			}
+		//			P->Pos = { i.x, i.y, 0 };
+		//			P->Color = { 0, 0, 1.0f, 1.0f };
+		//			++P;
+		//		}
+		//		return (DataP->size() * 2) - 2;
+		//		};
+		//	mAuxiliaryVision->OpenStaticLineUpData();
+		//}
+		//fangzhifanfuvhufa = Leftan;
+		//mAuxiliaryVision->Spot(
+		//	{ beang, 0 },
+		//	{ 0, 1.0f, 0, 1.0f }
+		//);
+		//mAuxiliaryVision->Spot(
+		//	{ end, 0 },
+		//	{ 1.0f, 0, 0, 1.0f }
+		//);
+		//
+		//mArms->BulletsEvent();
+		//
+		//mCrowd->TimeoutDetection();//检测玩家更新情况
+		//
 
-			VulKan::StaticAuxiliaryData* P = mAuxiliaryVision->GetContinuousStaticLine()->Get(&JPSPath);
-			P->Size = JPSPath.size();
-			P->Pointer = &JPSPath;
-			P->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
-				std::vector<JPSVec2>* DataP = (std::vector<JPSVec2>*)D;
-				for (auto& i : *DataP)
-				{
-					if ((i != (*DataP)[0]) && (i != DataP->back())) {
-						P->Pos = { i.x, i.y, 0 };
-						P->Color = { 0, 0, 1.0f, 1.0f };
-						++P;
-					}
-					P->Pos = { i.x, i.y, 0 };
-					P->Color = { 0, 0, 1.0f, 1.0f };
-					++P;
-				}
-				return (DataP->size() * 2) - 2;
-				};
-			mAuxiliaryVision->OpenStaticLineUpData();
-		}
-		fangzhifanfuvhufa = Leftan;
-		mAuxiliaryVision->Spot(
-			{ beang, 0 },
-			{ 0, 1.0f, 0, 1.0f }
-		);
-		mAuxiliaryVision->Spot(
-			{ end, 0 },
-			{ 1.0f, 0, 0, 1.0f }
-		);
-		
-		mArms->BulletsEvent();
-		
-		mCrowd->TimeoutDetection();//检测玩家更新情况
-		
+		//static double MistContinuityFire = 0;
+		//if (Global::GameMode) {
+		//	mLabyrinth->UpDateMaps();
 
-		static double MistContinuityFire = 0;
-		if (Global::GameMode) {
-			mLabyrinth->UpDateMaps();
+		//	//战争迷雾
+		//	TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
+		//	MistContinuityFire += TOOL::FPStime;
+		//	if (MistContinuityFire > 0.02f && Global::MistSwitch) {
+		//		MistContinuityFire = 0;
+		//		mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
+		//	}
+		//	TOOL::mTimer->StartEnd();
+		//}
+		//else {
+		//	static float UpDataGIFTime = 0;
+		//	UpDataGIFTime += TOOL::FPStime;
+		//	if (UpDataGIFTime > 0.1f) {
+		//		UpDataGIFTime = 0;
+		//		mDungeon->UpDataGIF();
+		//	}
+		//	MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
+		//	if (LMovePlateInfo.UpData) {
+		//		mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);
+		//		Global::MainCommandBufferUpdateRequest();
+		//	}
+		//	//战争迷雾
+		//	TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
+		//	MistContinuityFire += TOOL::FPStime;
+		//	if (MistContinuityFire > 0.02f && Global::MistSwitch) {
+		//		MistContinuityFire = 0;
+		//		mDungeon->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
+		//	}
+		//	TOOL::mTimer->StartEnd();
+		//}
 
-			//战争迷雾
-			TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
-			MistContinuityFire += TOOL::FPStime;
-			if (MistContinuityFire > 0.02f && Global::MistSwitch) {
-				MistContinuityFire = 0;
-				mLabyrinth->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
-			}
-			TOOL::mTimer->StartEnd();
-		}
-		else {
-			static float UpDataGIFTime = 0;
-			UpDataGIFTime += TOOL::FPStime;
-			if (UpDataGIFTime > 0.1f) {
-				UpDataGIFTime = 0;
-				mDungeon->UpDataGIF();
-			}
-			MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
-			if (LMovePlateInfo.UpData) {
-				mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);
-				Global::MainCommandBufferUpdateRequest();
-			}
-			//战争迷雾
-			TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
-			MistContinuityFire += TOOL::FPStime;
-			if (MistContinuityFire > 0.02f && Global::MistSwitch) {
-				MistContinuityFire = 0;
-				mDungeon->UpdataMist(int(mCamera.getCameraPos().x), int(mCamera.getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
-			}
-			TOOL::mTimer->StartEnd();
-		}
-
-		mAuxiliaryVision->End();
+		//mAuxiliaryVision->End();
 
 		//ImGui显示录制
 		if (Global::Monitor) {
@@ -893,11 +861,11 @@ namespace GAME {
 			
 			ImGui::Begin(u8"监视器 ");
 			ImGui::SetWindowPos(ImVec2(0, 0));
-			ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera.getCameraPos().x, mCamera.getCameraPos().y, mCamera.getCameraPos().z);
+			ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera->getCameraPos().x, mCamera->getCameraPos().y, mCamera->getCameraPos().z);
 			ImGui::Text(u8"鼠标角度：%10.3f", m_angle * 180 / M_PI);
 			ImGui::Text(u8"鼠标获取位置：%10.3f - %10.3f - %10.3f", huoqdedian.x, huoqdedian.y, huoqdedian.z);
 			ImGui::Text(u8"攻击模式：%d (1 / 2 上下切换) ", AttackType);
-			ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->GetObjectCollision()->GetSpeed().x, mGamePlayer->GetObjectCollision()->GetSpeed().y);
+			//ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->GetObjectCollision()->GetSpeed().x, mGamePlayer->GetObjectCollision()->GetSpeed().y);
 			ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
 			if (Global::MultiplePeopleMode) {
 				if (Global::ServerOrClient) {
@@ -933,27 +901,27 @@ namespace GAME {
 
 	void Application::GameCommandBuffers(unsigned int Format_i, VkCommandBufferInheritanceInfo info) {
 		
+		mGameMods->GameCommandBuffers(Format_i);
+		//if (Global::GameMode) { mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i); }
+		//else { 
+		//	mDungeon->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
+		//	mDungeon->GetGIFCommandBuffer(&ThreadCommandBufferS, Format_i);
+		//}
 
-		if (Global::GameMode) { mLabyrinth->GetCommandBuffer(&ThreadCommandBufferS, Format_i); }
-		else { 
-			mDungeon->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
-			mDungeon->GetGIFCommandBuffer(&ThreadCommandBufferS, Format_i);
-		}
+		//mParticleSystem->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
+		////加到显示数组中
+		//mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
 
-		mParticleSystem->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
-		//加到显示数组中
-		mCrowd->GetCommandBufferS(&ThreadCommandBufferS, Format_i);
+		//if (Global::MistSwitch) {
+		//	if (Global::GameMode) { mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i); }
+		//	else { mDungeon->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i); }
+		//}
 
-		if (Global::MistSwitch) {
-			if (Global::GameMode) { mLabyrinth->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i); }
-			else { mDungeon->GetMistCommandBuffer(&ThreadCommandBufferS, Format_i); }
-		}
+		//if (!Global::GameMode) mVisualEffect->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 
-		if (!Global::GameMode) mVisualEffect->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
+		//ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
 
-		ThreadCommandBufferS.push_back(mGamePlayer->getCommandBuffer(Format_i));
-
-		mAuxiliaryVision->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
+		//mAuxiliaryVision->GetCommandBuffer(&ThreadCommandBufferS, Format_i);
 	}
 
 	void Application::Render() {

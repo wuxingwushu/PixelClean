@@ -165,7 +165,7 @@ namespace SquarePhysics {
 			);
 			if (LCollisionInfo.Collision) {//是否碰撞
 				LPixel->SetPos(LCollisionInfo.Pos);//设置为碰撞位置
-				if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LPixel, mTerrain, nullptr)) {
+				if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LCollisionInfo.NormalAngle, LPixel, mTerrain, nullptr)) {
 					LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
 					mPixelCollisionS->Delete(i);//销毁对应的像素
 					--i;//因为销毁了，I--，这样就不会少遍历对应的像素事件
@@ -185,7 +185,7 @@ namespace SquarePhysics {
 						LPixel->GetSpeedAngle() * (LPixel->GetSpeedFloat() * LPixel->GetQuality()),//力
 						TimeStep
 					);
-					if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, true, LPixel, LObject, nullptr)) {
+					if (LPixel->DestroyModeCallback(LCollisionInfo.Pos.x, LCollisionInfo.Pos.y, LCollisionInfo.NormalAngle, true, LPixel, LObject, nullptr)) {
 						LPixel->CollisionCallback(LPixel);//调用像素销毁回调函数
 						mPixelCollisionS->Delete(i);//销毁对应的像素
 						LObject->OutlineCalculate();//重新生成碰撞骨骼点

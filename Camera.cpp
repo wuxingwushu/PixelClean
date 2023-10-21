@@ -1,5 +1,24 @@
 #include "Camera.h"
 
+glm::vec3 get_ray_direction(int mouse_x, int mouse_y, int screen_width, int screen_height, glm::mat4 view_matrix, glm::mat4 projection_matrix) {
+	// 计算归一化设备坐标
+	float x = (2.0f * mouse_x) / screen_width - 1.0f;
+	float y = 1.0f - (2.0f * mouse_y) / screen_height;
+
+	// 计算齐次裁剪坐标
+	glm::vec4 clip_coords(x, y, -1.0f, 1.0f);
+
+	// 转换到相机坐标系下
+	glm::vec4 eye_coords = glm::inverse(projection_matrix) * clip_coords;
+	eye_coords = glm::vec4(eye_coords.x, eye_coords.y, -1.0f, 0.0f);
+
+	// 转换到世界坐标系下
+	glm::vec4 world_coords = glm::inverse(view_matrix) * eye_coords;
+	glm::vec3 ray_direction = glm::normalize(glm::vec3(world_coords));
+	return ray_direction;
+}
+
+
 glm::vec3	m_position;
 float		m_angle;
 

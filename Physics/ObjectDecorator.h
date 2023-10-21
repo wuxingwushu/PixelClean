@@ -19,31 +19,32 @@ namespace SquarePhysics {
 
 		}
 		
+		//设置质量
 		void SetQuality(float quality) { mQuality = quality; }
 
-		[[nodiscard]] constexpr float GetQuality() const noexcept { return mQuality; }
+		[[nodiscard]] inline float GetQuality() const noexcept { return mQuality; }
 
 		void SetFrictionCoefficient(float frictionCoefficient) { mFrictionCoefficient = frictionCoefficient; }
 
-		[[nodiscard]] constexpr float GetFrictionCoefficient() const noexcept { return mFrictionCoefficient; }
+		[[nodiscard]] inline float GetFrictionCoefficient() const noexcept { return mFrictionCoefficient; }
 
-		[[nodiscard]] glm::vec2 GetBarycenter() { return mBarycenter; }
+		[[nodiscard]] inline glm::vec2 GetBarycenter() { return mBarycenter; }
 
 
 
 		
-		void SetPosX(float x) { mPos.x = x; }
+		inline void SetPosX(float x) { mPos.x = x; }
 
-		void SetPosY(float y) { mPos.y = y; }
+		inline void SetPosY(float y) { mPos.y = y; }
 
-		void SetPos(glm::vec2 pos) { mPos = pos; }
+		inline void SetPos(glm::vec2 pos) { mPos = pos; }
 
-		[[nodiscard]] float GetPosX() { return mPos.x; }
+		[[nodiscard]] inline float GetPosX() { return mPos.x; }
 
-		[[nodiscard]] float GetPosY() { return mPos.y; }
+		[[nodiscard]] inline float GetPosY() { return mPos.y; }
 
-		[[nodiscard]] constexpr glm::vec2 GetPos() const noexcept { return mPos; }
-		[[nodiscard]] constexpr glm::vec2* GetPosPointer() noexcept { return &mPos; }
+		[[nodiscard]] inline glm::vec2 GetPos() const noexcept { return mPos; }
+		[[nodiscard]] constexpr inline glm::vec2* GetPosPointer() noexcept { return &mPos; }
 
 
 
@@ -52,13 +53,13 @@ namespace SquarePhysics {
 			mAngle = AngleFloatToAngleVec(angle);
 		}
 
-		[[nodiscard]] constexpr float GetAngleX() const noexcept { return mAngle.x; }
+		[[nodiscard]] inline  float GetAngleX() const noexcept { return mAngle.x; }
 
-		[[nodiscard]] constexpr float GetAngleY() const noexcept { return mAngle.y; }
+		[[nodiscard]] inline  float GetAngleY() const noexcept { return mAngle.y; }
 
-		[[nodiscard]] constexpr glm::vec2 GetAngle() const noexcept { return mAngle; }
+		[[nodiscard]] inline  glm::vec2 GetAngle() const noexcept { return mAngle; }
 
-		[[nodiscard]] constexpr float GetAngleFloat() const noexcept { return mAngleFloat; }
+		[[nodiscard]] inline  float GetAngleFloat() const noexcept { return mAngleFloat; }
 
 
 
@@ -99,22 +100,22 @@ namespace SquarePhysics {
 			mForceAngle = AngleFloatToAngleVec(mForceAngleFloat);
 		}
 
-		[[nodiscard]] constexpr float GetForceX() const noexcept { return mForce.x; }
+		[[nodiscard]] inline  float GetForceX() const noexcept { return mForce.x; }
 
-		[[nodiscard]] constexpr float GetForceY() const noexcept { return mForce.y; }
+		[[nodiscard]] inline  float GetForceY() const noexcept { return mForce.y; }
 
-		[[nodiscard]] constexpr float GetForceAngleX() const noexcept { return mForceAngle.x; }
+		[[nodiscard]] inline  float GetForceAngleX() const noexcept { return mForceAngle.x; }
 
-		[[nodiscard]] constexpr float GetForceAngleY() const noexcept { return mForceAngle.y; }
+		[[nodiscard]] inline  float GetForceAngleY() const noexcept { return mForceAngle.y; }
 
-		[[nodiscard]] constexpr glm::vec2 GetForce() const noexcept { return mForce; }
-		[[nodiscard]] constexpr glm::vec2* GetForcePointer() noexcept { return &mForce; }
+		[[nodiscard]] inline  glm::vec2 GetForce() const noexcept { return mForce; }
+		[[nodiscard]] constexpr inline  glm::vec2* GetForcePointer() noexcept { return &mForce; }
 
-		[[nodiscard]] constexpr float GetForceFloat() const noexcept { return mForceFloat; }
+		[[nodiscard]] inline  float GetForceFloat() const noexcept { return mForceFloat; }
 
-		[[nodiscard]] constexpr float GetForceAngleFloat() const noexcept { return mForceAngleFloat; }
+		[[nodiscard]] inline  float GetForceAngleFloat() const noexcept { return mForceAngleFloat; }
 
-		[[nodiscard]] constexpr glm::vec2 GetForceAngle() const noexcept { return mForceAngle; }
+		[[nodiscard]] inline  glm::vec2 GetForceAngle() const noexcept { return mForceAngle; }
 
 
 
@@ -148,33 +149,33 @@ namespace SquarePhysics {
 		}
 
 
-		[[nodiscard]] constexpr float GetSpeedX() const noexcept { return mSpeed.x; }
+		[[nodiscard]] inline float GetSpeedX() const noexcept { return mSpeed.x; }
 
-		[[nodiscard]] constexpr float GetSpeedY() const noexcept { return mSpeed.y; }
+		[[nodiscard]] inline float GetSpeedY() const noexcept { return mSpeed.y; }
 
-		[[nodiscard]] constexpr float GetSpeedAngleX() const noexcept { return mSpeedAngle.x; }
+		[[nodiscard]] inline float GetSpeedAngleX() const noexcept { return mSpeedAngle.x; }
 
-		[[nodiscard]] constexpr float GetSpeedAngleY() const noexcept { return mSpeedAngle.y; }
+		[[nodiscard]] inline float GetSpeedAngleY() const noexcept { return mSpeedAngle.y; }
 
-		[[nodiscard]] constexpr glm::vec2 GetSpeed() const noexcept { return mSpeed; }
-		[[nodiscard]] constexpr glm::vec2* GetSpeedPointer() noexcept { return &mSpeed; }
+		[[nodiscard]] inline glm::vec2 GetSpeed() const noexcept { return mSpeed; }
+		[[nodiscard]] constexpr inline  glm::vec2* GetSpeedPointer() noexcept { return &mSpeed; }
 
-		[[nodiscard]] constexpr float GetSpeedFloat() const noexcept { return mSpeedFloat; }
+		[[nodiscard]] inline float GetSpeedFloat() const noexcept { return mSpeedFloat; }
 
-		[[nodiscard]] constexpr float GetSpeedAngleFloat() const noexcept { return mSpeedAngleFloat; }
+		[[nodiscard]] inline float GetSpeedAngleFloat() const noexcept { return mSpeedAngleFloat; }
 
-		[[nodiscard]] constexpr glm::vec2 GetSpeedAngle() const noexcept { return mSpeedAngle; }
+		[[nodiscard]] inline glm::vec2 GetSpeedAngle() const noexcept { return mSpeedAngle; }
 
 
 
 		//破坏的回调函数
-		void SetDestroyModeCallback(_DestroyModeCallback DestroyModeCallback) {
+		inline void SetDestroyModeCallback(_DestroyModeCallback DestroyModeCallback) {
 			mDestroyModeCallback = DestroyModeCallback;
 		}
 
-		bool DestroyModeCallback(int x, int y, bool Bool, ObjectDecorator* Object, GridDecorator* Grid, void* Data) {
+		bool DestroyModeCallback(int x, int y, bool Bool, float Angle, ObjectDecorator* Object, GridDecorator* Grid, void* Data) {
 			if (mDestroyModeCallback != nullptr) {
-				return mDestroyModeCallback(x, y, Bool, Object, Grid, Data);
+				return mDestroyModeCallback(x, y, Bool, Angle, Object, Grid, Data);
 			}
 		}
 

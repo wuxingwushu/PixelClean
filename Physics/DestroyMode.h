@@ -16,12 +16,12 @@ namespace SquarePhysics {
 
 	_DestroyModeCallback GetDestroyMode(DestroyModeEnum Enum);
 
-	bool DestroyModePixel(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
+	bool DestroyModePixel(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
 
-	bool DestroyModeCross(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
+	bool DestroyModeCross(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
 
-	bool DestroyModeSquare(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
+	bool DestroyModeSquare(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
 
-	bool DestroyModeSquareDA(int x, int y, bool Bool, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
+	bool DestroyModeSquareDA(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data);
 
 }

@@ -18,12 +18,14 @@ namespace SquarePhysics {
 
 	void ObjectCollision::OutlineCalculate() {
 		OutlinePointSize = 0;
+		mQuality = 0;
 		for (size_t x = 0; x < mNumberX; ++x)
 		{
 			for (size_t y = 0; y < mNumberY; ++y)
 			{
 				if (at({x,y})->Collision)
 				{
+					mQuality += 0.01f;
 					OutlinePointJudge(x,y);
 					mBarycenter.x += x;
 					mBarycenter.y += y;
@@ -39,12 +41,14 @@ namespace SquarePhysics {
 	}
 
 	void ObjectCollision::CalculationBarycenter() {
+		mQuality = 0;
 		for (size_t x = 0; x < mNumberX; ++x)
 		{
 			for (size_t y = 0; y < mNumberY; ++y)
 			{
 				if (at({ x,y })->Collision)
 				{
+					mQuality += 0.01f;
 					mBarycenter.x += x;
 					mBarycenter.y += y;
 				}

@@ -38,15 +38,15 @@ namespace GAME {
 
 	void GenerateBlock(SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* mT, int x, int y, void* Data) {
 		GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
-		ObjectUniformGIF LUniform;
+		ObjectUniformGIF* LUniform = (ObjectUniformGIF*)mT->mModel->mBufferS->getupdateBufferByMap();
 		mT->mModel->Type = LDungeon->GetNoise(x, y);
 		if (mT->mModel->Type == 20) {
 			GAME::TextureLibrary::TextureToUVInfo TUinfo = LDungeon->wTextureLibrary->GetTextureUV("004_24");
 			mT->mModel->mGIFDescriptorSet = LDungeon->AddGIF(mT->mModel->mBufferS, TUinfo.mTexture, TUinfo.mUV);
-			LUniform.chuang = 1.0f / TUinfo.X;
+			LUniform->chuang = 1.0f / TUinfo.X;
 		}
-		LUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x * 16, y * 16, 0.0f));//位移矩阵
-		mT->mModel->mBufferS->updateBufferByMap((void*)&LUniform, sizeof(ObjectUniformGIF));
+		LUniform->mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x * 16, y * 16, 0.0f));//位移矩阵
+		mT->mModel->mBufferS->endupdateBufferByMap();
 		bool CollisionBool = false;
 		if (mT->mModel->Type > (TextureNumber / 2)) {
 			CollisionBool = true;
@@ -92,6 +92,7 @@ namespace GAME {
 					LDungeon->LSMistPointer = (unsigned char*)LDungeon->WarfareMist->getHOSTImagePointer();
 					LDungeon->LSPointer = (int*)LDungeon->WallBool->getupdateBufferByMap();
 				}
+				std::cout << x << " - " << y << " - " << mT->mModel->mBufferS << std::endl;
 				LDungeon->MultithreadingGenerate.push_back(TOOL::mThreadPool->enqueue(&GenerateBlock, mT, x, y, Data));
 				LDungeon->MultithreadingPixelTexture.push_back(mT->mModel->mPixelTexture);
 			},
@@ -646,8 +647,17 @@ namespace GAME {
 	}
 
 	void Dungeon::UpdataMistData(int x, int y) {
+		std::cout << "************************************" << std::endl;
 		PathfindingDecoratorDeviationX = (mMoveTerrain->OriginX - mMoveTerrain->GetGridSPosX()) * 16;
 		PathfindingDecoratorDeviationY = (mMoveTerrain->OriginY - mMoveTerrain->GetGridSPosY()) * 16;
+		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
+		{
+			i.wait();
+		}
+		MultithreadingGenerate.clear();//清空
+		mBlockData->WholePop();
+		UpDataGIFCommandBuffer();
+		TOOL::mThreadPool->enqueue(&Dungeon::UpdateAIPathfindingBlock, this, x, y);
 
 		int* Index = (int*)CalculateIndex->getupdateBufferByMap();
 		int A;
@@ -659,19 +669,12 @@ namespace GAME {
 				A = (iy * mNumberX + ix) * 2;
 				info = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel;
 				Index[A] = info->MistPointerY;
-				Index[++A] = info->MistPointerX;
+				++A;
+				Index[A] = info->MistPointerX;
 			}
 		}
 		CalculateIndex->endupdateBufferByMap();
 
-		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
-		{
-			i.wait();
-		}
-		MultithreadingGenerate.clear();//清空
-		mBlockData->WholePop();
-		UpDataGIFCommandBuffer();
-		TOOL::mThreadPool->enqueue(&Dungeon::UpdateAIPathfindingBlock, this, x, y);
 		TOOL::mTimer->MomentTiming(u8"上传图片耗时");
 		//统一上传
 		mCalculate->GetCommandBuffer()->begin();

@@ -109,6 +109,18 @@ namespace VulKan {
 			SpotVertex.push_back({ pos, color });
 		};
 
+		//静态线段（录制外使用）
+		void AddStaticLine(glm::vec3 Vertex1, glm::vec3 Vertex2, glm::vec4 color) {
+			StaticLineVertex.push_back({ Vertex1, color });
+			StaticLineVertex.push_back({ Vertex2, color });
+			StaticLineVertexUpData = true;
+		};
+		//静态点（录制外使用）
+		void AddStaticSpot(glm::vec3 pos, glm::vec4 color) {
+			StaticSpotVertex.push_back({ pos, color });
+			StaticSpotVertexUpData = true;
+		};
+
 		//动态线段
 		auto GetContinuousLine() { return ContinuousAuxiliaryLine; }
 		//动态线段（力）
@@ -133,6 +145,9 @@ namespace VulKan {
 		bool StaticLineUpData = false;//静态线段是否需要更新
 		unsigned int StaticLineDeviation = 0;//静态数据偏移量
 		std::vector<AuxiliarySpot> LineVertex{};//单纯的位置连线（一次性）
+		bool StaticLineVertexUpData = false;//静态线段是否需要更新
+		unsigned int StaticLineVertexDeviation = 0;//静态数据偏移量
+		std::vector<AuxiliarySpot> StaticLineVertex{};//单纯的位置连线（静态）
 		Buffer* AuxiliaryLineS{ nullptr };//线段缓存
 	private://点
 		AuxiliarySpot* SpotPointerHOST = nullptr;
@@ -143,6 +158,9 @@ namespace VulKan {
 		bool StaticSpotUpData = false;//静态点是否需要更新
 		unsigned int StaticSpotDeviation = 0;//静态数据偏移量
 		std::vector<AuxiliarySpot> SpotVertex{};//单纯的位置点（一次性）
+		bool StaticSpotVertexUpData = false;//静态点是否需要更新
+		unsigned int StaticSpotVertexDeviation = 0;//静态数据偏移量
+		std::vector<AuxiliarySpot> StaticSpotVertex{};//单纯的位置点（静态）
 		Buffer* AuxiliarySpotS{ nullptr };//点缓存
 
 	private:

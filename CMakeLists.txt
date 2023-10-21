@@ -19,7 +19,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	message("Debug 模式")
 else()
 	message("Release 模式")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -O2")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 	# o2: 代码编译优化
 	# -Ofast：在进行某些优化时，可能会牺牲一些标准兼容性。
 	# Os: 优化代码大小,尽可能地缩小可执行文件的体积。
@@ -89,6 +89,7 @@ add_subdirectory(Labyrinth)
 add_subdirectory(Arms)
 add_subdirectory(GeneralCalculationGPU)
 add_subdirectory(Opcode)
+add_subdirectory(GameMods)
 add_subdirectory(Tool)#文件夹里面要有代码文件，不可以是空的，会报错
 
 
@@ -119,7 +120,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		ArmsLib
 		GeneralCalculationGPULib
 		OpcodeLib
-	
+		GameModsLib
 	
 		# VulKan API
 		vulkan-1.lib 
@@ -168,6 +169,7 @@ else()
 		ArmsLib
 		GeneralCalculationGPULib
 		OpcodeLib
+		GameModsLib
 	
 		# VulKan API
 		vulkan-1.lib 

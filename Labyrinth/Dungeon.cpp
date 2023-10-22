@@ -492,12 +492,21 @@ namespace GAME {
 		InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 		InheritanceInfo.renderPass = wRenderPass->getRenderPass();
 
-		UpDataGIFCommandBuffer();
-		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
+		BlockData<BlockGifData, BlockCommandBuffer>::BlockDataT** PointerInfo = mBlockData->GetBlockDataS();
+		BlockData<BlockGifData, BlockCommandBuffer>::BlockDataT* Pointer;
+		for (size_t i = 0; i < mBlockData->GetApplyNumber(); i++)
 		{
-			i.wait();
+			Pointer = *PointerInfo;
+			++PointerInfo;
+
+			if (Pointer->mNumber != 0) {
+				MultithreadingGenerate.push_back(TOOL::mThreadPool->enqueue(&Dungeon::GIFCommandBuffer, this, Pointer));
+				Pointer->mHandle->State = GIFCommandBufferState::Enabled;
+			}
+			else {
+				Pointer->mHandle->State = GIFCommandBufferState::NotEnabled;
+			}
 		}
-		MultithreadingGenerate.clear();//清空
 
 		for (size_t i = 0; i < wFrameCount; ++i)
 		{
@@ -531,6 +540,12 @@ namespace GAME {
 			}
 			mMistCommandBuffer[i]->end();
 		}
+
+		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
+		{
+			i.wait();
+		}
+		MultithreadingGenerate.clear();//清空
 	}
 
 	void Dungeon::Destroy(int x, int y, bool Bool) {

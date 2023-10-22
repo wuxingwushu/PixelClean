@@ -4,14 +4,13 @@
 
 #include "SoundEffect/SoundEffect.h"
 
-#include "ImGui/Interface.h"
-
 #include "Labyrinth/Labyrinth.h"
 
 #include "Labyrinth/Dungeon.h"
 
 #include "GameMods/Configuration.h"
-#include "GameMods/UnlimitednessMap.h"
+#include "GameMods/UnlimitednessMapMods.h"
+#include "GameMods/MazeMods.h"
 
 namespace GAME {
 	class Application : public Configuration {
@@ -22,15 +21,9 @@ namespace GAME {
 
 		//总初始化
 		void run(VulKan::Window* w);
-		//鼠标事件
-		void onMouseMove(double xpos, double ypos);
-		//键盘事件
-		void onKeyDown(CAMERA_MOVE moveDirection);
 
-		//鼠标滚轮事件
-		void SetCameraZ(int z) {
-			mGameMods->MouseRoller(z);
-		}
+		//获取对于游戏
+		GameMods* GetGame(GameModsEnum Game);
 
 		//重建交换链:  当窗口大小发生变化的时候，交换链也要发生变化，Frame View Pipeline RenderPass Sync
 		void recreateSwapChain();
@@ -52,15 +45,8 @@ namespace GAME {
 		void mainLoop();
 
 		/*************************************************************************************/
-		//加载游戏内容
-		void LoadingGame();
-		//卸载游戏内容
-		void UninstallGame();
-
-
 		//游戏循环事件
 		void GameLoop();
-		void GameCommandBuffers(unsigned int Format_i, VkCommandBufferInheritanceInfo info);
 		/*************************************************************************************/
 
 		//渲染一帧画面
@@ -70,8 +56,6 @@ namespace GAME {
 		void cleanUp();
 
 	private:
-
-
 		//创建渲染管线
 		void createPipeline();
 		//设置GPU画布
@@ -96,17 +80,6 @@ namespace GAME {
 
 		std::vector<VkCommandBuffer> ThreadCommandBufferS;//把录制好的二级指令存放在数组中统一绑定在主指令缓存中
 		int mCurrentFrame{ 0 };//当前是渲染哪一张GPU画布
-	private:
-		Labyrinth* mLabyrinth = nullptr;//迷宫
-	public:
-		ImGuiInterFace* InterFace = nullptr; // ImGui 游戏界面都写这里面
-
-
-		//测试
-		//GifPipeline* mGifPipeline = nullptr;//GIF渲染管线
-		//GIF* mGIF = nullptr;//GIF
-		Dungeon* mDungeon = nullptr;//无限地图
-
 		
 		GameMods* mGameMods = nullptr;
 	};

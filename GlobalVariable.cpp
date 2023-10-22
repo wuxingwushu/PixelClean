@@ -1,6 +1,7 @@
 #include "GlobalVariable.h"
 #include "ini.h"
 #include "FilePath.h"
+#include "GameMods/GameMods.h"
 
 namespace Global {
 	/*  测试  */
@@ -14,7 +15,7 @@ namespace Global {
 	bool GameResourceLoadingBool = false;
 	bool GameResourceUninstallBool = false;
 
-	bool GameMode;
+	GameModsEnum GameMode;
 
 	/*  测试  */
 
@@ -29,7 +30,7 @@ namespace Global {
 	}
 
 	bool MultiplePeopleMode = false;
-	bool ServerOrClient;
+	bool ServerOrClient = true;
 
 	/***************************	INI	***************************/
 	void Read() {

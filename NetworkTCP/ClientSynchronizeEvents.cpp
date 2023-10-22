@@ -24,7 +24,7 @@ void CGamePlayerSynchronize(bufferevent* be, void* Data) {
 
 		LPlayer->GetObjectCollision()->SetAngle(LData[i].ang);
 		LPlayer->GetObjectCollision()->SetPos({ LData[i].X, LData[i].Y });
-		LPlayer->setGamePlayerMatrix(3, true);
+		LPlayer->setGamePlayerMatrix(TOOL::FPStime, 3, true);
 	}
 	client::GetClient()->GetClientData()->TimeoutDetection();
 }

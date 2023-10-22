@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 
 	VulKan::Window* mWin = new VulKan::Window(Global::mWidth, Global::mHeight, false, Global::FullScreen);
 
-	mWin->setApp(app);
+	//mWin->setApp(app);
 
 	try {
 		app->run(mWin);

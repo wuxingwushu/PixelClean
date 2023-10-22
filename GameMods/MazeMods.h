@@ -1,15 +1,15 @@
 #pragma once
 #include "Configuration.h"
 #include "GameMods.h"
-#include "../Labyrinth/Dungeon.h"
+#include "../Labyrinth/Labyrinth.h"
 
 namespace GAME {
 
-	class UnlimitednessMap : public GameMods, Configuration
+	class MazeMods : public GameMods, Configuration
 	{
 	public:
-		UnlimitednessMap(Configuration wConfiguration);
-		~UnlimitednessMap();
+		MazeMods(Configuration wConfiguration);
+		~MazeMods();
 
 		//鼠标移动事件
 		virtual void MouseMove(double xpos, double ypos);
@@ -18,7 +18,7 @@ namespace GAME {
 		virtual void MouseRoller(int z);
 
 		//键盘事件
-		virtual void KeyDown(CAMERA_MOVE moveDirection);
+		virtual void KeyDown(GameKeyEnum moveDirection);
 
 		//获取 CommandBuffer
 		virtual void GameCommandBuffers(unsigned int Format_i);
@@ -28,8 +28,12 @@ namespace GAME {
 
 		//录制 CommandBuffer
 		virtual void GameRecordCommandBuffers();
-		
-		Dungeon* mDungeon = nullptr;//无限地图
+
+		//游戏停止界面循环
+		virtual void GameStopInterfaceLoop(unsigned int mCurrentFrame);
+
+	private:
+		Labyrinth* mLabyrinth = nullptr;//迷宫
 	};
 
 }

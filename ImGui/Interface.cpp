@@ -243,7 +243,7 @@ namespace GAME {
 		if (ImGui::Button(u8"无限 ", { kuan/2 - 2, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
-			Global::GameMode = false;
+			Global::GameMode = GameModsEnum::Infinite;
 			Global::GameResourceLoadingBool = true;//加载游戏资源
 			InterfaceIndexes = ViceInterface_Enum;
 		}
@@ -252,7 +252,7 @@ namespace GAME {
 		if (ImGui::Button(u8"迷宫 ", { kuan/2 - 2, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
-			Global::GameMode = true;
+			Global::GameMode = GameModsEnum::Maze;
 			Global::GameResourceLoadingBool = true;//加载游戏资源
 			InterfaceIndexes = ViceInterface_Enum;
 		}
@@ -393,7 +393,7 @@ namespace GAME {
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
 			Global::ServerOrClient = true;
-			Global::GameMode = true;
+			Global::GameMode = GameModsEnum::Maze;
 			Global::GameResourceLoadingBool = true;//加载游戏资源
 			server::GetServer();
 		}
@@ -408,7 +408,7 @@ namespace GAME {
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
 			Global::ServerOrClient = false;
-			Global::GameMode = true;
+			Global::GameMode = GameModsEnum::Maze;
 			Global::GameResourceLoadingBool = true;//加载游戏资源
 			client::GetClient();
 		}

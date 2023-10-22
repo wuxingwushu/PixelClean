@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include "GameMods/GameMods.h"
 
 namespace Global {
 	/*  测试  */
@@ -13,7 +14,7 @@ namespace Global {
 	extern bool GameResourceLoadingBool;//加载游戏资源开关
 	extern bool GameResourceUninstallBool;//卸载游戏资源开关
 
-	extern bool GameMode;//游戏模式
+	extern GameModsEnum GameMode;//游戏模式
 
 	/*  测试  */
 

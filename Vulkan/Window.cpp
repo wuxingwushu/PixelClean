@@ -1,8 +1,6 @@
 #include "window.h"
-#include "../application.h"
-#include "../Camera.h"
 #include "../GlobalVariable.h"
-#include "../Physics/DestroyMode.h"
+#include "../GameMods/GameMods.h"
 
 namespace VulKan {
 
@@ -13,13 +11,13 @@ namespace VulKan {
 
 	//用来绑定Camera鼠标事件
 	static void cursorPosCallBack(GLFWwindow* window, double xpos, double ypos) {
-		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->onMouseMove(xpos, ypos);
+		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->MouseMove(xpos, ypos);
 	}
 
 	//绑定鼠标滚轮事件
 	static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	{
-		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->SetCameraZ(-yoffset);
+		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->MouseRoller(-yoffset);
 		//printf("Mouse wheel scrolled: xoffset = %lf, yoffset = %lf\n", xoffset, yoffset);
 	}
 
@@ -78,7 +76,7 @@ namespace VulKan {
 		else {
 			glfwSetWindowMonitor(mWindow, NULL, mWidth / 4, mHeight / 4, mWidth/2, mHeight/2, 0);
 		}
-		mApp->recreateSwapChain();
+		mWindowResized = true;
 	}
 
 	void Window::WindowClose() {
@@ -97,12 +95,12 @@ namespace VulKan {
 	}
 
 	void Window::ImGuiKeyBoardEvent() {
-		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_ESCAPE) != KeysRisingEdgeTrigger_Esc) {
+		/*if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_ESCAPE) != KeysRisingEdgeTrigger_Esc) {
 			if (mApp->InterFace->GetInterfaceIndexes() == GAME::InterFaceEnum_::ViceInterface_Enum) {
 				mApp->InterFace->SetInterFaceBool();
 			}
 		}
-		KeysRisingEdgeTrigger_Esc = glfwGetKey(mWindow, GLFW_KEY_ESCAPE);
+		KeysRisingEdgeTrigger_Esc = glfwGetKey(mWindow, GLFW_KEY_ESCAPE);*/
 
 		//控制鼠标显示和禁用
 		if (glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT) != KeysRisingEdgeTrigger) {
@@ -141,15 +139,7 @@ namespace VulKan {
 		KeysRisingEdgeTrigger_Console = glfwGetKey(mWindow, GLFW_KEY_SLASH);
 
 		if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_ESCAPE) != KeysRisingEdgeTrigger_Esc) {
-			if (Global::ConsoleBool) {
-				Global::ConsoleBool = false;
-				mApp->InterFace->ConsoleFocusHere = true;
-			}
-			else
-			{
-				mApp->InterFace->SetInterFaceBool();
-			}
-			
+			mApp->KeyDown(GameKeyEnum::ESC);
 		}
 		KeysRisingEdgeTrigger_Esc = glfwGetKey(mWindow, GLFW_KEY_ESCAPE);
 
@@ -158,34 +148,28 @@ namespace VulKan {
 		}
 
 		if (glfwGetKey(mWindow, Global::KeyW) == GLFW_PRESS) {
-			mApp->onKeyDown(CAMERA_MOVE::MOVE_FRONT);
+			mApp->KeyDown(GameKeyEnum::MOVE_FRONT);
 		}
 
 		if (glfwGetKey(mWindow, Global::KeyS) == GLFW_PRESS) {
-			mApp->onKeyDown(CAMERA_MOVE::MOVE_BACK);
+			mApp->KeyDown(GameKeyEnum::MOVE_BACK);
 		}
 
 		if (glfwGetKey(mWindow, Global::KeyA) == GLFW_PRESS) {
-			mApp->onKeyDown(CAMERA_MOVE::MOVE_LEFT);
+			mApp->KeyDown(GameKeyEnum::MOVE_LEFT);
 		}
 
 		if (glfwGetKey(mWindow, Global::KeyD) == GLFW_PRESS) {
-			mApp->onKeyDown(CAMERA_MOVE::MOVE_RIGHT);
+			mApp->KeyDown(GameKeyEnum::MOVE_RIGHT);
 		}
 
 		if (glfwGetKey(mWindow, GLFW_KEY_1) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_1) != KeysRisingEdgeTrigger_0) {
-			mApp->AttackType--;
-			if (mApp->AttackType > SquarePhysics::DestroyModeEnumNumber) {
-				mApp->AttackType = SquarePhysics::DestroyModeEnumNumber;
-			}
+			mApp->KeyDown(GameKeyEnum::Key_1);
 		}
 		KeysRisingEdgeTrigger_0 = glfwGetKey(mWindow, GLFW_KEY_1);
 
 		if (glfwGetKey(mWindow, GLFW_KEY_2) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_2) != KeysRisingEdgeTrigger_1) {
-			mApp->AttackType++;
-			if (mApp->AttackType > SquarePhysics::DestroyModeEnumNumber) {
-				mApp->AttackType = 0;
-			}
+			mApp->KeyDown(GameKeyEnum::Key_2);
 		}
 		KeysRisingEdgeTrigger_1 = glfwGetKey(mWindow, GLFW_KEY_2);
 	}

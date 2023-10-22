@@ -2,9 +2,7 @@
 
 #include "../base.h"
 
-namespace GAME {
-	class Application;
-}
+class GameMods;
 
 namespace VulKan {
 
@@ -30,7 +28,7 @@ namespace VulKan {
 
 		[[nodiscard]] GLFWwindow* getWindow() const noexcept { return mWindow; }
 
-		void setApp(GAME::Application* app) { mApp = app; }
+		void setApp(GameMods* app) { mApp = app; }
 
 		//界面键盘事件
 		void ImGuiKeyBoardEvent();
@@ -39,7 +37,7 @@ namespace VulKan {
 
 	public:
 		bool mWindowResized{ false };//窗口大小是否发生改变
-		GAME::Application* mApp;
+		GameMods* mApp;
 
 	private:
 		bool MouseDisabled = false;//是否显示鼠标光标

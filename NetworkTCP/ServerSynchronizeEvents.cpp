@@ -13,7 +13,7 @@ void SGamePlayerSynchronize(bufferevent* be, void* Data) {
 	GAME::GamePlayer* LPlayer = server::GetServer()->GetCrowd()->GetGamePlayer(PosData->Key);
 	LPlayer->GetObjectCollision()->SetAngle(PosData->ang);
 	LPlayer->GetObjectCollision()->SetPos({ PosData->X, PosData->Y });
-	LPlayer->setGamePlayerMatrix(3, true);
+	LPlayer->setGamePlayerMatrix(TOOL::FPStime, 3, true);
 
 
 	DataHeader DH;

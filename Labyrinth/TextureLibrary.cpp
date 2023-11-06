@@ -1,6 +1,6 @@
 #include "TextureLibrary.h"
 #include <regex>
-#include "../stb_image.h"
+#include "../VulkanTool/stb_image.h"
 #include <sstream>
 
 namespace GAME {

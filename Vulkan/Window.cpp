@@ -1,6 +1,9 @@
 #include "window.h"
 #include "../GlobalVariable.h"
 #include "../GameMods/GameMods.h"
+#define _WINSOCKAPI_
+#include <Windows.h>
+#include <iostream>
 
 namespace VulKan {
 

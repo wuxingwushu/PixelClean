@@ -1,7 +1,7 @@
 #include "texture.h"
 
 #define STB_IMAGE_IMPLEMENTATION//stb_image.h �ĺ궨��
-#include "../stb_image.h"
+#include "stb_image.h"
 
 namespace VulKan {
 

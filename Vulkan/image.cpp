@@ -1,5 +1,5 @@
 #include "image.h"
-
+#include <assert.h>
 
 namespace VulKan {
 

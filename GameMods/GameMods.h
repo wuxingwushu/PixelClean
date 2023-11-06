@@ -41,4 +41,7 @@ public:
 
 	//游戏停止界面循环
 	virtual void GameStopInterfaceLoop(unsigned int mCurrentFrame) = 0;
+
+	//游戏 TCP事件
+	virtual void GameTCPLoop() = 0;
 };

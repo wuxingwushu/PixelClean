@@ -426,4 +426,17 @@ namespace GAME {
 		}
 	}
 
+	//游戏 TCP事件
+	void MazeMods::GameTCPLoop() {
+		if (Global::MultiplePeopleMode)
+		{
+			if (Global::ServerOrClient) {
+				event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
+			}
+			else {
+				event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
+			}
+		}
+	}
+
 }

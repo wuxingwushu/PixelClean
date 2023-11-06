@@ -24,7 +24,7 @@ namespace GAME {
 
 		float mGamePlayerPosX = -160;
 		float mGamePlayerPosY = 0;
-		mDungeon = new Dungeon(mDevice, 50, 30, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
+		mDungeon = new Dungeon(mDevice, 100, 60, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
 		mDungeon->initUniformManager(
 			mSwapChain->getImageCount(),
 			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
@@ -364,6 +364,11 @@ namespace GAME {
 
 	//游戏停止界面循环
 	void UnlimitednessMapMods::GameStopInterfaceLoop(unsigned int mCurrentFrame) {
+
+	}
+
+	//游戏 TCP事件
+	void UnlimitednessMapMods::GameTCPLoop() {
 
 	}
 }

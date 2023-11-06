@@ -32,6 +32,9 @@ namespace GAME {
 		//游戏停止界面循环
 		virtual void GameStopInterfaceLoop(unsigned int mCurrentFrame);
 
+		//游戏 TCP事件
+		virtual void GameTCPLoop();
+
 	private:
 		Labyrinth* mLabyrinth = nullptr;//迷宫
 	};

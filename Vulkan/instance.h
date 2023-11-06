@@ -1,5 +1,11 @@
 #pragma once
-#include <vector>
+#include <vector>//动态数组
+#include <array>//静态数组
+#include <map>
+#include <string>//字符串
+#include <optional>
+#include <set>
+#include <fstream>
 #include <vulkan/vulkan.h>//VulKan API
 
 //开启的测试模式

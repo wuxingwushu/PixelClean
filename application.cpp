@@ -167,16 +167,6 @@ namespace GAME {
 		Opcode::OpApplication = this;
 	}
 
-	bool LabyrinthGetWall(int x, int y, void* P) {
-		Labyrinth* LLabyrinth = (Labyrinth*)P;
-		return LLabyrinth->GetPixelWallNumber(x, y);
-	}
-
-	bool DungeonGetWall(int x, int y, void* P) {
-		Dungeon* LLabyrinth = (Dungeon*)P;
-		return LLabyrinth->GetPixelWallNumber(x, y);
-	}
-
 	void Application::createRenderPass() {
 		//0：最终输出图片 1：Resolve图片（MutiSample） 2：Depth图片
 
@@ -431,14 +421,8 @@ namespace GAME {
 
 
 			TOOL::mTimer->StartTiming(u8"TCP ");
-			if (Global::MultiplePeopleMode)
-			{
-				if (Global::ServerOrClient) {
-					event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
-				}
-				else {
-					event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
-				}
+			if (mGameMods != nullptr) {
+				mGameMods->GameTCPLoop();
 			}
 			TOOL::mTimer->StartEnd();
 

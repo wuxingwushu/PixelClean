@@ -887,14 +887,18 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
         VkSamplerCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        info.magFilter = VK_FILTER_LINEAR;
-        info.minFilter = VK_FILTER_LINEAR;
-        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        info.magFilter = VK_FILTER_NEAREST;
+        info.minFilter = VK_FILTER_NEAREST;
+        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.minLod = -1000;
-        info.maxLod = 1000;
+        info.anisotropyEnable = VK_FALSE;
+        info.maxAnisotropy = 1;//最多采样多少个像素点，（支持到16的最多）
+        info.compareEnable = VK_FALSE;
+        info.minLod = 0.0f;
+        info.maxLod = 0.0f;
+        info.mipLodBias = 0.0f;
         info.maxAnisotropy = 1.0f;
         err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->FontSampler);
         check_vk_result(err);

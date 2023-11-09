@@ -96,7 +96,7 @@ namespace GAME {
 
 	//鼠标移动事件
 	void UnlimitednessMapMods::MouseMove(double xpos, double ypos) {
-		mCamera->onMouseMove(xpos, ypos);
+		//mCamera->onMouseMove(xpos, ypos);
 	}
 
 	//鼠标移动事件
@@ -354,12 +354,6 @@ namespace GAME {
 		mCrowd->ReconfigurationCommandBuffer();
 		mVisualEffect->initCommandBuffer();
 		mDungeon->initCommandBuffer();
-		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
-		{
-			VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[i]->getupdateBufferByMap();
-			mVPMatrices->mProjectionMatrix = mCamera->getProjectMatrix();//获取ProjectionMatrix数据
-			mCameraVPMatricesBuffer[i]->endupdateBufferByMap();
-		}
 	}
 
 	//游戏停止界面循环

@@ -51,6 +51,7 @@ namespace VulKan {
 
 		if (mEnableValidationLayer && !checkValidationLayerSupport()) {//判断测试功能开启成功没
 			mEnableValidationLayer = false;
+			TOOL::VulKanError->error("Error: validation layer is not supported");
 			throw std::runtime_error("Error: validation layer is not supported");
 		}
 
@@ -84,6 +85,7 @@ namespace VulKan {
 		}
 
 		if (vkCreateInstance(&instCreateInfo, nullptr, &mInstance) != VK_SUCCESS) {//用上面信息创建VulKan的实例
+			TOOL::VulKanError->error("Error:failed to create instance");
 			throw std::runtime_error("Error:failed to create instance");
 		}
 

@@ -57,7 +57,7 @@ namespace GAME {
 		}
 	}
 
-	TextureLibrary::TextureLibrary(VulKan::Device* device, VulKan::CommandPool* commandPool, VulKan::Sampler* sampler, std::string Path)
+	TextureLibrary::TextureLibrary(VulKan::Device* device, VulKan::CommandPool* commandPool, VulKan::Sampler* sampler, std::string Path, bool UVbool)
 	{
 		std::vector<std::string> Texture;
 		TOOL::FilePath(Path.c_str(), &Texture, "png", "nullptr", nullptr);
@@ -77,13 +77,15 @@ namespace GAME {
 			TextureToUVInfo* info = mTextureLibraryData->Get(name);
 			info->mTexture = new VulKan::Texture(device, commandPool, sampler, pixels, texWidth, texHeight);
 			LeaveOnlyLetters(name, '_', info);
-			float mUVs[] = {
+			if (UVbool) {
+				float mUVs[] = {
 				0.0f,			1.0f / info->Y,
 				1.0f / info->X,	1.0f / info->Y,
 				1.0f / info->X,	0.0f,
 				0.0f,			0.0f,
-			};
-			info->mUV = VulKan::Buffer::createVertexBuffer(device, 8 * sizeof(float), mUVs);
+				};
+				info->mUV = VulKan::Buffer::createVertexBuffer(device, 8 * sizeof(float), mUVs);
+			}
 
 			stbi_image_free(pixels);
 		}

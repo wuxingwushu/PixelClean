@@ -28,7 +28,8 @@ namespace VulKan {
 
 		[[nodiscard]] GLFWwindow* getWindow() const noexcept { return mWindow; }
 
-		void setApp(GameMods* app) { mApp = app; }
+		void setApp(GameMods* app);
+		void ReleaseApp();
 
 		//界面键盘事件
 		void ImGuiKeyBoardEvent();
@@ -37,7 +38,7 @@ namespace VulKan {
 
 	public:
 		bool mWindowResized{ false };//窗口大小是否发生改变
-		GameMods* mApp;
+		GameMods* mApp{ nullptr };
 
 	private:
 		bool MouseDisabled = false;//是否显示鼠标光标

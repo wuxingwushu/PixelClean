@@ -46,6 +46,7 @@ namespace Global {
 	extern bool FullScreen;				//全屏
 	extern float MusicVolume;			//音乐音量
 	extern float SoundEffectsVolume;	//音效音量
+	extern float FontZoomRatio;			//字体缩放比
 
 	//按键
 	extern unsigned char KeyW;

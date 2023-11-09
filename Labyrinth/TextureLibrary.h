@@ -16,13 +16,17 @@ namespace GAME {
 			unsigned int Y = 1;
 		};
 
-		TextureLibrary(VulKan::Device* device, VulKan::CommandPool* commandPool, VulKan::Sampler* sampler, std::string Path);
+		TextureLibrary(VulKan::Device* device, VulKan::CommandPool* commandPool, VulKan::Sampler* sampler, std::string Path, bool UVbool = true);
 
 		~TextureLibrary();
 
 		//获取动图数据
 		TextureToUVInfo GetTextureUV(std::string TextureName) {
 			return *mTextureLibraryData->Get(TextureName);
+		}
+
+		ContinuousMap<std::string, TextureToUVInfo>* GetDataMap() {
+			return mTextureLibraryData;
 		}
 
 	private:

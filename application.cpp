@@ -20,8 +20,7 @@ namespace GAME {
 	}
 
 	//总初始化
-	void Application::run(VulKan::Window* w) {
-		mWindow = w;
+	void Application::run() {
 		TOOL::mTimer->MomentTiming(u8"总初始化 ");
 		TOOL::mTimer->MomentTiming(u8"初始化窗口 ");
 		initWindow();//初始化窗口
@@ -57,7 +56,7 @@ namespace GAME {
 
 	//窗口的初始化
 	void Application::initWindow() {
-		//mWindow = new VulKan::Window(mWidth, mHeight, false, false);
+		mWindow = new VulKan::Window(Global::mWidth, Global::mHeight, false, Global::FullScreen);
 		//mWindow->setApp(shared_from_this());//把 application 本体指针传给 Window ，便于调用 Camera
 		//设置摄像机   位置，朝向（后面两个 vec3 来决定）
 		mCamera = new Camera();
@@ -122,7 +121,9 @@ namespace GAME {
 		mImGuuiCommandPool = new VulKan::CommandPool(mDevice);
 		mImGuuiCommandBuffers = new VulKan::CommandBuffer(mDevice, mImGuuiCommandPool);
 
-		InterFace = new ImGuiInterFace(mDevice, mWindow, init_info, mRenderPass, mImGuuiCommandBuffers, mSwapChain->getImageCount());
+		InterFace = new ImGuiInterFace(mDevice, mWindow, init_info, mRenderPass, mImGuuiCommandBuffers,
+			new ImGuiTexture(mDevice, mSwapChain, mCommandPool,mSampler),
+			mSwapChain->getImageCount());
 	}
 
 	
@@ -370,8 +371,14 @@ namespace GAME {
 		mImGuuiRenderPass->~RenderPass();
 		createRenderPass();
 		mSwapChain->createFrameBuffers(mRenderPass);
-		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
 		mPipelineS->ReconfigurationPipelineS();
+		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
+		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
+		{
+			VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[i]->getupdateBufferByMap();
+			mVPMatrices->mProjectionMatrix = mCamera->getProjectMatrix();//获取ProjectionMatrix数据
+			mCameraVPMatricesBuffer[i]->endupdateBufferByMap();
+		}
 		if (mGameMods != nullptr) {
 			mGameMods->GameRecordCommandBuffers();
 		}
@@ -389,10 +396,15 @@ namespace GAME {
 		while (!mWindow->shouldClose()) {//窗口被关闭结束循环
 			SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
 			PlayerForce = { 0,0 };
-			mWindow->pollEvents();
+			mWindow->pollEvents();//GLFW轮询事件
+			//更新 ImGui 的 MousePos
+			ImGuiIO& io = ImGui::GetIO();
+			glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
+			io.MousePos.x = CursorPosX;
+			io.MousePos.y = CursorPosY;
 			if (InterFace->GetInterFaceBool()) {
 				mWindow->ImGuiKeyBoardEvent();//监听键盘
-				InterFace->InterFace();
+				InterFace->InterFace(mCurrentFrame);
 				
 				if (Global::GameResourceLoadingBool) {
 					Global::GameResourceLoadingBool = false;
@@ -404,6 +416,7 @@ namespace GAME {
 					Global::GameResourceUninstallBool = false;
 					delete mGameMods;
 					mGameMods = nullptr;
+					mWindow->ReleaseApp();
 				}
 
 				if (mGameMods != nullptr) {
@@ -444,7 +457,7 @@ namespace GAME {
 
 		int winwidth, winheight;
 		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
-
+		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 		huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
 		huoqdedian.x += mCamera->getCameraPos().x;

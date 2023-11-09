@@ -239,7 +239,7 @@ public:
         return DataS;
     }
 
-    [[nodiscard]] TKey GetIndexKey(unsigned i) {
+    [[nodiscard]] TKey GetIndexKey(unsigned int i) {
         return KeyS[i];
     }
 

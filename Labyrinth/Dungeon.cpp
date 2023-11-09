@@ -92,7 +92,7 @@ namespace GAME {
 					LDungeon->LSMistPointer = (unsigned char*)LDungeon->WarfareMist->getHOSTImagePointer();
 					LDungeon->LSPointer = (int*)LDungeon->WallBool->getupdateBufferByMap();
 				}
-				std::cout << x << " - " << y << " - " << mT->mModel->mBufferS << std::endl;
+				//std::cout << x << " - " << y << " - " << mT->mModel->mBufferS << std::endl;
 				LDungeon->MultithreadingGenerate.push_back(TOOL::mThreadPool->enqueue(&GenerateBlock, mT, x, y, Data));
 				LDungeon->MultithreadingPixelTexture.push_back(mT->mModel->mPixelTexture);
 			},
@@ -662,7 +662,7 @@ namespace GAME {
 	}
 
 	void Dungeon::UpdataMistData(int x, int y) {
-		std::cout << "************************************" << std::endl;
+		//std::cout << "************************************" << std::endl;
 		PathfindingDecoratorDeviationX = (mMoveTerrain->OriginX - mMoveTerrain->GetGridSPosX()) * 16;
 		PathfindingDecoratorDeviationY = (mMoveTerrain->OriginY - mMoveTerrain->GetGridSPosY()) * 16;
 		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束

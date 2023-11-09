@@ -43,15 +43,14 @@ namespace VulKan {
 		//glfwSetWindowAttrib(mWindow, GLFW_FLOATING, GLFW_TRUE);//窗口置顶
 		//glfwSetWindowOpacity(mWindow, 1.0f);//窗口透明度
 		glfwSetWindowUserPointer(mWindow, this);
-		glfwSetFramebufferSizeCallback(mWindow, windowResized);//绑定窗口大小改变事件
-		//glfwSetCursorPosCallback(mWindow, cursorPosCallBack);//绑定鼠标事件
 		if (FullScreen) {
 			glfwSetWindowMonitor(mWindow, glfwGetPrimaryMonitor(), 0, 0, mWidth, mHeight, GLFW_DONT_CARE);//全屏
 		}
 		
 
-		// 注册鼠标滚轮回调函数
-		glfwSetScrollCallback(mWindow, scroll_callback);
+		
+		
+		glfwSetFramebufferSizeCallback(mWindow, windowResized);//绑定窗口大小改变事件
 
 		//GLFW_CURSOR_DISABLED 禁用鼠标
 		if (MouseDisabled) {
@@ -60,6 +59,21 @@ namespace VulKan {
 		else {
 			glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
+	}
+
+	void Window::setApp(GameMods* app) { 
+		mApp = app;
+		// 注册鼠标滚轮回调函数
+		glfwSetScrollCallback(mWindow, scroll_callback);
+		// 注册鼠标移动回调函数
+		glfwSetCursorPosCallback(mWindow, cursorPosCallBack);
+	}
+
+	void Window::ReleaseApp() {
+		// 注册鼠标滚轮回调函数
+		glfwSetScrollCallback(mWindow, nullptr);
+		// 注册鼠标移动回调函数
+		glfwSetCursorPosCallback(mWindow, nullptr);
 	}
 
 	//销毁Window

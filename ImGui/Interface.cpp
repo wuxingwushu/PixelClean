@@ -14,6 +14,7 @@ namespace GAME {
 		ImGui_ImplVulkan_InitInfo Info, 
 		VulKan::RenderPass* Pass,
 		VulKan::CommandBuffer* commandbuffer,
+		ImGuiTexture* imGuiTexture,
 		int FormatCount
 	)
 	{
@@ -23,6 +24,7 @@ namespace GAME {
 		mInfo = Info;
 		mRenderPass = Pass;
 		mCommandBuffer = commandbuffer;
+		mImGuiTexture = imGuiTexture;
 
 		StructureImGuiInterFace();
 	}
@@ -51,10 +53,10 @@ namespace GAME {
 
 		// 设置字体
 		ImFontConfig Font_cfg;
+		Font_cfg.OversampleH = 1;
 		Font_cfg.FontDataOwnedByAtlas = false;
-		//Font = io.Fonts->AddFontFromMemoryTTF((void*)Font_data, Font_size, 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
-		Font = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 16, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
-		Font2 = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 32, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+		Font = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+
 
 
 		
@@ -159,12 +161,12 @@ namespace GAME {
 		delete ImGuiCommandPoolS;
 	}
 
-	void ImGuiInterFace::InterFace()
+	void ImGuiInterFace::InterFace(unsigned int CurrentFrame)
 	{
+		mCurrentFrame = CurrentFrame;
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		ImGui::PushFont(Font2);
 		switch (InterfaceIndexes)
 		{
 		case 0:
@@ -180,7 +182,6 @@ namespace GAME {
 			SetInterface();
 			break;
 		}
-		ImGui::PopFont();
 		ImGui::Render();
 	}
 
@@ -193,6 +194,8 @@ namespace GAME {
 
 	void ImGuiInterFace::MainInterface()
 	{
+		ImGui::SetNextWindowBgAlpha(0.0f); // 关闭默认背景颜色
+
 		ImGui::Begin(u8"游戏ESC界面 ", NULL,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
@@ -201,6 +204,8 @@ namespace GAME {
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 		ImGui::SetWindowFontScale(1.0f);
+
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku_1_1")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		int gao = (Global::mHeight / 7) - 4;
 		float kuan = Global::mWidth / 3;
@@ -214,7 +219,7 @@ namespace GAME {
 
 
 
-		ImGui::SetWindowFontScale(gao/32.0f);
+		ImGui::SetWindowFontScale(gao / 16.0f);
 
 		ImVec2 textSize = ImGui::CalcTextSize(u8"素  净");
 		float windowWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
@@ -226,35 +231,48 @@ namespace GAME {
 
 
 
-		ImGui::SetWindowFontScale(1.0f);
+		ImGui::SetWindowFontScale(Global::FontZoomRatio);
 
 
 		posX = (windowWidth - kuan) * 0.5f;
 
-
-
-
 		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
 		ImGui::TableNextColumn();
 		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
 		ImGui::TableNextColumn();
 
-		ImGui::SetCursorPosX(posX);
-		if (ImGui::Button(u8"无限 ", { kuan/2 - 2, Bgao })) {
+		//ImGui::ImageButton((ImTextureID)mImGuiTexture->GetTexture("miku_1_1")->getDescriptorSet(mCurrentFrame), { Bgao - 8, Bgao - 8 });
+
+		ImGui::SetCursorPosX(posX - Bgao - 2);
+		if (ImGui::Button(u8"<", { Bgao, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
-			InterFaceBool = false;
-			Global::GameMode = GameModsEnum::Infinite;
+			int x = Global::GameMode - 1;
+			if (x < 0) {
+				Global::GameMode = GameModsEnum::Infinite;
+			}
+			else {
+				Global::GameMode = (GameModsEnum)x;
+			}
+		}
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(posX);
+		if (ImGui::Button(GameModsEnumName[Global::GameMode], {kuan, Bgao})) {
+			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			SetInterFaceBool();
 			Global::GameResourceLoadingBool = true;//加载游戏资源
 			InterfaceIndexes = ViceInterface_Enum;
 		}
 		ImGui::SameLine();
-		ImGui::SetCursorPosX(posX + (kuan / 2) + 4);
-		if (ImGui::Button(u8"迷宫 ", { kuan/2 - 2, Bgao })) {
+		ImGui::SetCursorPosX(posX + kuan + 2);
+		if (ImGui::Button(u8">", { Bgao, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
-			InterFaceBool = false;
-			Global::GameMode = GameModsEnum::Maze;
-			Global::GameResourceLoadingBool = true;//加载游戏资源
-			InterfaceIndexes = ViceInterface_Enum;
+			int x = Global::GameMode + 1;
+			if (x > GameModsEnum::Infinite) {
+				Global::GameMode = (GameModsEnum)0;
+			}
+			else {
+				Global::GameMode = (GameModsEnum)x;
+			}
 		}
 
 		ImGui::TableNextRow(ImGuiTableRowFlags_None, gao);
@@ -293,13 +311,18 @@ namespace GAME {
 
 	void ImGuiInterFace::ViceInterface()
 	{
+		ImGui::SetNextWindowBgAlpha(0.0f); // 关闭默认背景颜色
+
 		ImGui::Begin(u8"游戏时界面 ", NULL,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove
 		);
+		ImGui::SetWindowFontScale(Global::FontZoomRatio);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku_1_1")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		int gao = (Global::mHeight / 7) - 4;
 		float kuan = Global::mWidth / 3;
@@ -361,13 +384,18 @@ namespace GAME {
 	}
 
 	void ImGuiInterFace::MultiplePeopleInterface() {
+		ImGui::SetNextWindowBgAlpha(0.0f); // 关闭默认背景颜色
+
 		ImGui::Begin(u8"多人界面 ", NULL,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove
 		);
+		ImGui::SetWindowFontScale(Global::FontZoomRatio);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku_1_1")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		int gao = (Global::mHeight / 7) - 4;
 		float kuan = Global::mWidth / 3;
@@ -389,7 +417,7 @@ namespace GAME {
 		ImGui::SetCursorPosX(posX);
 		if (ImGui::Button(u8"服务器 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
-			InterFaceBool = false;
+			SetInterFaceBool();
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
 			Global::ServerOrClient = true;
@@ -404,7 +432,7 @@ namespace GAME {
 		ImGui::SetCursorPosX(posX);
 		if (ImGui::Button(u8"客户端 ", { kuan, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
-			InterFaceBool = false;
+			SetInterFaceBool();
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
 			Global::ServerOrClient = false;
@@ -436,6 +464,7 @@ namespace GAME {
 		static bool SetFullScreen;
 		static float SetMusicVolume;
 		static float SetSoundEffectsVolume;
+		static float SetFontZoomRatio;
 		static bool SetMonitorCompatibleMode;
 
 		static char SetKeyW[2];//截止符
@@ -468,17 +497,24 @@ namespace GAME {
 			SetClientPort = Global::ClientPort;
 			memcpy(SetClientIP, Global::ClientIP.c_str(), Global::ClientIP.size());
 			SetVulKanValidationLayer = Global::VulKanValidationLayer;
+			SetFontZoomRatio = Global::FontZoomRatio;
 			SetMonitor = Global::Monitor;
 			SetMonitorCompatibleMode = Global::MonitorCompatibleMode;
 		}
+		ImGui::SetNextWindowBgAlpha(0.0f); // 关闭默认背景颜色
 
 		ImGui::Begin(u8"设置界面 ", NULL,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove
 		);
+		ImGui::SetWindowFontScale((Global::FontZoomRatio - 1.0f) < 0.1f ? 0.1f : Global::FontZoomRatio - 1.0f);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku_1_1")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
+
+		ImGui::DragFloat(u8"字体大小 ", &Global::FontZoomRatio, 0.001f, 0.0f, 10.0f);
 		ImGui::DragFloat(u8"音乐音量 ", &SetMusicVolume, 0.001f, 0.0f, 10.0f);
 		ImGui::DragFloat(u8"音效音量 ", &SetSoundEffectsVolume, 0.001f, 0.0f, 10.0f);
 		ImGui::DragInt(u8"服务器端口 ", &SetServerPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家开设在本地的服务器端口 ");
@@ -518,6 +554,7 @@ namespace GAME {
 			Global::MonitorCompatibleMode = SetMonitor?SetMonitorCompatibleMode:false;
 			Global::MusicVolume = SetMusicVolume;
 			Global::SoundEffectsVolume = SetSoundEffectsVolume;
+			SetFontZoomRatio = Global::FontZoomRatio;
 			Global::ServerPort = SetServerPort;
 			Global::ClientPort = SetClientPort;
 			Global::ClientIP = SetClientIP;
@@ -528,6 +565,7 @@ namespace GAME {
 			InterfaceIndexes = PreviousLayerInterface;
 		}
 		if (ImGui::Button(u8"返回 ")) {
+			Global::FontZoomRatio = SetFontZoomRatio;
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = PreviousLayerInterface;
 		}

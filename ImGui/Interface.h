@@ -8,6 +8,7 @@
 
 #include "../GlobalVariable.h"
 #include "../Tool/QueueData.h"
+#include "ImGuiTexture.h"
 
 namespace GAME {
 
@@ -31,6 +32,7 @@ namespace GAME {
 			ImGui_ImplVulkan_InitInfo Info, 
 			VulKan::RenderPass* Pass,
 			VulKan::CommandBuffer* commandbuffer,
+			ImGuiTexture* imGuiTexture,
 			int FormatCount
 		);
 
@@ -38,7 +40,8 @@ namespace GAME {
 
 		~ImGuiInterFace();
 
-		void InterFace();//显示
+		unsigned int mCurrentFrame;//当前第几帧
+		void InterFace(unsigned int CurrentFrame);//显示
 		int GetInterfaceIndexes() { return InterfaceIndexes; }
 
 		void ImGuiShowFPS();//显示
@@ -61,8 +64,7 @@ namespace GAME {
 
 		VkCommandBuffer GetCommandBuffer(int i, VkCommandBufferInheritanceInfo info);
 
-		ImFont* Font; //字体小
-		ImFont* Font2; //字体大
+		ImFont* Font; //字体
 	private:
 		VkDescriptorPool			g_DescriptorPool = VK_NULL_HANDLE;//给 ImGui 创建的 DescriptorPool 记得销毁
 		int							g_MinImageCount = 3;
@@ -71,6 +73,8 @@ namespace GAME {
 		VulKan::Device* mDevice{ nullptr };
 		ImGui_ImplVulkan_InitInfo mInfo;
 		VulKan::RenderPass* mRenderPass;
+
+		ImGuiTexture* mImGuiTexture{ nullptr };
 		
 		VulKan::CommandBuffer* mCommandBuffer;
 

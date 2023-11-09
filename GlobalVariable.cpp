@@ -1,7 +1,6 @@
 #include "GlobalVariable.h"
 #include "ini.h"
 #include "FilePath.h"
-#include "GameMods/GameMods.h"
 
 namespace Global {
 	/*  测试  */
@@ -46,6 +45,7 @@ namespace Global {
 		FullScreen = Ini.Get<bool>("Set", "FullScreen");
 		MusicVolume = Ini.Get<float>("Set", "MusicVolume");
 		SoundEffectsVolume = Ini.Get<float>("Set", "SoundEffectsVolume");
+		FontZoomRatio = Ini.Get<float>("Set", "FontZoomRatio");
 		KeyW = Ini.Get<unsigned char>("Key", "KeyW");
 		KeyS = Ini.Get<unsigned char>("Key", "KeyS");
 		KeyA = Ini.Get<unsigned char>("Key", "KeyA");
@@ -65,6 +65,7 @@ namespace Global {
 		Ini.UpdateEntry("Set", "FullScreen", FullScreen);
 		Ini.UpdateEntry("Set", "MusicVolume", MusicVolume);
 		Ini.UpdateEntry("Set", "SoundEffectsVolume", SoundEffectsVolume);
+		Ini.UpdateEntry("Set", "FontZoomRatio", FontZoomRatio);
 		Ini.UpdateEntry("Key", "KeyW", KeyW);
 		Ini.UpdateEntry("Key", "KeyS", KeyS);
 		Ini.UpdateEntry("Key", "KeyA", KeyA);
@@ -85,6 +86,7 @@ namespace Global {
 	bool FullScreen;
 	float MusicVolume;
 	float SoundEffectsVolume;
+	float FontZoomRatio;
 
 	unsigned char KeyW;
 	unsigned char KeyS;

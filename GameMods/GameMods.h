@@ -3,7 +3,12 @@
 enum GameModsEnum
 {
 	Maze = 0,
-	Infinite
+	Infinite//作为截至符号
+};
+
+static const char* GameModsEnumName[]{
+	u8"迷宫",
+	u8"无限"
 };
 
 enum GameKeyEnum

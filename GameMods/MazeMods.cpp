@@ -138,7 +138,7 @@ namespace GAME {
 
 	void MazeMods::MouseMove(double xpos, double ypos)
 	{
-		mCamera->onMouseMove(xpos, ypos);
+		//mCamera->onMouseMove(xpos, ypos);
 	}
 
 	void MazeMods::MouseRoller(int z)
@@ -411,12 +411,6 @@ namespace GAME {
 		mCrowd->ReconfigurationCommandBuffer();
 		mVisualEffect->initCommandBuffer();
 		mLabyrinth->ThreadUpdateCommandBuffer();
-		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
-		{
-			VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[i]->getupdateBufferByMap();
-			mVPMatrices->mProjectionMatrix = mCamera->getProjectMatrix();//获取ProjectionMatrix数据
-			mCameraVPMatricesBuffer[i]->endupdateBufferByMap();
-		}
 	}
 
 	//游戏停止界面循环

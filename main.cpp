@@ -14,12 +14,8 @@ int main(int argc, char** argv) {
 
 	GAME::Application* app = new GAME::Application();
 
-	VulKan::Window* mWin = new VulKan::Window(Global::mWidth, Global::mHeight, false, Global::FullScreen);
-
-	//mWin->setApp(app);
-
 	try {
-		app->run(mWin);
+		app->run();
 	}
 	catch (const std::exception& e) {
 		//std::cout << "main: " << e.what() << std::endl;
@@ -27,7 +23,6 @@ int main(int argc, char** argv) {
 		TOOL::Error->error(e.what());
 	}
 
-	delete mWin;
 	delete app;
 
 	TOOL::DeleteThreadPool();

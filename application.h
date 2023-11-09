@@ -20,7 +20,7 @@ namespace GAME {
 		~Application() = default;
 
 		//总初始化
-		void run(VulKan::Window* w);
+		void run();
 
 		//获取对于游戏
 		GameMods* GetGame(GameModsEnum Game);

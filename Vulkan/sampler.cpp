@@ -13,8 +13,8 @@ namespace VulKan {
 		createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
-		createInfo.anisotropyEnable = VK_TRUE;
-		createInfo.maxAnisotropy = 16;//最多采样多少个像素点，（支持到16的最多）
+		createInfo.anisotropyEnable = VK_FALSE;
+		createInfo.maxAnisotropy = 1;//最多采样多少个像素点，（支持到16的最多）
 
 		createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;//UV值超过了 1.0f 的话怎么办。（我们这里用黑色填充）
 
@@ -25,7 +25,7 @@ namespace VulKan {
 		createInfo.compareEnable = VK_FALSE;
 		createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 
-		createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 		createInfo.mipLodBias = 0.0f;
 		createInfo.minLod = 0.0f;
 		createInfo.maxLod = 0.0f;

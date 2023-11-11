@@ -2,7 +2,7 @@
 #include "zlib/zlib.h"
 #include"../GlobalStructural.h"
 #include "../Tool/PileUp.h"
-#include "../Tool/QueueData.h"
+#include "../Tool/Queue.h"
 #include "../Tool/LimitUse.h"
 #include <event2/bufferevent.h>
 
@@ -50,7 +50,7 @@ struct BufferEventSingleData
 	PileUp<SynchronizeBullet>* mSubmitBullet = nullptr;//子弹一次性数据
 	PileUp<PixelState>* mLabyrinthPixel = nullptr;//地图点事件
 	PileUp<PixelState>* mCharacterPixel = nullptr;//人物点事件
-	QueueData<LimitUse<ChatStrStruct*>*>* mStr = nullptr;//对话
+	Queue<LimitUse<ChatStrStruct*>*>* mStr = nullptr;//对话
 
 	bool* mBrokenData = nullptr;//破碎状态
 
@@ -58,7 +58,7 @@ struct BufferEventSingleData
 		mSubmitBullet = new PileUp<SynchronizeBullet>(size);
 		mLabyrinthPixel = new PileUp<PixelState>(size*10);
 		mCharacterPixel = new PileUp<PixelState>(size);
-		mStr = new QueueData<LimitUse<ChatStrStruct*>*>(size);
+		mStr = new Queue<LimitUse<ChatStrStruct*>*>(size);
 	}
 
 	~BufferEventSingleData() {

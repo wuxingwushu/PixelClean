@@ -22,4 +22,8 @@ mkdir Spv
 
 .\..\glslangValidator.exe  -V SpotNormal.geom -o Spv/SpotNormal.spv
 
+.\..\glslangValidator.exe  -V DamagePrompt.vert -o Spv/DamagePromptV.spv
+
+.\..\glslangValidator.exe  -V DamagePrompt.frag -o Spv/DamagePromptF.spv
+
 pause

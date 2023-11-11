@@ -18,6 +18,10 @@ namespace GAME {
 		);
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
+		mDamagePrompt = new DamagePrompt(mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::DamagePrompt)->DescriptorSetLayout, mCameraVPMatricesBuffer,
+			mTextureLibrary->GetTextureUV("DamagePrompt").mTexture, mSwapChain->getImageCount(), 10);
+		mDamagePrompt->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::DamagePrompt));
+
 		//测试寻路
 		JPSPathfinding = new JPS(300, 10000);
 		AStarPathfinding = new AStar(300, 10000);
@@ -30,7 +34,7 @@ namespace GAME {
 			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
 			mCameraVPMatricesBuffer,
 			mSampler,
-			mTextureLibrary
+			mGIFTextureLibrary
 		);
 		mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods), mPipelineS->GetPipeline(VulKan::PipelineMods::GifMods));
 
@@ -64,6 +68,7 @@ namespace GAME {
 			mSampler
 		);
 		mGamePlayer->InitCommandBuffer();
+		mGamePlayer->SetDamagePrompt(mDamagePrompt);
 
 		VulKan::AuxiliaryForceData* ALine = mAuxiliaryVision->GetContinuousForce()->New(mGamePlayer->GetObjectCollision()->GetForcePointer());
 		ALine->pos = mGamePlayer->GetObjectCollision()->GetPosPointer();
@@ -92,6 +97,7 @@ namespace GAME {
 		delete mCrowd;
 		delete mGamePlayer;
 		delete mVisualEffect;
+		delete mDamagePrompt;
 	}
 
 	//鼠标移动事件
@@ -165,6 +171,8 @@ namespace GAME {
 		wThreadCommandBufferS->push_back(mGamePlayer->getCommandBuffer(Format_i));
 
 		mAuxiliaryVision->GetCommandBuffer(wThreadCommandBufferS, Format_i);
+
+		mDamagePrompt->GetCommandBuffer(wThreadCommandBufferS, Format_i);
 	}
 
 	void UnlimitednessMapMods::GameLoop(unsigned int mCurrentFrame)
@@ -173,6 +181,8 @@ namespace GAME {
 
 		Global::GamePlayerX = mGamePlayer->GetObjectCollision()->GetPosX();
 		Global::GamePlayerY = mGamePlayer->GetObjectCollision()->GetPosY();
+
+		mDamagePrompt->UpDataDamagePrompt(Global::GamePlayerX, Global::GamePlayerY, TOOL::FPStime);
 
 		int winwidth, winheight;
 		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
@@ -354,6 +364,7 @@ namespace GAME {
 		mCrowd->ReconfigurationCommandBuffer();
 		mVisualEffect->initCommandBuffer();
 		mDungeon->initCommandBuffer();
+		mDamagePrompt->initCommandBuffer();
 	}
 
 	//游戏停止界面循环

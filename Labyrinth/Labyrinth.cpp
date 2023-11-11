@@ -9,7 +9,7 @@
 namespace GAME {
 
 
-	void Labyrinth_SetPixel(int x, int y, bool Bool, void* mclass) {
+	void Labyrinth_SetPixel(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* mclass) {
 		Labyrinth* mClass = (Labyrinth*)mclass;
 		//破坏的像素
 		mClass->mPixelQueue->add({ x, y, Bool });//储存起来，统一上传

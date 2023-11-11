@@ -138,7 +138,7 @@ namespace GAME {
 		}
 
 
-		mChatBoxStr = new QueueData<ChatBoxStr>(100);
+		mChatBoxStr = new Queue<ChatBoxStr>(100);
 	}
 
 	ImGuiInterFace::~ImGuiInterFace()
@@ -205,7 +205,7 @@ namespace GAME {
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 		ImGui::SetWindowFontScale(1.0f);
 
-		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku_1_1")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		int gao = (Global::mHeight / 7) - 4;
 		float kuan = Global::mWidth / 3;
@@ -322,7 +322,7 @@ namespace GAME {
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 
-		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku_1_1")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		int gao = (Global::mHeight / 7) - 4;
 		float kuan = Global::mWidth / 3;
@@ -395,7 +395,7 @@ namespace GAME {
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 
-		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku_1_1")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		int gao = (Global::mHeight / 7) - 4;
 		float kuan = Global::mWidth / 3;
@@ -508,13 +508,13 @@ namespace GAME {
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove
 		);
-		ImGui::SetWindowFontScale((Global::FontZoomRatio - 1.0f) < 0.1f ? 0.1f : Global::FontZoomRatio - 1.0f);
+		ImGui::SetWindowFontScale((Global::FontZoomRatio - 1.0f) < 1.0f ? 1.0f : Global::FontZoomRatio - 1.0f);
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
 
-		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku_1_1")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
-		ImGui::DragFloat(u8"字体大小 ", &Global::FontZoomRatio, 0.001f, 0.0f, 10.0f);
+		ImGui::DragFloat(u8"字体大小 ", &Global::FontZoomRatio, 0.001f, 1.0f, 10.0f);
 		ImGui::DragFloat(u8"音乐音量 ", &SetMusicVolume, 0.001f, 0.0f, 10.0f);
 		ImGui::DragFloat(u8"音效音量 ", &SetSoundEffectsVolume, 0.001f, 0.0f, 10.0f);
 		ImGui::DragInt(u8"服务器端口 ", &SetServerPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家开设在本地的服务器端口 ");

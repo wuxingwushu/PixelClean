@@ -8,8 +8,8 @@ namespace Global {
 	bool DrawLinesMode = false;
 	bool MistSwitch = true;
 
-	int GamePlayerX;   
-	int GamePlayerY;
+	float GamePlayerX;   
+	float GamePlayerY;
 
 	bool GameResourceLoadingBool = false;
 	bool GameResourceUninstallBool = false;

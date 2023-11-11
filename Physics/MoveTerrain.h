@@ -51,10 +51,10 @@ namespace SquarePhysics {
 		}
 
 		//调用回调函数
-		virtual void CollisionCallback(int x, int y, bool Bool) {
+		virtual void CollisionCallback(int x, int y, bool Bool, ObjectDecorator* object) {
 			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->CalculateGetPlate(x, y);
 			if (LRigidBodyAndModel != nullptr) {
-				LRigidBodyAndModel->mGridDecorator->CollisionCallback(x % mSquareSideLength, y % mSquareSideLength, Bool);
+				LRigidBodyAndModel->mGridDecorator->CollisionCallback(x % mSquareSideLength, y % mSquareSideLength, Bool, object);
 			}
 		}
 

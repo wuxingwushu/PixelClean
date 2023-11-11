@@ -13,4 +13,7 @@ namespace VulKan {
 
 	//GIF
 	Pipeline* GIFPipeline(Pipeline* Pipeline, Device* Device);
+
+	//受伤渐消
+	Pipeline* DamagePromptPipeline(Pipeline* Pipeline, Device* Device);
 }

@@ -12,6 +12,7 @@
 #include "GameMods/UnlimitednessMapMods.h"
 #include "GameMods/MazeMods.h"
 
+
 namespace GAME {
 	class Application : public Configuration {
 	public:

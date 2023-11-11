@@ -25,5 +25,7 @@
 #define LineF_spv				"./shaders/LineShaderF.spv"
 #define LineV_spv				"./shaders/LineShaderV.spv"
 #define SpotNormal_spv			"./shaders/SpotNormal.spv"
-#define SpotF_spv				"./shaders/SpotShaderF.spv"
+#define SpotF_spv				"./shaders/SpotShaderF.spv"	
 #define SpotV_spv				"./shaders/SpotShaderV.spv"
+#define DamagePromptF_spv		"./shaders/DamagePromptF.spv"
+#define DamagePromptV_spv		"./shaders/DamagePromptV.spv"

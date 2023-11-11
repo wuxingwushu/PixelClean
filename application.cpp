@@ -163,7 +163,10 @@ namespace GAME {
 		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
 
 		//GIF库
-		mTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Texture/");
+		mGIFTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Texture/");
+		//素材库
+		mTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Resource/Material/", false);
+
 
 		Opcode::OpApplication = this;
 	}

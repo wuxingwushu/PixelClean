@@ -26,6 +26,7 @@
 #include "../VulkanTool/AuxiliaryVision.h"
 #include "../Tool/AStar.h"
 #include "../Labyrinth/TextureLibrary.h"
+#include "../Character/DamagePrompt.h"
 
 namespace GAME {
 
@@ -55,7 +56,8 @@ namespace GAME {
 		unsigned int AttackType = 0;//攻击模式
 		Camera*      mCamera{ nullptr };//定义的相机
 		ImGuiInterFace* InterFace = nullptr; // ImGui 游戏界面都写这里面
-		TextureLibrary* mTextureLibrary{ nullptr };//GIF库
+		TextureLibrary* mGIFTextureLibrary{ nullptr };//GIF库
+		TextureLibrary* mTextureLibrary{ nullptr };//素材库
 		std::vector<VulKan::Buffer*> mCameraVPMatricesBuffer{};//GPU用的玩家变换矩阵（位置 角度）
 		ParticleSystem* mParticleSystem = nullptr;//粒子系统
 		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;//粒子特效
@@ -69,6 +71,7 @@ namespace GAME {
 		Crowd* mCrowd = nullptr;//玩家群系统
 		VulKan::VisualEffect* mVisualEffect{ nullptr };//视觉效果
 		VulKan::AuxiliaryVision* mAuxiliaryVision{ nullptr };//辅助视觉
+		DamagePrompt* mDamagePrompt{ nullptr };//受伤提示
 		JPS* JPSPathfinding = nullptr;
 		AStar* AStarPathfinding = nullptr;
 	};

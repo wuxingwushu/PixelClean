@@ -94,7 +94,7 @@ namespace SquarePhysics {
 		dian = vec2angle(dian, { mAngle.x, -mAngle.y });//减除玩家的角度// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		if (GetFixedCollisionBool(dian)) {
 			SetFixedCollisionBool(dian, false);
-			CollisionCallback(dian.x, dian.y, false);
+			CollisionCallback(dian.x, dian.y, false, this);
 			OutlineCalculate();
 			return { true, glm::ivec2(dian) };
 		}

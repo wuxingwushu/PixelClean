@@ -11,7 +11,8 @@ namespace VulKan {
 		MainMods = 0,
 		LineMods,
 		SpotMods,
-		GifMods
+		GifMods,
+		DamagePrompt
 	};
 
 	class PipelineS

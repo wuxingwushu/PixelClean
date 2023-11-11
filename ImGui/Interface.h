@@ -7,7 +7,7 @@
 #include "../Vulkan/commandBuffer.h"
 
 #include "../GlobalVariable.h"
-#include "../Tool/QueueData.h"
+#include "../Tool/Queue.h"
 #include "ImGuiTexture.h"
 
 namespace GAME {
@@ -51,7 +51,7 @@ namespace GAME {
 		bool ConsoleFocusHere = true;
 		void ConsoleInterface();//控制台
 
-		QueueData<ChatBoxStr>* mChatBoxStr;
+		Queue<ChatBoxStr>* mChatBoxStr;
 		void DisplayTextS();
 
 		bool GetInterFaceBool() {//获取显示状态

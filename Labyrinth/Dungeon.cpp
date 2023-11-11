@@ -9,7 +9,7 @@ namespace GAME {
 		P[y * 16 + x] = *((int*)&pixelS[20][(y * 16 + x) * 4]);
 	}
 
-	void DungeonDestroy(int x, int y, bool Bool, void* wClass) {
+	void DungeonDestroy(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* wClass) {
 		DungeonDestroyStruct* LSDungeon = (DungeonDestroyStruct*)wClass;
 		int* LSP = (int*)LSDungeon->wTextureAndBuffer->mPixelTexture->getHOSTImagePointer();
 		Destroy(LSP, x, y, Bool);

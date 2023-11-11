@@ -103,7 +103,7 @@ void CNPCSSynchronize(bufferevent* be, void* Data) {
 
 //Str发送
 void CStrSend(bufferevent* be, void* Data) {
-	QueueData<LimitUse<ChatStrStruct*>*>* LStrQueue = client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mStr;
+	Queue<LimitUse<ChatStrStruct*>*>* LStrQueue = client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mStr;
 	LimitUse<ChatStrStruct*>* LLimitUse;
 
 	DataHeader DH;

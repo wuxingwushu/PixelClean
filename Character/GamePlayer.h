@@ -12,6 +12,7 @@
 #include "../Tool/Queue.h"
 #include "../GlobalStructural.h"
 #include "../NetworkTCP/StructTCP.h"
+#include "DamagePrompt.h"
 
 namespace GAME {
 
@@ -100,6 +101,13 @@ namespace GAME {
 
 		//同步数据
 		RoleSynchronizationData* mSynchronizationData = nullptr;
+
+	public://受伤提示
+		DamagePrompt* wDamagePrompt{ nullptr };
+
+		void SetDamagePrompt(DamagePrompt* damagePrompt) {
+			wDamagePrompt = damagePrompt;
+		}
 
 	private://模型   顶点，UV，顶点索引
 		VulKan::Buffer* mPositionBuffer{ nullptr };

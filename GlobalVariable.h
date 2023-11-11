@@ -8,8 +8,8 @@ namespace Global {
 	extern bool DrawLinesMode;//画线模式
 	extern bool MistSwitch;//是否开启迷雾
 
-	extern int GamePlayerX;
-	extern int GamePlayerY;
+	extern float GamePlayerX;
+	extern float GamePlayerY;
 
 	extern bool GameResourceLoadingBool;//加载游戏资源开关
 	extern bool GameResourceUninstallBool;//卸载游戏资源开关

@@ -23,17 +23,17 @@ namespace SquarePhysics {
 
 	bool DestroyModePixel(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
 		std::cout << Angle << std::endl;
-		mGrid->CollisionCallback(x, y, false);
+		mGrid->CollisionCallback(x, y, false, mObject);
 
 		return true;
 	}
 
 	bool DestroyModeCross(int x, int y, bool Bool, float Angle, ObjectDecorator* mObject, GridDecorator* mGrid, void* Data) {
-		mGrid->CollisionCallback(x, y, false);
-		mGrid->CollisionCallback(x + 1, y, false);
-		mGrid->CollisionCallback(x, y + 1, false);
-		mGrid->CollisionCallback(x - 1, y, false);
-		mGrid->CollisionCallback(x, y - 1, false);
+		mGrid->CollisionCallback(x, y, false, mObject);
+		mGrid->CollisionCallback(x + 1, y, false, mObject);
+		mGrid->CollisionCallback(x, y + 1, false, mObject);
+		mGrid->CollisionCallback(x - 1, y, false, mObject);
+		mGrid->CollisionCallback(x, y - 1, false, mObject);
 
 		return true;
 	}
@@ -42,7 +42,7 @@ namespace SquarePhysics {
 		const int Range = 1;
 		for (int i = -Range; i <= Range; ++i) {
 			for (int j = -Range; j <= Range; ++j) {
-				mGrid->CollisionCallback(x + i, y + j, false);
+				mGrid->CollisionCallback(x + i, y + j, false, mObject);
 			}
 		}
 		return true;
@@ -52,7 +52,7 @@ namespace SquarePhysics {
 		const int Range = 5;
 		for (int i = -Range; i <= Range; ++i) {
 			for (int j = -Range; j <= Range; ++j) {
-				mGrid->CollisionCallback(x + i, y + j, false);
+				mGrid->CollisionCallback(x + i, y + j, false, mObject);
 			}
 		}
 		return true;

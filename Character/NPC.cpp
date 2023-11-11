@@ -141,7 +141,7 @@ namespace GAME {
 			SquarePhysics::CollisionInfo LInfo = wPathfinding->RadialCollisionDetection(pos.x, pos.y, Global::GamePlayerX, Global::GamePlayerY);
 			if (!LInfo.Collision) {//在视野范围内，且可以看到玩家
 				mSuspicious = true;
-				mSuspiciousPos = { Global::GamePlayerX, Global::GamePlayerY };
+				mSuspiciousPos = { (int)Global::GamePlayerX, (int)Global::GamePlayerY };
 				flags |= SensoryMessages_Visible;
 			}
 		}
@@ -164,7 +164,7 @@ namespace GAME {
 			) {
 			//std::cout << "开始寻路" << std::endl;
 			LPath.clear();
-			TOOL::mThreadPool->enqueue(&JPS::FindPath, mJPS, JPSVec2{ int(pos.x), int(pos.y) }, JPSVec2{ Global::GamePlayerX, Global::GamePlayerY }, &LPath,
+			TOOL::mThreadPool->enqueue(&JPS::FindPath, mJPS, JPSVec2{ int(pos.x), int(pos.y) }, JPSVec2{ (int)Global::GamePlayerX, (int)Global::GamePlayerY }, &LPath,
 				JPSVec2{ wPathfinding->PathfindingDecoratorDeviationX, wPathfinding->PathfindingDecoratorDeviationY }
 			);
 			hsuldad = 0;

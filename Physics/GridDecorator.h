@@ -129,11 +129,11 @@ namespace SquarePhysics {
 
 
 		//调用回调函数
-		virtual void CollisionCallback(int x, int y, bool Bool) {
+		virtual void CollisionCallback(int x, int y, bool Bool, ObjectDecorator* object) {
 			if (SetFixedCollisionBool({x, y}, Bool)) {
 				x += OriginX;
 				y += OriginY;
-				mCollisionCallback(x, y, Bool, mClass);
+				mCollisionCallback(x, y, Bool, object, mClass);
 			}
 		}
 

@@ -144,7 +144,7 @@ void SStrSend(bufferevent* be, void* Data) {
 	LRoleMap = server::GetServer()->GetServerData();
 	LRoleData = LRoleMap->Get(bufferevent_getfd(be));
 
-	QueueData<LimitUse<ChatStrStruct*>*>* LStrQueue = LRoleData->mBufferEventSingleData->mStr;
+	Queue<LimitUse<ChatStrStruct*>*>* LStrQueue = LRoleData->mBufferEventSingleData->mStr;
 
 	LimitUse<ChatStrStruct*>* LLimitUse;
 	

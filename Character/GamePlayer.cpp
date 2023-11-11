@@ -11,9 +11,12 @@ namespace GAME {
 		Gameclass->SetRoleSynchronizationData(Data);
 	}
 
-	void GamePlayerDestroyPixel(int x, int y, bool Bool, void* mclass) {
+	void GamePlayerDestroyPixel(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* mclass) {
 		GamePlayer* Class = (GamePlayer*)mclass;
 		Class->mPixelQueue->add({x,y, Bool });
+		if (Class->wDamagePrompt != nullptr) {
+			Class->wDamagePrompt->AddDamagePrompt(Object->GetSpeedAngleFloat());
+		}
 	}
 
 	GamePlayer::GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, 
@@ -246,14 +249,13 @@ namespace GAME {
 	}
 
 	void GamePlayer::InitCommandBuffer() {
+		VkCommandBufferInheritanceInfo InheritanceInfo{};
+		InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+		InheritanceInfo.renderPass = mRenderPass->getRenderPass();
+
 		for (size_t i = 0; i < 3; ++i)
 		{
-			VkCommandBufferInheritanceInfo InheritanceInfo{};
-			InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-			InheritanceInfo.renderPass = mRenderPass->getRenderPass();
 			InheritanceInfo.framebuffer = mSwapChain->getFrameBuffer(i);
-
-
 
 			mBufferCopyCommandBuffer[i]->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);//开始录制二级指令
 			mBufferCopyCommandBuffer[i]->bindGraphicPipeline(mPipeline->getPipeline());//获得渲染管线

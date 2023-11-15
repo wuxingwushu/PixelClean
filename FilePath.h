@@ -1,5 +1,5 @@
 //ini配置文件
-#define	IniPath					"./Info.ini"
+#define	IniPath_ini				"./Info.ini"
 
 //音效
 #define	夜に駆ける				"./Resources/夜に駆ける.mid"
@@ -29,3 +29,6 @@
 #define SpotV_spv				"./shaders/SpotShaderV.spv"
 #define DamagePromptF_spv		"./shaders/DamagePromptF.spv"
 #define DamagePromptV_spv		"./shaders/DamagePromptV.spv"
+#define UVDynamicDiagramF_spv	"./shaders/UVDynamicDiagramF.spv"
+#define UVDynamicDiagramG_spv	"./shaders/UVDynamicDiagramG.spv"
+#define UVDynamicDiagramV_spv	"./shaders/UVDynamicDiagramV.spv"

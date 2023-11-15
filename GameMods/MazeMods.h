@@ -2,6 +2,7 @@
 #include "Configuration.h"
 #include "GameMods.h"
 #include "../Labyrinth/Labyrinth.h"
+#include "../Character/UVDynamicDiagram.h"
 
 namespace GAME {
 
@@ -37,6 +38,7 @@ namespace GAME {
 
 	private:
 		Labyrinth* mLabyrinth = nullptr;//迷宫
+		UVDynamicDiagram* mUVDynamicDiagram = nullptr;
 	};
 
 }

@@ -12,7 +12,8 @@ namespace VulKan {
 		LineMods,
 		SpotMods,
 		GifMods,
-		DamagePrompt
+		DamagePrompt,
+		UVDynamicDiagram
 	};
 
 	class PipelineS

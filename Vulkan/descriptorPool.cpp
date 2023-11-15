@@ -20,11 +20,13 @@ namespace VulKan {
 
 		int uniformBufferCount = 0;
 		int textureCount = 0;
+		int storageCount = 0;
 		//TODO: 纹理这个种类的uniform有多少个？
 
 		for (const auto& param : params) {
 			if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) { uniformBufferCount++; }
 			if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) { textureCount++; }
+			if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) { storageCount++; }
 		}
 
 		//描述每一种uniform都有多少个
@@ -39,6 +41,12 @@ namespace VulKan {
 			VkDescriptorPoolSize textureSize{};
 			textureSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			textureSize.descriptorCount = textureCount * frameCount * shuliang;//这边的size是指，有多少个descriptor
+			poolSizes.push_back(textureSize);
+		}
+		if (storageCount != 0) {
+			VkDescriptorPoolSize textureSize{};
+			textureSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			textureSize.descriptorCount = storageCount * frameCount * shuliang;//这边的size是指，有多少个descriptor
 			poolSizes.push_back(textureSize);
 		}
 		

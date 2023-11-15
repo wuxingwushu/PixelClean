@@ -12,6 +12,7 @@ namespace VulKan {
 		EstablishPipeline(SpotPipeline);
 		EstablishPipeline(GIFPipeline);
 		EstablishPipeline(DamagePromptPipeline);
+		EstablishPipeline(UVDynamicDiagramPipeline);
 	}
 
 	PipelineS::~PipelineS() {

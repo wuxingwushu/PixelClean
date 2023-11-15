@@ -48,7 +48,7 @@ namespace VulKan {
 				descriptorSetWrite.descriptorCount = param->mCount;//多少个这样的数据
 				descriptorSetWrite.dstBinding = param->mBinding;//绑定到那个Binding
 				
-				if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+				if ((param->mDescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) || (param->mDescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)) {
 					descriptorSetWrite.pBufferInfo = &param->mBuffers[i]->getBufferInfo();
 				}
 				else if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {

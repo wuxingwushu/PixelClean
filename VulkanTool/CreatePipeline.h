@@ -16,4 +16,7 @@ namespace VulKan {
 
 	//受伤渐消
 	Pipeline* DamagePromptPipeline(Pipeline* Pipeline, Device* Device);
+
+	//像素UV动画
+	Pipeline* UVDynamicDiagramPipeline(Pipeline* Pipeline, Device* Device);
 }

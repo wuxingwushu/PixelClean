@@ -26,4 +26,10 @@ mkdir Spv
 
 .\..\glslangValidator.exe  -V DamagePrompt.frag -o Spv/DamagePromptF.spv
 
+.\..\glslangValidator.exe  -V UVDynamicDiagram.vert -o Spv/UVDynamicDiagramV.spv
+
+.\..\glslangValidator.exe  -V UVDynamicDiagram.frag -o Spv/UVDynamicDiagramF.spv
+
+.\..\glslangValidator.exe  -V UVDynamicDiagram.geom -o Spv/UVDynamicDiagramG.spv
+
 pause

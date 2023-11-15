@@ -12,7 +12,7 @@ layout(binding = 2) uniform sampler2D texSampler;
 
 void main() {
 	vec4 Color = texture(texSampler, inUV);
-	if(Color.y == 0 && Color.x ==  0 && Color.z == 0){
+	if(Color.w == 0){
 		discard;//丢弃片段
 	}else{
 		Color.w = inStrike;

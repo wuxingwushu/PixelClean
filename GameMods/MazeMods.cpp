@@ -24,7 +24,8 @@ namespace GAME {
 			mTextureLibrary->GetTextureUV("DamagePrompt").mTexture, mSwapChain->getImageCount(), 10);
 		mDamagePrompt->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::DamagePrompt));
 		
-
+		mUVDynamicDiagram = new UVDynamicDiagram(mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::UVDynamicDiagram), mSwapChain, mRenderPass, mCameraVPMatricesBuffer);
+		mUVDynamicDiagram->InitCommandBuffer();
 		//测试寻路
 		JPSPathfinding = new JPS(300, 10000);
 		AStarPathfinding = new AStar(300, 10000);
@@ -130,6 +131,7 @@ namespace GAME {
 		delete mGamePlayer;
 		delete mVisualEffect;
 		delete mDamagePrompt;
+		delete mUVDynamicDiagram;
 
 		if (Global::MultiplePeopleMode)
 		{
@@ -215,6 +217,8 @@ namespace GAME {
 		mAuxiliaryVision->GetCommandBuffer(wThreadCommandBufferS, Format_i);
 
 		mDamagePrompt->GetCommandBuffer(wThreadCommandBufferS, Format_i);
+
+		mUVDynamicDiagram->GetCommandBuffer(wThreadCommandBufferS, Format_i);
 	}
 
 	void MazeMods::GameLoop(unsigned int mCurrentFrame)
@@ -224,6 +228,8 @@ namespace GAME {
 
 		mDamagePrompt->UpDataDamagePrompt(Global::GamePlayerX, Global::GamePlayerY, TOOL::FPStime);
 
+		mUVDynamicDiagram->SetPosition(Global::GamePlayerX, Global::GamePlayerY, 0);
+		mUVDynamicDiagram->AnimationEvent(TOOL::FPStime);
 		if (!Global::ServerOrClient)
 		{
 			mCrowd->NPCTimeoutDetection();
@@ -423,6 +429,7 @@ namespace GAME {
 		mVisualEffect->initCommandBuffer();
 		mLabyrinth->ThreadUpdateCommandBuffer();
 		mDamagePrompt->initCommandBuffer();
+		mUVDynamicDiagram->InitCommandBuffer();
 	}
 
 	//游戏停止界面循环

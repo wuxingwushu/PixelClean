@@ -33,7 +33,7 @@ namespace Global {
 
 	/***************************	INI	***************************/
 	void Read() {
-		inih::INIReader Ini{ IniPath };
+		inih::INIReader Ini{ IniPath_ini };
 		mWidth = Ini.Get<unsigned int>("Window", "Width");
 		mHeight = Ini.Get<unsigned int>("Window", "Height");
 		ServerPort = Ini.Get<int>("ServerTCP", "Port");
@@ -53,7 +53,7 @@ namespace Global {
 	}
 
 	void Storage() {
-		inih::INIReader Ini{ IniPath };
+		inih::INIReader Ini{ IniPath_ini };
 		Ini.UpdateEntry("Window", "Width", mWidth);
 		Ini.UpdateEntry("Window", "Height", mHeight);
 		Ini.UpdateEntry("ServerTCP", "Port", ServerPort);
@@ -70,7 +70,7 @@ namespace Global {
 		Ini.UpdateEntry("Key", "KeyS", KeyS);
 		Ini.UpdateEntry("Key", "KeyA", KeyA);
 		Ini.UpdateEntry("Key", "KeyD", KeyD);
-		inih::INIWriter::write_Gai(IniPath, Ini);//保存
+		inih::INIWriter::write_Gai(IniPath_ini, Ini);//保存
 	}
 
 	unsigned int mWidth;

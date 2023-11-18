@@ -24,7 +24,7 @@ namespace GAME {
 			mTextureLibrary->GetTextureUV("DamagePrompt").mTexture, mSwapChain->getImageCount(), 10);
 		mDamagePrompt->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::DamagePrompt));
 		
-		mUVDynamicDiagram = new UVDynamicDiagram(mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::UVDynamicDiagram), mSwapChain, mRenderPass, mCameraVPMatricesBuffer);
+		mUVDynamicDiagram = new UVDynamicDiagram(mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::UVDynamicDiagram), mSwapChain, mRenderPass, mCameraVPMatricesBuffer, mSquarePhysics);
 		mUVDynamicDiagram->InitCommandBuffer();
 		//测试寻路
 		JPSPathfinding = new JPS(300, 10000);
@@ -223,12 +223,42 @@ namespace GAME {
 
 	void MazeMods::GameLoop(unsigned int mCurrentFrame)
 	{
+		mAuxiliaryVision->Begin();
+
 		Global::GamePlayerX = mGamePlayer->GetObjectCollision()->GetPosX();
 		Global::GamePlayerY = mGamePlayer->GetObjectCollision()->GetPosY();
 
 		mDamagePrompt->UpDataDamagePrompt(Global::GamePlayerX, Global::GamePlayerY, TOOL::FPStime);
 
-		mUVDynamicDiagram->SetPosition(Global::GamePlayerX, Global::GamePlayerY, 0);
+		for (size_t i = 0; i < mUVDynamicDiagram->mIndexAnimationGrid->GetOutlinePointSize(); i++)
+		{
+			mAuxiliaryVision->AddSpot(
+				{
+					SquarePhysics::vec2angle(
+						mUVDynamicDiagram->mIndexAnimationGrid->GetOutlinePointSet(i),
+						mUVDynamicDiagram->mIndexAnimationGrid->GetAngle()
+					) + glm::dvec2(mUVDynamicDiagram->mIndexAnimationGrid->GetPos()), 
+					0
+				}, 
+				glm::vec4{1,0,0,1}
+			);
+		}
+
+		/*for (size_t i = 0; i < mGamePlayer->GetObjectCollision()->GetOutlinePointSize(); i++)
+		{
+			mAuxiliaryVision->AddSpot(
+				{
+					SquarePhysics::vec2angle(
+						mGamePlayer->GetObjectCollision()->GetOutlinePointSet(i),
+						mGamePlayer->GetObjectCollision()->GetAngle()
+					) + glm::dvec2(mGamePlayer->GetObjectCollision()->GetPos()),
+					0
+				},
+				glm::vec4{ 0,0,1,1 }
+			);
+		}*/
+		
+			
 		mUVDynamicDiagram->AnimationEvent(TOOL::FPStime);
 		if (!Global::ServerOrClient)
 		{
@@ -255,7 +285,6 @@ namespace GAME {
 		mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle);//设置玩家物理角度
 		mGamePlayer->GetObjectCollision()->SufferForce(PlayerForce);//设置玩家受力
 		PlayerForce = { 0, 0 };
-		mAuxiliaryVision->Begin();
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
 		TOOL::mTimer->StartEnd();

@@ -30,12 +30,12 @@ layout(std430, binding = 3) buffer UVIndex//UV索引
 };
 
 void main() {
-	gl_Position = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * objectUBO.mModelMatrix  * vec4(inPosition, 0.0, 1.0);
+	gl_Position = vec4(inPosition, 0.0, 1.0);
 	int shu = Index[((objectUBO.CellSize * objectUBO.Frame) + inIndex)];
 	if(shu < 0){
 		outColor = vec4(0.0, 0.0, 0.0, 0.0);
 	}else{
 		outColor = Color[shu];
 	}
-	outViewMatrix = vpUBO.mProjectionMatrix;	
+	outViewMatrix = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * objectUBO.mModelMatrix ;	
 }

@@ -1,5 +1,4 @@
 #pragma once
-#include "StructuralComponents.h"
 #include "ObjectDecorator.h"
 #include "GridDecorator.h"
 
@@ -17,24 +16,18 @@ namespace SquarePhysics {
 
 		virtual ~ObjectCollision();
 
-		
-
-		
-
-		
-
 
 		/*++++++++++++++++++++++++++++++++       碰撞有关       ++++++++++++++++++++++++++++++++*/
 
 		//计算当前碰撞体的 外骨架
-		void OutlineCalculate();
+		virtual void OutlineCalculate();
 
 		//判断点是否符合骨架的条件
-		void OutlinePointJudge(int x, int y);
+		virtual inline void OutlinePointJudge(int x, int y);
 		
 		//获取点信息
-		bool PixelAttributeCollision(int x, int y) {
-			if ((x < 0) || (x >= mNumberX) || (y < 0) || (y >= mNumberY))
+		inline bool PixelAttributeCollision(unsigned int x, unsigned int y) {
+			if ((x >= mNumberX) || (y >= mNumberY))
 			{
 				return false;
 			}
@@ -45,9 +38,9 @@ namespace SquarePhysics {
 		void CalculationBarycenter();
 
 		//有多少个外骨架点
-		unsigned int GetOutlinePointSize() { return OutlinePointSize; }
+		virtual unsigned int GetOutlinePointSize() { return OutlinePointSize; }
 		//获取第 I 个外骨架点
-		glm::vec2 GetOutlinePointSet(unsigned int i) { return { mOutlinePointSet[i].x - OriginX, mOutlinePointSet[i].y - OriginY }; }
+		virtual glm::vec2 GetOutlinePointSet(unsigned int i) { return { mOutlinePointSet[i].x - OriginX, mOutlinePointSet[i].y - OriginY }; }
 
 
 		//点对玩家的碰撞判断

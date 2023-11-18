@@ -62,7 +62,7 @@ namespace SquarePhysics {
 		mBarycenter.y += LSideLength;
 	}
 
-	void ObjectCollision::OutlinePointJudge(int x, int y) {
+	inline void ObjectCollision::OutlinePointJudge(int x, int y) {
 		//左上角
 		if (!PixelAttributeCollision(x - 1, y) || !PixelAttributeCollision(x, y - 1) || !PixelAttributeCollision(x - 1, y - 1)) {
 			mOutlinePointSet[OutlinePointSize].x = x;

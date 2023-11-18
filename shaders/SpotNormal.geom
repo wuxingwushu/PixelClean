@@ -14,7 +14,7 @@ void main()
     // 从输入顶点中获取位置信息
     vec4 position = gl_in[0].gl_Position;
     if(position.z > -1.0){
-        vec4 Horn = (vec4(0.5, 0.5, 0.0, 0.0) * inViewMatrix[0]);
+        vec4 Horn = (vec4(0.25, 0.25, 0.0, 0.0) * inViewMatrix[0]);
         // 生成三角形的三个顶点
         outColor = inGeomColor[0];
         gl_Position = vec4(position.x - Horn.x, position.y - Horn.y, position.z, position.w);

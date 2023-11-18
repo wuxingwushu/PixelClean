@@ -3,6 +3,7 @@
 #include "../Vulkan/descriptorSet.h"
 #include "../Vulkan/pipeline.h"
 #include "../Vulkan/swapChain.h"
+#include "../Physics/SquarePhysics.h"
 
 
 namespace GAME {
@@ -17,7 +18,7 @@ namespace GAME {
 	class UVDynamicDiagram
 	{
 	public:
-		UVDynamicDiagram(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, std::vector<VulKan::Buffer*> VPMstdBuffer);
+		UVDynamicDiagram(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, std::vector<VulKan::Buffer*> VPMstdBuffer, SquarePhysics::SquarePhysics* SquarePhysics);
 		~UVDynamicDiagram();
 
 		void InitCommandBuffer();
@@ -27,6 +28,7 @@ namespace GAME {
 			Vector->push_back(mCommandBuffer[F]->getCommandBuffer());
 		}
 
+		//设置位置
 		void SetPosition(float x, float y, float z) {
 			//mUVDynamicDiagramStruct.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
 			UVDynamicDiagramStruct* P = (UVDynamicDiagramStruct*)mPositionToData->getupdateBufferByMap();
@@ -34,18 +36,31 @@ namespace GAME {
 			mPositionToData->endupdateBufferByMap();
 		}
 
+		//动画事件
 		void AnimationEvent(float time) {
 			AccumulatedTime += time;
-			if (AccumulatedTime > 0.5f) {
+			UVDynamicDiagramStruct* P = (UVDynamicDiagramStruct*)mPositionToData->getupdateBufferByMap();
+			P->mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(mIndexAnimationGrid->GetPosX(), mIndexAnimationGrid->GetPosY(), 0));
+			P->mModelMatrix = glm::rotate(P->mModelMatrix, glm::radians(mIndexAnimationGrid->GetAngleFloat() * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
+			if (AccumulatedTime > 2.5f) {
 				AccumulatedTime = 0;
-				UVDynamicDiagramStruct* P = (UVDynamicDiagramStruct*)mPositionToData->getupdateBufferByMap();
+				
 				++P->CurrentFrame;
 				if (P->CurrentFrame >= FrameNumber) {
 					P->CurrentFrame = 0;
 				}
-				mPositionToData->endupdateBufferByMap();
+				mIndexAnimationGrid->SetCurrentFrame(P->CurrentFrame);
+				mUVDynamicDiagramStruct.CurrentFrame = P->CurrentFrame;
+				
 			}
+			mPositionToData->endupdateBufferByMap();
 		}
+
+		int GetPixelIndex(int x, int y) {
+			return uvdh[9 * mUVDynamicDiagramStruct.CurrentFrame + (x * 3 + y)];
+		}
+
+		SquarePhysics::IndexAnimationGrid* mIndexAnimationGrid{ nullptr };
 
 	private:
 		UVDynamicDiagramStruct mUVDynamicDiagramStruct{};
@@ -67,6 +82,42 @@ namespace GAME {
 		VulKan::Pipeline* wPipeline{ nullptr };
 		VulKan::SwapChain* wSwapChain{ nullptr };
 		VulKan::RenderPass* wRenderPass{ nullptr };
+		SquarePhysics::SquarePhysics* wSquarePhysics{ nullptr };
+
+
+		int uvdh[72] = {
+			-1, -1, -1,
+			 0,  1,  2,
+			-1, -1, -1,
+
+			 0, -1, -1,
+			-1,  1, -1,
+			-1, -1,  2,
+
+			-1,  0, -1,
+			-1,  1, -1,
+			-1,  2, -1,
+
+			-1, -1,  0,
+			-1,  1, -1,
+			 2, -1, -1,
+
+			-1, -1, -1,
+			 2,  1,  0,
+			-1, -1, -1,
+
+			 2, -1, -1,
+			-1,  1, -1,
+			-1, -1,  0,
+
+			-1,  2, -1,
+			-1,  1, -1,
+			-1,  0, -1,
+
+			-1, -1,  2,
+			-1,  1, -1,
+			 0, -1, -1,
+		};
 	};
 
 }

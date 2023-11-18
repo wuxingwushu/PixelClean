@@ -8,7 +8,7 @@ namespace SquarePhysics {
 	}
 
 	//获取模的长度
-	float Modulus(glm::vec2 Modulus) {
+	inline float Modulus(glm::vec2 Modulus) {
 		return sqrt((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
 	}
 
@@ -18,7 +18,7 @@ namespace SquarePhysics {
 	}
 
 	//根据XY算出cos的角度
-	float EdgeVecToCosAngleFloat(glm::vec2 XYedge) {
+	inline float EdgeVecToCosAngleFloat(glm::vec2 XYedge) {
 		float BeveledEdge = Modulus(XYedge);
 		if (BeveledEdge == 0) {
 			return 0;//分母不可以为零
@@ -35,14 +35,14 @@ namespace SquarePhysics {
 	}
 
 	//vec2旋转
-	glm::dvec2 vec2angle(glm::dvec2 pos, double angle) {
+	inline glm::dvec2 vec2angle(glm::dvec2 pos, double angle) {
 		double cosangle = cos(angle);
 		double sinangle = sin(angle);
 		return glm::dvec2((pos.x * cosangle) - (pos.y * sinangle), (pos.x * sinangle) + (pos.y * cosangle));
 	}
 
 	//vec2旋转
-	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle) {
+	inline glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle) {
 		return glm::dvec2((pos.x * angle.x) - (pos.y * angle.y), (pos.x * angle.y) + (pos.y * angle.x));
 	}
 
@@ -95,7 +95,7 @@ namespace SquarePhysics {
 	}
 
 	//正方形和点的碰撞检测
-	glm::dvec2 SquareToDrop(float A1, float A2, float B1, float B2, glm::dvec2 Drop, glm::dvec2 PY) {
+	inline glm::dvec2 SquareToDrop(float A1, float A2, float B1, float B2, glm::dvec2 Drop, glm::dvec2 PY) {
 		glm::dvec2 PYpos{ 0.0f,0.0f };
 		if (((Drop.x >= A1) && (Drop.x <= A2)) && ((Drop.y >= B1) && (Drop.y <= B2))) {//判断这个点是否在另外一个正方形里面
 			if (PY.x > 0) {

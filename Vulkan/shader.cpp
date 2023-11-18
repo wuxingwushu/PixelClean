@@ -1,4 +1,5 @@
 #include "shader.h"
+#include <shaderc/shaderc.h>
 
 namespace VulKan {
 

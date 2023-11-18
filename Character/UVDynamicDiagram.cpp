@@ -4,10 +4,14 @@
 
 namespace GAME {
 
+	void UVDynamicDiagramDestroyPixel(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* mclass) {
+		UVDynamicDiagram* LUVDynamicDiagram = (UVDynamicDiagram*)mclass;
+		
+		std::cout << "破坏: " << x << " - " << y << " : " << LUVDynamicDiagram->GetPixelIndex(x, y) << std::endl;
+	}
 
-
-	UVDynamicDiagram::UVDynamicDiagram(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, std::vector<VulKan::Buffer*> VPMstdBuffer)
-		:wPipeline(pipeline), wSwapChain(swapChain), wRenderPass(renderPass)
+	UVDynamicDiagram::UVDynamicDiagram(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, std::vector<VulKan::Buffer*> VPMstdBuffer, SquarePhysics::SquarePhysics* SquarePhysics)
+		:wPipeline(pipeline), wSwapChain(swapChain), wRenderPass(renderPass), wSquarePhysics(SquarePhysics)
 	{
 		mCommandPool = new VulKan::CommandPool(device);
 		mCommandBuffer = new VulKan::CommandBuffer*[wSwapChain->getImageCount()];
@@ -41,41 +45,22 @@ namespace GAME {
 			0,0,1.0f,1.0f
 		};
 
-		int uvdh[]{
-			-1, -1, -1,
-			 0,  1,  2,
-			-1, -1, -1,
+		
 
-			 0, -1, -1,
-			-1,  1, -1,
-			-1, -1,  2,
+		mIndexAnimationGrid = new SquarePhysics::IndexAnimationGrid(3, 3, 1, 8);
+		SquarePhysics::PixelAttribute* pixelAttribute = mIndexAnimationGrid->mPixelAttributeS;
+		pixelAttribute[0].Collision = true;
+		pixelAttribute[1].Collision = true;
+		pixelAttribute[2].Collision = true;
+		mIndexAnimationGrid->SetAnimationIndex(uvdh);
+		mIndexAnimationGrid->OutlineCalculate();
+		mIndexAnimationGrid->SetPos({ 20,20 });
+		mIndexAnimationGrid->SetOrigin(1,1);
+		mIndexAnimationGrid->SetAngle(0);
+		mIndexAnimationGrid->SetCollisionCallback(UVDynamicDiagramDestroyPixel, this);
+		wSquarePhysics->AddObjectCollision(mIndexAnimationGrid);
 
-			-1,  0, -1,
-			-1,  1, -1,
-			-1,  2, -1,
-
-			-1, -1,  0,
-			-1,  1, -1,
-			 2, -1, -1,
-
-			-1, -1, -1,
-			 2,  1,  0,
-			-1, -1, -1,
-
-			 2, -1, -1,
-			-1,  1, -1,
-			-1, -1,  0,
-
-			-1,  2, -1,
-			-1,  1, -1,
-			-1,  0, -1,
-
-			-1, -1,  2,
-			-1,  1, -1,
-			 0, -1, -1,
-		};
-
-		mUVDynamicDiagramStruct.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+		mUVDynamicDiagramStruct.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(20.0f, 20.0f, 0.0f));
 		mUVDynamicDiagramStruct.UnitSize = 9;
 		mUVDynamicDiagramStruct.CurrentFrame = 0;
 

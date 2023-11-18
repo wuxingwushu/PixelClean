@@ -22,7 +22,7 @@ namespace SquarePhysics {
 			}
 		}
 
-		inline PixelAttribute* at(glm::ivec2 pos) {
+		virtual inline PixelAttribute* at(glm::ivec2 pos) {
 			return &mPixelAttributeS[pos.x * mNumberY + pos.y];
 		}
 
@@ -44,7 +44,7 @@ namespace SquarePhysics {
 
 
 		//设置某个点
-		virtual bool SetFixedCollisionBool(glm::ivec2 pos, bool Bool) {
+		virtual inline bool SetFixedCollisionBool(glm::ivec2 pos, bool Bool) {
 			pos.x += OriginX;
 			pos.y += OriginY;
 			if (pos.x >= mNumberX || pos.x < 0)
@@ -62,7 +62,7 @@ namespace SquarePhysics {
 			return true;
 		}
 
-		virtual [[nodiscard]] bool GetFixedCollisionBool(glm::ivec2 pos) {
+		virtual inline bool GetFixedCollisionBool(glm::ivec2 pos) {
 			pos.x += OriginX;
 			pos.y += OriginY;
 			if (pos.x >= mNumberX || pos.x < 0)
@@ -77,7 +77,7 @@ namespace SquarePhysics {
 		}
 
 		//获取某个像素带点的摩檫力系数
-		virtual [[nodiscard]] float GetFrictionCoefficient(glm::ivec2 pos) {
+		virtual inline float GetFrictionCoefficient(glm::ivec2 pos) {
 			pos.x += OriginX;
 			pos.y += OriginY;
 			if (pos.x >= mNumberX || pos.x < 0)
@@ -92,12 +92,12 @@ namespace SquarePhysics {
 		}
 
 		//判断点是否出界
-		virtual [[nodiscard]] bool BoundaryJudge(glm::ivec2 pos) {
-			if (pos.x >= mNumberX && pos.x < 0)
+		virtual inline bool BoundaryJudge(glm::uvec2 pos) {
+			if (pos.x >= mNumberX)
 			{
 				return false;
 			}
-			if (pos.y >= mNumberY && pos.y < 0)
+			if (pos.y >= mNumberY)
 			{
 				return false;
 			}
@@ -105,7 +105,7 @@ namespace SquarePhysics {
 		}
 
 		//判断点是否出界（中心偏移）
-		virtual [[nodiscard]] bool CrossingTheBoundary(glm::ivec2 pos) {
+		virtual inline bool CrossingTheBoundary(glm::ivec2 pos) {
 			pos.x += OriginX;
 			if ((pos.x >= mNumberX) || (pos.x < 0))
 			{
@@ -129,7 +129,7 @@ namespace SquarePhysics {
 
 
 		//调用回调函数
-		virtual void CollisionCallback(int x, int y, bool Bool, ObjectDecorator* object) {
+		virtual inline void CollisionCallback(int x, int y, bool Bool, ObjectDecorator* object) {
 			if (SetFixedCollisionBool({x, y}, Bool)) {
 				x += OriginX;
 				y += OriginY;
@@ -189,6 +189,12 @@ namespace SquarePhysics {
 		//回调函数指针
 		_TerrainCollisionCallback mCollisionCallback = nullptr;
 		void* mClass = nullptr;//回调数据,模型
+
+
+		//有多少个外骨架点
+		virtual unsigned int GetOutlinePointSize() { return 0; }
+		//获取第 I 个外骨架点
+		virtual glm::vec2 GetOutlinePointSet(unsigned int i) { return glm::vec2(0); }
 	};
 
 }

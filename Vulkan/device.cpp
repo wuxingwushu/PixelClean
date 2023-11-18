@@ -1,7 +1,7 @@
 #include "device.h"
 #define VMA_DEBUG_MARGIN 16
 #define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
+#include <vma/vk_mem_alloc.h>
 
 namespace VulKan {
 

@@ -1,6 +1,6 @@
 #pragma once
 //#define VMA_DEBUG_MARGIN 16//边距（Margins）https://blog.csdn.net/weixin_50523841/article/details/122506850
-#include "vk_mem_alloc.h"//内存分配器，宏声明 放在了 device.cpp 当中去了，引用的时候要放在CPP当中用要不然会报错（反复定义）
+#include <vma/vk_mem_alloc.h>
 #include "instance.h"
 #include "windowSurface.h"
 

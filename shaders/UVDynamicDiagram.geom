@@ -14,22 +14,22 @@ void main()
         // 从输入顶点中获取位置信息
         vec4 position = gl_in[0].gl_Position;
 
-        vec4 Horn = (vec4(0.5, 0.5, 0.0, 0.0) * inViewMatrix[0]);
+        vec4 Horn = vec4(-1.0, -1.0, 0.0, 0.0);
         // 生成三角形的三个顶点
         outColor = inGeomColor[0];
-        gl_Position = vec4(position.x - Horn.x, position.y - Horn.y, position.z, position.w);
+        gl_Position = inViewMatrix[0] * vec4(position.x, position.y, position.z, position.w);
         EmitVertex();                 
         
         outColor = inGeomColor[0];
-        gl_Position = vec4(position.x - Horn.x, position.y + Horn.y, position.z, position.w);
+        gl_Position = inViewMatrix[0] * vec4(position.x, position.y + Horn.y, position.z, position.w);
         EmitVertex();
         
         outColor = inGeomColor[0];
-        gl_Position = vec4(position.x + Horn.x, position.y - Horn.y, position.z, position.w);
+        gl_Position = inViewMatrix[0] * vec4(position.x + Horn.x, position.y, position.z, position.w);
         EmitVertex();
 
         outColor = inGeomColor[0];
-        gl_Position = vec4(position.x + Horn.x, position.y + Horn.y, position.z, position.w);
+        gl_Position = inViewMatrix[0] * vec4(position.x + Horn.x, position.y + Horn.y, position.z, position.w);
         EmitVertex();
     }
     

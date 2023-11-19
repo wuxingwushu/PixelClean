@@ -25,11 +25,11 @@ namespace SquarePhysics {
 		);
 		virtual ~MoveTerrain();
 
-		void SetCallback(_MoveTerrainGenerateCallback G, void* GData, _MoveTerrainDeleteCallback D, void* DData) {
+		inline void SetCallback(_MoveTerrainGenerateCallback G, void* GData, _MoveTerrainDeleteCallback D, void* DData) noexcept {
 			mGridDecoratorS->SetCallback(G, GData, D, DData);
 		}
 
-		RigidBodyAndModel* GetRigidBodyAndModel(unsigned int x, unsigned int y) {
+		inline RigidBodyAndModel* GetRigidBodyAndModel(unsigned int x, unsigned int y) noexcept {
 			return mGridDecoratorS->GetPlate(x,y);
 		}
 
@@ -72,20 +72,20 @@ namespace SquarePhysics {
 		
 
 		//更新位置
-		MovePlateInfo UpDataPos(float x, float y) {
+		inline MovePlateInfo UpDataPos(float x, float y) noexcept {
 			return mGridDecoratorS->UpData(x, y);
 		}
 
-		RigidBodyAndModel* CalculateGetRigidBodyAndModel(float x, float y) {
+		inline RigidBodyAndModel* CalculateGetRigidBodyAndModel(float x, float y) noexcept {
 			return mGridDecoratorS->CalculateGetPlate(x, y);
 		}
 
-		void SetPos(float x, float y) {
+		inline void SetPos(float x, float y) noexcept {
 			mGridDecoratorS->SetPos(x, y);
 		}
 
-		int GetGridSPosX() { return mGridDecoratorS->GetPosX(); }
-		int GetGridSPosY() { return mGridDecoratorS->GetPosY(); }
+		inline int GetGridSPosX() noexcept { return mGridDecoratorS->GetPosX(); }
+		inline int GetGridSPosY() noexcept { return mGridDecoratorS->GetPosY(); }
 
 	private:
 		unsigned int mSquareSideLength;

@@ -15,19 +15,20 @@ namespace SquarePhysics {
 			unsigned int Frames);
 		~IndexAnimationGrid();
 
-		virtual inline PixelAttribute* at(glm::ivec2 pos) {
-			if (AnimationIndex[pos.y * mNumberY + pos.x + AnimationDeviation] >= 0) {
-				return &mPixelAttributeS[AnimationIndex[pos.y * mNumberY + pos.x + AnimationDeviation]];
+		virtual inline PixelAttribute* at(glm::ivec2 pos) noexcept {
+			int Index = AnimationIndex[pos.y * mNumberY + pos.x + AnimationDeviation];
+			if (Index >= 0) {
+				return &mPixelAttributeS[Index];
 			}
 			return &mPixelAttributeS[mNumberX * mNumberX - 1];
 		}
 
-		inline void SetCurrentFrame(unsigned int frame) {
+		inline inline void SetCurrentFrame(unsigned int frame) noexcept {
 			CurrentFrame = frame;
 			AnimationDeviation = CurrentFrame * mNumberX * mNumberY;
 		}
 
-		void SetAnimationIndex(int* Index) {
+		inline void SetAnimationIndex(int* Index) noexcept {
 			AnimationIndex = Index;
 		}
 		/*++++++++++++++++++++++++++++++++       碰撞有关       ++++++++++++++++++++++++++++++++*/
@@ -39,9 +40,9 @@ namespace SquarePhysics {
 		virtual inline void OutlinePointJudge(int x, int y);
 
 		//有多少个外骨架点
-		virtual unsigned int GetOutlinePointSize() { return OutlinePointSizeS[CurrentFrame]; }
+		virtual inline unsigned int GetOutlinePointSize() noexcept { return OutlinePointSizeS[CurrentFrame]; }
 		//获取第 I 个外骨架点
-		virtual glm::vec2 GetOutlinePointSet(unsigned int i) { return { mOutlinePointSet[CurrentFrame][i].x - OriginX, mOutlinePointSet[CurrentFrame][i].y - OriginY }; }
+		virtual inline glm::vec2 GetOutlinePointSet(unsigned int i) noexcept { return { mOutlinePointSet[CurrentFrame][i].x - OriginX, mOutlinePointSet[CurrentFrame][i].y - OriginY }; }
 
 	private:
 		unsigned int mFrames = 0;

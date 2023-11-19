@@ -71,15 +71,15 @@ namespace VulKan {
 
 		void updateBufferByMap(void* data, size_t size);
 
-		[[nodiscard]] auto getImage() const noexcept { return mImage; }
+		[[nodiscard]] inline VkImage getImage() const noexcept { return mImage; }
 
-		[[nodiscard]] auto getLayout() const noexcept { return mLayout; }
+		[[nodiscard]] inline VkImageLayout getLayout() const noexcept { return mLayout; }
 
-		[[nodiscard]] auto getWidth() const noexcept { return mWidth; }
+		[[nodiscard]] inline size_t getWidth() const noexcept { return mWidth; }
 
-		[[nodiscard]] auto getHeight() const noexcept { return mHeight; }
+		[[nodiscard]] inline size_t getHeight() const noexcept { return mHeight; }
 
-		[[nodiscard]] auto getImageView() const noexcept { return mImageView; }
+		[[nodiscard]] inline VkImageView getImageView() const noexcept { return mImageView; }
 
 		//[[nodiscard]] auto getImageBuffer() const { return fillstageBuffer; }
 

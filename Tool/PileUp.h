@@ -9,16 +9,17 @@ private:
     unsigned int Max;
     T* mPileUp;
 public:
-    PileUp(unsigned int size) {
-        Max = size;
-        mPileUp = new T[size];
+    PileUp(unsigned int size):
+        Max(size)
+    {
+        mPileUp = new T[Max];
     };
 
     ~PileUp() {
         delete mPileUp;
     };
 
-    void add(T Parameter) {
+    inline void add(T Parameter) noexcept {
         if (Index >= Max)
         {
             std::cout << "[PileUp]Error: GoBeyond" << std::endl;
@@ -29,7 +30,7 @@ public:
         ++Index;
     };
 
-    [[nodiscard]] T* pop() {
+    [[nodiscard]] inline T* pop() noexcept {
         if (Index == 0)
         {
             std::cout << "[PileUp]Error: Empty" << std::endl;
@@ -39,36 +40,36 @@ public:
         return &mPileUp[Index];
     }
 
-    [[nodiscard]] unsigned int GetNumber() const noexcept {
+    [[nodiscard]] inline unsigned int GetNumber() const noexcept {
         return Index;
     }
 
-    [[nodiscard]] T* GetData() const noexcept {
+    [[nodiscard]] inline T* GetData() noexcept {
         return mPileUp;
     }
 
-    [[nodiscard]] T GetEnd() {
+    [[nodiscard]] inline T GetEnd() {
         return mPileUp[Index - 1];
     }
 
-    [[nodiscard]] void pop__() {
+    inline void pop__() noexcept {
         if (Index == 0)return;
         --Index;
     }
 
-    [[nodiscard]] T GetIndex(unsigned int I) {
+    [[nodiscard]] inline T GetIndex(unsigned int I) {
         return mPileUp[I];
     }
 
-    void ClearAll() {
+    inline void ClearAll() noexcept {
         Index = 0;
     }
 
-    Iterator<T> begin() {
+    inline Iterator<T> begin() {
         return Iterator<T>(mPileUp);
     }
 
-    Iterator<T> end() {
+    inline Iterator<T> end() {
         return Iterator<T>(mPileUp + Index);
     }
 };

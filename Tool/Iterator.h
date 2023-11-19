@@ -7,7 +7,7 @@ private:
 public:
     Iterator(T* ptr) : mPtr(ptr) {}
 
-    Iterator operator++() {
+    inline Iterator operator++() {
         ++mPtr;
         return *this;
     }
@@ -29,11 +29,11 @@ private:
 public:
     DataIterator(T* Begin, unsigned int size): mBegin(Begin), mEnd(Begin + size){}
 
-    Iterator<T> begin() {
+    inline Iterator<T> begin() {
         return mBegin;
     }
 
-    Iterator<T> end() {
+    inline Iterator<T> end() {
         return mEnd;
     }
 };
@@ -47,7 +47,7 @@ private:
     public:
         AddressIterator(T* ptr) : mPtr(ptr) {}
 
-        AddressIterator operator++() {
+        inline AddressIterator operator++() {
             ++mPtr;
             return *this;
         }
@@ -66,11 +66,11 @@ private:
 public:
     PointerIterator(T* Begin, unsigned int size) : mBegin(Begin), mEnd(Begin + size) {}
 
-    AddressIterator begin() {
+    inline AddressIterator begin() {
         return mBegin;
     }
 
-    AddressIterator end() {
+    inline AddressIterator end() {
         return mEnd;
     }
 };

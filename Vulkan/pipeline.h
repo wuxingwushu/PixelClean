@@ -37,8 +37,8 @@ namespace VulKan {
 		VkPipelineLayoutCreateInfo mLayoutState{};//创建管线布局
 
 	public:
-		[[nodiscard]] auto getPipeline() const noexcept { return mPipeline; }
-		[[nodiscard]] auto getLayout() const noexcept { return mLayout; }
+		[[nodiscard]] inline VkPipeline getPipeline() const noexcept { return mPipeline; }
+		[[nodiscard]] inline VkPipelineLayout getLayout() const noexcept { return mLayout; }
 
 		VkDescriptorSetLayout DescriptorSetLayout{ VK_NULL_HANDLE };
 

@@ -33,14 +33,14 @@ namespace VulKan {
 		//设置调试器的返回那些信息
 		void setupDebugger();
 		//判断是否开启了检测
-		[[nodiscard]] bool getEnableValidationLayer() const noexcept { return mEnableValidationLayer; }
+		inline bool getEnableValidationLayer() const noexcept { return mEnableValidationLayer; }
 
 		
 
 		//获取VulKan的实列
-		[[nodiscard]] VkInstance getInstance() const noexcept { return mInstance; }
+		[[nodiscard]] inline VkInstance getInstance() const noexcept { return mInstance; }
 
-		[[nodiscard]] std::vector<const char*> getextensions() const noexcept { return extensions; }
+		[[nodiscard]] inline std::vector<const char*> getextensions() const noexcept { return extensions; }
 
 		
 

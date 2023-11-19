@@ -1,4 +1,5 @@
 #pragma once
+#include <assert.h>
 
 template<typename T>
 class ContinuousPlate
@@ -20,27 +21,30 @@ private:
 	_DeleteCallback DeleteCallback = nullptr;//销毁回调函数
 	void* DeleteData = nullptr;
 
-	T* at(unsigned int x, unsigned int y) {
+	inline T* at(unsigned int x, unsigned int y) {
+		assert((x * mNumberY + y) < (mNumberX * mNumberY) && "Error : Array Crossing The Boundary");
 		return &mPlate[x * mNumberY + y];
 	}
 
 public:
 	//创建连续板块，板块大小 X，Y， 板块间距 Edge
-	ContinuousPlate(unsigned int x, unsigned int y, unsigned int edge) {
-		mNumberX = x;
-		mNumberY = y;
-		mEdge = edge;
+	ContinuousPlate(unsigned int x, unsigned int y, unsigned int edge) :
+		mNumberX(x),
+		mNumberY(y),
+		mEdge(edge)
+	{
+		assert(mEdge != 0 && "Error : mEdge = 0");
 		mPlate = new T[mNumberX * mNumberY];
 	}
 
 	//设置起始位置
-	void SetPos(float x, float y) {
+	inline void SetPos(float x, float y) noexcept {
 		mX = int(x) / mEdge;
 		mY = int(y) / mEdge;
 	}
 
 	//设置回调函数
-	void SetCallback(_GenerateCallback G, void* GData, _DeleteCallback D, void* DData) {
+	inline void SetCallback(_GenerateCallback G, void* GData, _DeleteCallback D, void* DData) noexcept {
 		GenerateCallback = G;
 		GenerateData = GData;
 		DeleteCallback = D;
@@ -48,7 +52,7 @@ public:
 	}
 
 	//这种连续板块的中心
-	void SetOrigin(unsigned int x, unsigned int y) {
+	inline void SetOrigin(unsigned int x, unsigned int y) noexcept {
 		mOriginX = x;
 		mOriginY = y;
 	}
@@ -59,7 +63,7 @@ public:
 	}
 
 	//获取那个板块
-	T* GetPlate(unsigned int x, unsigned int y) {
+	[[nodiscard]] inline T* GetPlate(unsigned int x, unsigned int y) noexcept {
 		int MX = moveX + x;
 		int MY = moveY + y;
 		if (MX >= mNumberX)

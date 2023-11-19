@@ -22,20 +22,20 @@ private:
 
     typedef void (*_DeleteCallback)(TData data, void* ptr);//销毁 回调函数类型
     _DeleteCallback mDeleteCallback = nullptr;//用户自定义销毁 回调函数
-    void* mDeleteData;
+    void* mDeleteData = nullptr;
 
     typedef bool (*_TimeoutCallback)(TData data, void* ptr);//超时 回调函数类型（返回值 表示释放要调用 销毁 函数）
     _TimeoutCallback mTimeoutCallback = nullptr;//用户自定义超时 回调函数
-    void* mTimeoutData;
+    void* mTimeoutData = nullptr;
 
     typedef void (*_PointerCallback)(TData* data, void* ptr);//更新引用指针对象回调函数
     _PointerCallback mPointerCallback = nullptr;//用户自定义更新指针 回调函数
-    void** mPointerData;//用户自定义更新指针 回调函数
+    void** mPointerData = nullptr;//用户自定义更新指针 回调函数
 
     TKey* KeyS = nullptr;//键
     TData* DataS = nullptr;//数据
-    ContinuousMapFlags mFlags;
-    clock_t* TimeS;//键对应的更新时间（Get算更新）
+    ContinuousMapFlags mFlags = ContinuousMap_None;
+    clock_t* TimeS = nullptr;//键对应的更新时间（Get算更新）
     clock_t TimeoutTime = 3000;//默认三秒
     const unsigned int Max = 0;//最多容量
     unsigned int Number = 0;//当前容量
@@ -67,7 +67,7 @@ public:
     }
 
     //添加新 Map
-    [[nodiscard]] TData* New(TKey key){
+    [[nodiscard]] inline TData* New(TKey key){
         if (Max == Number)//判断是否达到上线
         {
             if(mFlags & ContinuousMap_Debug){
@@ -94,7 +94,7 @@ public:
     };
 
     //更加 key 获取对应映射
-    [[nodiscard]] TData* Get(TKey key){
+    [[nodiscard]] inline TData* Get(TKey key){
         if (Dictionary.find(key) == Dictionary.end())//判断是否存在键
         {
             if (mFlags & ContinuousMap_Debug) {
@@ -114,7 +114,7 @@ public:
     }
 
     //绑定销毁回调函数
-    void SetDeleteCallback(_DeleteCallback DeleteCallback, void* Data) {
+    void SetDeleteCallback(_DeleteCallback DeleteCallback, void* Data) noexcept {
         mDeleteCallback = DeleteCallback;//设置销毁回调函数
         mDeleteData = Data;
     }
@@ -155,7 +155,7 @@ public:
 
 
     //超时检测
-    void TimeoutDetection() {
+    inline void TimeoutDetection() {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
         for (size_t i = 0; i < Number; ++i)
@@ -172,20 +172,20 @@ public:
     }
 
     //设置超时回调函数
-    void SetTimeoutCallback(_TimeoutCallback TimeoutCallback, void* Data) {
+    void SetTimeoutCallback(_TimeoutCallback TimeoutCallback, void* Data) noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         mTimeoutCallback = TimeoutCallback;
         mTimeoutData = Data;
     }
 
     //设置超时时间
-    void SetTimeoutTime(clock_t Time) {
+    void SetTimeoutTime(clock_t Time) noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         TimeoutTime = Time;
     }
 
     //更新所有时间
-    void UpDataWholeTime() {
+    inline void UpDataWholeTime() noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
         for (size_t i = 0; i < Number; ++i)
@@ -195,7 +195,7 @@ public:
     }
 
     //设置数据对齐时更新引用对象绑定的数据指针 回调函数
-    void SetPointerCallback(_PointerCallback PointerCallback) {
+    void SetPointerCallback(_PointerCallback PointerCallback) noexcept {
         assert(mFlags & ContinuousMap_Pointer && "Not Turned On ContinuousMap_Pointer");
         mPointerCallback = PointerCallback;
     }
@@ -239,7 +239,7 @@ public:
         return DataS;
     }
 
-    [[nodiscard]] TKey GetIndexKey(unsigned int i) {
+    [[nodiscard]] inline TKey GetIndexKey(unsigned int i) noexcept {
         return KeyS[i];
     }
 
@@ -252,27 +252,27 @@ public:
     }
 
     //获取除 Key 以外 Data 数量
-    [[nodiscard]] unsigned int GetKeyNumber() noexcept {
+    [[nodiscard]] inline unsigned int GetKeyNumber() noexcept {
         return (Number - 1) > Max ? 0 : (Number - 1);
     }
 
     //获取除 Key 以外 Data 数量的数据一共多少字节
-    [[nodiscard]] unsigned int GetKeyDataSize() noexcept {
+    [[nodiscard]] inline unsigned int GetKeyDataSize() noexcept {
         return GetKeyNumber() * sizeof(TData);
     }
 
     //获取所有 Data
-    [[nodiscard]] constexpr TData* GetData() noexcept {
+    [[nodiscard]] inline constexpr TData* GetData() noexcept {
         return DataS;
     }
 
     //获取所有 Data 数量
-    [[nodiscard]] unsigned int GetNumber() noexcept {
+    [[nodiscard]] inline unsigned int GetNumber() noexcept {
         return Number;
     }
 
     //获取 Data 数量的数据一共多少字节
-    [[nodiscard]] unsigned int GetDataSize() noexcept {
+    [[nodiscard]] inline unsigned int GetDataSize() noexcept {
         return Number * sizeof(TData);
     }
 };

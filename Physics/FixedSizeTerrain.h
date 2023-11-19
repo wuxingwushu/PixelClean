@@ -17,14 +17,14 @@ namespace SquarePhysics {
 
 
 
-		void SetPosX(float x) { PosX = x; }
+		inline void SetPosX(float x) noexcept { PosX = x; }
 
-		void SetPosY(float y) { PosY = y; }
+		inline void SetPosY(float y) noexcept { PosY = y; }
 
 
-		[[nodiscard]] float GetPosX() { return PosX; }
+		[[nodiscard]] inline float GetPosX() noexcept { return PosX; }
 
-		[[nodiscard]] float GetPosY() { return PosY; }
+		[[nodiscard]] inline float GetPosY() noexcept { return PosY; }
 
 
 

@@ -78,7 +78,7 @@ namespace VulKan {
 		void Begin();
 
 		//画线
-		void Line(glm::vec3 Vertex1, glm::vec4 color1, glm::vec3 Vertex2, glm::vec4 color2) {
+		inline void Line(glm::vec3 Vertex1, glm::vec4 color1, glm::vec3 Vertex2, glm::vec4 color2) {
 			LinePointerHOST->Pos = Vertex1;
 			LinePointerHOST->Color = color1;
 			++LinePointerHOST;
@@ -89,7 +89,7 @@ namespace VulKan {
 		};
 
 		//画点
-		void Spot(glm::vec3 pos, glm::vec4 color) {
+		inline void Spot(glm::vec3 pos, glm::vec4 color) {
 			SpotPointerHOST->Pos = pos;
 			SpotPointerHOST->Color = color;
 			++SpotPointerHOST;
@@ -100,41 +100,41 @@ namespace VulKan {
 		void End();
 
 		//一次性线段（录制外使用）
-		void AddLine(glm::vec3 Vertex1, glm::vec3 Vertex2, glm::vec4 color) {
+		inline void AddLine(glm::vec3 Vertex1, glm::vec3 Vertex2, glm::vec4 color) {
 			LineVertex.push_back({ Vertex1, color });
 			LineVertex.push_back({ Vertex2, color });
 		};
 		//一次性点（录制外使用）
-		void AddSpot(glm::vec3 pos, glm::vec4 color) {
+		inline void AddSpot(glm::vec3 pos, glm::vec4 color) {
 			SpotVertex.push_back({ pos, color });
 		};
 
 		//静态线段（录制外使用）
-		void AddStaticLine(glm::vec3 Vertex1, glm::vec3 Vertex2, glm::vec4 color) {
+		inline void AddStaticLine(glm::vec3 Vertex1, glm::vec3 Vertex2, glm::vec4 color) {
 			StaticLineVertex.push_back({ Vertex1, color });
 			StaticLineVertex.push_back({ Vertex2, color });
 			StaticLineVertexUpData = true;
 		};
 		//静态点（录制外使用）
-		void AddStaticSpot(glm::vec3 pos, glm::vec4 color) {
+		inline void AddStaticSpot(glm::vec3 pos, glm::vec4 color) {
 			StaticSpotVertex.push_back({ pos, color });
 			StaticSpotVertexUpData = true;
 		};
 
 		//动态线段
-		auto GetContinuousLine() { return ContinuousAuxiliaryLine; }
+		inline constexpr auto GetContinuousLine() noexcept { return ContinuousAuxiliaryLine; }
 		//动态线段（力）
-		auto GetContinuousForce() { return ContinuousAuxiliaryForce; }
+		inline constexpr auto GetContinuousForce() noexcept { return ContinuousAuxiliaryForce; }
 		//动态点
-		auto GetContinuousSpot() { return ContinuousAuxiliarySpot; }
+		inline constexpr auto GetContinuousSpot() noexcept { return ContinuousAuxiliarySpot; }
 
 		//静态线段
-		auto GetContinuousStaticLine() { return StaticContinuousAuxiliaryLine; }
+		inline constexpr auto GetContinuousStaticLine() noexcept { return StaticContinuousAuxiliaryLine; }
 		//静态点
-		auto GetContinuousStaticSpot() { return StaticContinuousAuxiliarySpot; }
+		inline constexpr auto GetContinuousStaticSpot() noexcept { return StaticContinuousAuxiliarySpot; }
 		//静态数据更新
-		void OpenStaticSpotUpData() { StaticSpotUpData = true; }
-		void OpenStaticLineUpData() { StaticLineUpData = true; }
+		inline constexpr void OpenStaticSpotUpData() noexcept { StaticSpotUpData = true; }
+		inline constexpr void OpenStaticLineUpData() noexcept { StaticLineUpData = true; }
 	private://线段
 		AuxiliarySpot* LinePointerHOST = nullptr;
 		unsigned int LineNumber = 0;//当前帧的数量

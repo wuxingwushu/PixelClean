@@ -15,15 +15,18 @@ namespace VulKan {
 		Calculate(Device* Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp);
 		~Calculate();
 
-		CommandBuffer* GetCommandBuffer() { return mCommandBuffer; }
+		[[nodiscard]] inline constexpr 
+		CommandBuffer* GetCommandBuffer() noexcept {
+			return mCommandBuffer; 
+		}
 
 		void begin();
 
 		void end();
 	private:
-		Device* wDevice;
-		CommandPool* mCommandPool = nullptr;
-		CommandBuffer* mCommandBuffer = nullptr;
+		Device* wDevice{ nullptr };
+		CommandPool* mCommandPool{ nullptr };
+		CommandBuffer* mCommandBuffer{ nullptr };
 
 
 		VkDescriptorSetLayout mDescriptorSetLayout{ VK_NULL_HANDLE };

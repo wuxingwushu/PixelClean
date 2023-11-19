@@ -2,7 +2,6 @@
 #include "application.h"
 #include "Vulkan/Window.h"
 
-
 int main(int argc, char** argv) {
 	Global::Read();
 	TOOL::InitThreadPool();

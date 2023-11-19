@@ -26,7 +26,7 @@ namespace SquarePhysics {
 		virtual inline void OutlinePointJudge(int x, int y);
 		
 		//获取点信息
-		inline bool PixelAttributeCollision(unsigned int x, unsigned int y) {
+		inline bool PixelAttributeCollision(unsigned int x, unsigned int y) noexcept {
 			if ((x >= mNumberX) || (y >= mNumberY))
 			{
 				return false;
@@ -38,9 +38,9 @@ namespace SquarePhysics {
 		void CalculationBarycenter();
 
 		//有多少个外骨架点
-		virtual unsigned int GetOutlinePointSize() { return OutlinePointSize; }
+		virtual inline unsigned int GetOutlinePointSize() noexcept { return OutlinePointSize; }
 		//获取第 I 个外骨架点
-		virtual glm::vec2 GetOutlinePointSet(unsigned int i) { return { mOutlinePointSet[i].x - OriginX, mOutlinePointSet[i].y - OriginY }; }
+		virtual inline glm::vec2 GetOutlinePointSet(unsigned int i) noexcept { return { mOutlinePointSet[i].x - OriginX, mOutlinePointSet[i].y - OriginY }; }
 
 
 		//点对玩家的碰撞判断

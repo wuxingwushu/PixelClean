@@ -9,6 +9,7 @@
 #include "../GlobalVariable.h"
 #include "../Tool/Queue.h"
 #include "ImGuiTexture.h"
+#include "../VulkanTool/ShaderTexture.h"
 
 namespace GAME {
 
@@ -63,6 +64,8 @@ namespace GAME {
 		}
 
 		VkCommandBuffer GetCommandBuffer(int i, VkCommandBufferInheritanceInfo info);
+
+		VulKan::ShaderTexture* mShaderTexture{ nullptr };
 
 		ImFont* Font; //字体
 	private:

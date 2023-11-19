@@ -24,7 +24,7 @@ namespace SquarePhysics {
 
 		}
 
-		std::vector<ObjectDecorator*> GetObjectDecorator(unsigned int x, unsigned int y) {
+		inline std::vector<ObjectDecorator*> GetObjectDecorator(unsigned int x, unsigned int y) noexcept {
 			return mGridDictionary[x * mNumberY + y];
 		}
 	};

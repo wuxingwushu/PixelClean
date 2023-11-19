@@ -27,6 +27,11 @@ namespace GAME {
 		mImGuiTexture = imGuiTexture;
 
 		StructureImGuiInterFace();
+		VulKan::CommandPool* commandPool = new VulKan::CommandPool(mDevice);
+		VulKan::Sampler* sampler = new VulKan::Sampler(device);
+		mShaderTexture = new VulKan::ShaderTexture(mDevice, commandPool, 1920, 1080, 4, sampler);
+
+		mImGuiTexture->AddTexture("Shader", mShaderTexture->getTexture());
 	}
 
 	void ImGuiInterFace::StructureImGuiInterFace() {
@@ -167,6 +172,7 @@ namespace GAME {
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
+		mShaderTexture->CalculationScreen(TOOL::FPStime);
 		switch (InterfaceIndexes)
 		{
 		case 0:
@@ -201,11 +207,11 @@ namespace GAME {
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove
 		);
-		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+		ImGui::SetWindowPos(ImVec2(-1, -1));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth + 2, Global::mHeight + 2));
 		ImGui::SetWindowFontScale(1.0f);
 
-		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("Shader")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		int gao = (Global::mHeight / 7) - 4;
 		float kuan = Global::mWidth / 3;
@@ -319,10 +325,10 @@ namespace GAME {
 			ImGuiWindowFlags_NoMove
 		);
 		ImGui::SetWindowFontScale(Global::FontZoomRatio);
-		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+		ImGui::SetWindowPos(ImVec2(-1, -1));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth + 2, Global::mHeight + 2));
 
-		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("Shader")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		int gao = (Global::mHeight / 7) - 4;
 		float kuan = Global::mWidth / 3;
@@ -392,10 +398,10 @@ namespace GAME {
 			ImGuiWindowFlags_NoMove
 		);
 		ImGui::SetWindowFontScale(Global::FontZoomRatio);
-		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+		ImGui::SetWindowPos(ImVec2(-1, -1));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth + 2, Global::mHeight + 2));
 
-		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("Shader")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		int gao = (Global::mHeight / 7) - 4;
 		float kuan = Global::mWidth / 3;
@@ -509,10 +515,10 @@ namespace GAME {
 			ImGuiWindowFlags_NoMove
 		);
 		ImGui::SetWindowFontScale((Global::FontZoomRatio - 1.0f) < 1.0f ? 1.0f : Global::FontZoomRatio - 1.0f);
-		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+		ImGui::SetWindowPos(ImVec2(-1, -1));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth + 2, Global::mHeight + 2));
 
-		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("miku")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::GetWindowDrawList()->AddImage((ImTextureID)mImGuiTexture->GetTexture("Shader")->getDescriptorSet(mCurrentFrame), ImVec2(0, 0), ImVec2(Global::mWidth, Global::mHeight), ImVec2(0, 0), ImVec2(1, 1));
 
 		ImGui::DragFloat(u8"字体大小 ", &Global::FontZoomRatio, 0.001f, 1.0f, 10.0f);
 		ImGui::DragFloat(u8"音乐音量 ", &SetMusicVolume, 0.001f, 0.0f, 10.0f);

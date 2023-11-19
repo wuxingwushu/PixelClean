@@ -22,9 +22,9 @@ namespace SquarePhysics {
 		~SquarePhysics();
 
 		//添加Object
-		void AddObjectCollision(ObjectCollision* LObjectCollision) { mObjectCollisionS->add(LObjectCollision); }
+		inline void AddObjectCollision(ObjectCollision* LObjectCollision) noexcept { mObjectCollisionS->add(LObjectCollision); }
 		//移除Object
-		void RemoveObjectCollision(ObjectCollision* LObjectCollision) {
+		inline void RemoveObjectCollision(ObjectCollision* LObjectCollision) noexcept {
 			ObjectCollision** ObjectCollisionS = mObjectCollisionS->Data();
 			for (size_t i = 0; i < mObjectCollisionS->GetNumber(); ++i)
 			{
@@ -35,9 +35,9 @@ namespace SquarePhysics {
 			}
 		}
 		//添加Pixel
-		void AddPixelCollision(PixelCollision* LPixelCollision) { mPixelCollisionS->add(LPixelCollision); }
+		inline void AddPixelCollision(PixelCollision* LPixelCollision) noexcept { mPixelCollisionS->add(LPixelCollision); }
 		//移除Object
-		void RemovePixelCollision(PixelCollision* LPixelCollision) {
+		inline void RemovePixelCollision(PixelCollision* LPixelCollision) noexcept {
 			PixelCollision** PixelCollisionS = mPixelCollisionS->Data();
 			for (size_t i = 0; i < mPixelCollisionS->GetNumber(); ++i)
 			{
@@ -48,7 +48,7 @@ namespace SquarePhysics {
 			}
 		}
 		//设置地图
-		void SetFixedSizeTerrain(GridDecorator* LTerrain) { mTerrain = LTerrain; }
+		inline void SetFixedSizeTerrain(GridDecorator* LTerrain) noexcept { mTerrain = LTerrain; }
 		//物理模拟
 		void PhysicsSimulation(float TimeStep);
 

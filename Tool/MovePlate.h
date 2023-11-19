@@ -1,4 +1,5 @@
 #pragma once
+#include <assert.h>
 
 struct MovePlateInfo
 {
@@ -27,20 +28,21 @@ private:
 private:
 	PlateT* LPlate = nullptr;
 public:
-	inline int GetPosX() { return mPosX; }
-	inline int GetPosY() { return mPosY; }
+	[[nodiscard]] inline int GetPosX() { return mPosX; }
+	[[nodiscard]] inline int GetPosY() { return mPosY; }
 
-	inline int GetPlateX() { return (mOriginX - mPosX) * mEdge; }
-	inline int GetPlateY() { return (mOriginY - mPosY) * mEdge; }
+	[[nodiscard]] inline int GetPlateX() { return (mOriginX - mPosX) * mEdge; }
+	[[nodiscard]] inline int GetPlateY() { return (mOriginY - mPosY) * mEdge; }
 
-	inline int GetCalculatePosX(int x) { return (x / mEdge) - mPosX + mOriginX; }
-	inline int GetCalculatePosY(int y) { return (y / mEdge) - mPosY + mOriginY; }
+	[[nodiscard]] inline int GetCalculatePosX(int x) { return (x / mEdge) - mPosX + mOriginX; }
+	[[nodiscard]] inline int GetCalculatePosY(int y) { return (y / mEdge) - mPosY + mOriginY; }
 
 	constexpr MovePlate(const unsigned int NumberX, const unsigned int NumberY, const unsigned int Edge,
 		const unsigned int OriginX = 0, const unsigned int OriginY = 0) :
 		mNumberX(NumberX), mNumberY(NumberY), mEdge(Edge),
 		mOriginX(OriginX), mOriginY(OriginY)
 	{
+		assert(mEdge != 0 && "Error : mEdge = 0");
 		mPlate = new PlateT[mNumberX * mNumberY];
 		LPlate = new PlateT[mNumberX > mNumberY ? mNumberX : mNumberY];
 	}
@@ -51,12 +53,12 @@ public:
 		delete LPlate;
 	}
 
-	inline PlateT* PlateAt(unsigned int x, unsigned int y) {
+	[[nodiscard]] inline PlateT* PlateAt(unsigned int x, unsigned int y) {
 		return &mPlate[x * mNumberY + y];
 	}
 
 	//设置回调函数
-	inline void SetCallback(_GenerateCallback G, void* GData, _DeleteCallback D, void* DData) {
+	inline void SetCallback(_GenerateCallback G, void* GData, _DeleteCallback D, void* DData) noexcept {
 		mGenerateCallback = G;
 		mGenerateData = GData;
 		mDeleteCallback = D;
@@ -64,19 +66,19 @@ public:
 	}
 
 	//设置位置
-	inline void SetPos(float x, float y) {
+	inline void SetPos(float x, float y) noexcept {
 		mPosX = x / mEdge;
 		mPosY = y / mEdge;
 	}
 
-	inline PlateT* GetPlate(unsigned int x, unsigned int y) {
+	inline PlateT* GetPlate(unsigned int x, unsigned int y) noexcept {
 		if (x >= mNumberX || y >= mNumberY) {
 			return nullptr;
 		}
 		return PlateAt(x, y);
 	}
 
-	inline PlateT* CalculateGetPlate(float x, float y) {
+	inline PlateT* CalculateGetPlate(float x, float y) noexcept {
 		unsigned int xx = (x / mEdge) - mPosX + mOriginX;
 		unsigned int yy = (y / mEdge) - mPosY + mOriginY;
 		if (xx >= mNumberX || yy >= mNumberY) {

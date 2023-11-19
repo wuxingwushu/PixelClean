@@ -157,8 +157,9 @@ namespace GAME {
 		delete mPixelPosition;
 		delete mSequentialIndex;
 
-		delete mDescriptorPool;
+		
 		delete mDescriptorSet;
+		delete mDescriptorPool;
 		for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
 		{
 			delete mCommandBuffer[i];

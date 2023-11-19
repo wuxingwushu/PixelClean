@@ -36,20 +36,20 @@ namespace VulKan {
 		void SynchronizationUpDataImage();
 
 		//获取图片
-		[[nodiscard]] auto getImage() const { return mImage; }
+		[[nodiscard]] inline constexpr auto getImage() const noexcept { return mImage; }
 
 		//获取图片信息
-		[[nodiscard]] VkDescriptorImageInfo& getImageInfo() { return mImageInfo; }
-		[[nodiscard]] VkDescriptorImageInfo* getImageInfoP() { return &mImageInfo; }
+		[[nodiscard]] inline constexpr VkDescriptorImageInfo& getImageInfo() noexcept { return mImageInfo; }
+		[[nodiscard]] inline constexpr VkDescriptorImageInfo* getImageInfoP() noexcept { return &mImageInfo; }
 
 		//获取图片HOST缓存的指针
-		[[nodiscard]] void* getHOSTImagePointer() { return HOSTImage->getupdateBufferByMap(); }
+		[[nodiscard]] inline void* getHOSTImagePointer() { return HOSTImage->getupdateBufferByMap(); }
 
 		//关闭HOST缓存的指针
-		void endHOSTImagePointer() { HOSTImage->endupdateBufferByMap(); }
+		inline void endHOSTImagePointer() { HOSTImage->endupdateBufferByMap(); }
 
 		//获取HOST缓存
-		[[nodiscard]] VkBuffer getHOSTImageBuffer() { return HOSTImage->getBuffer(); }
+		[[nodiscard]] inline VkBuffer getHOSTImageBuffer() noexcept { return HOSTImage->getBuffer(); }
 
 		//************ 延迟上传
 		//改变数据类型（可写）

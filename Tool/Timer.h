@@ -191,7 +191,7 @@ public:
 					mTimeS[i] = 0;
 				}
 			}
-			mTimeHeapIndexS++;
+			++mTimeHeapIndexS;
 			if (mTimeHeapIndexS >= mHeapNumber)
 			{
 				mTimeHeapIndexS = 0;

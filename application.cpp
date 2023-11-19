@@ -54,6 +54,21 @@ namespace GAME {
 		}
 	}
 
+	void Application::DeleteGame(GameModsEnum Game) {
+		switch (Game)
+		{
+		case Maze:
+			delete (MazeMods*)mGameMods;
+			break;
+		case Infinite:
+			delete (UnlimitednessMapMods*)mGameMods;
+			break;
+		default:
+			break;
+		}
+		mGameMods = nullptr;
+	}
+
 	//窗口的初始化
 	void Application::initWindow() {
 		mWindow = new VulKan::Window(Global::mWidth, Global::mHeight, false, Global::FullScreen);
@@ -122,7 +137,7 @@ namespace GAME {
 		mImGuuiCommandBuffers = new VulKan::CommandBuffer(mDevice, mImGuuiCommandPool);
 
 		InterFace = new ImGuiInterFace(mDevice, mWindow, init_info, mRenderPass, mImGuuiCommandBuffers,
-			new ImGuiTexture(mDevice, mSwapChain, mCommandPool,mSampler),
+			new ImGuiTexture(mDevice, mSwapChain, mCommandPool,mSampler, 1),
 			mSwapChain->getImageCount());
 	}
 
@@ -417,8 +432,7 @@ namespace GAME {
 
 				if (Global::GameResourceUninstallBool) {
 					Global::GameResourceUninstallBool = false;
-					delete mGameMods;
-					mGameMods = nullptr;
+					DeleteGame(Global::GameMode);
 					mWindow->ReleaseApp();
 				}
 

@@ -54,7 +54,7 @@ public:
     };
 
     //添加
-    inline void add(T Parameter) {
+    inline void add(T Parameter) noexcept {
         if (mNumber == mMax)
         {
             std::cout << "[Queue]Error: GoBeyond" << std::endl;
@@ -69,7 +69,7 @@ public:
     };
 
     //弹出
-    [[nodiscard]] inline T* pop() {
+    [[nodiscard]] inline T* pop() noexcept {
         assert(!(mFlags_ & Queue_Timeout) && "Queue_Timeout Manual Not Supported pop");
 
         if (mNumber == 0)
@@ -83,7 +83,7 @@ public:
         return Parameter;
     }
 
-    void _pop() {
+    inline void _pop() noexcept {
         assert(!(mFlags_ & Queue_Timeout) && "Queue_Timeout Manual Not Supported pop");
         if (mNumber == 0)
         {
@@ -95,12 +95,12 @@ public:
     }
 
     //队列数量
-    [[nodiscard]] inline unsigned int GetNumber() {
+    [[nodiscard]] inline unsigned int GetNumber() noexcept {
         return mNumber;
     }
 
     //设置回调函数
-    void SetPopCallback(unsigned int time, _PopCallback callback, void* _Class) {
+    inline void SetPopCallback(unsigned int time, _PopCallback callback, void* _Class) noexcept {
         assert(mFlags_ & Queue_Timeout && "Not Turned On Queue_Timeout");
         mTime = time;
         mPopCallback = callback;
@@ -108,7 +108,7 @@ public:
     }
 
     //超时事件
-    inline void TimeoutEvent() {
+    inline void TimeoutEvent() noexcept {
         assert(mFlags_ & Queue_Timeout && "Not Turned On Queue_Timeout");
         if (mNumber == 0)return;
 
@@ -119,19 +119,19 @@ public:
     }
 
     //拿队列数据初始化
-    void InitData() {
+    inline void InitData() noexcept {
         DataHeadIndex = HeadIndex;
         DataTailIndex = TailIndex - 1;
     }
 
     //按顺序拿数据，不是弹出(调用前先 InitData() )
-    T* popData() {
+    [[nodiscard]] inline T* popData() noexcept {
         T* Parameter = &mQueue[DataHeadIndex];
         DataHeadIndex = Max(DataHeadIndex + 1);
         return Parameter;
     }
 
-    T* addData() {
+    [[nodiscard]] inline T* addData() noexcept {
         T* Parameter = &mQueue[DataTailIndex];
         DataTailIndex = Max(DataTailIndex - 1);
         return Parameter;

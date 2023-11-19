@@ -11,23 +11,23 @@ public:
 		mUseNumber(UseNumber),
 		mData(Data){}
 
-	D Use() {
+	[[nodiscard]] inline constexpr D Use() noexcept {
 		return mData;
 	}
 
-	void Limit() {
+	inline void Limit() noexcept {
 		if (mUseNumber != 0) {
 			--mUseNumber;
 		}
 	}
 
-	void Delete() {
+	inline void Delete() {
 		if (mUseNumber == 0) {
 			delete mData;
 		}
 	}
 
-	bool LimitDelete() {
+	inline bool LimitDelete() {
 		Limit();
 		if (mUseNumber == 0) {
 			delete mData;
@@ -36,7 +36,7 @@ public:
 		return false;
 	}
 
-	unsigned int GetUseNumber() {
+	[[nodiscard]] inline unsigned int GetUseNumber() {
 		return mUseNumber;
 	}
 

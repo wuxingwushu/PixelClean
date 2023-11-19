@@ -30,7 +30,7 @@ namespace VulKan {
 		void UpDataImagePicture(unsigned int Index, VkDescriptorImageInfo* ImageInfo);
 		void UpDataBufferPicture(unsigned int Index, VkDescriptorBufferInfo* BufferInfo);
 
-		[[nodiscard]] auto getDescriptorSet(int frameCount) const { return mDescriptorSets[frameCount]; }
+		[[nodiscard]] inline VkDescriptorSet getDescriptorSet(int frameCount) const { return mDescriptorSets[frameCount]; }
 
 	private:
 		unsigned int wFrameCount = 0;

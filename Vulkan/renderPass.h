@@ -31,7 +31,7 @@ namespace VulKan {
 		//构建子描述
 		void buildSubPassDescription();
 
-		[[nodiscard]] auto getSubPassDescription() const noexcept { return mSubPassDescription; }
+		[[nodiscard]] inline VkSubpassDescription getSubPassDescription() const noexcept { return mSubPassDescription; }
 
 	private:
 		VkSubpassDescription mSubPassDescription{};

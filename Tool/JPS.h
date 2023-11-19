@@ -22,36 +22,36 @@ struct JPSVec2 {
     int x;
     int y;
 
-    constexpr JPSVec2& operator+=(const JPSVec2& other) noexcept
+    inline constexpr JPSVec2& operator+=(const JPSVec2& other) noexcept
     {
         x += other.x;
         y += other.y;
         return *this;
     }
 
-    constexpr JPSVec2 operator+(const JPSVec2& other) noexcept
+    inline constexpr JPSVec2 operator+(const JPSVec2& other) noexcept
     {
         return { x += other.x, y += other.y };
     }
 
-    constexpr JPSVec2& operator-=(const JPSVec2& other) noexcept
+    inline constexpr JPSVec2& operator-=(const JPSVec2& other) noexcept
     {
         x -= other.x;
         y -= other.y;
         return *this;
     }
 
-    constexpr JPSVec2 operator-(const JPSVec2& other) noexcept
+    inline constexpr JPSVec2 operator-(const JPSVec2& other) noexcept
     {
         return { x - other.x, y - other.y };
     }
 
-    constexpr bool operator!=(const JPSVec2& other) noexcept
+    inline constexpr bool operator!=(const JPSVec2& other) noexcept
     {
         return (x != other.x) || (y != other.y);
     }
 
-    constexpr bool operator==(const JPSVec2& other) noexcept
+    inline constexpr bool operator==(const JPSVec2& other) noexcept
     {
         return (x == other.x) && (y == other.y);
     }
@@ -82,17 +82,17 @@ struct NodeData : public JPSVec2
     NodeData(int X, int Y, JPSDirection direction):JPSVec2{ X, Y }, Direction(direction){}
     NodeData(JPSVec2 pos, JPSDirection direction) :JPSVec2{ pos }, Direction(direction) {}
 
-    bool operator<(const NodeData& other) const {
+    inline bool operator<(const NodeData& other) const {
         return x < other.x || (x == other.x && y < other.y) || (x == other.x && y == other.y && Direction < other.Direction);
     }
 
-    bool operator==(const NodeData& other) const {
+    inline bool operator==(const NodeData& other) const {
         return x == other.x && y == other.y && Direction == other.Direction;
     }
 };
 
 struct NodeDataHash {
-    std::size_t operator()(const NodeData& node) const {
+    inline std::size_t operator()(const NodeData& node) const {
         std::size_t h1 = std::hash<int>{}(node.x);
         std::size_t h2 = std::hash<int>{}(node.y);
         std::size_t h3 = std::hash<int>{}(static_cast<int>(node.Direction));
@@ -121,7 +121,7 @@ private:
     _ObstaclesCallback mObstaclesCallback = nullptr;    //是否为障碍物回调函数
     void* mDataPointer = nullptr;                       //回调参数
 
-    std::vector<JPSNode*>* mJPSDirectionVec2;       //子集指针
+    std::vector<JPSNode*>* mJPSDirectionVec2{};       //子集指针
 #ifdef JPS_MemoryPool
     MemoryPool<JPSNode, sizeof(JPSNode) * 100> mMemoryPool;    //内存池
 #endif
@@ -521,7 +521,7 @@ private:
     }
 
     //节点排序
-    void NodeSort(JPSNode* jPSNode) {
+    inline void NodeSort(JPSNode* jPSNode) {
         std::sort(jPSNode->pChild.begin(), jPSNode->pChild.end(),
             [](JPSNode* a, JPSNode* b) {
                 return a->f > b->f;

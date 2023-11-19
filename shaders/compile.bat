@@ -32,4 +32,8 @@ mkdir Spv
 
 .\..\glslangValidator.exe  -V UVDynamicDiagram.geom -o Spv/UVDynamicDiagramG.spv
 
+.\..\glslangValidator.exe  -V Background.comp -o Spv/Background.spv
+
+.\..\glslangValidator.exe  -V GridBackground.comp -o Spv/GridBackground.spv
+
 pause

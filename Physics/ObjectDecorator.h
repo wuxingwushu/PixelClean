@@ -20,35 +20,35 @@ namespace SquarePhysics {
 		}
 		
 		//设置质量
-		void SetQuality(float quality) { mQuality = quality; }
+		inline void SetQuality(float quality) noexcept { mQuality = quality; }
 
 		[[nodiscard]] inline float GetQuality() const noexcept { return mQuality; }
 
-		void SetFrictionCoefficient(float frictionCoefficient) { mFrictionCoefficient = frictionCoefficient; }
+		inline void SetFrictionCoefficient(float frictionCoefficient) noexcept { mFrictionCoefficient = frictionCoefficient; }
 
 		[[nodiscard]] inline float GetFrictionCoefficient() const noexcept { return mFrictionCoefficient; }
 
-		[[nodiscard]] inline glm::vec2 GetBarycenter() { return mBarycenter; }
+		[[nodiscard]] inline glm::vec2 GetBarycenter() noexcept { return mBarycenter; }
 
 
 
 		
-		inline void SetPosX(float x) { mPos.x = x; }
+		inline void SetPosX(float x) noexcept { mPos.x = x; }
 
-		inline void SetPosY(float y) { mPos.y = y; }
+		inline void SetPosY(float y) noexcept { mPos.y = y; }
 
-		inline void SetPos(glm::vec2 pos) { mPos = pos; }
+		inline void SetPos(glm::vec2 pos) noexcept { mPos = pos; }
 
-		[[nodiscard]] inline float GetPosX() { return mPos.x; }
+		[[nodiscard]] inline float GetPosX() noexcept { return mPos.x; }
 
-		[[nodiscard]] inline float GetPosY() { return mPos.y; }
+		[[nodiscard]] inline float GetPosY() noexcept { return mPos.y; }
 
 		[[nodiscard]] inline glm::vec2 GetPos() const noexcept { return mPos; }
 		[[nodiscard]] constexpr inline glm::vec2* GetPosPointer() noexcept { return &mPos; }
 
 
 
-		void SetAngle(float angle) {
+		inline void SetAngle(float angle) noexcept {
 			mAngleFloat = angle;
 			mAngle = AngleFloatToAngleVec(angle);
 		}
@@ -69,7 +69,7 @@ namespace SquarePhysics {
 
 
 		//设置受力
-		void SetForce(glm::vec2 force) { 
+		inline void SetForce(glm::vec2 force) {
 			mForce = force;
 			mForceFloat = Modulus(force);
 			mForceAngleFloat = EdgeVecToCosAngleFloat(force);
@@ -77,7 +77,7 @@ namespace SquarePhysics {
 		}
 
 		//设置受力
-		void SetForce(float angle, float Force) {
+		inline void SetForce(float angle, float Force) {
 			mForceFloat = Force;
 			mForceAngleFloat = angle;
 			mForceAngle = AngleFloatToAngleVec(angle);
@@ -85,7 +85,7 @@ namespace SquarePhysics {
 		}
 
 		//受到的力
-		void SufferForce(glm::vec2 force) {
+		inline void SufferForce(glm::vec2 force) {
 			mForce += force;
 			mForceFloat = Modulus(force);
 			mForceAngleFloat = EdgeVecToCosAngleFloat(force);
@@ -93,7 +93,7 @@ namespace SquarePhysics {
 		}
 
 		//受到的力
-		void SufferForce(float angle, float Force) {
+		inline void SufferForce(float angle, float Force) {
 			mForce += AngleFloatToAngleVec(angle) * Force;
 			mForceFloat = Modulus(mForce);
 			mForceAngleFloat = EdgeVecToCosAngleFloat(mForce);
@@ -123,7 +123,7 @@ namespace SquarePhysics {
 		
 
 		//设置速度
-		void SetSpeed(glm::vec2 speed) { 
+		inline void SetSpeed(glm::vec2 speed) {
 			mSpeed = speed;
 			mSpeedFloat = Modulus(mSpeed);
 			mSpeedAngleFloat = EdgeVecToCosAngleFloat(mSpeed);
@@ -131,7 +131,7 @@ namespace SquarePhysics {
 		}
 
 		//设置速度
-		void SetSpeed(float speed, float angle) { 
+		inline void SetSpeed(float speed, float angle) {
 			mSpeedFloat = speed;
 			mSpeedAngleFloat = angle;
 			mSpeedAngle = AngleFloatToAngleVec(mSpeedAngleFloat);
@@ -139,7 +139,7 @@ namespace SquarePhysics {
 		}
 
 		//期望速度
-		void ExpectSpeed(float speed, float angle, float time) {
+		inline void ExpectSpeed(float speed, float angle, float time) {
 			glm::vec2 Lspeed = speed * AngleFloatToAngleVec(angle);
 			Lspeed -= mSpeed;
 			mSpeed += Lspeed * time;
@@ -169,11 +169,11 @@ namespace SquarePhysics {
 
 
 		//破坏的回调函数
-		inline void SetDestroyModeCallback(_DestroyModeCallback DestroyModeCallback) {
+		inline void SetDestroyModeCallback(_DestroyModeCallback DestroyModeCallback) noexcept {
 			mDestroyModeCallback = DestroyModeCallback;
 		}
 
-		bool DestroyModeCallback(int x, int y, bool Bool, float Angle, ObjectDecorator* Object, GridDecorator* Grid, void* Data) {
+		inline bool DestroyModeCallback(int x, int y, bool Bool, float Angle, ObjectDecorator* Object, GridDecorator* Grid, void* Data) noexcept {
 			if (mDestroyModeCallback != nullptr) {
 				return mDestroyModeCallback(x, y, Bool, Angle, Object, Grid, Data);
 			}
@@ -252,7 +252,7 @@ namespace SquarePhysics {
 		}
 
 		//更新各个方向速度的Bool
-		void UpDataSpeedBack() {
+		inline void UpDataSpeedBack() noexcept {
 			mSpeedBack[0] = (mSpeed.x > 0.0f);
 			mSpeedBack[1] = (mSpeed.y > 0.0f);
 		}
@@ -296,9 +296,9 @@ namespace SquarePhysics {
 			SufferForce(LSDecompositionForce.Parallel);
 		}
 
-		void SetTorque(float Torque) { mTorque = Torque; }
+		inline void SetTorque(float Torque) noexcept { mTorque = Torque; }
 
-		void SufferTorque(float Torque) { mTorque += Torque; }
+		inline void SufferTorque(float Torque) noexcept { mTorque += Torque; }
 
 
 	

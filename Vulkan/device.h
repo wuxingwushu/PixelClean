@@ -40,16 +40,16 @@ namespace VulKan {
 
 		VkSampleCountFlagBits getMaxUsableSampleCount();
 
-		[[nodiscard]] VmaAllocator getAllocator() const noexcept { return mAllocator; }//获取内存分配器
+		[[nodiscard]] inline VmaAllocator getAllocator() const noexcept { return mAllocator; }//获取内存分配器
 
-		[[nodiscard]] VkDevice getDevice() const noexcept { return mDevice; }
-		[[nodiscard]] VkPhysicalDevice getPhysicalDevice() const noexcept { return mPhysicalDevice; }
+		[[nodiscard]] inline VkDevice getDevice() const noexcept { return mDevice; }
+		[[nodiscard]] inline VkPhysicalDevice getPhysicalDevice() const noexcept { return mPhysicalDevice; }
 
-		[[nodiscard]] std::optional<uint32_t> getGraphicQueueFamily() const noexcept { return mGraphicQueueFamily; }
-		[[nodiscard]] std::optional<uint32_t> getPresentQueueFamily() const noexcept { return mPresentQueueFamily; }
+		[[nodiscard]] inline std::optional<uint32_t> getGraphicQueueFamily() const noexcept { return mGraphicQueueFamily; }
+		[[nodiscard]] inline std::optional<uint32_t> getPresentQueueFamily() const noexcept { return mPresentQueueFamily; }
 
-		[[nodiscard]] VkQueue getGraphicQueue() const noexcept { return mGraphicQueue; }
-		[[nodiscard]] VkQueue getPresentQueue() const noexcept { return mPresentQueue; }
+		[[nodiscard]] inline VkQueue getGraphicQueue() const noexcept { return mGraphicQueue; }
+		[[nodiscard]] inline VkQueue getPresentQueue() const noexcept { return mPresentQueue; }
 
 	private:
 		VkPhysicalDevice mPhysicalDevice{ VK_NULL_HANDLE };//获得的详细设备信息

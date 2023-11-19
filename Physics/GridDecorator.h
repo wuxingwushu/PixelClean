@@ -22,19 +22,19 @@ namespace SquarePhysics {
 			}
 		}
 
-		virtual inline PixelAttribute* at(glm::ivec2 pos) {
+		virtual inline PixelAttribute* at(glm::ivec2 pos) noexcept {
 			return &mPixelAttributeS[pos.x * mNumberY + pos.y];
 		}
 
 		//设置原点
-		void SetOrigin(int x, int y) {
+		inline void SetOrigin(int x, int y) noexcept {
 			OriginX = x;
 			OriginY = y;
 		}
 
-		[[nodiscard]] inline unsigned int GetObjectX() { return mNumberX; }
+		[[nodiscard]] inline constexpr unsigned int GetObjectX() noexcept { return mNumberX; }
 
-		[[nodiscard]] inline unsigned int GetObjectY() { return mNumberY; }
+		[[nodiscard]] inline constexpr unsigned int GetObjectY() noexcept { return mNumberY; }
 
 
 
@@ -44,7 +44,7 @@ namespace SquarePhysics {
 
 
 		//设置某个点
-		virtual inline bool SetFixedCollisionBool(glm::ivec2 pos, bool Bool) {
+		virtual inline bool SetFixedCollisionBool(glm::ivec2 pos, bool Bool) noexcept {
 			pos.x += OriginX;
 			pos.y += OriginY;
 			if (pos.x >= mNumberX || pos.x < 0)
@@ -92,7 +92,7 @@ namespace SquarePhysics {
 		}
 
 		//判断点是否出界
-		virtual inline bool BoundaryJudge(glm::uvec2 pos) {
+		virtual inline bool BoundaryJudge(glm::uvec2 pos) noexcept {
 			if (pos.x >= mNumberX)
 			{
 				return false;
@@ -105,7 +105,7 @@ namespace SquarePhysics {
 		}
 
 		//判断点是否出界（中心偏移）
-		virtual inline bool CrossingTheBoundary(glm::ivec2 pos) {
+		virtual inline bool CrossingTheBoundary(glm::ivec2 pos) noexcept {
 			pos.x += OriginX;
 			if ((pos.x >= mNumberX) || (pos.x < 0))
 			{
@@ -121,7 +121,7 @@ namespace SquarePhysics {
 
 
 		//设置回调函数的指针和输入
-		void SetCollisionCallback(_TerrainCollisionCallback CollisionCallback, void* mclass) {
+		inline void SetCollisionCallback(_TerrainCollisionCallback CollisionCallback, void* mclass) noexcept {
 			mCollisionCallback = CollisionCallback;
 			mClass = mclass;
 		}
@@ -192,9 +192,9 @@ namespace SquarePhysics {
 
 
 		//有多少个外骨架点
-		virtual unsigned int GetOutlinePointSize() { return 0; }
+		virtual inline unsigned int GetOutlinePointSize() noexcept { return 0; }
 		//获取第 I 个外骨架点
-		virtual glm::vec2 GetOutlinePointSet(unsigned int i) { return glm::vec2(0); }
+		virtual inline glm::vec2 GetOutlinePointSet(unsigned int i) noexcept { return glm::vec2(0); }
 	};
 
 }

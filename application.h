@@ -26,6 +26,8 @@ namespace GAME {
 		//获取对于游戏
 		GameMods* GetGame(GameModsEnum Game);
 
+		void DeleteGame(GameModsEnum Game);
+
 		//重建交换链:  当窗口大小发生变化的时候，交换链也要发生变化，Frame View Pipeline RenderPass Sync
 		void recreateSwapChain();
 

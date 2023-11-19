@@ -58,11 +58,11 @@ private:
 	unsigned int mAtWorkNumber = 0;				//正在工作的区块数量
 	BlockDataT** mBlockDataAtWorkS = nullptr;	//正在工作的区块
 
-	void Increase(BlockDataT* Pointer) {
+	inline void Increase(BlockDataT* Pointer) {
 		mBlockDataAtWorkS[mAtWorkNumber++] = Pointer;
 	}
 
-	void Alignment(BlockDataT* Pointer) {
+	inline void Alignment(BlockDataT* Pointer) {
 		for (size_t i = 0; i < mAtWorkNumber; i++)
 		{
 			if (mBlockDataAtWorkS[i] == Pointer) {
@@ -104,19 +104,19 @@ public:
 		delete mBlockDataAtWorkS;
 	}
 
-	DataT* Data() {
+	[[nodiscard]] inline constexpr DataT* Data() noexcept {
 		return mData;
 	}
 
 	//设置回调函数
-	void SetCallback(_Callback _add, _Callback _pop, void* _Class) {
+	inline void SetCallback(_Callback _add, _Callback _pop, void* _Class) noexcept {
 		AddCallback = _add;
 		PopCallback = _pop;
 		CallbackClass = _Class;
 	}
 
 	//延迟注册数据
-	BlockDataInfo DelayRegistration() {
+	[[nodiscard]] BlockDataInfo DelayRegistration() {
 		std::lock_guard<std::mutex> lock(mMutex);  // 加锁
 		unsigned int Index = mBlockDataAvailableS[mAvailableNumber - 1]->add();
 		if (Index == 0) {
@@ -129,24 +129,24 @@ public:
 	}
 
 	//注册
-	void Registration(BlockDataInfo info) {
+	inline void Registration(BlockDataInfo info) {
 		std::lock_guard<std::mutex> lock(mMutex);  // 加锁
 		Dictionary[info.mBlockDataT->DataS[info.mIndex]] = info;
 	}
 
 	//延迟添加（线程安全）
-	void DelayAddMutex(DataT data) {
+	inline void DelayAddMutex(DataT data) {
 		std::lock_guard<std::mutex> lock(mMutex);  // 加锁
 		DelayAddData.push_back(data);
 	}
 
 	//延迟添加
-	void DelayAdd(DataT data) {
+	inline void DelayAdd(DataT data) {
 		DelayAddData.push_back(data);
 	}
 
 	//添加全部延迟数据
-	void WholeAdd() {
+	inline void WholeAdd() {
 		for (auto data : DelayAddData)
 		{
 			add(data);
@@ -155,18 +155,18 @@ public:
 	}
 
 	//延迟弹出（线程安全）
-	void DelayPopMutex(DataT data) {
+	inline void DelayPopMutex(DataT data) noexcept {
 		std::lock_guard<std::mutex> lock(mMutex);  // 加锁
 		DelayPopData.push_back(data);
 	}
 
 	//延迟弹出
-	void DelayPop(DataT data) {
+	inline void DelayPop(DataT data) noexcept {
 		DelayPopData.push_back(data);
 	}
 
 	//弹出全部延迟数据
-	void WholePop() {
+	inline void WholePop() {
 		for (auto data : DelayPopData)
 		{
 			pop(data);
@@ -211,7 +211,7 @@ public:
 		}
 	}
 
-	unsigned int GetApplyNumber() { return mAtWorkNumber; }
+	[[nodiscard]] inline unsigned int GetApplyNumber() noexcept { return mAtWorkNumber; }
 
-	BlockDataT** GetBlockDataS() { return mBlockDataAtWorkS; }
+	[[nodiscard]] inline BlockDataT** GetBlockDataS() noexcept { return mBlockDataAtWorkS; }
 };

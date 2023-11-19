@@ -26,7 +26,7 @@ namespace VulKan {
 
 		void SetWindow(bool FullScreen);
 
-		[[nodiscard]] GLFWwindow* getWindow() const noexcept { return mWindow; }
+		[[nodiscard]] inline GLFWwindow* getWindow() const noexcept { return mWindow; }
 
 		void setApp(GameMods* app);
 		void ReleaseApp();

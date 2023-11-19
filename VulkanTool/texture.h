@@ -1,11 +1,9 @@
 #pragma once
-
 #include "../base.h"
-#include "../VulKan/image.h"//����ͼƬ
-#include "../VulKan/sampler.h"//����ͼƬ������
+#include "../VulKan/image.h"
+#include "../VulKan/sampler.h"
 #include "../VulKan/device.h"
 #include "../VulKan/commandPool.h"
-
 
 
 namespace VulKan {
@@ -20,13 +18,13 @@ namespace VulKan {
 
 		~Texture();
 
-		[[nodiscard]] auto getImage() const { return mImage; }
+		[[nodiscard]] inline constexpr auto getImage() const noexcept { return mImage; }
 		
 		//[[nodiscard]] auto getSampler() const { return mSampler; }
 
-		[[nodiscard]] VkDescriptorImageInfo& getImageInfo() { return mImageInfo; }
+		[[nodiscard]] inline constexpr VkDescriptorImageInfo& getImageInfo() noexcept { return mImageInfo; }
 
-		[[nodiscard]] VkDescriptorImageInfo* getImageInfoP() { return &mImageInfo; }
+		[[nodiscard]] inline constexpr VkDescriptorImageInfo* getImageInfoP() noexcept { return &mImageInfo; }
 
 	private:
 		Device* wDevice{ nullptr };

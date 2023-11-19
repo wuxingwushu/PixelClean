@@ -9,7 +9,7 @@ namespace VulKan {
 
 		~CommandPool();
 
-		[[nodiscard]] auto getCommandPool() const noexcept { return mCommandPool; }
+		[[nodiscard]] inline VkCommandPool getCommandPool() const noexcept { return mCommandPool; }
 
 	private:
 		VkCommandPool mCommandPool{ VK_NULL_HANDLE };

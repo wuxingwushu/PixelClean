@@ -6,11 +6,12 @@ class ContinuousData
 {
 private:
 	TData* mData;
-	unsigned int mMax;//最多容量
+	unsigned int mMax = 0;//最多容量
 	unsigned int mNumber = 0;//当前容量
 public:
-	ContinuousData(unsigned int size) {
-		mMax = size;
+	ContinuousData(unsigned int size):
+		mMax(size)
+	{
 		mData = new TData[mMax];
 	};
 
@@ -18,7 +19,7 @@ public:
 		delete mData;
 	};
 
-	void add(TData data) {
+	inline void add(TData data) noexcept {
 		if (mNumber == mMax)
 		{
 			return;
@@ -27,7 +28,7 @@ public:
 		++mNumber;
 	}
 
-	void Delete(unsigned int index) {
+	inline void Delete(unsigned int index) noexcept {
 		if (mNumber == 0)
 		{
 			return;
@@ -37,7 +38,7 @@ public:
 	}
 
 
-	void Delete(TData* Pointer) {
+	inline void Delete(TData* Pointer) noexcept {
 		--mNumber;
 		*Pointer = mData[mNumber];
 	}
@@ -51,15 +52,15 @@ public:
 		return Iterator<TData>(mData + mNumber);
 	}
 
-	[[nodiscard]] constexpr TData* Data() const noexcept {
+	inline constexpr TData* Data() const noexcept {
 		return mData;
 	}
 
-	[[nodiscard]] TData* GetData(unsigned int index) {
+	[[nodiscard]] inline TData* GetData(unsigned int index) {
 		return &mData[index];
 	}
 
-	[[nodiscard]] unsigned int GetNumber() const noexcept {
+	[[nodiscard]] inline unsigned int GetNumber() const noexcept {
 		return mNumber;
 	}
 };

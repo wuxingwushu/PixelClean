@@ -22,22 +22,22 @@ namespace VulKan {
 		PipelineS(Device* Device, RenderPass* RenderPass);
 		~PipelineS();
 
-		void EstablishPipeline(NewPipeline F) {
+		inline void EstablishPipeline(NewPipeline F) noexcept {
 			mPipelineS.push_back(F(new Pipeline(mDevice, mRenderPass), mDevice));
 			mNewPipelineS.push_back(F);
 		};
 
 		void ReconfigurationPipelineS();
 
-		Pipeline* GetPipeline(PipelineMods I) {
+		[[nodiscard]] inline Pipeline* GetPipeline(PipelineMods I) noexcept {
 			return mPipelineS[I];
 		}
 
 	private:
-		Device* mDevice;
-		RenderPass* mRenderPass;
-		std::vector<Pipeline*> mPipelineS;
-		std::vector<NewPipeline> mNewPipelineS;
+		Device* mDevice{ nullptr };
+		RenderPass* mRenderPass{ nullptr };
+		std::vector<Pipeline*> mPipelineS{};
+		std::vector<NewPipeline> mNewPipelineS{};
 	};
 
 }

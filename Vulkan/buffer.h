@@ -13,9 +13,9 @@ namespace VulKan {
 		~Buffer();
 
 		//获取 Buffer
-		[[nodiscard]] VkBuffer getBuffer() const noexcept { return mBuffer; }
+		[[nodiscard]] inline VkBuffer getBuffer() const noexcept { return mBuffer; }
 
-		[[nodiscard]] VkDescriptorBufferInfo& getBufferInfo() noexcept { return mBufferInfo; }
+		[[nodiscard]] inline VkDescriptorBufferInfo& getBufferInfo() noexcept { return mBufferInfo; }
 		
 		//创建顶点缓存
 		static Buffer* createVertexBuffer(Device* device, VkDeviceSize size, void * pData, bool ThreadBool = false);

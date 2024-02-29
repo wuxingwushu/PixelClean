@@ -425,9 +425,9 @@ namespace GAME {
 			mMistDescriptorSet[ix] = new VulKan::DescriptorSet * [mNumberY];
 			for (int iy = 0; iy < mNumberY; ++iy)
 			{
-				mTextureAndBuffer[ix][iy].Type = GetNoise(ix - mMoveTerrain->OriginX + mMoveTerrain->GetGridSPosX(), iy - mMoveTerrain->OriginY + mMoveTerrain->GetGridSPosY());
+				mTextureAndBuffer[ix][iy].Type = GetNoise(ix - mMoveTerrain->Origin.x + mMoveTerrain->GetGridSPosX(), iy - mMoveTerrain->Origin.y + mMoveTerrain->GetGridSPosY());
 
-				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3((ix - mMoveTerrain->OriginX + mMoveTerrain->GetGridSPosX()) * 16, (iy - mMoveTerrain->OriginY + mMoveTerrain->GetGridSPosY()) * 16, 0));//位移矩阵
+				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3((ix - mMoveTerrain->Origin.x + mMoveTerrain->GetGridSPosX()) * 16, (iy - mMoveTerrain->Origin.y + mMoveTerrain->GetGridSPosY()) * 16, 0));//位移矩阵
 				mTextureAndBuffer[ix][iy].mBufferS = VulKan::Buffer::createUniformBuffer(wDevice, sizeof(ObjectUniformGIF));
 				mTextureAndBuffer[ix][iy].mBufferS->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniformGIF));
 				for (size_t i = 0; i < wFrameCount; ++i)
@@ -663,8 +663,8 @@ namespace GAME {
 
 	void Dungeon::UpdataMistData(int x, int y) {
 		//std::cout << "************************************" << std::endl;
-		PathfindingDecoratorDeviationX = (mMoveTerrain->OriginX - mMoveTerrain->GetGridSPosX()) * 16;
-		PathfindingDecoratorDeviationY = (mMoveTerrain->OriginY - mMoveTerrain->GetGridSPosY()) * 16;
+		PathfindingDecoratorDeviationX = (mMoveTerrain->Origin.x - mMoveTerrain->GetGridSPosX()) * 16;
+		PathfindingDecoratorDeviationY = (mMoveTerrain->Origin.y - mMoveTerrain->GetGridSPosY()) * 16;
 		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
 		{
 			i.wait();

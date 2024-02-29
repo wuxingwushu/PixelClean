@@ -5,7 +5,8 @@
 enum QueueFlags_
 {
     Queue_None      = 0,
-    Queue_Timeout   = 1 << 1, // 开启  超时检测
+    Queue_Timeout   = 1 << 0,   // 开启  超时检测
+    Queue_Expansion = 1 << 1,   // 开启  扩容
 };
 
 template <typename T>
@@ -19,7 +20,7 @@ private:
 
     unsigned int HeadIndex = 0;
     unsigned int TailIndex = 0;
-    const unsigned int mMax;
+    unsigned int mMax;
     unsigned int mNumber = 0;
     QueueFlags_ mFlags_;
 
@@ -40,9 +41,9 @@ private:
     };
 public:
     constexpr Queue(unsigned int size, QueueFlags_ flags = Queue_None):mMax(size), mFlags_(flags){
-        mQueue = new T[size];
+        mQueue = new T[mMax];
         if (mFlags_ & Queue_Timeout) {
-            mTimeS = new clock_t[size];
+            mTimeS = new clock_t[mMax];
         }
     };
 
@@ -57,8 +58,13 @@ public:
     inline void add(T Parameter) noexcept {
         if (mNumber == mMax)
         {
-            std::cout << "[Queue]Error: GoBeyond" << std::endl;
-            return;
+            if (mFlags_ & Queue_Expansion) {
+                Expansion();
+            }
+            else {
+                std::cout << "[Queue]Error: GoBeyond" << std::endl;
+                return;
+            }
         }
         ++mNumber;
         mQueue[TailIndex] = Parameter;
@@ -116,6 +122,35 @@ public:
             mPopCallback(&mQueue[HeadIndex], mClass);
             HeadIndex = Max(HeadIndex + 1);//弹出
         }
+    }
+
+    void Expansion() {
+        T* PQueue = mQueue;
+        T* LQueue = new T[mMax * 2];
+        T* WQueue = LQueue;
+        for (size_t i = 0; i < mMax; i++)
+        {
+            *LQueue = *PQueue;
+            ++PQueue;
+            ++LQueue;
+        }
+        delete mQueue;
+        mQueue = WQueue;
+        if (mFlags_ & Queue_Timeout) {
+            clock_t* PTimeS = mTimeS;
+            clock_t* LTimeS= new clock_t[mMax * 2];
+            clock_t* WTimeS = LTimeS;
+            for (size_t i = 0; i < mMax; i++)
+            {
+                *LTimeS = *PTimeS;
+                ++PTimeS;
+                ++LTimeS;
+            }
+            delete mTimeS;
+            mTimeS = WTimeS;
+        }
+
+        mMax *= 2;
     }
 
     //拿队列数据初始化

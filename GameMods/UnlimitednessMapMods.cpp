@@ -201,8 +201,9 @@ namespace GAME {
 		mGamePlayer->GetObjectCollision()->SufferForce(PlayerForce);//设置玩家受力
 		PlayerForce = { 0, 0 };
 		mAuxiliaryVision->Begin();
+		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsSimulation(TOOL::FPStime);//物理事件
-
+		TOOL::mTimer->StartEnd();
 
 
 		m_angle = mGamePlayer->GetObjectCollision()->GetAngleFloat();
@@ -347,12 +348,15 @@ namespace GAME {
 			mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);
 			Global::MainCommandBufferUpdateRequest();
 		}
+
 		//战争迷雾
+		TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
 		MistContinuityFire += TOOL::FPStime;
 		if (MistContinuityFire > 0.02f && Global::MistSwitch) {
 			MistContinuityFire = 0;
 			mDungeon->UpdataMist(int(mCamera->getCameraPos().x), int(mCamera->getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
 		}
+		TOOL::mTimer->StartEnd();
 
 		mAuxiliaryVision->End();
 	}

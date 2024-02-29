@@ -56,20 +56,17 @@ void bresenham_line(int x0, int y0, int x1, int y1) {
     int err = dx - dy;
     int e2;
     while (true) {
-        if(dianshe(x0,y0)) break;
         if (x0 == x1 && y0 == y1) break; // 线条绘制完毕
         e2 = 2 * err;
         if (e2 > -dy) {
             err -= dy;
             x0 += sx;
-        }
-        if (x0 == x1 && y0 == y1) {
-            dianshe(x0,y0);
-            break;
+            if(dianshe(x0,y0)) break;
         }
         if (e2 < dx) {
             err += dx;
             y0 += sy;
+            if(dianshe(x0,y0)) break;
         }
     }
 }

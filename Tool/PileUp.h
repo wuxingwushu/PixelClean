@@ -22,8 +22,7 @@ public:
     inline void add(T Parameter) noexcept {
         if (Index >= Max)
         {
-            std::cout << "[PileUp]Error: GoBeyond" << std::endl;
-            return;
+            Expansion();
         }
         //memcpy(&mPileUp[Index], &Parameter, sizeof(T));
         mPileUp[Index] = Parameter;
@@ -71,5 +70,20 @@ public:
 
     inline Iterator<T> end() {
         return Iterator<T>(mPileUp + Index);
+    }
+
+    void Expansion() {
+        T* PPileUp = mPileUp;
+        T* LPileUp = new T[Max * 2];
+        T* WPileUp = LPileUp;
+        for (size_t i = 0; i < Max; i++)
+        {
+            *LPileUp = *PPileUp;
+            ++PPileUp;
+            ++LPileUp;
+        }
+        delete mPileUp;
+        mPileUp = WPileUp;
+        Max *= 2;
     }
 };

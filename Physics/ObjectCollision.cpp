@@ -19,9 +19,9 @@ namespace SquarePhysics {
 	void ObjectCollision::OutlineCalculate() {
 		OutlinePointSize = 0;
 		mQuality = 0;
-		for (size_t x = 0; x < mNumberX; ++x)
+		for (size_t x = 0; x < mNumber.x; ++x)
 		{
-			for (size_t y = 0; y < mNumberY; ++y)
+			for (size_t y = 0; y < mNumber.y; ++y)
 			{
 				if (at({x,y})->Collision)
 				{
@@ -32,7 +32,7 @@ namespace SquarePhysics {
 				}
 			}
 		}
-		float LSideLength = mNumberX * mNumberY;
+		float LSideLength = mNumber.x * mNumber.y;
 		mBarycenter.x /= LSideLength;
 		mBarycenter.y /= LSideLength;
 		LSideLength = float(mSideLength) / 2;
@@ -42,9 +42,9 @@ namespace SquarePhysics {
 
 	void ObjectCollision::CalculationBarycenter() {
 		mQuality = 0;
-		for (size_t x = 0; x < mNumberX; ++x)
+		for (size_t x = 0; x < mNumber.x; ++x)
 		{
-			for (size_t y = 0; y < mNumberY; ++y)
+			for (size_t y = 0; y < mNumber.y; ++y)
 			{
 				if (at({ x,y })->Collision)
 				{
@@ -54,7 +54,7 @@ namespace SquarePhysics {
 				}
 			}
 		}
-		float LSideLength = mNumberX * mNumberY;
+		float LSideLength = mNumber.x * mNumber.y;
 		mBarycenter.x /= LSideLength;
 		mBarycenter.y /= LSideLength;
 		LSideLength = float(mSideLength) / 2;
@@ -92,7 +92,7 @@ namespace SquarePhysics {
 	CollisionInfo ObjectCollision::PixelCollision(glm::vec2 dian) {
 		dian -= mPos;//网格体为中心
 		dian = vec2angle(dian, { mAngle.x, -mAngle.y });//减除玩家的角度// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
-		if (GetFixedCollisionBool(dian)) {
+		if (GetFixedCollisionCompensateBool(dian)) {
 			SetFixedCollisionBool(dian, false);
 			CollisionCallback(dian.x, dian.y, false, this);
 			OutlineCalculate();
@@ -107,17 +107,16 @@ namespace SquarePhysics {
 		Start = vec2angle((glm::vec2(Start) - mPos), { mAngle.x, -mAngle.y} ); // -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		End = vec2angle((glm::vec2(End) - mPos), { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		glm::ivec2 IStart = Start, IEnd = End;
-		if (IStart.x < 0)IStart.x -= 1;//负值偏移
-		if (IStart.y < 0)IStart.y -= 1;//负值偏移
-		if (IEnd.x < 0)IEnd.x -= 1;//负值偏移
-		if (IEnd.y < 0)IEnd.y -= 1;//负值偏移
+		if (Start.x < 0)--IStart.x;//负值偏移
+		if (Start.y < 0)--IStart.y;//负值偏移
+		if (End.x < 0)--IEnd.x;//负值偏移
+		if (End.y < 0)--IEnd.y;//负值偏移
 		CollisionInfo LCollisionInfo = RadialCollisionDetection(IStart, IEnd);
 		if (LCollisionInfo.Collision)
 		{
 			Direction = vec2angle(Direction, { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 
-			glm::ivec2 IEnd = End;
-			glm::dvec2 YEnd = End - glm::dvec2(IEnd);
+			glm::dvec2 YEnd = End - glm::dvec2(glm::ivec2(End));
 			if (YEnd.x < 0) {
 				YEnd.x += 1;
 			}
@@ -135,6 +134,10 @@ namespace SquarePhysics {
 				Depth = fabs(IEnd.x) - 1;
 			}
 
+			if (Depth < 0) {
+				Depth = 0;
+			}
+
 			End += SquareToRadial(-Depth, 1 + Depth,  -Depth, 1 + Depth, YEnd, Direction);
 			LCollisionInfo.Pos = glm::vec2(vec2angle(End, mAngle)) + mPos;
 		}
@@ -142,10 +145,12 @@ namespace SquarePhysics {
 	}
 
 	[[nodiscard]] CollisionInfo ObjectCollision::RelativeCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End) {
-		CollisionInfo LCollisionInfo = RadialCollisionDetection(
-			vec2angle((glm::vec2(Start) - mPos), { mAngle.x, -mAngle.y }),// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
-			vec2angle((glm::vec2(End) - mPos), { mAngle.x, -mAngle.y })// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
-		);
-		return LCollisionInfo;
+		Start = vec2angle((glm::vec2(Start) - mPos), { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+		End = vec2angle((glm::vec2(End) - mPos), { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+		if (Start.x < 0)--Start.x;
+		if (Start.y < 0)--Start.y;
+		if (End.x < 0)--End.x;
+		if (End.y < 0)--End.y;
+		return RadialCollisionDetection(Start, End);
 	}
 }

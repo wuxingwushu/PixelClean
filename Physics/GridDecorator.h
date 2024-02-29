@@ -10,10 +10,11 @@ namespace SquarePhysics {
 	{
 	public:
 		GridDecorator(unsigned int x, unsigned int y, unsigned int SideLength, bool Structure = true)
-			: mNumberX(x), mNumberY(y), mSideLength(SideLength)
+			: mNumber{ x, y }, mSideLength(SideLength)
 		{
 			if (Structure) {
-				mPixelAttributeS = new PixelAttribute[mNumberX * mNumberY];
+				Radius = Modulus(mNumber);
+				mPixelAttributeS = new PixelAttribute[mNumber.x * mNumber.y];
 			}
 		}
 		virtual ~GridDecorator() {
@@ -22,19 +23,20 @@ namespace SquarePhysics {
 			}
 		}
 
-		virtual inline PixelAttribute* at(glm::ivec2 pos) noexcept {
-			return &mPixelAttributeS[pos.x * mNumberY + pos.y];
+		virtual inline PixelAttribute* at(glm::uvec2 pos) noexcept {
+			return &mPixelAttributeS[pos.x * mNumber.y + pos.y];
 		}
 
 		//设置原点
-		inline void SetOrigin(int x, int y) noexcept {
-			OriginX = x;
-			OriginY = y;
+		inline void SetOrigin(int x, int y) noexcept { 
+			Origin = { x, y };
+			glm::ivec2 S = glm::ivec2(mNumber) - Origin;
+			S.x = fabs(Origin.x) > fabs(S.x) ? fabs(Origin.x) : fabs(S.x);
+			S.y = fabs(Origin.y) > fabs(S.y) ? fabs(Origin.y) : fabs(S.y);
+			Radius = Modulus(S);
 		}
 
-		[[nodiscard]] inline constexpr unsigned int GetObjectX() noexcept { return mNumberX; }
-
-		[[nodiscard]] inline constexpr unsigned int GetObjectY() noexcept { return mNumberY; }
+		[[nodiscard]] inline constexpr glm::uvec2 GetObject() noexcept { return mNumber; }
 
 
 
@@ -45,13 +47,13 @@ namespace SquarePhysics {
 
 		//设置某个点
 		virtual inline bool SetFixedCollisionBool(glm::ivec2 pos, bool Bool) noexcept {
-			pos.x += OriginX;
-			pos.y += OriginY;
-			if (pos.x >= mNumberX || pos.x < 0)
+			pos.x += Origin.x;
+			if (pos.x >= mNumber.x || pos.x < 0)
 			{
 				return false;
 			}
-			if (pos.y >= mNumberY || pos.y < 0)
+			pos.y += Origin.y;
+			if (pos.y >= mNumber.y || pos.y < 0)
 			{
 				return false;
 			}
@@ -62,14 +64,24 @@ namespace SquarePhysics {
 			return true;
 		}
 
-		virtual inline bool GetFixedCollisionBool(glm::ivec2 pos) {
-			pos.x += OriginX;
-			pos.y += OriginY;
-			if (pos.x >= mNumberX || pos.x < 0)
+		//获取网格是否有碰撞（中心原点补偿）
+		virtual inline bool GetFixedCollisionCompensateBool(glm::ivec2 pos) {
+			pos.x += Origin.x;
+			if (pos.x >= mNumber.x || pos.x < 0)
 			{
 				return false;
 			}
-			if (pos.y >= mNumberY || pos.y < 0)
+			pos.y += Origin.y;
+			if (pos.y >= mNumber.y || pos.y < 0)
+			{
+				return false;
+			}
+			return at(pos)->Collision;
+		}
+
+		//获取网格是否有碰撞
+		virtual inline bool GetFixedCollisionBool(glm::uvec2 pos) {
+			if ((pos.x >= mNumber.x) || (pos.y >= mNumber.y))
 			{
 				return false;
 			}
@@ -78,13 +90,13 @@ namespace SquarePhysics {
 
 		//获取某个像素带点的摩檫力系数
 		virtual inline float GetFrictionCoefficient(glm::ivec2 pos) {
-			pos.x += OriginX;
-			pos.y += OriginY;
-			if (pos.x >= mNumberX || pos.x < 0)
+			pos.x += Origin.x;
+			if (pos.x >= mNumber.x || pos.x < 0)
 			{
 				return 1.0f;
 			}
-			if (pos.y >= mNumberY || pos.y < 0)
+			pos.y += Origin.y;
+			if (pos.y >= mNumber.y || pos.y < 0)
 			{
 				return 1.0f;
 			}
@@ -93,11 +105,11 @@ namespace SquarePhysics {
 
 		//判断点是否出界
 		virtual inline bool BoundaryJudge(glm::uvec2 pos) noexcept {
-			if (pos.x >= mNumberX)
+			if (pos.x >= mNumber.x)
 			{
 				return false;
 			}
-			if (pos.y >= mNumberY)
+			if (pos.y >= mNumber.y)
 			{
 				return false;
 			}
@@ -106,13 +118,13 @@ namespace SquarePhysics {
 
 		//判断点是否出界（中心偏移）
 		virtual inline bool CrossingTheBoundary(glm::ivec2 pos) noexcept {
-			pos.x += OriginX;
-			if ((pos.x >= mNumberX) || (pos.x < 0))
+			pos.x += Origin.x;
+			if ((pos.x >= mNumber.x) || (pos.x < 0))
 			{
 				return true;
 			}
-			pos.y += OriginY;
-			if ((pos.y >= mNumberY) || (pos.y < 0))
+			pos.y += Origin.y;
+			if ((pos.y >= mNumber.y) || (pos.y < 0))
 			{
 				return true;
 			}
@@ -131,8 +143,8 @@ namespace SquarePhysics {
 		//调用回调函数
 		virtual inline void CollisionCallback(int x, int y, bool Bool, ObjectDecorator* object) {
 			if (SetFixedCollisionBool({x, y}, Bool)) {
-				x += OriginX;
-				y += OriginY;
+				x += Origin.x;
+				y += Origin.y;
 				mCollisionCallback(x, y, Bool, object, mClass);
 			}
 		}
@@ -141,6 +153,8 @@ namespace SquarePhysics {
 		
 		//（输入是 Object 的 mPixelAttributeS 数组索引两个点，返回是 mPixelAttributeS 数组索引）
 		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End) {
+			Start += Origin;
+			End += Origin;
 			int dx = abs(End.x - Start.x);
 			int dy = abs(End.y - Start.y);
 			int sx = (Start.x < End.x) ? 1 : -1;
@@ -148,30 +162,23 @@ namespace SquarePhysics {
 			int err = dx - dy;
 			int e2;
 			while (true) {
-				if (GetFixedCollisionBool(Start)) {
-					//if (GetFixedCollisionBool({ Start.x - sx, Start.y }))
-					//	return { true, Start, 1.57f - (sx == 1 ? 0 : 3.14f) };
-					return { true, Start, 1.57f - (sy == 1 ? 3.14f : 0) };
-				}
 				if (Start.x == End.x && Start.y == End.y) {
-					return { false, Start, 0 };
+					return { false, Start - Origin, 0 };
 				}
 				e2 = 2 * err;
 				if (e2 > -dy) {
 					err -= dy;
 					Start.x += sx;
-				}
-				if (GetFixedCollisionBool(Start)) {
-					//if (GetFixedCollisionBool({ Start.x, Start.y - sy }))
-					//	return { true, Start, 0 + (sy == 1 ? 0 : 3.14f) };
-					return { true, Start, 0 + (sx == 1 ? 3.14f : 0) };
-				}
-				if (Start.x == End.x && Start.y == End.y) {
-					return { false, Start, 0 };
+					if (GetFixedCollisionBool(Start)) {
+						return { true, Start - Origin, 0 + (sx == 1 ? 3.14f : 0) };
+					}
 				}
 				if (e2 < dx) {
 					err += dx;
 					Start.y += sy;
+					if (GetFixedCollisionBool(Start)) {
+						return { true, Start - Origin, 1.57f - (sy == 1 ? 3.14f : 0) };
+					}
 				}
 			}
 		}
@@ -179,12 +186,13 @@ namespace SquarePhysics {
 		//像素边长
 		unsigned int mSideLength = 1;
 		//原点
-		int OriginX = 0;
-		int OriginY = 0;
+		glm::ivec2 Origin{ 0 };
 		//大小
-		unsigned int mNumberX = 0;
-		unsigned int mNumberY = 0;
-		PixelAttribute* mPixelAttributeS{ nullptr };//点数据
+		glm::uvec2 mNumber{ 0 };
+		//碰撞最大半径
+		float Radius = 0;
+		//点数据
+		PixelAttribute* mPixelAttributeS{ nullptr };
 
 		//回调函数指针
 		_TerrainCollisionCallback mCollisionCallback = nullptr;

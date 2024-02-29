@@ -35,7 +35,7 @@ namespace SquarePhysics {
 		{
 			Lpos = pos - LObjectDecorator->GetPos();
 			Lpos = vec2angle(Lpos, -LObjectDecorator->GetAngleFloat());
-			if (LObjectDecorator->GetFixedCollisionBool(Lpos)) {
+			if (LObjectDecorator->GetFixedCollisionCompensateBool(Lpos)) {
 				return { LObjectDecorator, Lpos };
 			}
 		}
@@ -62,15 +62,18 @@ namespace SquarePhysics {
 		bool Once;
 
 		//玩家碰撞玩家
-		for (size_t i = 0; i < (mObjectCollisionS->GetNumber() - 1); ++i)
+		for (size_t i = 0; i < mObjectCollisionS->GetNumber(); ++i)
 		{
 			LObject = ObjectNumberS[i];
-			Xpos = LObject->GetPos();//位置
-			for (size_t i2 = (i + 1); i2 < mObjectCollisionS->GetNumber(); ++i2)
+			for (size_t i2 = 0; i2 < mObjectCollisionS->GetNumber(); ++i2)
 			{
+				if (i == i2) {
+					continue;
+				}
+				Xpos = LObject->GetPos();//位置
 				LObject2 = ObjectNumberS[i2];
 				Once = false;
-				if (Modulus(LObject->GetPos() - LObject2->GetPos()) < 22.7f) {//到了碰撞范围
+				if (Modulus(LObject->GetPos() - LObject2->GetPos()) < (LObject->Radius + LObject2->Radius)) {//到了碰撞范围
 					Deviation = LObject->GetPos() - LObject2->GetPos();
 					CoordinateDianJi = { 0, 0 };
 					LiBi = { 0, 0 };
@@ -78,6 +81,9 @@ namespace SquarePhysics {
 					for (size_t i3 = 0; i3 < LObject->GetOutlinePointSize(); ++i3)
 					{
 						Dian = vec2angle(LObject->GetOutlinePointSet(i3), LObject->GetAngle());//获取骨骼点
+						if (Modulus(Xpos + Dian - (glm::dvec2)LObject2->GetPos()) > (LObject->Radius + LObject2->Radius)) {
+							continue;
+						}
 						LCollisionInfo = LObject2->SquarePhysicsCoordinateSystemRadialCollisionDetection(Xpos, Xpos + Dian, Deviation);//获取碰撞点
 						if (LCollisionInfo.Collision) {
 							Once = true;
@@ -116,11 +122,11 @@ namespace SquarePhysics {
 			{
 				Dian = vec2angle(LObject->GetOutlinePointSet(i2), LObject->GetAngle());//获取骨骼点
 				Start = Jpos;//久位置的骨骼点位置
-				if (Start.x < 0)Start.x -= 1;//负值偏移
-				if (Start.y < 0)Start.y -= 1;//负值偏移
+				if (Start.x < 0)--Start.x;//负值偏移
+				if (Start.y < 0)--Start.y;//负值偏移
 				End = Xpos + Dian;//新位置的骨骼点位置
-				if (End.x < 0)End.x -= 1;//负值偏移
-				if (End.y < 0)End.y -= 1;//负值偏移
+				if (End.x < 0)--End.x;//负值偏移
+				if (End.y < 0)--End.y;//负值偏移
 				LCollisionInfo = mTerrain->RadialCollisionDetection(Start, End);//对地图射线碰撞进行判断
 				if (LCollisionInfo.Collision) {//是否碰撞
 					Speed = LObject->GetSpeed();
@@ -160,8 +166,8 @@ namespace SquarePhysics {
 			LPixel->FrameTimeStep(TimeStep, 0);//更新物理状态
 			Xpos = LPixel->GetPos();//新位置
 			LCollisionInfo = mTerrain->RadialCollisionDetection(//对地图碰撞进行判断
-				{ (Jpos.x < 0 ? Jpos.x - 1 : Jpos.x), (Jpos.y < 0 ? Jpos.y - 1 : Jpos.y) },
-				{ (Xpos.x < 0 ? Xpos.x - 1 : Xpos.x), (Xpos.y < 0 ? Xpos.y - 1 : Xpos.y) }
+				{ (Jpos.x < 0 ? --Jpos.x : Jpos.x), (Jpos.y < 0 ? --Jpos.y : Jpos.y) },
+				{ (Xpos.x < 0 ? --Xpos.x : Xpos.x), (Xpos.y < 0 ? --Xpos.y : Xpos.y) }
 			);
 			if (LCollisionInfo.Collision) {//是否碰撞
 				LPixel->SetPos(LCollisionInfo.Pos);//设置为碰撞位置

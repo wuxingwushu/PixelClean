@@ -11,7 +11,8 @@ enum ContinuousMapFlags_
     ContinuousMap_New        = 1 << 0, // 开启  没有键就自动生成
     ContinuousMap_Debug      = 1 << 1, // 开启  事件打印
     ContinuousMap_Timeout    = 1 << 2, // 开启  超时检测
-    ContinuousMap_Pointer    = 1 << 3  // 开启  指针更新（在移动数据时更新对应引用）
+    ContinuousMap_Pointer    = 1 << 3, // 开启  指针更新（在移动数据时更新对应引用）
+    ContinuousMap_Expansion  = 1 << 4  // 开启  自动扩容
 };
 
 
@@ -37,7 +38,7 @@ private:
     ContinuousMapFlags mFlags = ContinuousMap_None;
     clock_t* TimeS = nullptr;//键对应的更新时间（Get算更新）
     clock_t TimeoutTime = 3000;//默认三秒
-    const unsigned int Max = 0;//最多容量
+    unsigned int Max = 0;//最多容量
     unsigned int Number = 0;//当前容量
     std::map<TKey, unsigned int> Dictionary;//索引对应数据
 public:
@@ -70,10 +71,15 @@ public:
     [[nodiscard]] inline TData* New(TKey key){
         if (Max == Number)//判断是否达到上线
         {
-            if(mFlags & ContinuousMap_Debug){
-                std::cerr << "创建 " << key << " 失败：达到上线！" << std::endl;
+            if (mFlags & ContinuousMap_Expansion) {
+                Expansion();
             }
-            return nullptr;
+            else {
+                if (mFlags & ContinuousMap_Debug) {
+                    std::cerr << "创建 " << key << " 失败：达到上线！" << std::endl;
+                }
+                return nullptr;
+            }
         }
         if (Dictionary.find(key) != Dictionary.end())//判断键是否存在
         {
@@ -114,7 +120,7 @@ public:
     }
 
     //绑定销毁回调函数
-    void SetDeleteCallback(_DeleteCallback DeleteCallback, void* Data) noexcept {
+    void inline SetDeleteCallback(_DeleteCallback DeleteCallback, void* Data) noexcept {
         mDeleteCallback = DeleteCallback;//设置销毁回调函数
         mDeleteData = Data;
     }
@@ -155,7 +161,7 @@ public:
 
 
     //超时检测
-    inline void TimeoutDetection() {
+    void inline TimeoutDetection() {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
         for (size_t i = 0; i < Number; ++i)
@@ -172,20 +178,20 @@ public:
     }
 
     //设置超时回调函数
-    void SetTimeoutCallback(_TimeoutCallback TimeoutCallback, void* Data) noexcept {
+    void inline SetTimeoutCallback(_TimeoutCallback TimeoutCallback, void* Data) noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         mTimeoutCallback = TimeoutCallback;
         mTimeoutData = Data;
     }
 
     //设置超时时间
-    void SetTimeoutTime(clock_t Time) noexcept {
+    void inline SetTimeoutTime(clock_t Time) noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         TimeoutTime = Time;
     }
 
     //更新所有时间
-    inline void UpDataWholeTime() noexcept {
+    void inline UpDataWholeTime() noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
         for (size_t i = 0; i < Number; ++i)
@@ -195,13 +201,13 @@ public:
     }
 
     //设置数据对齐时更新引用对象绑定的数据指针 回调函数
-    void SetPointerCallback(_PointerCallback PointerCallback) noexcept {
+    void inline SetPointerCallback(_PointerCallback PointerCallback) noexcept {
         assert(mFlags & ContinuousMap_Pointer && "Not Turned On ContinuousMap_Pointer");
         mPointerCallback = PointerCallback;
     }
 
     //绑定数据引用对象
-    void SetPointerData(TKey key, void* Data) {
+    void inline SetPointerData(TKey key, void* Data) {
         assert(mFlags & ContinuousMap_Pointer && "Not Turned On ContinuousMap_Pointer");
         mPointerData[Dictionary[key]] = Data;
     }
@@ -243,11 +249,11 @@ public:
         return KeyS[i];
     }
 
-    Iterator<TData> begin() {
+    Iterator<TData> inline begin() {
         return Iterator<TData>(DataS);
     }
 
-    Iterator<TData> end() {
+    Iterator<TData> inline end() {
         return Iterator<TData>(DataS + Number);
     }
 
@@ -274,5 +280,57 @@ public:
     //获取 Data 数量的数据一共多少字节
     [[nodiscard]] inline unsigned int GetDataSize() noexcept {
         return Number * sizeof(TData);
+    }
+
+    void inline Expansion() {
+        TKey* PKeyS = KeyS;
+        TKey* LKeyS = new TKey[Max * 2];
+        TKey* WKeyS = LKeyS;
+        TData* PDataS = DataS;
+        TData* LDataS = new TData[Max * 2];
+        TData* WDataS = LDataS;
+        for (size_t i = 0; i < Max; i++)
+        {
+            *LKeyS = *PKeyS;
+            ++PKeyS;
+            ++LKeyS;
+            *LDataS = *PDataS;
+            ++PDataS;
+            ++LDataS;
+        }
+        delete KeyS;
+        KeyS = WKeyS;
+        delete DataS;
+        DataS = WDataS;
+
+        
+        if (mFlags & ContinuousMap_Timeout) {
+            clock_t* PTimeS = TimeS;
+            clock_t* LTimeS = new clock_t[Max * 2];
+            clock_t* WTimeS = LTimeS;
+            for (size_t i = 0; i < Max; i++)
+            {
+                *LTimeS = *PTimeS;
+                ++PTimeS;
+                ++LTimeS;
+            }
+            delete TimeS;
+            TimeS = WTimeS;
+        }
+        if (mFlags & ContinuousMap_Pointer) {
+            void** PPointerData = mPointerData;
+            void** LPointerData = new void* [Max * 2];
+            void** WPointerData = LPointerData;
+            for (size_t i = 0; i < Max; i++)
+            {
+                *LPointerData = *PPointerData;
+                ++PPointerData;
+                ++LPointerData;
+            }
+            delete mPointerData;
+            mPointerData = WPointerData;
+        }
+
+        Max *= 2;
     }
 };

@@ -27,7 +27,7 @@ namespace SquarePhysics {
 		
 		//获取点信息
 		inline bool PixelAttributeCollision(unsigned int x, unsigned int y) noexcept {
-			if ((x >= mNumberX) || (y >= mNumberY))
+			if ((x >= mNumber.x) || (y >= mNumber.y))
 			{
 				return false;
 			}
@@ -40,14 +40,17 @@ namespace SquarePhysics {
 		//有多少个外骨架点
 		virtual inline unsigned int GetOutlinePointSize() noexcept { return OutlinePointSize; }
 		//获取第 I 个外骨架点
-		virtual inline glm::vec2 GetOutlinePointSet(unsigned int i) noexcept { return { mOutlinePointSet[i].x - OriginX, mOutlinePointSet[i].y - OriginY }; }
+		virtual inline glm::vec2 GetOutlinePointSet(unsigned int i) noexcept { return { mOutlinePointSet[i].x - Origin.x, mOutlinePointSet[i].y - Origin.y }; }
 
 
 		//点对玩家的碰撞判断
 		CollisionInfo PixelCollision(glm::vec2 dian);
+
 		//路径碰撞判断
+		
 		//（输入是 SquarePhysics 坐标的两个点，返回是 SquarePhysics 坐标点， 偏移方向）
 		[[nodiscard]] CollisionInfo SquarePhysicsCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End, glm::vec2 Direction);
+
 		//（输入是 SquarePhysics 坐标的两个点，返回是 mPixelAttributeS 数组索引）
 		[[nodiscard]] CollisionInfo RelativeCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End);
 

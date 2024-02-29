@@ -389,7 +389,7 @@ namespace GAME {
 		mTime += time;
 		FPSTime = time;
 		
-		NPCFSM->Get()->process_event(S_Event{});
+		//NPCFSM->Get()->process_event(S_Event{});
 
 		//更新NPC损伤
 		mNPC->UpData();

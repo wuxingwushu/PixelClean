@@ -131,7 +131,7 @@ namespace GAME {
 		//计算点附近的墙壁数量
 		void PixelWallNumberCalculate(short* PixelWallNumber, int x, int y) {
 			int posX, posY;
-			int Range1A = (x < 9 ? -x : -9), Range1B = ((x + 10) > (mNumberX * 16) ? ((mNumberX * 16) - x) : 10);
+			int Range1A = (x < 9 ? -x : -9), Range1B = ((x + 10) >(mNumberX * 16) ? ((mNumberX * 16) - x) : 10);
 			int Range2A = (y < 9 ? -y : -9), Range2B = ((y + 10) > (mNumberY * 16) ? ((mNumberY * 16) - y) : 10);
 			*PixelWallNumber = 0;
 			for (int ix = Range1A; ix < Range1B; ++ix)
@@ -140,7 +140,7 @@ namespace GAME {
 				for (int iy = Range2A; iy < Range2B; ++iy)
 				{
 					posY = y + iy;
-					if (mMoveTerrain->GetRigidBodyAndModel(posX / 16, posY / 16)->mGridDecorator->GetFixedCollisionBool({ posX % 16, posY % 16 })) {
+					if (mMoveTerrain->GetRigidBodyAndModel(posX / 16, posY / 16)->mGridDecorator->GetFixedCollisionCompensateBool({ posX % 16, posY % 16 })) {
 						++(*PixelWallNumber);
 					}
 				}

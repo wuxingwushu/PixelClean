@@ -53,11 +53,11 @@ namespace GAME {
 		pixelAttribute[1].Collision = true;
 		pixelAttribute[2].Collision = true;
 		mIndexAnimationGrid->SetAnimationIndex(uvdh);
-		mIndexAnimationGrid->OutlineCalculate();
 		mIndexAnimationGrid->SetPos({ 20,20 });
 		mIndexAnimationGrid->SetOrigin(1,1);
 		mIndexAnimationGrid->SetAngle(0);
 		mIndexAnimationGrid->SetCollisionCallback(UVDynamicDiagramDestroyPixel, this);
+		mIndexAnimationGrid->OutlineCalculate();
 		wSquarePhysics->AddObjectCollision(mIndexAnimationGrid);
 
 		mUVDynamicDiagramStruct.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(20.0f, 20.0f, 0.0f));

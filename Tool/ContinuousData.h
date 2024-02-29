@@ -22,7 +22,7 @@ public:
 	inline void add(TData data) noexcept {
 		if (mNumber == mMax)
 		{
-			return;
+			Expansion();
 		}
 		mData[mNumber] = data;
 		++mNumber;
@@ -62,5 +62,20 @@ public:
 
 	[[nodiscard]] inline unsigned int GetNumber() const noexcept {
 		return mNumber;
+	}
+
+	void Expansion() {
+		TData* PData = mData;
+		TData* LData = new TData[mMax * 2];
+		TData* WData = LData;
+		for (size_t i = 0; i < mMax; i++)
+		{
+			*LData = *PData;
+			++PData;
+			++LData;
+		}
+		delete mData;
+		mData = WData;
+		mMax *= 2;
 	}
 };

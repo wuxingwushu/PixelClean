@@ -74,9 +74,8 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Info.ini 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs.json ${PROJECT_SOURCE_DIR}/.vs)# 设置的DLL文件路径
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders/Spv ${CMAKE_CURRENT_BINARY_DIR}/shaders) # 拷贝shaders
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./SoundEffect/Resources ${CMAKE_CURRENT_BINARY_DIR}/Resources)# 拷贝音效
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Labyrinth/Texture ${CMAKE_CURRENT_BINARY_DIR}/Texture)# 测试图片
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ImGui/Minecraft_AE.ttf ${CMAKE_CURRENT_BINARY_DIR})# 字体
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource ${CMAKE_CURRENT_BINARY_DIR}/Resource)# 测试图片
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource ${CMAKE_CURRENT_BINARY_DIR}/Resource)# 数字资源
 
 add_subdirectory(Vulkan)
 add_subdirectory(VulkanTool)
@@ -86,11 +85,13 @@ add_subdirectory(SoundEffect)
 add_subdirectory(NetworkTCP)
 add_subdirectory(Character)
 add_subdirectory(Physics)
-add_subdirectory(Labyrinth)
 add_subdirectory(Arms)
 add_subdirectory(GeneralCalculationGPU)
 add_subdirectory(Opcode)
 add_subdirectory(GameMods)
+add_subdirectory(GameMods/MazeMods)
+add_subdirectory(GameMods/TankTrouble)
+add_subdirectory(GameMods/UnlimitednessMapMods)
 add_subdirectory(Tool)#文件夹里面要有代码文件，不可以是空的，会报错
 
 
@@ -117,11 +118,13 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		NetworkTCPLib
 		CharacterLib
 		PhysicsLib
-		LabyrinthLib
 		ArmsLib
 		GeneralCalculationGPULib
 		OpcodeLib
 		GameModsLib
+		MazeModsLib
+		TankTroubleLib
+		UnlimitednessMapModsLib
 	
 		# VulKan API
 		vulkan-1.lib 
@@ -166,11 +169,13 @@ else()
 		NetworkTCPLib
 		CharacterLib
 		PhysicsLib
-		LabyrinthLib
 		ArmsLib
 		GeneralCalculationGPULib
 		OpcodeLib
 		GameModsLib
+		MazeModsLib
+		TankTroubleLib
+		UnlimitednessMapModsLib
 	
 		# VulKan API
 		vulkan-1.lib 

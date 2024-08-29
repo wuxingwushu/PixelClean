@@ -1,23 +1,23 @@
 #pragma once
-#include "../Vulkan/buffer.h"
-#include "../Vulkan/descriptorSet.h"
-#include "../Vulkan/commandBuffer.h"
-#include "../Vulkan/renderPass.h"
-#include "../Vulkan/swapChain.h"
-#include "../Vulkan/pipeline.h"
+#include "../../Vulkan/buffer.h"
+#include "../../Vulkan/descriptorSet.h"
+#include "../../Vulkan/commandBuffer.h"
+#include "../../Vulkan/renderPass.h"
+#include "../../Vulkan/swapChain.h"
+#include "../../Vulkan/pipeline.h"
 
 
-#include "../Physics/SquarePhysics.h"
+#include "../../Physics/SquarePhysics.h"
 
-#include "../Tool/PerlinNoise.h"
-#include "../BlockS/PixelS.h"
-#include "../VulkanTool/Calculate.h"
-#include "../GlobalVariable.h"
-#include "../Tool/BlockData.h"
-#include "../GlobalStructural.h"
-#include "TextureLibrary.h"
+#include "../../Tool/PerlinNoise.h"
+#include "../../BlockS/PixelS.h"
+#include "../../VulkanTool/Calculate.h"
+#include "../../GlobalVariable.h"
+#include "../../Tool/BlockData.h"
+#include "../../GlobalStructural.h"
+#include "../../VulkanTool/TextureLibrary.h"
 
-#include "PathfindingDecorator.h"
+#include "../PathfindingDecorator.h"
 
 namespace GAME {
 

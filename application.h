@@ -4,13 +4,10 @@
 
 #include "SoundEffect/SoundEffect.h"
 
-#include "Labyrinth/Labyrinth.h"
-
-#include "Labyrinth/Dungeon.h"
-
 #include "GameMods/Configuration.h"
-#include "GameMods/UnlimitednessMapMods.h"
-#include "GameMods/MazeMods.h"
+#include "GameMods/UnlimitednessMapMods/UnlimitednessMapMods.h"
+#include "GameMods/MazeMods/MazeMods.h"
+#include "GameMods/TankTrouble/TankTrouble.h"
 
 
 namespace GAME {

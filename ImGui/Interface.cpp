@@ -254,7 +254,7 @@ namespace GAME {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			int x = Global::GameMode - 1;
 			if (x < 0) {
-				Global::GameMode = GameModsEnum::Infinite;
+				Global::GameMode = GameModsEnum::Infinite_;
 			}
 			else {
 				Global::GameMode = (GameModsEnum)x;
@@ -273,7 +273,7 @@ namespace GAME {
 		if (ImGui::Button(u8">", { Bgao, Bgao })) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
 			int x = Global::GameMode + 1;
-			if (x > GameModsEnum::Infinite) {
+			if (x > GameModsEnum::Infinite_) {
 				Global::GameMode = (GameModsEnum)0;
 			}
 			else {
@@ -427,7 +427,7 @@ namespace GAME {
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
 			Global::ServerOrClient = true;
-			Global::GameMode = GameModsEnum::Maze;
+			Global::GameMode = GameModsEnum::Maze_;
 			Global::GameResourceLoadingBool = true;//加载游戏资源
 			server::GetServer();
 		}
@@ -442,7 +442,7 @@ namespace GAME {
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
 			Global::ServerOrClient = false;
-			Global::GameMode = GameModsEnum::Maze;
+			Global::GameMode = GameModsEnum::Maze_;
 			Global::GameResourceLoadingBool = true;//加载游戏资源
 			client::GetClient();
 		}
@@ -768,36 +768,36 @@ namespace GAME {
 			ImGui::Text(u8"帧时间 ");
 			ImGui::TableNextColumn();
 			ImGui::Text(u8"%f", TOOL::FPStime);
-			for (int i = 0; i < TOOL::mTimer->Count; ++i)
+			for (int i = 0; i < TOOL::mTimer->mTimerTimeS.size(); ++i)
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
-				ImGui::Text(TOOL::mTimer->mNameS[i]);
+				ImGui::Text(TOOL::mTimer->mTimerTimeS[i].Name);
 				ImGui::TableNextColumn();
-				if (TOOL::mTimer->mHeapBoolS[i]) {
+				if (TOOL::mTimer->mTimerTimeS[i].HeapBool) {
 					ImGui::PlotLines("",
-						TOOL::mTimer->mTimeHeapS[i],
+						TOOL::mTimer->mTimerTimeS[i].TimeHeap,
 						TOOL::mTimer->mHeapNumber,
 						TOOL::mTimer->mTimeHeapIndexS,
 						nullptr,
-						TOOL::mTimer->mTimeMax[i],
-						TOOL::mTimer->mTimeMin[i],
+						TOOL::mTimer->mTimerTimeS[i].TimeMax,
+						TOOL::mTimer->mTimerTimeS[i].TimeMin,
 						ImVec2(0, 25.0f)
 					);
 				}
 				else {
-					ImGui::Text(u8"%1.6f 秒 ", TOOL::mTimer->mTimerS[i]);
+					ImGui::Text(u8"%1.6f 秒 ", TOOL::mTimer->mTimerTimeS[i].Time);
 				}
 				ImGui::TableNextColumn();
-				ImGui::Text("%3.3f %%", TOOL::mTimer->mTimerPercentageS[i]);
+				ImGui::Text("%3.3f %%", TOOL::mTimer->mTimerTimeS[i].Percentage);
 			}
-			for (int i = 0; i < TOOL::mTimer->MomentCount; ++i)
+			for (int i = 0; i < TOOL::mTimer->mMomentS.size(); ++i)
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
-				ImGui::Text(TOOL::mTimer->mMomentNameS[i]);
+				ImGui::Text(TOOL::mTimer->mMomentS[i].Name);
 				ImGui::TableNextColumn();
-				ImGui::Text(u8"%d", TOOL::mTimer->mMomentTimerS[i]);
+				ImGui::Text(u8"%d", TOOL::mTimer->mMomentS[i].Timer);
 			}
 			ImGui::EndTable();
 		}

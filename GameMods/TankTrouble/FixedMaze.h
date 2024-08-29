@@ -1,32 +1,34 @@
 #pragma once
-#include "../base.h"
-#include "../Vulkan/pipeline.h"
-#include "../Vulkan/swapChain.h"
-#include "../Tool/MemoryPool.h"
-#include "../Vulkan/descriptorSet.h"
-#include "../Vulkan/description.h"
-#include "../Vulkan/buffer.h"
-#include "../VulKanTool/PixelTexture.h"
+#include "../../base.h"
+#include "../../Vulkan/pipeline.h"
+#include "../../Vulkan/swapChain.h"
+#include "../../Tool/MemoryPool.h"
+#include "../../Vulkan/descriptorSet.h"
+#include "../../Vulkan/description.h"
+#include "../../Vulkan/buffer.h"
+#include "../../VulKanTool/PixelTexture.h"
 
 
-#include "../GeneralCalculationGPU/GPU.h"
+#include "../../GeneralCalculationGPU/GPU.h"
 
-#include "../Physics/SquarePhysics.h"
+#include "../../Physics/SquarePhysics.h"
 
-#include "../Tool/PerlinNoise.h"
+#include "../../Tool/PerlinNoise.h"
 
 
-#include "../GlobalVariable.h"
+#include "../../GlobalVariable.h"
 
-#include "../Tool/Queue.h"
+#include "../../Tool/Queue.h"
 
-#include "../GlobalStructural.h"
+#include "../../GlobalStructural.h"
 
-#include "../VulkanTool/Calculate.h"
+#include "../../VulkanTool/Calculate.h"
 
-#include "PathfindingDecorator.h"
+#include "../PathfindingDecorator.h"
 
-struct miwustruct {
+#include "../../Tool/GridNavigation.h"
+
+struct miwustruct_2 {
 	unsigned int size;
 	int x;
 	int y;
@@ -37,16 +39,14 @@ struct miwustruct {
 
 
 namespace GAME {
-	class Labyrinth : public PathfindingDecorator
+	class FixedMaze : public PathfindingDecorator
 	{
 	public:
-		Labyrinth(SquarePhysics::SquarePhysics* squarePhysics);
-		~Labyrinth();
+		FixedMaze(SquarePhysics::SquarePhysics* squarePhysics);
+		~FixedMaze();
 
 		//重新生成迷宫
 		void AgainGenerateLabyrinth(int X, int Y);
-		//加载迷宫
-		void LoadLabyrinth(int X, int Y, int* PixelData, unsigned int* BlockTypeData);
 		//初始化迷宫
 		void InitLabyrinth(VulKan::Device* device, int X, int Y);
 		//迷宫缓存
@@ -85,12 +85,6 @@ namespace GAME {
 			Vector->push_back(mThreadCommandBufferS[F]->getCommandBuffer());
 		};
 
-		//获取迷雾
-		inline void GetMistCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
-			Vector->push_back(mMistCommandBufferS[F]->getCommandBuffer());
-		};
-		
-
 
 		//更新迷宫破损情况
 		void UpDateMaps();
@@ -103,42 +97,29 @@ namespace GAME {
 		void EndPixelSPointer();
 
 		unsigned char* TexturePointer = nullptr;
-		unsigned char* TextureMist = nullptr;
-		int* Mistwall = nullptr;
 
 		//多线程分配指令缓存
 		void ThreadUpdateCommandBuffer();
 		//录制缓存指令
-		void ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count);
-
-		//初始化战争迷雾
-		void InitMist();
-		//计算可视范围
-		void UpdataMist(int wjx, int wjy, float ang);
-		//销毁战争迷雾
-		void DeleteMist();
-		
+		void ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count);		
 
 		//中心
 		int mOriginX = 0;
 		int mOriginY = 0;
 		int numberX = 0;//Block 横排多少个
 		int numberY = 0;//Block 纵排多少个
-		//是否是墙壁 16 * 16 
-		bool** BlockS = nullptr;
 		//像素点是否是墙壁
 		int* BlockPixelS = nullptr;
-		//地面类型
-		unsigned int** BlockTypeS = nullptr;
 
-		short** PixelWallNumber = nullptr;// 附近 17 * 17 的墙壁的数量
+
+		GridNavigation<short>* mGridNavigation = nullptr;
 		/*******************************************************/
 		//获取点附近的墙壁数量
 		virtual inline bool GetPixelWallNumber(unsigned int x, unsigned int y) {
 			x += mOriginX;
 			y += mOriginY;
-			if ((x < (numberX * 16)) && (y < (numberY * 16))) {
-				return PixelWallNumber[x][y] <= 0;
+			if ((x < (numberX)) && (y < (numberY))) {
+				return mGridNavigation->Get(x,y) >= 9;
 			}
 			else {
 				return false;
@@ -149,16 +130,7 @@ namespace GAME {
 			return mFixedSizeTerrain->RadialCollisionDetection({ x,y }, { Ex,Ey });
 		};
 		/*******************************************************/
-		//计算点附近的墙壁数量
-		void PixelWallNumberCalculate(int x, int y);
-		//将 17 * 17 范围的点都加 1
-		void PixelWallNumberAdd(int x, int y);
-		//将 17 * 17 范围的点都减 1
-		void PixelWallNumberReduce(int x, int y);
-		//获取点是否是墙壁
-		bool GetPixel(int x, int y);
-		//获取位置是否合法
-		bool GetPixelLegitimate(int x, int y);
+
 
 		bool RangeLegitimate(int x, int y);
 		glm::ivec2 GetLegitimateGeneratePos();
@@ -181,10 +153,6 @@ namespace GAME {
 		unsigned int mFrameCount = 0;
 		VulKan::CommandPool** mThreadCommandPoolS = nullptr;
 		VulKan::CommandBuffer** mThreadCommandBufferS = nullptr;//地图
-		VulKan::CommandBuffer** mMistCommandBufferS = nullptr;//迷雾
-
-
-
 		
 	private://储存信息
 		VulKan::Device* mDevice = nullptr;
@@ -194,23 +162,6 @@ namespace GAME {
 		VulKan::SwapChain* mSwapChain = nullptr;
 		VulKan::Sampler* mSampler = nullptr;
 		std::vector<VulKan::Buffer*>* mVPMstdBuffer = nullptr;
-
-
-
-
-	private://战争迷雾
-
-		VulKan::Calculate* mCalculate = nullptr;
-		std::vector<VulKan::CalculateStruct> CalculateBufferS;
-
-
-		VulKan::PixelTexture* WarfareMist{ nullptr };//每块的贴图
-		VulKan::DescriptorSet* mMistDescriptorSet{ nullptr };//位置 角度  射线颜色 的数据
-
-		miwustruct wymiwustruct{};
-		VulKan::Buffer* jihsuanTP{ nullptr };//储存计算结果的缓存
-		VulKan::Buffer* information{ nullptr };//储存原数据的缓存(图片纹理)
-		VulKan::Buffer* WallBool{ nullptr };//储存碰撞(是否是墙壁)
 
 	public://物理
 		SquarePhysics::SquarePhysics* wSquarePhysics = nullptr;

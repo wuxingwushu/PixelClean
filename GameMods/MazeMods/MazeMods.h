@@ -1,15 +1,16 @@
-#pragma once11
-#include "Configuration.h"
-#include "GameMods.h"
-#include "../Labyrinth/Dungeon.h"
+#pragma once
+#include "../Configuration.h"
+#include "../GameMods.h"
+#include "Labyrinth.h"
+#include "../../Character/UVDynamicDiagram.h"
 
 namespace GAME {
 
-	class UnlimitednessMapMods : public GameMods, Configuration
+	class MazeMods : public GameMods, Configuration
 	{
 	public:
-		UnlimitednessMapMods(Configuration wConfiguration);
-		~UnlimitednessMapMods();
+		MazeMods(Configuration wConfiguration);
+		~MazeMods();
 
 		//鼠标移动事件
 		virtual void MouseMove(double xpos, double ypos);
@@ -36,7 +37,8 @@ namespace GAME {
 		virtual void GameTCPLoop();
 
 	private:
-		Dungeon* mDungeon = nullptr;//无限地图
+		Labyrinth* mLabyrinth = nullptr;//迷宫
+		UVDynamicDiagram* mUVDynamicDiagram = nullptr;
 	};
 
 }

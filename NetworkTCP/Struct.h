@@ -1,8 +1,8 @@
 #pragma once
 #include "../Character/Crowd.h"
 #include "../Arms/Arms.h"
-#include "../Labyrinth/Labyrinth.h"
 #include "../ImGui/Interface.h"
+#include "../GameMods/MazeMods/Labyrinth.h"
 
 class SynchronizeClass
 {

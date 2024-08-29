@@ -8,7 +8,7 @@ namespace TOOL {
 	void InitTimer() {
 		if (mTimer == nullptr)
 		{
-			mTimer = new Timer(100);
+			mTimer = new Timer();
 		}
 	}
 

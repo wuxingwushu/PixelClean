@@ -1,6 +1,6 @@
 #pragma once
 #include "../Vulkan/descriptorSet.h"
-#include "../Labyrinth/TextureLibrary.h"
+#include "../VulkanTool/TextureLibrary.h"
 #include "../Vulkan/pipeline.h"
 #include "../Vulkan/sampler.h"
 #include "../Vulkan/swapChain.h"

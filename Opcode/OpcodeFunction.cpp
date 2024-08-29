@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <sstream>
 
-#include "../Labyrinth/Labyrinth.h"
+#include "../GameMods/MazeMods/Labyrinth.h"
 #include "../Character/Crowd.h"
 #include "../application.h"
 #include "../Arms/Arms.h"

@@ -419,6 +419,12 @@ private:
         if (isValid(pos.x, pos.y + 1)) {
             RadialNearUpper({ pos.x, pos.y + 1 }, Parent);
         }
+        /*
+        int shu = isValid(pos.x, pos.y);
+        if (isValid(pos.x, pos.y + shu)) {
+            RadialNearUpper({ pos.x, pos.y + shu }, Parent);
+        }
+        */
     }
 
     //下

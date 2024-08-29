@@ -1,6 +1,6 @@
 #pragma once
 #include "GamePlayer.h"
-#include "../Labyrinth/PathfindingDecorator.h"
+#include "../GameMods/PathfindingDecorator.h"
 #include "../Tool/ContinuousData.h"
 #include "../Tool/JPS.h"
 #include "../Tool/sml.hpp"

@@ -1,31 +1,127 @@
 #pragma once
 #include <iostream>
 #include "../Tool/PileUp.h"
+#include <random>
 
 
 
 class GenerateMaze
 {
+public:
 	struct Pos {
 		int X;
 		int Y;
 	};
-
-	typedef void (*_GenerateMazeCallback)(int x,int y, bool B, void* ptr);//销毁 回调函数类型
-	_GenerateMazeCallback mGenerateMazeCallback = nullptr;//用户自定义销毁 回调函数
+	typedef void (*_GenerateMazeCallback)(int x,int y, bool B, void* ptr);//画迷宫 回调函数类型
+	_GenerateMazeCallback mGenerateMazeCallback = nullptr;//用户自定义画迷宫 回调函数
 	void* mMazeData = nullptr;
-
 private:
 	int HEIGHT = 0;//高
 	int WIDTH = 0;//宽
+	int WallWide;//墙壁宽
+	int RoadWide;//道路宽
+	int AtlasWide = 0;//地图宽
+	int AtlasHigh = 0;//地图高
 	bool** block = nullptr;
 
 	PileUp<Pos>* mPos1 = nullptr;
 	PileUp<Pos>* mPos2 = nullptr;
 public:
-	GenerateMaze() {
+	GenerateMaze(int ww = 1, int rw = 1) {
+		WallWide = ww;
+		RoadWide = rw;
 		mPos1 = new PileUp<Pos>(4);
 		mPos2 = new PileUp<Pos>(4);
+	}
+
+	Pos GetMazeSize(int x, int y, int ww = 0, int rw = 0) {
+		if (ww != 0) { WallWide = ww; }
+		if (rw != 0) { RoadWide = rw; }
+		WIDTH = x;
+		if ((WIDTH % 2) == 0) {
+			++WIDTH;
+		}
+		HEIGHT = y;
+		if ((HEIGHT % 2) == 0) {
+			++HEIGHT;
+		}
+		AtlasWide = (WIDTH / 2) * (WallWide + RoadWide) + WallWide;
+		AtlasHigh = (HEIGHT / 2) * (WallWide + RoadWide) + WallWide;
+		return { AtlasWide, AtlasHigh };
+	}
+
+	Pos GetMazeSize(int MazeSize, int ww = 0, int rw = 0) {
+		if (ww != 0) { WallWide = ww; }
+		if (rw != 0) { RoadWide = rw; }
+		if (MazeSize < 3)MazeSize = 3;
+		// 使用当前时间作为随机数生成器的种子，以获得更好的随机性
+		unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+		std::default_random_engine generator(seed);
+		// 定义一个在0到100之间的均匀分布
+		std::uniform_int_distribution<int> distribution(3, MazeSize);
+		WIDTH = distribution(generator);
+		if ((WIDTH % 2) == 0) {
+			++WIDTH;
+		}
+		HEIGHT = distribution(generator);
+		if ((HEIGHT % 2) == 0) {
+			++HEIGHT;
+		}
+		AtlasWide = (WIDTH / 2) * (WallWide + RoadWide) + WallWide;
+		AtlasHigh = (HEIGHT / 2) * (WallWide + RoadWide) + WallWide;
+		return { AtlasWide, AtlasHigh };
+	}
+
+	void RunGenerateMaze() {
+		PileUp<Pos> mPos(WIDTH * HEIGHT);
+		block = new bool* [WIDTH];
+		for (size_t x = 0; x < WIDTH; ++x)
+		{
+			block[x] = new bool[HEIGHT] {true};
+			for (size_t y = 0; y < HEIGHT; ++y)
+			{
+				block[x][y] = true;
+			}
+		}
+		
+		mPos.add(Pos{ (WIDTH / 2) + 1, (HEIGHT / 2) + 1 });
+		while (mPos.GetNumber() != 0)
+		{
+			while (check(mPos.GetEnd()))
+			{
+				mPos.pop__();
+				if (mPos.GetNumber() == 0) goto RGMreturn;
+			}
+			through(&mPos);
+		}
+	RGMreturn:
+		int posW, posH, W, H;
+		bool B;
+		for (size_t x = 0; x < WIDTH; ++x)
+		{
+			for (size_t y = 0; y < HEIGHT; ++y)
+			{
+				B = (x % 2) == 0;
+				posW = (x / 2) * (WallWide + RoadWide) + (B ? 0 : WallWide);
+				W = B ? WallWide : RoadWide;
+				B = (y % 2) == 0;
+				posH = (y / 2) * (WallWide + RoadWide) + (B ? 0 : WallWide);
+				H = B ? WallWide : RoadWide;
+				for (size_t posx = 0; posx < W; posx++)
+				{
+					for (size_t posy = 0; posy < H; posy++)
+					{
+						mGenerateMazeCallback(posW + posx, posH + posy, block[x][y], mMazeData);
+					}
+				}
+			}
+		}
+
+		for (size_t i = 0; i < WIDTH; ++i)
+		{
+			delete[] block[i];
+		}
+		delete[] block;
 	}
 
 	GenerateMaze(bool** Block, int X, int Y) :
@@ -63,11 +159,11 @@ public:
 	{
 		WIDTH = X;
 		if ((WIDTH % 2) == 0) {
-			WIDTH++;
+			++WIDTH;
 		}
 		HEIGHT = Y;
 		if ((HEIGHT % 2) == 0) {
-			HEIGHT++;
+			++HEIGHT;
 		}
 		block = Block;
 		bool NewBlock = false;

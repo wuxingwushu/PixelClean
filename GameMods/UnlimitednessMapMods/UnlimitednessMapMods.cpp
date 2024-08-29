@@ -1,6 +1,6 @@
 #include "UnlimitednessMapMods.h"
-#include "../Opcode/OpcodeFunction.h"
-#include "../Physics/DestroyMode.h"
+#include "../../Opcode/OpcodeFunction.h"
+#include "../../Physics/DestroyMode.h"
 
 namespace GAME {
 
@@ -28,7 +28,7 @@ namespace GAME {
 
 		float mGamePlayerPosX = -160;
 		float mGamePlayerPosY = 0;
-		mDungeon = new Dungeon(mDevice, 100, 60, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
+		mDungeon = new Dungeon(mDevice, 50, 30, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
 		mDungeon->initUniformManager(
 			mSwapChain->getImageCount(),
 			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,

@@ -25,7 +25,7 @@
 #include "../VulkanTool/VisualEffect.h"
 #include "../VulkanTool/AuxiliaryVision.h"
 #include "../Tool/AStar.h"
-#include "../Labyrinth/TextureLibrary.h"
+#include "../VulkanTool/TextureLibrary.h"
 #include "../Character/DamagePrompt.h"
 
 namespace GAME {

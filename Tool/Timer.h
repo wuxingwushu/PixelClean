@@ -1,5 +1,7 @@
 #pragma once
-#include <map>
+#include <unordered_map>
+#include <vector>
+#include <stack>
 #define TimerWindowsTime
 #ifdef TimerWindowsTime
 #include <Windows.h>
@@ -9,40 +11,49 @@
 #endif
 
 
+struct Moment
+{
+	const char* Name;	//储存名字
+	__int64 Timer;		//当前耗时
+};
+
+
+struct TimerTime
+{
+	const char* Name;			//储存名字
+	bool HeapBool;				//是否开启时间记录
+	float Time;					//当前耗时
+	float* TimeHeap;			//历史耗时记录
+	float Percentage;			//耗时占周期的百分比
+	float TimeMax;				//耗时记录最大值
+	float TimeMin;				//耗时记录最小值
+	//中间数据
+	__int64 MiddleTime;			//累积周期每次的耗时
+};
+
+struct TimerStack
+{
+	unsigned int Label;	//记录标签检测对象数组位置
+	__int64 Time;		//周期时间累积
+};
+
+
+
 class Timer
 {
 public:
-	unsigned int MomentCount = 0;//当前有多少个对象
-	const char** mMomentNameS;//储存名字
-	__int64* mMomentTimerS;//当前耗时
-
-
-	int mMomentStackNumber = -1;//堆的用量+1
-	unsigned int* mMomentLabelStack;//记录标签
-	__int64* mMomentTimeStack;//记录时间
-	/************************************************************************************************************/
-public:
-	const unsigned int mHeapNumber = 60;//记录对象多少次时间数据
-	unsigned int Count = 0;//当前有多少个对象
-	const char** mNameS;//储存名字
-	bool* mHeapBoolS;//是否开启时间记录
-	float* mTimerS;//当前耗时
-	float** mTimeHeapS;//耗时记录
-	int mTimeHeapIndexS = 0;//更新那个数据
-	float* mTimerPercentageS;//耗时占周期的百分比
-	float* mTimeMax;//耗时记录最大值
-	float* mTimeMin;//耗时记录最小值
-	__int64 CyclesNumberTime = 0;//一个周期的时间
-
+	const unsigned int mHeapNumber = 60;	//记录对象多少次时间数据
+	std::vector<TimerTime> mTimerTimeS{};	//每个检测节点数据
+	std::vector<Moment> mMomentS{};			//每个单次检测节点数据
+	int mTimeHeapIndexS = 0;				//更新那个数据
+	__int64 CyclesNumberTime = 0;			//一个周期的时间
 private:
-	const unsigned int CyclesNumber = 60;//循环多少次处理一次
-	int mStackNumber = -1;//堆的用量+1
-	unsigned int* mLabelStack;//记录标签
-	__int64* mTimeStack;//记录时间
-	__int64* mTimeS;//对象单次时间
-	std::map<const char*, unsigned int> mTimerMap{};//名字，对应数据索引
-	unsigned int CyclesCount = 0;//循环次数
-	unsigned int mNumber;//最多检测多少个对象
+	std::stack<TimerStack> mStack;			//检测节点 栈
+	std::stack<TimerStack> mMomentStack;	//单次检测节点 栈
+	std::unordered_map<const char*, unsigned int> mTimerMap{};//名字，对应数据索引
+	
+	const unsigned int CyclesNumber = 60;	//循环多少次处理一次
+	unsigned int CyclesCount = 0;			//循环次数
 
 	auto GetTime() {
 #ifdef TimerWindowsTime
@@ -65,131 +76,74 @@ private:
 	}
 
 public:
-	Timer(unsigned int Number) {
-		mNumber = Number;
+	Timer(){}
+	~Timer(){}
 
-		mMomentTimerS = new __int64[mNumber];
-		mMomentNameS = new const char* [mNumber];
-		mMomentTimeStack = new __int64[mNumber];
-		mMomentLabelStack = new unsigned int[mNumber];
-
-		mTimerPercentageS = new float[mNumber];
-		mTimerS = new float[mNumber];
-		mNameS = new const char* [mNumber];
-		mHeapBoolS = new bool[mNumber];
-		mTimeS = new __int64[mNumber];
-		mTimeHeapS = new float*[mNumber];
-		mTimeStack = new __int64[mNumber];
-		mLabelStack = new unsigned int[mNumber];
-		mTimeMax = new float[mNumber];
-		mTimeMin = new float[mNumber];
-	}
-
-	~Timer() {
-		delete mMomentTimerS;
-		delete mMomentNameS;
-		delete mMomentTimeStack;
-		delete mMomentLabelStack;
-		
-		delete mTimerPercentageS;
-		delete mNameS;
-		delete mTimeS;
-		delete mTimerS;
-		for (size_t i = 0; i < Count; ++i)
-		{
-			if (mHeapBoolS[i])
-			{
-				delete mTimeHeapS[i];
-			}
-		}
-		delete mTimeHeapS;
-		delete mHeapBoolS;
-		delete mTimeStack;
-		delete mLabelStack;
-		delete mTimeMax;
-		delete mTimeMin;
-	}
-
-	void StartTiming(const char* name, bool RecordBool = false) {
+	inline void StartTiming(const char* name, bool RecordBool = false) {
 		if (mTimerMap.find(name) == mTimerMap.end())//判断是否存在键
 		{
-			mTimerMap.insert(std::make_pair(name, Count));
-			mNameS[Count] = name;
-			mHeapBoolS[Count] = RecordBool;
-			if (RecordBool)
-			{
-				mTimeHeapS[Count] = new float[mHeapNumber];
-				mTimeMax[Count] = -1000.0f;
-				mTimeMin[Count] = 1000.0f;
-			}
-			mTimeS[Count] = 0;
-			++mStackNumber;
-			mLabelStack[mStackNumber] = Count;
-			++Count;
-			mTimeStack[mStackNumber] = GetTime();
-			
+			mTimerMap.insert({ name, mTimerTimeS.size() });//记录唯一节点
+			mTimerTimeS.push_back({//添加耗时检测节点
+				name,
+				RecordBool,
+				0,
+				RecordBool ? new float[mHeapNumber] : nullptr,
+				0,
+				-1000.0f,
+				1000.0f,
+				0
+				});
+			mStack.push({ (unsigned int)(mTimerTimeS.size() - 1), GetTime() });//入栈
 		}
 		else
 		{
-			++mStackNumber;//++堆
-			mLabelStack[mStackNumber] = mTimerMap[name];//获取数组标签
-			mTimeStack[mStackNumber] = GetTime();//获取当前时间
+			mStack.push({ mTimerMap[name], GetTime() });//入栈
 		}
 	}
 
-	void StartEnd() {
-		mTimeS[mLabelStack[mStackNumber]] += (GetTime() - mTimeStack[mStackNumber]);//当前时间 减去 开始时间 获取 耗时
-		--mStackNumber;//--堆
+	inline void StartEnd() {
+		mTimerTimeS[mStack.top().Label].MiddleTime += (GetTime() - mStack.top().Time);//当前时间 减去 开始时间 获取 耗时
+		mStack.pop();//出栈
 	}
 
-	void MomentTiming(const char* name) {
+	inline void MomentTiming(const char* name) {
 		if (mTimerMap.find(name) == mTimerMap.end())//判断是否存在键
 		{
-			mTimerMap.insert(std::make_pair(name, MomentCount));
-			mMomentNameS[MomentCount] = name;
-			mMomentTimerS[MomentCount] = 0;
-			++mMomentStackNumber;
-			mMomentLabelStack[mMomentStackNumber] = MomentCount;
-			++MomentCount;
-			mMomentTimeStack[mMomentStackNumber] = GetTime();
+			mTimerMap.insert({ name, mMomentS.size() });//记录唯一节点
+			mMomentS.push_back({ name, 0 });//添加耗时检测节点
+			mMomentStack.push({ (unsigned int)(mMomentS.size() - 1), GetTime() });//入栈
 		}
 		else {
-			++mMomentStackNumber;
-			mMomentLabelStack[mMomentStackNumber] = mTimerMap[name];
-			mMomentTimeStack[mMomentStackNumber] = GetTime();
+			mMomentStack.push({ mTimerMap[name], GetTime() });//入栈
 		}
 	}
 
-	void MomentEnd() {
-		mMomentTimerS[mMomentLabelStack[mMomentStackNumber]] = GetTime() - mMomentTimeStack[mMomentStackNumber];
-		--mMomentStackNumber;
+	inline void MomentEnd() {
+		mMomentS[mMomentStack.top().Label].Timer = GetTime() - mMomentStack.top().Time;//当前时间 减去 开始时间 获取 耗时
+		mMomentStack.pop();//出栈
 	}
 
-	void RefreshTiming() {
+	inline void RefreshTiming() {
 		if (CyclesCount >= CyclesNumber)
 		{
-			CyclesNumberTime = (GetTime() - CyclesNumberTime);
-			CyclesCount = 0;
-			for (size_t i = 0; i < Count; ++i)
+			CyclesNumberTime = (GetTime() - CyclesNumberTime);//一个周期耗时
+			CyclesCount = 0;//清空周期计数器
+			for (auto &TimeData : mTimerTimeS)//处理每个耗时节点
 			{
-				if (mHeapBoolS[i])
-				{
-					mTimerPercentageS[i] = float(mTimeS[i] * 100) / CyclesNumberTime;
-					mTimeHeapS[i][mTimeHeapIndexS] = float(mTimeS[i]) / (GetClocks() * CyclesNumber);
-					mTimeS[i] = 0;
-					if (mTimeHeapS[i][mTimeHeapIndexS] > mTimeMax[i]) {
-						mTimeMax[i] = mTimeHeapS[i][mTimeHeapIndexS];
+				TimeData.Percentage = float(TimeData.MiddleTime * 100) / CyclesNumberTime;//计算耗时占一个周期的百分比
+				if (TimeData.HeapBool) {
+					TimeData.TimeHeap[mTimeHeapIndexS] = float(TimeData.MiddleTime) / (GetClocks() * CyclesNumber);//记录这个周期的耗时
+					if (TimeData.TimeHeap[mTimeHeapIndexS] > TimeData.TimeMax) {//最大值
+						TimeData.TimeMax = TimeData.TimeHeap[mTimeHeapIndexS];
 					}
-					else if (mTimeHeapS[i][mTimeHeapIndexS] < mTimeMin[i]) {
-						mTimeMin[i] = mTimeHeapS[i][mTimeHeapIndexS];
+					else if (TimeData.TimeHeap[mTimeHeapIndexS] < TimeData.TimeMin) {//最小值
+						TimeData.TimeMin = TimeData.TimeHeap[mTimeHeapIndexS];
 					}
 				}
-				else
-				{
-					mTimerPercentageS[i] = float(mTimeS[i] * 100) / CyclesNumberTime;
-					mTimerS[i] = float(mTimeS[i]) / (GetClocks() * CyclesNumber);
-					mTimeS[i] = 0;
+				else {
+					TimeData.Time = float(TimeData.MiddleTime) / (GetClocks() * CyclesNumber);//记录这个周期的耗时
 				}
+				TimeData.MiddleTime = 0;
 			}
 			++mTimeHeapIndexS;
 			if (mTimeHeapIndexS >= mHeapNumber)

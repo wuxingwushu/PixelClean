@@ -1,7 +1,7 @@
 #include "Dungeon.h"
 
-#include "../VulkanTool/PixelTexture.h"
-#include "../Tool/Tool.h"
+#include "../../VulkanTool/PixelTexture.h"
+#include "../../Tool/Tool.h"
 
 namespace GAME {
 

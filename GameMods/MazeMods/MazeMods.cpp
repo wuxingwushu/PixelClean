@@ -1,8 +1,8 @@
 #include "MazeMods.h"
-#include "../NetworkTCP/Server.h"
-#include "../NetworkTCP/Client.h"
-#include "../Opcode/OpcodeFunction.h"
-#include "../Physics/DestroyMode.h"
+#include "../../NetworkTCP/Server.h"
+#include "../../NetworkTCP/Client.h"
+#include "../../Opcode/OpcodeFunction.h"
+#include "../../Physics/DestroyMode.h"
 
 namespace GAME {
 

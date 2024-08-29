@@ -1,9 +1,9 @@
 #include "Labyrinth.h"
-#include "../NetworkTCP/Server.h"
-#include "../NetworkTCP/Client.h"
-#include "../SoundEffect/SoundEffect.h"
-#include "../BlockS/PixelS.h"
-#include "../Tool/GenerateMaze.h"
+#include "../../NetworkTCP/Server.h"
+#include "../../NetworkTCP/Client.h"
+#include "../../SoundEffect/SoundEffect.h"
+#include "../../BlockS/PixelS.h"
+#include "../../Tool/GenerateMaze.h"
 
 
 namespace GAME {

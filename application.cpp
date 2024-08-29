@@ -43,11 +43,14 @@ namespace GAME {
 	GameMods* Application::GetGame(GameModsEnum Game) {
 		switch (Game)
 		{
-		case Maze:
+		case Maze_:
 			return new MazeMods(*this);
 			break;
-		case Infinite:
+		case Infinite_:
 			return new UnlimitednessMapMods(*this);
+			break;
+		case TankTrouble_:
+			return new TankTrouble(*this);
 			break;
 		default:
 			break;
@@ -57,11 +60,14 @@ namespace GAME {
 	void Application::DeleteGame(GameModsEnum Game) {
 		switch (Game)
 		{
-		case Maze:
+		case Maze_:
 			delete (MazeMods*)mGameMods;
 			break;
-		case Infinite:
+		case Infinite_:
 			delete (UnlimitednessMapMods*)mGameMods;
+			break;
+		case TankTrouble_:
+			delete (TankTrouble*)mGameMods;
 			break;
 		default:
 			break;
@@ -178,7 +184,7 @@ namespace GAME {
 		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
 
 		//GIF库
-		mGIFTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Texture/");
+		mGIFTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Resource/GifTexture/");
 		//素材库
 		mTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Resource/Material/", false);
 

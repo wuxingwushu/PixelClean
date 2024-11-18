@@ -18,21 +18,21 @@ namespace VulKan {
 
 	struct AuxiliaryLineData
 	{
-		glm::vec2* Head{ nullptr };
-		glm::vec2* Tail{ nullptr };
+		glm::dvec2* Head{ nullptr };
+		glm::dvec2* Tail{ nullptr };
 		glm::vec4 Color{};
 	};
 
 	struct AuxiliaryForceData
 	{
-		glm::vec2* pos{ nullptr };
-		glm::vec2* Force{ nullptr };
+		glm::dvec2* pos{ nullptr };
+		glm::dvec2* Force{ nullptr };
 		glm::vec4 Color{};
 	};
 
 	struct AuxiliarySpotData
 	{
-		glm::vec2* pos{ nullptr };
+		glm::dvec2* pos{ nullptr };
 		glm::vec4 Color{};
 	};
 
@@ -78,7 +78,7 @@ namespace VulKan {
 		void Begin();
 
 		//画线
-		inline void Line(glm::vec3 Vertex1, glm::vec4 color1, glm::vec3 Vertex2, glm::vec4 color2) {
+		inline void Line(glm::dvec3 Vertex1, glm::vec4 color1, glm::dvec3 Vertex2, glm::vec4 color2) {
 			LinePointerHOST->Pos = Vertex1;
 			LinePointerHOST->Color = color1;
 			++LinePointerHOST;
@@ -89,7 +89,7 @@ namespace VulKan {
 		};
 
 		//画点
-		inline void Spot(glm::vec3 pos, glm::vec4 color) {
+		inline void Spot(glm::dvec3 pos, glm::vec4 color) {
 			SpotPointerHOST->Pos = pos;
 			SpotPointerHOST->Color = color;
 			++SpotPointerHOST;
@@ -100,23 +100,23 @@ namespace VulKan {
 		void End();
 
 		//一次性线段（录制外使用）
-		inline void AddLine(glm::vec3 Vertex1, glm::vec3 Vertex2, glm::vec4 color) {
+		inline void AddLine(glm::dvec3 Vertex1, glm::dvec3 Vertex2, glm::vec4 color) {
 			LineVertex.push_back({ Vertex1, color });
 			LineVertex.push_back({ Vertex2, color });
 		};
 		//一次性点（录制外使用）
-		inline void AddSpot(glm::vec3 pos, glm::vec4 color) {
+		inline void AddSpot(glm::dvec3 pos, glm::vec4 color) {
 			SpotVertex.push_back({ pos, color });
 		};
 
 		//静态线段（录制外使用）
-		inline void AddStaticLine(glm::vec3 Vertex1, glm::vec3 Vertex2, glm::vec4 color) {
+		inline void AddStaticLine(glm::dvec3 Vertex1, glm::dvec3 Vertex2, glm::vec4 color) {
 			StaticLineVertex.push_back({ Vertex1, color });
 			StaticLineVertex.push_back({ Vertex2, color });
 			StaticLineVertexUpData = true;
 		};
 		//静态点（录制外使用）
-		inline void AddStaticSpot(glm::vec3 pos, glm::vec4 color) {
+		inline void AddStaticSpot(glm::dvec3 pos, glm::vec4 color) {
 			StaticSpotVertex.push_back({ pos, color });
 			StaticSpotVertexUpData = true;
 		};
@@ -139,8 +139,8 @@ namespace VulKan {
 		AuxiliarySpot* LinePointerHOST = nullptr;
 		unsigned int LineNumber = 0;//当前帧的数量
 		unsigned int LineMax = 0;//上一帧的数量
-		ContinuousMap<glm::vec2*, AuxiliaryLineData>* ContinuousAuxiliaryLine = nullptr;//两点连线（动态）
-		ContinuousMap<glm::vec2*, AuxiliaryForceData>* ContinuousAuxiliaryForce = nullptr;//点上的向量（动态）
+		ContinuousMap<glm::dvec2*, AuxiliaryLineData>* ContinuousAuxiliaryLine = nullptr;//两点连线（动态）
+		ContinuousMap<glm::dvec2*, AuxiliaryForceData>* ContinuousAuxiliaryForce = nullptr;//点上的向量（动态）
 		ContinuousMap<void*, StaticAuxiliaryData>* StaticContinuousAuxiliaryLine = nullptr;//线段集（静态）
 		bool StaticLineUpData = false;//静态线段是否需要更新
 		unsigned int StaticLineDeviation = 0;//静态数据偏移量
@@ -153,7 +153,7 @@ namespace VulKan {
 		AuxiliarySpot* SpotPointerHOST = nullptr;
 		unsigned int SpotNumber = 0;//当前帧的数量
 		unsigned int SpotMax = 0;//上一帧的数量
-		ContinuousMap<glm::vec2*, AuxiliarySpotData>* ContinuousAuxiliarySpot = nullptr;//点集（动态）
+		ContinuousMap<glm::dvec2*, AuxiliarySpotData>* ContinuousAuxiliarySpot = nullptr;//点集（动态）
 		ContinuousMap<void*, StaticAuxiliaryData>* StaticContinuousAuxiliarySpot = nullptr;//点集（静态）
 		bool StaticSpotUpData = false;//静态点是否需要更新
 		unsigned int StaticSpotDeviation = 0;//静态数据偏移量

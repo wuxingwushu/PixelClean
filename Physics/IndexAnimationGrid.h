@@ -42,7 +42,7 @@ namespace SquarePhysics {
 		//有多少个外骨架点
 		virtual inline unsigned int GetOutlinePointSize() noexcept { return OutlinePointSizeS[CurrentFrame]; }
 		//获取第 I 个外骨架点
-		virtual inline glm::vec2 GetOutlinePointSet(unsigned int i) noexcept { return { mOutlinePointSet[CurrentFrame][i].x - Origin.x, mOutlinePointSet[CurrentFrame][i].y - Origin.y }; }
+		virtual inline glm::dvec2 GetOutlinePointSet(unsigned int i) noexcept { return { mOutlinePointSet[CurrentFrame][i].x - Origin.x, mOutlinePointSet[CurrentFrame][i].y - Origin.y }; }
 
 	private:
 		unsigned int mFrames = 0;
@@ -51,7 +51,7 @@ namespace SquarePhysics {
 		unsigned int CurrentFrame = 0;//当前帧
 
 		unsigned int* OutlinePointSizeS{ nullptr };//点集的数量
-		glm::vec2** mOutlinePointSet{ nullptr };//外包裹点集
+		glm::dvec2** mOutlinePointSet{ nullptr };//外包裹点集
 
 
 	//空

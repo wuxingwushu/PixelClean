@@ -29,7 +29,7 @@ namespace SquarePhysics {
 		delete mPixelCollisionS;
 	}
 
-	ObjectSufferForce SquarePhysics::GetGoods(glm::vec2 pos) {
+	ObjectSufferForce SquarePhysics::GetGoods(glm::dvec2 pos) {
 		glm::vec2 Lpos;
 		for (auto LObjectDecorator : *mObjectCollisionS)
 		{
@@ -42,7 +42,7 @@ namespace SquarePhysics {
 		return { nullptr, glm::vec2{ 0 } };
 	}
 
-	void SquarePhysics::PhysicsSimulation(float TimeStep) {
+	void SquarePhysics::PhysicsSimulation(double TimeStep) {
 		ObjectCollision** ObjectNumberS = mObjectCollisionS->Data();
 		PixelCollision** PixelCollisionS = mPixelCollisionS->Data();
 		PixelCollision* LPixel;
@@ -55,8 +55,8 @@ namespace SquarePhysics {
 		glm::dvec2 DStart, DEnd;
 		CollisionInfo LCollisionInfo;
 
-		glm::vec2 CoordinateDianJi{ 0, 0 };
-		glm::vec2 LiBi{ 0, 0 };
+		glm::dvec2 CoordinateDianJi{ 0, 0 };
+		glm::dvec2 LiBi{ 0, 0 };
 		int CoordinateDianJiShu = 0;
 		
 		bool Once;
@@ -101,10 +101,10 @@ namespace SquarePhysics {
 					if (Once) {
 						CoordinateDianJi /= CoordinateDianJiShu;
 						LiBi /= CoordinateDianJiShu;
-						LObject->SetPos((CoordinateDianJi / 2.0f) + LObject->GetPos());
-						LObject2->SetPos((-CoordinateDianJi / 2.0f) + LObject2->GetPos());
-						LObject->ForceSolution((LiBi + LObject->GetPos()) - LObject2->GetPos(), LObject->GetSpeed() * 0.1f, 0);
-						LObject2->ForceSolution(LiBi, -LObject->GetSpeed() * 0.1f, 0);
+						LObject->SetPos((CoordinateDianJi / 2.0) + LObject->GetPos());
+						LObject2->SetPos((-CoordinateDianJi / 2.0) + LObject2->GetPos());
+						LObject->ForceSolution((LiBi + LObject->GetPos()) - LObject2->GetPos(), LObject->GetSpeed() * 0.1, 0);
+						LObject2->ForceSolution(LiBi, -LObject->GetSpeed() * 0.1, 0);
 					}
 				}
 			}

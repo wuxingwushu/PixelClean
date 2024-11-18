@@ -1,5 +1,5 @@
 #pragma once
-#include <map>
+#include <unordered_map>
 #include <time.h>
 #include <iostream>
 #include "Iterator.h"
@@ -35,13 +35,18 @@ private:
 
     TKey* KeyS = nullptr;//键
     TData* DataS = nullptr;//数据
-    ContinuousMapFlags mFlags = ContinuousMap_None;
+    ContinuousMapFlags mFlags = ContinuousMap_None;//配置信息
     clock_t* TimeS = nullptr;//键对应的更新时间（Get算更新）
     clock_t TimeoutTime = 3000;//默认三秒
     unsigned int Max = 0;//最多容量
     unsigned int Number = 0;//当前容量
-    std::map<TKey, unsigned int> Dictionary;//索引对应数据
+    std::unordered_map<TKey, unsigned int> Dictionary;//索引对应数据
 public:
+
+    /**
+     * @brief 构造函数
+     * @param siez 初始数据大小
+     * @param flags 配置信息 */
     constexpr ContinuousMap(const unsigned int siez, ContinuousMapFlags flags = ContinuousMap_None) :
         mFlags(flags),
         Max(siez)
@@ -66,8 +71,11 @@ public:
             delete[] mPointerData;
         }
     }
-
-    //添加新 Map
+    
+    /**
+     * @brief 添加新 Map&
+     * @param key 键值对的键
+     * @return 返回分配数据空间的指针 */
     [[nodiscard]] inline TData* New(TKey key){
         if (Max == Number)//判断是否达到上线
         {
@@ -98,15 +106,18 @@ public:
         }
         return &DataS[Number++];//返回数据指针
     };
-
-    //更加 key 获取对应映射
+    
+    /**
+     * @brief 根据 key& 获取对应映射
+     * @param key 键值对的键
+     * @return 返回分配数据空间的指针 */
     [[nodiscard]] inline TData* Get(TKey key){
         if (Dictionary.find(key) == Dictionary.end())//判断是否存在键
         {
             if (mFlags & ContinuousMap_Debug) {
                 std::cerr << "没有 " << key << " !" << std::endl;
             }
-            if (mFlags & ContinuousMap_New){
+            if (mFlags & ContinuousMap_New) {
                 return New(key);
             }
             return nullptr;
@@ -119,13 +130,18 @@ public:
         return &DataS[Dictionary[key]];//返回数据指针
     }
 
-    //绑定销毁回调函数
+    /**
+     * @brief 绑定销毁回调函数
+     * @param DeleteCallback 销毁函数指针
+     * @param Data 传入数据指针 */
     void inline SetDeleteCallback(_DeleteCallback DeleteCallback, void* Data) noexcept {
         mDeleteCallback = DeleteCallback;//设置销毁回调函数
         mDeleteData = Data;
     }
 
-    //销毁 TKey 对应的映射
+    /**
+     * @brief 根据 key& 销毁对应数据
+     * @param key 键值对的键 */
     void Delete(TKey key){
         if (Dictionary.find(key) == Dictionary.end())//判断是否存在键
         {
@@ -159,8 +175,8 @@ public:
         }
     }
 
-
-    //超时检测
+    /**
+     * @brief 超时检测 */
     void inline TimeoutDetection() {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
@@ -177,20 +193,27 @@ public:
         }
     }
 
-    //设置超时回调函数
+    /**
+     * @brief 设置超时回调函数
+     * @param TimeoutCallback 超时函数指针
+     * @param Data 传入数据 */
     void inline SetTimeoutCallback(_TimeoutCallback TimeoutCallback, void* Data) noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         mTimeoutCallback = TimeoutCallback;
         mTimeoutData = Data;
     }
 
-    //设置超时时间
+    /**
+     * @brief 设置超时时间
+     * @param Time 超时时间 */
     void inline SetTimeoutTime(clock_t Time) noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         TimeoutTime = Time;
     }
 
-    //更新所有时间
+    /**
+     * @brief 更新所有时间 
+     * @note 清空所有数据的计时*/
     void inline UpDataWholeTime() noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         clock_t time = clock();
@@ -200,20 +223,27 @@ public:
         }
     }
 
-    //设置数据对齐时更新引用对象绑定的数据指针 回调函数
+    /**
+     * @brief 数据对齐时更新引用对象绑定的数据指针
+     * @param PointerCallback 更新引用回调函数指针 */
     void inline SetPointerCallback(_PointerCallback PointerCallback) noexcept {
         assert(mFlags & ContinuousMap_Pointer && "Not Turned On ContinuousMap_Pointer");
         mPointerCallback = PointerCallback;
     }
 
-    //绑定数据引用对象
+    /**
+     * @brief 绑定数据引用对象
+     * @param key 键值对的键
+     * @param Data 更新引用的对象指针 */
     void inline SetPointerData(TKey key, void* Data) {
         assert(mFlags & ContinuousMap_Pointer && "Not Turned On ContinuousMap_Pointer");
         mPointerData[Dictionary[key]] = Data;
     }
 
-
-    //获取除 Key 以外的所有 Data （且将 Key 移动最后面）
+    /**
+     * @brief 获取除 Key& 以外的所有 Data （且将 Key 移动最后面）
+     * @param key 键值对的键
+     * @return 返回数据指针 */
     [[nodiscard]] TData* GetKeyData(TKey key) {
         if (Dictionary.find(key) == Dictionary.end()) {//判断是否存在键
             return DataS;
@@ -245,43 +275,67 @@ public:
         return DataS;
     }
 
+    /**
+     * @brief 获取对应键值
+     * @param i 第几个数据
+     * @return 返回键值 */
     [[nodiscard]] inline TKey GetIndexKey(unsigned int i) noexcept {
         return KeyS[i];
     }
 
+    /**
+     * @brief 迭代器头
+     * @return 迭代器 */
     Iterator<TData> inline begin() {
         return Iterator<TData>(DataS);
     }
 
+    /**
+     * @brief 迭代器尾
+     * @return 迭代器 */
     Iterator<TData> inline end() {
         return Iterator<TData>(DataS + Number);
     }
 
-    //获取除 Key 以外 Data 数量
+    /**
+     * @brief 获取 Data 数量 - 1
+     * @return Data 数量 - 1 */
     [[nodiscard]] inline unsigned int GetKeyNumber() noexcept {
         return (Number - 1) > Max ? 0 : (Number - 1);
     }
 
     //获取除 Key 以外 Data 数量的数据一共多少字节
+
+    /**
+     * @brief 获取（Data数据 - 1）一共多少字节
+     * @return 字节数 */
     [[nodiscard]] inline unsigned int GetKeyDataSize() noexcept {
         return GetKeyNumber() * sizeof(TData);
     }
 
-    //获取所有 Data
+    /**
+     * @brief 获取 Data 指针
+     * @return Data 指针 */
     [[nodiscard]] inline constexpr TData* GetData() noexcept {
         return DataS;
     }
 
-    //获取所有 Data 数量
+    /**
+     * @brief 获取 Data 数量
+     * @return Data 数量 */
     [[nodiscard]] inline unsigned int GetNumber() noexcept {
         return Number;
     }
 
-    //获取 Data 数量的数据一共多少字节
+    /**
+     * @brief 获取 Data数据 一共多少字节
+     * @return 字节数 */
     [[nodiscard]] inline unsigned int GetDataSize() noexcept {
         return Number * sizeof(TData);
     }
 
+    /**
+     * @brief 扩容函数 */
     void inline Expansion() {
         TKey* PKeyS = KeyS;
         TKey* LKeyS = new TKey[Max * 2];

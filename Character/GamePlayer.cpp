@@ -148,7 +148,7 @@ namespace GAME {
 			}
 		}
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(mObjectCollision->GetPosX(), mObjectCollision->GetPosY(), 0.0f));//位移矩阵
-		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(mObjectCollision->GetAngleFloat() * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
+		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, (float)glm::radians(mObjectCollision->GetAngleFloat() * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
 		if (mode) {
 			for (int i = 0; i < frameCount; ++i) {
 				mUniformParams[1]->mBuffers[i]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));

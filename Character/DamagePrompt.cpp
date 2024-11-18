@@ -156,7 +156,7 @@ namespace GAME {
 		}
 	}
 
-	void DamagePrompt::AddDamagePrompt(float Angle)
+	void DamagePrompt::AddDamagePrompt(double Angle)
 	{
 		mDamagePromptAngle->add(Angle);
 		VulKan::Buffer* buffer = *mFreeLocation->pop();
@@ -166,7 +166,7 @@ namespace GAME {
 		mPlaceOfUse->add(buffer);
 	}
 
-	void DamagePrompt::UpDataDamagePrompt(float x, float y, float time)
+	void DamagePrompt::UpDataDamagePrompt(double x, double y, double time)
 	{
 		ObjectUniform mUniform{};
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0.0f));
@@ -179,7 +179,7 @@ namespace GAME {
 			buffer = *mPlaceOfUse->popData();
 			wObjectUniform = (ObjectUniform*)buffer->getupdateBufferByMap();
 			if (wObjectUniform->StrikeState > 0) {
-				wObjectUniform->mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(*mDamagePromptAngle->popData() * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
+				wObjectUniform->mModelMatrix = glm::rotate(mUniform.mModelMatrix, (float)glm::radians(*mDamagePromptAngle->popData() * 180.0 / 3.14), glm::vec3(0.0, 0.0, 1.0));
 				wObjectUniform->StrikeState -= time;
 				if (wObjectUniform->StrikeState < 0)wObjectUniform->StrikeState = 0.0f;
 			}

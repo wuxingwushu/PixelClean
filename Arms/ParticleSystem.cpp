@@ -3,6 +3,9 @@
 #include "../GlobalStructural.h"
 
 namespace GAME {
+	/**
+	 * @brief 粒子系统
+	 */
 	ParticleSystem::ParticleSystem(VulKan::Device* device, int Number)
 	{
 		mNumber = Number;

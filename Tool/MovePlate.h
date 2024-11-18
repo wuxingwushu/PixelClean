@@ -43,14 +43,14 @@ public:
 		mOriginX(OriginX), mOriginY(OriginY)
 	{
 		assert(mEdge != 0 && "Error : mEdge = 0");
-		mPlate = new PlateT[mNumberX * mNumberY];
-		LPlate = new PlateT[mNumberX > mNumberY ? mNumberX : mNumberY];
+		mPlate = (PlateT*)new char[mNumberX * mNumberY * sizeof(PlateT)];
+		LPlate = (PlateT*)new char[(mNumberX > mNumberY ? mNumberX : mNumberY) * sizeof(PlateT)];
 	}
 
 	~MovePlate()
 	{
-		delete mPlate;
-		delete LPlate;
+		delete (char*)mPlate;
+		delete (char*)LPlate;
 	}
 
 	[[nodiscard]] inline PlateT* PlateAt(unsigned int x, unsigned int y) {

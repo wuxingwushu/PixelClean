@@ -10,7 +10,7 @@ namespace SquarePhysics {
 	{
 	public:
 		struct RigidBodyAndModel {
-			GridDecorator* mGridDecorator = nullptr;
+			GridDecorator mGridDecorator;
 			ClassT* mModel = nullptr;
 		};
 
@@ -37,7 +37,7 @@ namespace SquarePhysics {
 		virtual [[nodiscard]] bool GetFixedCollisionBool(glm::ivec2 pos) {
 			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->CalculateGetPlate(pos.x, pos.y);
 			if (LRigidBodyAndModel != nullptr) {
-				return LRigidBodyAndModel->mGridDecorator->GetFixedCollisionBool({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
+				return LRigidBodyAndModel->mGridDecorator.GetFixedCollisionBool({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
 			}
 			return true;
 		}
@@ -45,7 +45,7 @@ namespace SquarePhysics {
 		virtual [[nodiscard]] float GetFrictionCoefficient(glm::ivec2 pos) {
 			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->CalculateGetPlate(pos.x, pos.y);
 			if (LRigidBodyAndModel != nullptr) {
-				return LRigidBodyAndModel->mGridDecorator->GetFrictionCoefficient({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
+				return LRigidBodyAndModel->mGridDecorator.GetFrictionCoefficient({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
 			}
 			return 1.0f;
 		}
@@ -54,7 +54,7 @@ namespace SquarePhysics {
 		virtual void CollisionCallback(int x, int y, bool Bool, ObjectDecorator* object) {
 			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->CalculateGetPlate(x, y);
 			if (LRigidBodyAndModel != nullptr) {
-				LRigidBodyAndModel->mGridDecorator->CollisionCallback(x % mSquareSideLength, y % mSquareSideLength, Bool, object);
+				LRigidBodyAndModel->mGridDecorator.CollisionCallback(x % mSquareSideLength, y % mSquareSideLength, Bool, object);
 			}
 		}
 
@@ -64,7 +64,7 @@ namespace SquarePhysics {
 		[[nodiscard]] bool GetFixedCollisionBoolRadial(glm::ivec2 pos) {
 			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->GetPlate(pos.x / mSquareSideLength, pos.y / mSquareSideLength);
 			if (LRigidBodyAndModel != nullptr) {
-				return LRigidBodyAndModel->mGridDecorator->GetFixedCollisionBool({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
+				return LRigidBodyAndModel->mGridDecorator.GetFixedCollisionBool({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
 			}
 			return true;
 		}
@@ -111,7 +111,7 @@ namespace SquarePhysics {
 		{
 			for (size_t iy = 0; iy < mNumber.y; ++iy)
 			{
-				mGridDecoratorS->GetPlate(ix, iy)->mGridDecorator = new GridDecorator(mSquareSideLength, mSquareSideLength, mSideLength);
+				new (&mGridDecoratorS->GetPlate(ix, iy)->mGridDecorator) GridDecorator(mSquareSideLength, mSquareSideLength, mSideLength);
 			}
 		}
 	}
@@ -123,7 +123,7 @@ namespace SquarePhysics {
 		{
 			for (size_t iy = 0; iy < mNumber.y; ++iy)
 			{
-				delete mGridDecoratorS->GetPlate(ix, iy)->mGridDecorator;
+				mGridDecoratorS->GetPlate(ix, iy)->mGridDecorator.~GridDecorator();
 			}
 		}
 		delete mGridDecoratorS;

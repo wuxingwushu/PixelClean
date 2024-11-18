@@ -37,14 +37,14 @@ namespace VulKan {
 			Vector->push_back(mCommandBuffer[F]->getCommandBuffer());
 		}
 
-		inline void SetPos(float x, float y, float z, int Index) {
-			mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+		inline void SetPos(double x, double y, double z, int Index) {
+			mUniform.mModelMatrix = glm::translate(glm::mat4(1.0), glm::vec3(x, y, z));
 			mUniformParams[1]->mBuffers[Index]->updateBufferByMap(&mUniform, sizeof(ObjectUniform));
 		}
 
-		inline void SetPosAngle(float x, float y, float z, float anlge, int Index) {
-			mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
-			mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(anlge * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
+		inline void SetPosAngle(double x, double y, double z, double anlge, int Index) {
+			mUniform.mModelMatrix = glm::translate(glm::mat4(1.0), glm::vec3(x, y, z));
+			mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, (float)glm::radians(anlge * 180.0 / 3.14), glm::vec3(0.0, 0.0, 1.0));
 			mUniformParams[1]->mBuffers[Index]->updateBufferByMap(&mUniform, sizeof(ObjectUniform));
 		}
 

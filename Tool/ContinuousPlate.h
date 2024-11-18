@@ -26,93 +26,6 @@ private:
 		return &mPlate[x * mNumberY + y];
 	}
 
-public:
-	//创建连续板块，板块大小 X，Y， 板块间距 Edge
-	ContinuousPlate(unsigned int x, unsigned int y, unsigned int edge) :
-		mNumberX(x),
-		mNumberY(y),
-		mEdge(edge)
-	{
-		assert(mEdge != 0 && "Error : mEdge = 0");
-		mPlate = new T[mNumberX * mNumberY];
-	}
-
-	//设置起始位置
-	inline void SetPos(float x, float y) noexcept {
-		mX = int(x) / mEdge;
-		mY = int(y) / mEdge;
-	}
-
-	//设置回调函数
-	inline void SetCallback(_GenerateCallback G, void* GData, _DeleteCallback D, void* DData) noexcept {
-		GenerateCallback = G;
-		GenerateData = GData;
-		DeleteCallback = D;
-		DeleteData = DData;
-	}
-
-	//这种连续板块的中心
-	inline void SetOrigin(unsigned int x, unsigned int y) noexcept {
-		mOriginX = x;
-		mOriginY = y;
-	}
-
-	//析构
-	~ContinuousPlate() {
-		delete[] mPlate;
-	}
-
-	//获取那个板块
-	[[nodiscard]] inline T* GetPlate(unsigned int x, unsigned int y) noexcept {
-		int MX = moveX + x;
-		int MY = moveY + y;
-		if (MX >= mNumberX)
-		{
-			MX -= mNumberX;
-		}
-		if (MY >= mNumberY)
-		{
-			MY -= mNumberY;
-		}
-		return at(MX,MY);
-	}
-
-	//更新当前监测位置，判断是否需要移动板块，返回板块是否移动信息
-	bool UpData(float x, float y) {
-		int uX = mX - (int(x) / mEdge);
-		int uY = mY - (int(y) / mEdge);
-		bool UpDataBool = false;
-		if ((fabs(uX) < mNumberX) && (fabs(uY) < mNumberY)) {
-			if (uX != 0)
-			{
-				mX -= uX;
-				MovePlateX(uX);
-				UpDataBool = true;
-			}
-			if (uY != 0)
-			{
-				mY -= uY;
-				MovePlateY(uY);
-				UpDataBool = true;
-			}
-		}
-		else
-		{
-			mX = (int(x) / mEdge);
-			mY = (int(y) / mEdge);
-			for (size_t Nx = 0; Nx < mNumberX; ++Nx)
-			{
-				for (size_t Ny = 0; Ny < mNumberY; ++Ny)
-				{
-					DeleteCallback(at(Nx, Ny), DeleteData);
-					GenerateCallback(at(Nx, Ny), (Nx + mX - mOriginX), (Ny + mY - mOriginY), GenerateData);
-				}
-			}
-			UpDataBool = true;
-		}
-		return UpDataBool;
-	}
-
 	//板块 X 的移动
 	void MovePlateX(int uX) {
 		int MX, MY;
@@ -223,6 +136,113 @@ public:
 		}
 	}
 
+public:
+	/**
+	 * @brief 构造函数
+	 * @param x 板块大小
+	 * @param y 板块大小
+	 * @param edge 板块间距 */
+	ContinuousPlate(unsigned int x, unsigned int y, unsigned int edge) :
+		mNumberX(x),
+		mNumberY(y),
+		mEdge(edge)
+	{
+		assert(mEdge != 0 && "Error : mEdge = 0");
+		mPlate = new T[mNumberX * mNumberY];
+	}
 
+	/**
+	 * @brief 设置起始位置
+	 * @param x 起始位置
+	 * @param y 起始位置 */
+	inline void SetPos(float x, float y) noexcept {
+		mX = int(x) / mEdge;
+		mY = int(y) / mEdge;
+	}
 
+	/**
+	 * @brief 设置回调函数
+	 * @param G 生成回调函数
+	 * @param GData 生成回调函数传入数据的指针
+	 * @param D 销毁回调函数
+	 * @param DData 销毁回调函数传入数据的指针 */
+	inline void SetCallback(_GenerateCallback G, void* GData, _DeleteCallback D, void* DData) noexcept {
+		GenerateCallback = G;
+		GenerateData = GData;
+		DeleteCallback = D;
+		DeleteData = DData;
+	}
+
+	/**
+	 * @brief 设置连续板块的中心
+	 * @param x 中心位置
+	 * @param y 中心位置 */
+	inline void SetOrigin(unsigned int x, unsigned int y) noexcept {
+		mOriginX = x;
+		mOriginY = y;
+	}
+
+	~ContinuousPlate() {
+		delete[] mPlate;
+	}
+
+	/**
+	 * @brief 获取那个板块
+	 * @param x 板块位置
+	 * @param y 板块位置
+	 * @return 板块指针 */
+	[[nodiscard]] inline T* GetPlate(unsigned int x, unsigned int y) noexcept {
+		int MX = moveX + x;
+		int MY = moveY + y;
+		if (MX >= mNumberX)
+		{
+			MX -= mNumberX;
+		}
+		if (MY >= mNumberY)
+		{
+			MY -= mNumberY;
+		}
+		return at(MX,MY);
+	}
+
+	/**
+	 * @brief 更新当前监测位置
+	 * @param x 位置
+	 * @param y 位置
+	 * @note 判断是否需要移动板块
+	 * @return 返回板块是否移动 */
+	bool UpData(int x, int y) {
+		int uX = mX - (x / mEdge);
+		int uY = mY - (y / mEdge);
+		bool UpDataBool = false;
+		if ((fabs(uX) < mNumberX) && (fabs(uY) < mNumberY)) {
+			if (uX != 0)
+			{
+				mX -= uX;
+				MovePlateX(uX);
+				UpDataBool = true;
+			}
+			if (uY != 0)
+			{
+				mY -= uY;
+				MovePlateY(uY);
+				UpDataBool = true;
+			}
+		}
+		else
+		{
+			mX = (x / mEdge);
+			mY = (y / mEdge);
+			for (size_t Nx = 0; Nx < mNumberX; ++Nx)
+			{
+				for (size_t Ny = 0; Ny < mNumberY; ++Ny)
+				{
+					DeleteCallback(at(Nx, Ny), DeleteData);
+					GenerateCallback(at(Nx, Ny), (Nx + mX - mOriginX), (Ny + mY - mOriginY), GenerateData);
+				}
+			}
+			UpDataBool = true;
+		}
+		return UpDataBool;
+	}
 };

@@ -340,10 +340,10 @@ namespace GAME {
 
 		//是否有受力对象
 		if (LSObjectDecorator.Object != nullptr) {
-			glm::vec2 LSArmOfForce = SquarePhysics::vec2angle(LSObjectDecorator.ArmOfForce, LSObjectDecorator.Object->GetAngle());
+			glm::dvec2 LSArmOfForce = SquarePhysics::vec2angle(LSObjectDecorator.ArmOfForce, LSObjectDecorator.Object->GetAngle());
 			LSObjectDecorator.Object->ForceSolution(
 				LSArmOfForce,
-				glm::vec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) },
+				glm::dvec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) },
 				TOOL::FPStime
 			);
 			mAuxiliaryVision->Line(

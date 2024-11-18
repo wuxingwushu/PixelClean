@@ -140,7 +140,7 @@ namespace GAME {
 				for (int iy = Range2A; iy < Range2B; ++iy)
 				{
 					posY = y + iy;
-					if (mMoveTerrain->GetRigidBodyAndModel(posX / 16, posY / 16)->mGridDecorator->GetFixedCollisionCompensateBool({ posX % 16, posY % 16 })) {
+					if (mMoveTerrain->GetRigidBodyAndModel(posX / 16, posY / 16)->mGridDecorator.GetFixedCollisionCompensateBool({ posX % 16, posY % 16 })) {
 						++(*PixelWallNumber);
 					}
 				}

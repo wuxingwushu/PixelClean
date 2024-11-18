@@ -23,7 +23,7 @@ layout(binding = 1) uniform ObjectUniform {
 }objectUBO;
 
 void main() {
-	gl_Position = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * objectUBO.mModelMatrix * vec4(inPosition, 1.0);
+	gl_Position = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * objectUBO.mModelMatrix * vec4(inPosition, 1.0f);
 	outzhen = objectUBO.zhen;
 	outchuang = objectUBO.chuang;
 	outUV = inUV;

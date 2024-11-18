@@ -25,11 +25,11 @@ namespace GAME {
 		~ParticlesSpecialEffect();
 
 		//生成一个粒子特效
-		void GenerateSpecialEffects(float x, float y, unsigned char* colour, float angle, float speed);
+		void GenerateSpecialEffects(double x, double y, unsigned char* colour, double angle, double speed);
 		//销毁对应的粒子
 		void DeleteSpecialEffects(unsigned int index);
 		//粒子事件
-		void SpecialEffectsEvent(unsigned int Fndex, float time);
+		void SpecialEffectsEvent(unsigned int Fndex, double time);
 	private:
 		ContinuousData<SpecialEffects>* mSpecialEffects;//现场的粒子
 		ParticleSystem* mParticleSystem;//粒子系统

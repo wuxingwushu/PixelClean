@@ -50,10 +50,10 @@ namespace SquarePhysics {
 		//设置地图
 		inline void SetFixedSizeTerrain(GridDecorator* LTerrain) noexcept { mTerrain = LTerrain; }
 		//物理模拟
-		void PhysicsSimulation(float TimeStep);
+		void PhysicsSimulation(double TimeStep);
 
 		//捕获选中动态物品
-		ObjectSufferForce GetGoods(glm::vec2 pos);
+		ObjectSufferForce GetGoods(glm::dvec2 pos);
 
 	private:
 		GridDecorator* mTerrain = nullptr;					//地图

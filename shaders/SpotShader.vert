@@ -17,5 +17,5 @@ layout(binding = 0) uniform VPMatrices {
 void main() {
 	outColor = inColor;
 	outViewMatrix = vpUBO.mProjectionMatrix;
-	gl_Position = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * vec4(inPosition, 1.0);
+	gl_Position = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * vec4(inPosition, 1.0f);
 }

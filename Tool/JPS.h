@@ -112,8 +112,9 @@ private:
     JPSNode* ParentJPSNode = nullptr;   //当前节点
     bool Finish = false;                //寻路是否结束
     bool Scanning = true;               //是否是初次跳点
-private:
+public:
     JPSVec2 StartingPoint = { 0,0 };                //开始位置（也是偏移值）
+private:
     const int mRange = 0;                           //范围
     const int mSteps = 0;                           //最大步数
     bool mPathfindingCompleted = true;              //寻路是否结束
@@ -125,15 +126,15 @@ private:
 #ifdef JPS_MemoryPool
     MemoryPool<JPSNode, sizeof(JPSNode) * 100> mMemoryPool;    //内存池
 #endif
-
+public:
     //位置是否合法
     inline bool Legitimacy(int x, int y) {
         if (x >= -mRange && x < mRange && y >= -mRange && y < mRange) { return true; }
         else { return false; }
     }
-
+private:
     //调用回调函数
-    inline bool isValid(int x, int y) {
+    virtual inline bool isValid(int x, int y) {
         if (Legitimacy(x, y)) {
             return mObstaclesCallback(x + StartingPoint.x, y + StartingPoint.y, mDataPointer);
         }

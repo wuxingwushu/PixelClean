@@ -67,7 +67,7 @@ namespace GAME {
 		{
 			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; ++iy)
 			{
-				mT->mGridDecorator->at({ ix,iy })->Collision = CollisionBool;
+				mT->mGridDecorator.at({ ix,iy })->Collision = CollisionBool;
 			}
 		}
 	}
@@ -454,7 +454,7 @@ namespace GAME {
 							WarfareMistPointer[((iy * 16 + ixx) * 16 * mNumberX * 4) + (ix * 16 * 4) + (iyy * 4) + i] = pixelS[mTextureAndBuffer[ix][iy].Type][(ixx * 16 * 4) + (iyy * 4) + i] * (i == 3 ? 1 : 0.3f);
 						}
 						WallBoolPointer[((((iy * 16) + ixx) * mNumberX * 16) + (ix * 16) + iyy)] = CollisionBool;
-						mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator->at({ ixx,iyy })->Collision = CollisionBool;
+						mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator.at({ ixx,iyy })->Collision = CollisionBool;
 					}
 				}
 
@@ -462,7 +462,7 @@ namespace GAME {
 				qiangshulaingData += 16 * 16;
 
 				mDungeonDestroyStruct[ix][iy] = { &mTextureAndBuffer[ix][iy], this };
-				mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator->SetCollisionCallback(DungeonDestroy, &mDungeonDestroyStruct[ix][iy]);
+				mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator.SetCollisionCallback(DungeonDestroy, &mDungeonDestroyStruct[ix][iy]);
 				textureParam->mPixelTexture = mTextureAndBuffer[ix][iy].mPixelTexture;
 				mDescriptorSet[ix][iy] = new VulKan::DescriptorSet(wDevice, mUniformParams, mDescriptorSetLayout, mDescriptorPool, wFrameCount);
 				textureParam->mPixelTexture = WarfareMist;

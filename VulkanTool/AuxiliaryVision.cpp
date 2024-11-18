@@ -14,13 +14,13 @@ namespace VulKan {
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
-		ContinuousAuxiliaryLine = new ContinuousMap<glm::vec2*, AuxiliaryLineData>(Number);
-		ContinuousAuxiliaryForce = new ContinuousMap<glm::vec2*, AuxiliaryForceData>(Number);
+		ContinuousAuxiliaryLine = new ContinuousMap<glm::dvec2*, AuxiliaryLineData>(Number);
+		ContinuousAuxiliaryForce = new ContinuousMap<glm::dvec2*, AuxiliaryForceData>(Number);
 		StaticContinuousAuxiliaryLine = new ContinuousMap<void*, StaticAuxiliaryData>(Number, ContinuousMap_New);
 		AuxiliarySpot* LP = (AuxiliarySpot*)AuxiliaryLineS->getupdateBufferByMap();
 		for (size_t i = 0; i < (Number * 2); ++i)
 		{
-			LP[i].Pos = { i, i, -10000.0f };
+			LP[i].Pos = { i, i, -10000.0 };
 			LP[i].Color = { 0, 1.0f, 0, 1.0f };
 		}
 		AuxiliaryLineS->endupdateBufferByMap();
@@ -30,12 +30,12 @@ namespace VulKan {
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
-		ContinuousAuxiliarySpot = new ContinuousMap<glm::vec2*, AuxiliarySpotData>(Number);
+		ContinuousAuxiliarySpot = new ContinuousMap<glm::dvec2*, AuxiliarySpotData>(Number);
 		StaticContinuousAuxiliarySpot = new ContinuousMap<void*, StaticAuxiliaryData>(Number, ContinuousMap_New);
 		LP = (AuxiliarySpot*)AuxiliarySpotS->getupdateBufferByMap();
 		for (size_t i = 0; i < Number; ++i)
 		{
-			LP[i].Pos = { i, i, -10000.0f };
+			LP[i].Pos = { i, i, -10000.0 };
 			LP[i].Color = { 0, 0, 1.0f, 1.0f };
 		}
 		AuxiliarySpotS->endupdateBufferByMap();
@@ -161,10 +161,10 @@ namespace VulKan {
 		//动态
 		for (auto& i : *ContinuousAuxiliaryLine)
 		{
-			LinePointerHOST->Pos = { *i.Head, 0.0f};
+			LinePointerHOST->Pos = { *i.Head, 0.0};
 			LinePointerHOST->Color = i.Color;
 			++LinePointerHOST;
-			LinePointerHOST->Pos = { *i.Tail, 0.0f };
+			LinePointerHOST->Pos = { *i.Tail, 0.0 };
 			LinePointerHOST->Color = i.Color;
 			++LinePointerHOST;
 		}
@@ -246,7 +246,7 @@ namespace VulKan {
 		if (LineMax > LineNumber) {
 			for (size_t i = LineNumber; i <= LineMax; ++i)
 			{
-				LinePointerHOST->Pos.z = -10000.0f;
+				LinePointerHOST->Pos.z = -10000.0;
 				++LinePointerHOST;
 			}
 		}
@@ -258,7 +258,7 @@ namespace VulKan {
 		if (SpotMax > SpotNumber) {
 			for (size_t i = SpotNumber; i <= SpotMax; ++i)
 			{
-				SpotPointerHOST->Pos.z = -10000.0f;
+				SpotPointerHOST->Pos.z = -10000.0;
 				++SpotPointerHOST;
 			}
 		}

@@ -54,7 +54,7 @@ private:
     }
 
     //调用回调函数
-    bool isValid(int x, int y) {
+    virtual inline bool isValid(int x, int y) {
         if (Legitimacy(x, y)) {
             return mObstaclesCallback(x + StartingPoint.x, y + StartingPoint.y, mDataPointer);
         }

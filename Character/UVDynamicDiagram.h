@@ -41,7 +41,7 @@ namespace GAME {
 			AccumulatedTime += time;
 			UVDynamicDiagramStruct* P = (UVDynamicDiagramStruct*)mPositionToData->getupdateBufferByMap();
 			P->mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(mIndexAnimationGrid->GetPosX(), mIndexAnimationGrid->GetPosY(), 0));
-			P->mModelMatrix = glm::rotate(P->mModelMatrix, glm::radians(mIndexAnimationGrid->GetAngleFloat() * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
+			P->mModelMatrix = glm::rotate(P->mModelMatrix, (float)glm::radians(mIndexAnimationGrid->GetAngleFloat() * 180.0 / 3.14159265359), glm::vec3(0.0, 0.0, 1.0));
 			if (AccumulatedTime > 2.5f) {
 				AccumulatedTime = 0;
 				

@@ -89,7 +89,7 @@ namespace SquarePhysics {
 		}
 	}
 
-	CollisionInfo ObjectCollision::PixelCollision(glm::vec2 dian) {
+	CollisionInfo ObjectCollision::PixelCollision(glm::dvec2 dian) {
 		dian -= mPos;//网格体为中心
 		dian = vec2angle(dian, { mAngle.x, -mAngle.y });//减除玩家的角度// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		if (GetFixedCollisionCompensateBool(dian)) {
@@ -104,8 +104,8 @@ namespace SquarePhysics {
 	}
 
 	[[nodiscard]] CollisionInfo ObjectCollision::SquarePhysicsCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End, glm::vec2 Direction) {
-		Start = vec2angle((glm::vec2(Start) - mPos), { mAngle.x, -mAngle.y} ); // -mAngleFloat  ->   { mAngle.x, -mAngle.y}
-		End = vec2angle((glm::vec2(End) - mPos), { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+		Start = vec2angle(Start - mPos, { mAngle.x, -mAngle.y} ); // -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+		End = vec2angle(End - mPos, { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		glm::ivec2 IStart = Start, IEnd = End;
 		if (Start.x < 0)--IStart.x;//负值偏移
 		if (Start.y < 0)--IStart.y;//负值偏移
@@ -139,14 +139,14 @@ namespace SquarePhysics {
 			}
 
 			End += SquareToRadial(-Depth, 1 + Depth,  -Depth, 1 + Depth, YEnd, Direction);
-			LCollisionInfo.Pos = glm::vec2(vec2angle(End, mAngle)) + mPos;
+			LCollisionInfo.Pos = vec2angle(End, mAngle) + mPos;
 		}
 		return LCollisionInfo;
 	}
 
 	[[nodiscard]] CollisionInfo ObjectCollision::RelativeCoordinateSystemRadialCollisionDetection(glm::dvec2 Start, glm::dvec2 End) {
-		Start = vec2angle((glm::vec2(Start) - mPos), { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
-		End = vec2angle((glm::vec2(End) - mPos), { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+		Start = vec2angle(Start - mPos, { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
+		End = vec2angle(End - mPos, { mAngle.x, -mAngle.y });// -mAngleFloat  ->   { mAngle.x, -mAngle.y}
 		if (Start.x < 0)--Start.x;
 		if (Start.y < 0)--Start.y;
 		if (End.x < 0)--End.x;

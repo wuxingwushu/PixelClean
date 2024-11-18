@@ -21,7 +21,7 @@ layout(binding = 1) uniform ObjectUniform {
 }objectUBO;
 
 void main() {
-	gl_Position = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * objectUBO.mModelMatrix * vec4(inPosition, 1.0);
+	gl_Position = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * objectUBO.mModelMatrix * vec4(inPosition, 1.0f);
 	outColour = objectUBO.StrikeColour;
 	outStrike = objectUBO.StrikeState;
 	outUV = inUV;

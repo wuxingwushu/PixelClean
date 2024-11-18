@@ -37,5 +37,5 @@ void main() {
 	}else{
 		outColor = Color[shu];
 	}
-	outViewMatrix = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * objectUBO.mModelMatrix ;	
+	outViewMatrix = vpUBO.mProjectionMatrix * vpUBO.mViewMatrix * objectUBO.mModelMatrix;	
 }

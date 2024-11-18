@@ -135,6 +135,7 @@ namespace VulKan {
 		VkPhysicalDeviceFeatures deviceFeatures = {};
 		deviceFeatures.samplerAnisotropy = VK_TRUE;//开启各向异性
 		deviceFeatures.geometryShader = VK_TRUE;//开启几何着色器
+		deviceFeatures.shaderFloat64 = VK_FALSE;//GPU开启 Float64
 
 		VkDeviceCreateInfo deviceCreateInfo = {};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

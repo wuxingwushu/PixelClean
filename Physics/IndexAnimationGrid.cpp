@@ -9,10 +9,10 @@ namespace SquarePhysics {
 		:ObjectCollision(x, y, SideLength), mFrames(Frames)
 	{
 		OutlinePointSizeS = new unsigned int[Frames];
-		mOutlinePointSet = new glm::vec2*[Frames];
+		mOutlinePointSet = new glm::dvec2*[Frames];
 		for (size_t i = 0; i < Frames; i++)
 		{
-			mOutlinePointSet[i] = new glm::vec2[x * y * 2];
+			mOutlinePointSet[i] = new glm::dvec2[x * y * 2];
 		}
 	}
 

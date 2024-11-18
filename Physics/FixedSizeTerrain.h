@@ -16,19 +16,18 @@ namespace SquarePhysics {
 		virtual ~FixedSizeTerrain();
 
 
-		inline void SetPos(glm::vec2 pos) noexcept { PosX = pos.x; PosY = pos.y;}
+		inline void SetPos(glm::dvec2 pos) noexcept { Pos = pos; }
 
-		inline void SetPosX(float x) noexcept { PosX = x; }
+		inline void SetPosX(double x) noexcept { Pos.x = x; }
 
-		inline void SetPosY(float y) noexcept { PosY = y; }
+		inline void SetPosY(double y) noexcept { Pos.y = y; }
 
-		[[nodiscard]] inline float GetPosX() noexcept { return PosX; }
+		[[nodiscard]] inline float GetPosX() noexcept { return Pos.x; }
 
-		[[nodiscard]] inline float GetPosY() noexcept { return PosY; }
+		[[nodiscard]] inline float GetPosY() noexcept { return Pos.y; }
 
 	private:
-		float PosX = 0;
-		float PosY = 0;
+		glm::dvec2 Pos{0};
 	};
 
 }

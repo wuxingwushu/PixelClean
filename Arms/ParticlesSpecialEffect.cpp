@@ -19,7 +19,7 @@ namespace GAME {
 		delete mSpecialEffects;
 	}
 
-	void ParticlesSpecialEffect::GenerateSpecialEffects(float x, float y, unsigned char* colour, float angle, float speed) {
+	void ParticlesSpecialEffect::GenerateSpecialEffects(double x, double y, unsigned char* colour, double angle, double speed) {
 		Particle* LParticle = mParticleSystem->mParticle->pop();//从粒子系统获取一个闲置的粒子
 		if (LParticle == nullptr)
 		{
@@ -37,7 +37,7 @@ namespace GAME {
 		mSpecialEffects->add(LSpecialEffects);//将创建的粒子特效添加到数组中
 		ObjectUniform mUniform;
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0.0f));
-		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(angle), glm::vec3(0.0f, 0.0f, 1.0f));
+		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, (float)glm::radians(angle), glm::vec3(0.0f, 0.0f, 1.0f));
 		mUniform.mModelMatrix = glm::scale(mUniform.mModelMatrix, glm::vec3(LSpecialEffects.Zoom, LSpecialEffects.Zoom, 1.0f));//缩放矩阵
 		for (auto i : *LSpecialEffects.Buffer)
 		{
@@ -57,7 +57,7 @@ namespace GAME {
 		mSpecialEffects->Delete(index);//销毁对应的粒子
 	}
 
-	void ParticlesSpecialEffect::SpecialEffectsEvent(unsigned int Fndex, float time) {
+	void ParticlesSpecialEffect::SpecialEffectsEvent(unsigned int Fndex, double time) {
 		SpecialEffects* LmSpecialEffects = mSpecialEffects->Data();//获取粒子特效数组
 		ObjectUniform mUniform;
 		for (auto i = 0; i < mSpecialEffects->GetNumber(); ++i)
@@ -70,8 +70,8 @@ namespace GAME {
 				DeleteSpecialEffects(i);
 			}
 			mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(LmSpecialEffects[i].x, LmSpecialEffects[i].y, 0.0f));
-			mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(LmSpecialEffects[i].angle), glm::vec3(0.0f, 0.0f, 1.0f));
-			mUniform.mModelMatrix = glm::scale(mUniform.mModelMatrix, glm::vec3(LmSpecialEffects[i].Zoom, LmSpecialEffects[i].Zoom, 1.0f));//缩放矩阵
+			mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, (float)glm::radians(LmSpecialEffects[i].angle), glm::vec3(0.0, 0.0, 1.0));
+			mUniform.mModelMatrix = glm::scale(mUniform.mModelMatrix, glm::vec3(LmSpecialEffects[i].Zoom, LmSpecialEffects[i].Zoom, 1.0));//缩放矩阵
 			(*LmSpecialEffects[i].Buffer)[Fndex]->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniform));//更新位置大小
 		}
 	}

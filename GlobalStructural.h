@@ -52,9 +52,9 @@ struct ObjectUniform {
 struct ObjectUniformGIF {
 	glm::mat4 mModelMatrix;
 	glm::vec3 StrikeColour = { 1.0f, 0.0f, 0.0f };
-	float StrikeState = 0;
-	float chuang = 0.0f;
-	unsigned int zhen = 0;
+	float StrikeState = 0.0f;
+	float chuang = 0.0f;//一帧 UV 长度
+	unsigned int zhen = 0;//显示第几帧
 
 	ObjectUniformGIF() {
 		mModelMatrix = glm::mat4(1.0f);

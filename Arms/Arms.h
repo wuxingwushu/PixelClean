@@ -32,9 +32,9 @@ namespace GAME {
 		}
 
 		//生成子弹
-		void ShootBullets(float x, float y, float angle, float speed, unsigned int Type);
+		void ShootBullets(double x, double y, double angle, double speed, unsigned int Type);
 
-		void Shoot(float x, float y, float angle, float speed, unsigned int Type) {
+		void Shoot(double x, double y, double angle, double speed, unsigned int Type) {
 			ShootCallback(this, x, y, angle, speed, Type);
 		}
 

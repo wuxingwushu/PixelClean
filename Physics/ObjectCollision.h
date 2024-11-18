@@ -40,11 +40,11 @@ namespace SquarePhysics {
 		//有多少个外骨架点
 		virtual inline unsigned int GetOutlinePointSize() noexcept { return OutlinePointSize; }
 		//获取第 I 个外骨架点
-		virtual inline glm::vec2 GetOutlinePointSet(unsigned int i) noexcept { return { mOutlinePointSet[i].x - Origin.x, mOutlinePointSet[i].y - Origin.y }; }
+		virtual inline glm::dvec2 GetOutlinePointSet(unsigned int i) noexcept { return { mOutlinePointSet[i].x - Origin.x, mOutlinePointSet[i].y - Origin.y }; }
 
 
 		//点对玩家的碰撞判断
-		CollisionInfo PixelCollision(glm::vec2 dian);
+		CollisionInfo PixelCollision(glm::dvec2 dian);
 
 		//路径碰撞判断
 		
@@ -58,7 +58,7 @@ namespace SquarePhysics {
 
 	private:
 		unsigned int OutlinePointSize = 0;//点集的数量
-		glm::vec2 mOutlinePointSet[256]{};//外包裹点集
+		glm::dvec2 mOutlinePointSet[256]{};//外包裹点集
 	};
 
 }

@@ -27,7 +27,7 @@ namespace GAME {
 		delete mBullet;
 	}
 
-	void Arms::ShootBullets(float x, float y, float angle, float speed, unsigned int Type) {
+	void Arms::ShootBullets(double x, double y, double angle, double speed, unsigned int Type) {
 
 		unsigned char color[4] = { 0,255,0,125 };
 
@@ -56,8 +56,8 @@ namespace GAME {
 		LPixelCollision->SetDestroyModeCallback(SquarePhysics::GetDestroyMode(SquarePhysics::DestroyModeEnum(Type)));//破坏模式
 		Ppppx->Pixel->ModifyImage(4, color);//设置模型颜色
 		ObjectUniform mUniform;
-		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3( x, y, 0.0f));//位置矩阵
-		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(angle * 180 / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));//旋转矩阵
+		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0), glm::vec3( x, y, 0.0));//位置矩阵
+		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, (float)glm::radians(angle * 180.0 / 3.14), glm::vec3(0.0, 0.0, 1.0));//旋转矩阵
 		//mUniform.mModelMatrix = glm::scale(mUniform.mModelMatrix, glm::vec3(1.30, 1.30, 1.30));//缩放矩阵
 		for (size_t i = 0; i < (*Ppppx->Buffer).size(); ++i)
 		{
@@ -94,7 +94,7 @@ namespace GAME {
 			ppPixelCollision = mBullet->GetIndexKey(i);//获取子弹物理模型
 			ObjectUniform mUniform;
 			mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(ppPixelCollision->GetPosX(), ppPixelCollision->GetPosY(), 0.0f));
-			mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, glm::radians(ppPixelCollision->GetAngleFloat() * 180 / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
+			mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, (float)glm::radians(ppPixelCollision->GetAngleFloat() * 180 / 3.14), glm::vec3(0.0, 0.0, 1.0));
 			for (size_t idd = 0; idd < (*mParticledd->Buffer).size(); ++idd)
 			{
 				(*mParticledd[i].Buffer)[idd]->updateBufferByMap(&mUniform, sizeof(ObjectUniform));//更新模型的位置

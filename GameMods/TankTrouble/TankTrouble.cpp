@@ -6,6 +6,26 @@
 
 namespace GAME {
 
+#define VirtualBool 1;
+
+	class TankTroubleJPS : public JPS
+	{
+	public:
+		TankTroubleJPS(int Range, int Steps, FixedMaze* c) : JPS(Range, Steps), CLASS(c){};
+		~TankTroubleJPS() {};
+
+		virtual inline bool isValid(int x, int y) {
+			if (!Legitimacy(x, y)) {
+				return false;
+			}
+			return CLASS->GetPixelWallNumber(x + StartingPoint.x, y + StartingPoint.y);
+		}
+
+	private:
+		FixedMaze* CLASS;
+	};
+	TankTroubleJPS* mTankTroubleJPS = nullptr;
+
 	bool TankTroubleGetWallD_2(int x, int y, void* P) {
 		FixedMaze* LLabyrinth = (FixedMaze*)P;
 		return LLabyrinth->GetPixelWallNumber(x, y);
@@ -26,9 +46,7 @@ namespace GAME {
 		
 		mUVDynamicDiagram = new UVDynamicDiagram(mDevice, mPipelineS->GetPipeline(VulKan::PipelineMods::UVDynamicDiagram), mSwapChain, mRenderPass, mCameraVPMatricesBuffer, mSquarePhysics);
 		mUVDynamicDiagram->InitCommandBuffer();
-		//测试寻路
-		JPSPathfinding = new JPS(300, 10000);
-		AStarPathfinding = new AStar(300, 10000);
+
 
 		//生成迷宫
 		mLabyrinth = new FixedMaze(mSquarePhysics);
@@ -42,8 +60,17 @@ namespace GAME {
 		);
 		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
 
+		//测试寻路
+
+		// 这种方法在查询是否是障碍物最快（内联函数，不是回调函数）
+		mTankTroubleJPS = new TankTroubleJPS(300, 10000, mLabyrinth);
+
+		JPSPathfinding = new JPS(300, 10000);
+		AStarPathfinding = new AStar(300, 10000);
 		JPSPathfinding->SetObstaclesCallback(TankTroubleGetWallD_2, mLabyrinth);
 		AStarPathfinding->SetObstaclesCallback(TankTroubleGetWallD_2, mLabyrinth);
+
+		
 
 		glm::ivec2 Lpos = mLabyrinth->GetLegitimateGeneratePos();
 
@@ -308,10 +335,10 @@ namespace GAME {
 
 		//是否有受力对象
 		if (LSObjectDecorator.Object != nullptr) {
-			glm::vec2 LSArmOfForce = SquarePhysics::vec2angle(LSObjectDecorator.ArmOfForce, LSObjectDecorator.Object->GetAngle());
+			glm::dvec2 LSArmOfForce = SquarePhysics::vec2angle(LSObjectDecorator.ArmOfForce, LSObjectDecorator.Object->GetAngle());
 			LSObjectDecorator.Object->ForceSolution(
 				LSArmOfForce,
-				glm::vec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) },
+				glm::dvec2{ huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y) },
 				TOOL::FPStime
 			);
 			mAuxiliaryVision->Line(
@@ -324,7 +351,6 @@ namespace GAME {
 				{ LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0 },
 				{ 0, 0, 1.0f, 1.0f }
 			);
-			mVisualEffect->SetPosAngle(LSObjectDecorator.Object->GetPosX(), LSObjectDecorator.Object->GetPosY(), 0, LSObjectDecorator.Object->GetAngleFloat(), mCurrentFrame);
 			if (Lzuojian != GLFW_PRESS) {
 				LSObjectDecorator.Object = nullptr;
 			}
@@ -349,7 +375,7 @@ namespace GAME {
 			AStarPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &AStarPath);
 			TOOL::mTimer->MomentEnd();
 			TOOL::mTimer->MomentTiming("JPS寻路耗时");
-			JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath);
+			mTankTroubleJPS->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath);
 			TOOL::mTimer->MomentEnd();
 			
 			VulKan::StaticAuxiliaryData* PA = mAuxiliaryVision->GetContinuousStaticSpot()->Get(&AStarPath);
@@ -412,7 +438,6 @@ namespace GAME {
 		mAuxiliaryVision->initCommandBuffer();
 		mGamePlayer->InitCommandBuffer();
 		mCrowd->ReconfigurationCommandBuffer();
-		mVisualEffect->initCommandBuffer();
 		mLabyrinth->ThreadUpdateCommandBuffer();
 		mDamagePrompt->initCommandBuffer();
 		mUVDynamicDiagram->InitCommandBuffer();

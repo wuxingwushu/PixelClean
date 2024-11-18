@@ -34,9 +34,9 @@ namespace GAME {
 			Vector->push_back(mCommandBuffer[F]->getCommandBuffer());
 		}
 
-		void AddDamagePrompt(float Angle);
+		void AddDamagePrompt(double Angle);
 
-		void UpDataDamagePrompt(float x, float y, float time);
+		void UpDataDamagePrompt(double x, double y, double time);
 
 	private://模型   顶点，UV，顶点索引
 		VulKan::Buffer* mPositionBuffer{ nullptr };

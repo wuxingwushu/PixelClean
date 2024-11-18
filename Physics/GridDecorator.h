@@ -202,7 +202,7 @@ namespace SquarePhysics {
 		//有多少个外骨架点
 		virtual inline unsigned int GetOutlinePointSize() noexcept { return 0; }
 		//获取第 I 个外骨架点
-		virtual inline glm::vec2 GetOutlinePointSet(unsigned int i) noexcept { return glm::vec2(0); }
+		virtual inline glm::dvec2 GetOutlinePointSet(unsigned int i) noexcept { return glm::dvec2(0); }
 	};
 
 }

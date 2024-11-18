@@ -36,20 +36,20 @@ namespace SquarePhysics {
 	//碰撞返回信息
 	struct CollisionInfo {
 		bool Collision = false;	//是否碰撞
-		glm::vec2 Pos{ 0 };		//碰撞位置
-		float NormalAngle = 0;	//法线角度
+		glm::dvec2 Pos{ 0 };		//碰撞位置
+		double NormalAngle = 0;	//法线角度
 	};
 
 	//分解力
 	struct DecompositionForce {
-		glm::vec2 Parallel{ 0 };//平行
-		glm::vec2 Vertical{ 0 };//垂直
+		glm::dvec2 Parallel{ 0 };//平行
+		glm::dvec2 Vertical{ 0 };//垂直
 	};
 
 	//受力
 	struct ObjectSufferForce {
 		ObjectDecorator* Object = nullptr;	//受力对象
-		glm::vec2 ArmOfForce{ 0 };			//力臂
+		glm::dvec2 ArmOfForce{ 0 };			//力臂
 	};
 
 	//破坏模式回调函数

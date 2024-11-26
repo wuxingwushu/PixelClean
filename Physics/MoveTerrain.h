@@ -73,7 +73,7 @@ namespace SquarePhysics {
 		
 
 		//更新位置
-		inline MovePlateInfo UpDataPos(float x, float y) noexcept {
+		inline MovePlate2DInfo UpDataPos(float x, float y) noexcept {
 			return mGridDecoratorS->UpData(x, y);
 		}
 
@@ -90,7 +90,7 @@ namespace SquarePhysics {
 
 	private:
 		unsigned int mSquareSideLength;
-		MovePlate<RigidBodyAndModel>* mGridDecoratorS = nullptr;
+		MovePlate2D<RigidBodyAndModel>* mGridDecoratorS = nullptr;
 	};
 
 
@@ -106,7 +106,7 @@ namespace SquarePhysics {
 	{
 		Origin.x = mNumber.x / 2;
 		Origin.y = mNumber.y / 2;
-		mGridDecoratorS = new MovePlate<RigidBodyAndModel>(mNumber.x, mNumber.y, mSquareSideLength, Origin.x, Origin.y);
+		mGridDecoratorS = new MovePlate2D<RigidBodyAndModel>(mNumber.x, mNumber.y, mSquareSideLength, Origin.x, Origin.y);
 		for (size_t ix = 0; ix < mNumber.x; ++ix)
 		{
 			for (size_t iy = 0; iy < mNumber.y; ++iy)

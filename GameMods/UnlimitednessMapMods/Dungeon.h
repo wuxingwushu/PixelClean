@@ -89,7 +89,7 @@ namespace GAME {
 		}
 
 		//根据输入的位置对区块位置进行更新
-		inline MovePlateInfo UpPos(float x, float y) {
+		inline MovePlate2DInfo UpPos(float x, float y) {
 			return mMoveTerrain->UpDataPos(x, y);
 		}
 

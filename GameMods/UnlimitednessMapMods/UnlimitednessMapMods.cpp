@@ -343,7 +343,7 @@ namespace GAME {
 			UpDataGIFTime = 0;
 			mDungeon->UpDataGIF();
 		}
-		MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
+		MovePlate2DInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
 		if (LMovePlateInfo.UpData) {
 			mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);
 			Global::MainCommandBufferUpdateRequest();

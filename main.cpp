@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 		app->run();
 	}
 	catch (const std::exception& e) {
-		//std::cout << "main: " << e.what() << std::endl;
+		std::cout << "main: " << e.what() << std::endl;
 		//log_error(e.what());
 		TOOL::Error->error(e.what());
 	}

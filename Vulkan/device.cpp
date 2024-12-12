@@ -78,8 +78,8 @@ namespace VulKan {
 		VkPhysicalDeviceFeatures deviceFeatures;
 		vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
-		return deviceProp.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-			deviceFeatures.geometryShader &&
+		// deviceProp.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 要求是独立显卡
+		return deviceFeatures.geometryShader &&
 			deviceFeatures.samplerAnisotropy;
 	}
 

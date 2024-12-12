@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #define JPS_MemoryPool
 //#include <set>
 #ifdef JPS_MemoryPool// 开启  内存池

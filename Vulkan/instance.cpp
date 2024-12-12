@@ -11,7 +11,7 @@ namespace VulKan {
 		void* pUserData) {
 
 		//if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-			//std::cout << "ValidationLayer: " << pMessageData->pMessage << std::endl;
+			std::cout << "ValidationLayer: " << pMessageData->pMessage << std::endl;
 			//log_debug(pMessageData->pMessage);
 			TOOL::VulKanError->error(pMessageData->pMessage);
 		//}

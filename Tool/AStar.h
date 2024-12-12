@@ -1,5 +1,5 @@
 #pragma once
-
+#include <algorithm>
 #define AStar_MemoryPool
 
 #ifdef AStar_MemoryPool// 开启  内存池

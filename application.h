@@ -8,6 +8,7 @@
 #include "GameMods/UnlimitednessMapMods/UnlimitednessMapMods.h"
 #include "GameMods/MazeMods/MazeMods.h"
 #include "GameMods/TankTrouble/TankTrouble.h"
+#include "GameMods/PhysicsTest/PhysicsTest.h"
 
 
 namespace GAME {

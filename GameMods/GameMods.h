@@ -2,14 +2,16 @@
 
 enum GameModsEnum
 {
-	Maze_ = 0,
-	TankTrouble_ = 1,
+	Maze_,
+	TankTrouble_,
+	PhysicsTest_,
 	Infinite_//作为截至符号
 };
 
 static const char* GameModsEnumName[]{
 	u8"迷宫",
 	u8"坦克动荡",
+	u8"物理",
 	u8"无限"
 };
 

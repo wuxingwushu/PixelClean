@@ -52,6 +52,9 @@ namespace GAME {
 		case TankTrouble_:
 			return new TankTrouble(*this);
 			break;
+		case PhysicsTest_:
+			return new PhysicsTest(*this);
+			break;
 		default:
 			break;
 		}

@@ -85,6 +85,7 @@ add_subdirectory(SoundEffect)
 add_subdirectory(NetworkTCP)
 add_subdirectory(Character)
 add_subdirectory(Physics)
+add_subdirectory(PhysicsBlock)
 add_subdirectory(Arms)
 add_subdirectory(GeneralCalculationGPU)
 add_subdirectory(Opcode)
@@ -92,6 +93,7 @@ add_subdirectory(GameMods)
 add_subdirectory(GameMods/MazeMods)
 add_subdirectory(GameMods/TankTrouble)
 add_subdirectory(GameMods/UnlimitednessMapMods)
+add_subdirectory(GameMods/PhysicsTest)
 add_subdirectory(Tool)#文件夹里面要有代码文件，不可以是空的，会报错
 
 
@@ -125,6 +127,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		MazeModsLib
 		TankTroubleLib
 		UnlimitednessMapModsLib
+		PhysicsBlockLib
 	
 		# VulKan API
 		vulkan-1.lib 
@@ -152,7 +155,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		OpenMP::OpenMP_CXX
 	)
 else()
-	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")#关闭控制台
+	# set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")#关闭控制台
 
 
 	target_link_libraries(
@@ -176,6 +179,7 @@ else()
 		MazeModsLib
 		TankTroubleLib
 		UnlimitednessMapModsLib
+		PhysicsBlockLib
 	
 		# VulKan API
 		vulkan-1.lib 

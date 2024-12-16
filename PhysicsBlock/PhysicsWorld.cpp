@@ -22,6 +22,9 @@ namespace PhysicsBlock
     void PhysicsWorld::SetMapFormwork(MapFormwork *MapFormwork_)
     {
         wMapFormwork = MapFormwork_;
+        if(!WindBool){
+            return;
+        }
         GridWindSize = wMapFormwork->FMGetMapSize();
         if (GridWind != nullptr)
         {

@@ -13,6 +13,11 @@ namespace PhysicsBlock
         ~MapFormwork() {};
 
         /**
+         * @brief 获取距离场
+         * @return 最小碰撞半径 */
+        virtual unsigned char FMGetDistanceField() { return 0; }
+
+        /**
          * @brief 获取地图模拟场大小
          * @return 地图大小
          * @note 单位：格子 */

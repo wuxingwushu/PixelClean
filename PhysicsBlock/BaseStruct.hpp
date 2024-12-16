@@ -73,13 +73,14 @@ namespace PhysicsBlock
     {
         union
         {
-            char Flag; // 类型
+            unsigned char Flag = 0; // 类型
             struct
             {
                 bool Collision : 1;           // 碰撞
-                CheckDirection Direction : 2; // 碰撞边
+                
             };
         };
+        CheckDirection Direction; // 碰撞边
         glm::dvec2 pos; // 碰撞位置
     };
 

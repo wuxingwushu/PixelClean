@@ -185,4 +185,19 @@ namespace PhysicsBlock
      * @note 让二维索引相邻的一维也尽可能相邻 */
     uint_fast32_t Morton2D(uint_fast16_t x, uint_fast16_t y);
 
+	/**
+	 * @brief 点到线段最短距离
+	 * @param start 线段起点
+	 * @param end 线段终点
+	 * @param drop 点位置
+	 * @return 垂直最短距离 */
+	double DropUptoLineShortes(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop);
+
+	/**
+	 * @brief 点到线段最短距离在线段上的交点
+	 * @param start 线段起点
+	 * @param end 线段终点
+	 * @param drop 点位置
+	 * @return 点到线段的垂直交点 */
+	glm::dvec2 DropUptoLineShortesIntersect(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop);
 }

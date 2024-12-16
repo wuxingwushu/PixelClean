@@ -2,6 +2,12 @@
 #include "PhysicsParticle.hpp"
 #include "PhysicsShape.hpp"
 
+/**
+ * 连接约束希望不单单是两个连接段互动，和场景也是可以互动的
+ * 那绳子和橡皮筋就应该分成多段连接，每段长度小于一个格子的单位长度。
+ * 每个链接点都可以做碰撞检测，这样就可以和场景互动了
+ */
+
 namespace PhysicsBlock
 {
 
@@ -17,6 +23,7 @@ namespace PhysicsBlock
         cord,   // 绳子
         spring, // 弹簧
         lever,  // 杠杆
+        rubber, // 橡皮筋
     };
 
     /**

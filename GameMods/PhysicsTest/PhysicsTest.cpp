@@ -136,6 +136,7 @@ namespace GAME {
 			int e2;
 			while (true)
 			{
+				mAuxiliaryVision->AddSpot({ (glm::dvec2)start1 + glm::dvec2{0.5,0.5}, 0 }, { 0,1,1,1 });
 				if (end1.x == start1.x && end1.y == start1.y)
 				{
 					break;
@@ -145,13 +146,11 @@ namespace GAME {
 				{
 					err -= dy;
 					start1.x += sx;
-					mAuxiliaryVision->AddSpot({ (glm::dvec2)start1 + glm::dvec2{0.5,0.5}, 0 }, { 0,1,1,1 });
 				}
 				if (e2 < dx)
 				{
 					err += dx;
 					start1.y += sy;
-					mAuxiliaryVision->AddSpot({ (glm::dvec2)start1 + glm::dvec2{0.5,0.5}, 0 }, { 0,1,1,1 });
 				}
 			}
 		}

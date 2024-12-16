@@ -136,26 +136,41 @@ namespace PhysicsBlock
 
 		if (data.end.x < 0)
 		{
-			if(posy1 < 0){ posy1 = (end.x / Difference) + end.y; }
+			if (posy1 < 0)
+			{
+				posy1 = (end.x / Difference) + end.y;
+			}
 			data.end = {0, posy1};
 		}
 		else if (data.end.x > width)
 		{
-			if(posy2 < 0){ posy2 = ((end.x - width) / Difference) + end.y; }
+			if (posy2 < 0)
+			{
+				posy2 = ((end.x - width) / Difference) + end.y;
+			}
 			data.end = {width, posy2};
 		}
 		if (data.end.y < 0)
 		{
-			if(posx1 < 0){ posx1 = (Difference * end.y) + end.x; }
+			if (posx1 < 0)
+			{
+				posx1 = (Difference * end.y) + end.x;
+			}
 			data.end = {posx1, 0};
 		}
 		else if (data.end.y > height)
 		{
-			if(posx2 < 0){ posx2 = (Difference * (end.y - height)) + end.x; }
+			if (posx2 < 0)
+			{
+				posx2 = (Difference * (end.y - height)) + end.x;
+			}
 			data.end = {posx2, height};
 		}
 
-		if (data.end == data.start){ data.Focus = false; }
+		if (data.end == data.start)
+		{
+			data.Focus = false;
+		}
 		return data;
 	}
 
@@ -330,23 +345,36 @@ namespace PhysicsBlock
 		return angleRad;
 	}
 
-	/**
-     * @brief 莫顿码
-     * @param x x 坐标
-     * @param y y 坐标
-     * @return 一维索引值
-     * @note 让二维索引相邻的一维也尽可能相邻 */
-    uint_fast32_t Morton2D(uint_fast16_t x, uint_fast16_t y)
-    {
-        uint_fast64_t m = x | (uint_fast64_t(y) << 32); // put Y in upper 32 bits, X in lower 32 bits
-        m = (m | (m << 8)) & 0x00FF00FF00FF00FF;
-        m = (m | (m << 4)) & 0x0F0F0F0F0F0F0F0F;
-        m = (m | (m << 2)) & 0x3333333333333333;
-        m = (m | (m << 1)) & 0x5555555555555555;
-        m = m | (m >> 31); // merge X and Y back together
-        // hard cut off to 32 bits, because on some systems uint_fast32_t will be a 64-bit type, and we don't want to retain split Y-version in the upper 32 bits.
-        m = m & 0x00000000FFFFFFFF;
-        return uint_fast32_t(m);
-    }
+	// 莫顿码
+	uint_fast32_t Morton2D(uint_fast16_t x, uint_fast16_t y)
+	{
+		uint_fast64_t m = x | (uint_fast64_t(y) << 32); // put Y in upper 32 bits, X in lower 32 bits
+		m = (m | (m << 8)) & 0x00FF00FF00FF00FF;
+		m = (m | (m << 4)) & 0x0F0F0F0F0F0F0F0F;
+		m = (m | (m << 2)) & 0x3333333333333333;
+		m = (m | (m << 1)) & 0x5555555555555555;
+		m = m | (m >> 31); // merge X and Y back together
+		// hard cut off to 32 bits, because on some systems uint_fast32_t will be a 64-bit type, and we don't want to retain split Y-version in the upper 32 bits.
+		m = m & 0x00000000FFFFFFFF;
+		return uint_fast32_t(m);
+	}
+
+	// 点到线段最短距离
+	double DropUptoLineShortes(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop)
+	{
+		double angle = EdgeVecToCosAngleFloat(end - start);
+		glm::dvec2 Shortes = LineYToPos(start, end, drop.y);
+		return (drop.x - Shortes.x) * cos(M_PI / 2 - angle);
+	}
+
+	// 点到线段最短距离在线段上的交点
+	glm::dvec2 DropUptoLineShortesIntersect(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop)
+	{
+		double angle = EdgeVecToCosAngleFloat(end - start);
+		glm::dvec2 Shortes = LineYToPos(start, end, drop.y);
+		glm::dvec2 Intersect = {(drop.x - Shortes.x) * sin(M_PI / 2 - angle), 0};
+		Intersect = vec2angle(Intersect, angle);
+		return Shortes + Intersect;
+	}
 
 }

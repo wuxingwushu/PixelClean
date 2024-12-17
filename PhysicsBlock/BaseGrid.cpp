@@ -81,13 +81,16 @@ namespace PhysicsBlock
                 Collisioninfo.pos = LineXToPos(start, end, info.pos.x + 1);
                 Collisioninfo.Direction = CheckDirection::Right;
             }
-            val = start.y - end.y;
-            if ((Collisioninfo.pos.y < info.pos.y) || (Collisioninfo.pos.y > (info.pos.y + 1))) {
-                if (val < 0) {
+            if ((Collisioninfo.pos.y < info.pos.y) || (Collisioninfo.pos.y > (info.pos.y + 1)))
+            {
+                val = start.y - end.y;
+                if (val < 0)
+                {
                     Collisioninfo.pos = LineYToPos(start, end, info.pos.y);
                     Collisioninfo.Direction = CheckDirection::Up;
                 }
-                else if (val > 0) {
+                else if (val > 0)
+                {
                     Collisioninfo.pos = LineYToPos(start, end, info.pos.y + 1);
                     Collisioninfo.Direction = CheckDirection::Down;
                 }
@@ -95,7 +98,7 @@ namespace PhysicsBlock
             switch (Collisioninfo.Direction)
             {
             case CheckDirection::Left:
-                if (GetCollision(info.pos.x - 1, info.pos.y)) {
+                if(GetCollision(info.pos.x - 1, info.pos.y)){
                     val = start.y - end.y;
                     if (val < 0) {
                         Collisioninfo.pos = LineYToPos(start, end, info.pos.y);
@@ -108,7 +111,7 @@ namespace PhysicsBlock
                 }
                 break;
             case CheckDirection::Right:
-                if (GetCollision(info.pos.x + 1, info.pos.y)) {
+                if(GetCollision(info.pos.x + 1, info.pos.y)){
                     val = start.y - end.y;
                     if (val < 0) {
                         Collisioninfo.pos = LineYToPos(start, end, info.pos.y);
@@ -120,9 +123,9 @@ namespace PhysicsBlock
                     }
                 }
                 break;
-
+                    
             case CheckDirection::Up:
-                if (GetCollision(info.pos.x, info.pos.y - 1)) {
+                if(GetCollision(info.pos.x, info.pos.y - 1)){
                     val = start.x - end.x;
                     if (val < 0) {
                         Collisioninfo.pos = LineXToPos(start, end, info.pos.x);
@@ -135,7 +138,7 @@ namespace PhysicsBlock
                 }
                 break;
             case CheckDirection::Down:
-                if (GetCollision(info.pos.x, info.pos.y + 1)) {
+                if(GetCollision(info.pos.x, info.pos.y + 1)){
                     val = start.x - end.x;
                     if (val < 0) {
                         Collisioninfo.pos = LineXToPos(start, end, info.pos.x);
@@ -147,7 +150,7 @@ namespace PhysicsBlock
                     }
                 }
                 break;
-
+                
             default:
                 break;
             }

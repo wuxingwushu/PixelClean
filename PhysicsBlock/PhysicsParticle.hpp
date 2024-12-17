@@ -10,10 +10,10 @@ namespace PhysicsBlock
     class PhysicsParticle
     {
     public:
-        glm::dvec2 pos;   // 位置
-        glm::dvec2 speed; // 速度
-        glm::dvec2 force; // 受力
-        double mass;      // 质量
+        glm::dvec2 pos{0};   // 位置
+        glm::dvec2 speed{0}; // 速度
+        glm::dvec2 force{0}; // 受力
+        double mass = 0;      // 质量
     public:
         PhysicsParticle(glm::dvec2 Pos, double Mass);
         PhysicsParticle(glm::dvec2 Pos);

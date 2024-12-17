@@ -12,9 +12,24 @@ namespace PhysicsBlock
     {
     }
 
+    CollisionInfoI PhysicsShape::DropCollision(glm::dvec2 Pos){
+        Pos -= pos;
+        Pos = vec2angle(Pos + CentreMass, angle);
+        CollisionInfoI info;
+        info.pos = ToInt(Pos);
+        if(Pos.x == width){
+            info.pos.x = width - 1;
+        }
+        if(Pos.y == height){
+            info.pos.y = height - 1;
+        }
+        info.Collision = GetCollision(info.pos);
+        return info;
+    }
+
     void PhysicsShape::AddForce(glm::dvec2 Pos, glm::dvec2 Force)
     {
-        Pos -= CentreMass;                                             // 质心指向受力点的力矩
+        Pos -= pos;                                             // 质心指向受力点的力矩
         double Langle = EdgeVecToCosAngleFloat(Pos);                   // 力臂角度
         double disparity = Langle - EdgeVecToCosAngleFloat(Force);     // 力矩角度
         double ForceDouble = Modulus(Force);                           // 力大小

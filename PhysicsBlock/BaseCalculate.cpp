@@ -59,7 +59,7 @@ namespace PhysicsBlock
 	}
 
 	// vec2旋转
-	inline glm::dvec2 vec2angle(glm::dvec2 pos, double angle)
+	glm::dvec2 vec2angle(glm::dvec2 pos, double angle)
 	{
 		double cosangle = cos(angle);
 		double sinangle = sin(angle);
@@ -67,7 +67,7 @@ namespace PhysicsBlock
 	}
 
 	// vec2旋转
-	inline glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle)
+	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle)
 	{
 		return glm::dvec2((pos.x * angle.x) - (pos.y * angle.y), (pos.x * angle.y) + (pos.y * angle.x));
 	}

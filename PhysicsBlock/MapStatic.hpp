@@ -8,7 +8,7 @@ namespace PhysicsBlock
 
     /**
      * @brief 静态地图 */
-    class MapStatic : public BaseGrid, MapFormwork
+    class MapStatic : public BaseGrid, public MapFormwork
     {
     public:
         glm::dvec2 centrality{0, 0}; // 中心位置

@@ -61,14 +61,14 @@ namespace PhysicsBlock
 	 * @param   pos 需要旋转的坐标
 	 * @param   angle 旋转度数（2 * M_PI 为一圈）
 	 * @return  返回旋转結果*/
-	inline glm::dvec2 vec2angle(glm::dvec2 pos, double angle);
+	glm::dvec2 vec2angle(glm::dvec2 pos, double angle);
 
 	/**
 	 * @brief   dvec2 基於零坐标旋转
 	 * @param   pos 需要旋转的坐标
 	 * @param   angle glm::dvec2 格式 X,Y 存储计算好了的 cos,sin 結果
 	 * @return  返回旋转結果*/
-	inline glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle);
+	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle);
 
 	/**
 	 * @brief   dvec2 基於某個坐标的旋转

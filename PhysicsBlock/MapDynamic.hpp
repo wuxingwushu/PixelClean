@@ -11,7 +11,7 @@ namespace PhysicsBlock
 
     /**
      * @brief 动态地图 */
-    class MapDynamic : public MapFormwork
+    class MapDynamic : public MapFormwork, public BaseGrid
     {
     private:
         const unsigned int width;         // 板块 X 的数量
@@ -44,16 +44,31 @@ namespace PhysicsBlock
          * @brief 获取格子
          * @param x 坐标x
          * @param y 坐标y
-         * @return 格子
-         * @warning 只可以输入范围内的 0 ~ width, 0 ~ height */
-        GridBlock &at(int x, int y) { return (*mMovePlate.ExcursionGetPlate(x >> PixelBlockPowerMaxNum, y >> PixelBlockPowerMaxNum))->at(x & PixelBlockPowerMinNum, y & PixelBlockPowerMinNum); }
+         * @return 格子 */
+        virtual GridBlock &at(int x, int y) { return (*mMovePlate.ExcursionGetPlate(x >> PixelBlockPowerMaxNum, y >> PixelBlockPowerMaxNum))->at(x & PixelBlockPowerMinNum, y & PixelBlockPowerMinNum); }
+        /**
+         * @brief 获取格子
+         * @param x 坐标x
+         * @param y 坐标y
+         * @return 格子 */
         GridBlock &at(double x, double y) { return at(ToInt(x), ToInt(y)); }
-        GridBlock &at(glm::ivec2 pos) { return at(pos.x, pos.y); }
+        /**
+         * @brief 获取格子
+         * @param pos 坐标
+         * @return 格子 */
+        virtual GridBlock &at(glm::ivec2 pos) { return at(pos.x, pos.y); }
+        /**
+         * @brief 获取格子
+         * @param pos 坐标
+         * @return 格子 */
         GridBlock &at(glm::dvec2 pos) { return at(ToInt(pos)); }
 
-        // 更新玩家位置
-        void Updata(glm::dvec2 pos){
-            mMovePlate.UpData(pos.x, pos.y);
+        
+        /**
+         * @brief 更新玩家位置
+         * @param pos 新位置 */
+        MovePlateInfo Updata(glm::dvec2 pos){
+            return mMovePlate.UpData(pos.x, pos.y);
         }
 
         /**

@@ -51,10 +51,10 @@ namespace PhysicsBlock
 
     enum CheckDirection
     {
-        Up = 0,   // 上
-        Down = 1, // 下
-        Left = 2, // 左
-        Right = 3 // 右
+        Up = 0x0U,   // 上
+        Down = 0x1U, // 下
+        Left = 0x2U, // 左
+        Right = 0x3U // 右
     };
 
     /**
@@ -73,15 +73,15 @@ namespace PhysicsBlock
     {
         union
         {
-            unsigned char Flag = 0; // 类型
+            unsigned char Flag; // 类型
             struct
             {
-                bool Collision : 1;           // 碰撞
-                
+                bool Collision : 1; // 碰撞
+                unsigned char Direction : 2; // 碰撞边 代替 CheckDirection
+                //CheckDirection Direction : 2; // 碰撞边 /* 使用这个类型会出现负数导致错误 */
             };
         };
-        CheckDirection Direction; // 碰撞边
-        glm::dvec2 pos; // 碰撞位置
+        glm::dvec2 pos;               // 碰撞位置
     };
 
     /**

@@ -13,7 +13,8 @@ namespace PhysicsBlock
 
     MapDynamic::MapDynamic(const unsigned int Width, const unsigned int Height):
         width(Width), height(Height), mMovePlate(Width, Height, PixelBlockEdgeSize, Width / 2, Height / 2), 
-        centrality({Width / 2 * PixelBlockEdgeSize, Height / 2 * PixelBlockEdgeSize})
+        centrality({Width / 2 * PixelBlockEdgeSize, Height / 2 * PixelBlockEdgeSize}),
+        BaseGrid(Width, Height, nullptr)
     {
         BaseGridBuffer = (BaseGrid *)new char[width * height * sizeof(BaseGrid)];
         GridBuffer = new GridBlock[width * height * PixelBlockEdgeSize * PixelBlockEdgeSize];
@@ -104,34 +105,7 @@ namespace PhysicsBlock
 
     CollisionInfoI MapDynamic::FMBresenhamDetection(glm::ivec2 start, glm::ivec2 end)
     {
-        int dx = abs(end.x - start.x);
-        int dy = abs(end.y - start.y);
-        int sx = (start.x < end.x) ? 1 : -1;
-        int sy = (start.y < end.y) ? 1 : -1;
-        int err = dx - dy;
-        int e2;
-        while (true)
-        {
-            if (at(start).Collision)
-            {
-                return {true, start};
-            }
-            if (end.x == start.x && end.y == start.y)
-            {
-                return {false, start};
-            }
-            e2 = 2 * err;
-            if (e2 > -dy)
-            {
-                err -= dy;
-                start.x += sx;
-            }
-            if (e2 < dx)
-            {
-                err += dx;
-                start.y += sy;
-            }
-        }
+        return BresenhamDetection(start, end);
     }
 
     CollisionInfoD MapDynamic::FMBresenhamDetection(glm::dvec2 start, glm::dvec2 end)
@@ -140,37 +114,20 @@ namespace PhysicsBlock
         start += centrality;
         end += centrality;
 
-        CollisionInfoD Collisioninfo{false};
         // 裁剪线段 让线段都在矩形内
-        PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start, end, width, height);
-        if(data.Focus){
+        PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start, end, width - 0.0001, height - 0.0001);
+        if (data.Focus)
+        {
             // 线段碰撞检测
-            CollisionInfoI info = FMBresenhamDetection(ToInt(data.start), ToInt(data.end));
-            if(info.Collision){
-                // 计算出精准位置
-                Collisioninfo.Collision = true;
-                Collisioninfo.pos = info.pos;
-                double val = start.x - end.x;
-                if(val < 0){
-                    Collisioninfo.pos = LineXToPos(start, end, info.pos.x);
-                    Collisioninfo.Direction = CheckDirection::Left;
-                }else if(val > 0){
-                    Collisioninfo.pos = LineXToPos(start, end, info.pos.x + 1);
-                    Collisioninfo.Direction = CheckDirection::Right;
-                }
-                val = start.y - end.y;
-                if(val < 0){
-                    Collisioninfo.pos = LineYToPos(start, end, info.pos.y);
-                    Collisioninfo.Direction = CheckDirection::Up;
-                }else if(val > 0){
-                    Collisioninfo.pos = LineYToPos(start, end, info.pos.y + 1);
-                    Collisioninfo.Direction = CheckDirection::Down;
-                }
+            CollisionInfoD info = BresenhamDetection(data.start, data.end);
+            if (info.Collision)
+            {
+                // 返回物理坐标系
+                info.pos -= centrality;
+                return info;
             }
         }
-        // 返回物理坐标系
-        Collisioninfo.pos -= centrality;
-        return Collisioninfo;
+        return {false};
     }
 
 }

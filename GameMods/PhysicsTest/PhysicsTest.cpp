@@ -3,6 +3,7 @@
 #include "../../NetworkTCP/Client.h"
 #include "../../Opcode/OpcodeFunction.h"
 #include "../../Physics/DestroyMode.h"
+#include "../../GlobalVariable.h"
 
 
 namespace GAME {
@@ -91,6 +92,15 @@ namespace GAME {
 	void PhysicsTest::GameCommandBuffers(unsigned int Format_i)
 	{
 		mAuxiliaryVision->GetCommandBuffer(wThreadCommandBufferS, Format_i);
+	}
+
+	void PhysicsTest::GameUI() {
+		ImGui::Begin(u8"属性 ");
+		ImVec2 window_size = ImGui::GetWindowSize();
+		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
+		ImGui::Text(u8"属性");
+
+		ImGui::End();
 	}
 
 	void PhysicsTest::GameLoop(unsigned int mCurrentFrame)

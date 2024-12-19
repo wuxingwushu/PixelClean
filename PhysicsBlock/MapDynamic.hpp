@@ -40,12 +40,21 @@ namespace PhysicsBlock
         MapDynamic(const unsigned int Width, const unsigned int Height);
         ~MapDynamic();
 
+        /*=========BaseGrid=========*/
+
         /**
          * @brief 获取格子
          * @param x 坐标x
          * @param y 坐标y
          * @return 格子 */
         virtual GridBlock &at(int x, int y) { return (*mMovePlate.ExcursionGetPlate(x >> PixelBlockPowerMaxNum, y >> PixelBlockPowerMaxNum))->at(x & PixelBlockPowerMinNum, y & PixelBlockPowerMinNum); }
+        /**
+         * @brief 获取格子
+         * @param pos 坐标
+         * @return 格子 */
+        virtual GridBlock &at(glm::ivec2 pos) { return at(pos.x, pos.y); }
+
+
         /**
          * @brief 获取格子
          * @param x 坐标x
@@ -56,20 +65,16 @@ namespace PhysicsBlock
          * @brief 获取格子
          * @param pos 坐标
          * @return 格子 */
-        virtual GridBlock &at(glm::ivec2 pos) { return at(pos.x, pos.y); }
-        /**
-         * @brief 获取格子
-         * @param pos 坐标
-         * @return 格子 */
         GridBlock &at(glm::dvec2 pos) { return at(ToInt(pos)); }
 
-        
         /**
          * @brief 更新玩家位置
          * @param pos 新位置 */
         MovePlateInfo Updata(glm::dvec2 pos){
             return mMovePlate.UpData(pos.x, pos.y);
         }
+
+        /*=========MapFormwork=========*/
 
         /**
          * @brief 获取地图模拟场大小

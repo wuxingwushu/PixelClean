@@ -1,5 +1,6 @@
 #pragma once
 #include "glm/glm.hpp"
+#include "BaseStruct.hpp"
 
 namespace PhysicsBlock
 {
@@ -13,13 +14,17 @@ namespace PhysicsBlock
         ~PhysicsFormwork(){};
 
         /**
+         * @brief 获取对象类型
+         * @return 类型 */
+        virtual PhysicsObjectEnum PFGetType(){ return PhysicsObjectEnum::Null; }
+        /**
          * @brief 获取碰撞半径
          * @return 半径 */
         virtual double PFGetCollisionR(){ return 0; }
         /**
-         * @brief 获取几何中心位置
-         * @return 几何中心位置 */
-        virtual glm::dvec2 PFGetCentre(){ return {0}; }
+         * @brief 获取位置
+         * @return 位置 */
+        virtual glm::dvec2 PFGetPos(){ return {0,0}; }
     };
 
 }

@@ -37,6 +37,8 @@ namespace GAME {
 		//游戏 TCP事件
 		virtual void GameTCPLoop();
 
+		virtual void GameUI();
+
 	private:
 		void ShowStop(glm::dvec2 pos) {
 			mAuxiliaryVision->AddStaticLine({ pos.x,pos.y,0 }, { pos.x + 1,pos.y,0 }, { 1,0,0,1 });

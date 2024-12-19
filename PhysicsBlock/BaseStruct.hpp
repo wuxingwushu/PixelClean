@@ -76,12 +76,12 @@ namespace PhysicsBlock
             unsigned char Flag; // 类型
             struct
             {
-                bool Collision : 1; // 碰撞
-                unsigned char Direction : 2; // 碰撞边 代替 CheckDirection
-                //CheckDirection Direction : 2; // 碰撞边 /* 使用这个类型会出现负数导致错误 */
+                bool Collision : 1;          // 碰撞
+                unsigned char Direction : 2; // 碰撞边（存储 CheckDirection 的枚举值）
+                // CheckDirection Direction : 2; // 碰撞边 /* 使用这个后赋值enum值后存储的反而是负值 */
             };
         };
-        glm::dvec2 pos;               // 碰撞位置
+        glm::dvec2 pos; // 碰撞位置
     };
 
     /**
@@ -92,6 +92,12 @@ namespace PhysicsBlock
         glm::dvec2 Parallel; // 平行
     };
 
+    struct DecompositionForceVal
+    {
+        double Vartical; // 垂直
+        double Parallel; // 平行
+    };
+
     /**
      * @brief 线段被矩形遮罩的数据 */
     struct SquareFocus
@@ -99,6 +105,15 @@ namespace PhysicsBlock
         bool Focus;       // 是否与矩形相交
         glm::dvec2 start; // 起始位置
         glm::dvec2 end;   // 结束位置
+    };
+
+    /**
+     * @brief 物理对象类型 */
+    enum PhysicsObjectEnum
+    {
+        Null,     // 无对象
+        shape,    // 形状
+        particle, // 点
     };
 
 }

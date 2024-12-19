@@ -325,6 +325,13 @@ namespace PhysicsBlock
 		double SinL = sin(ObjectAngle);
 		return {glm::dvec2{ParallelLong * CosL, ParallelLong * SinL}, glm::dvec2{VerticalLong * -SinL, VerticalLong * CosL}}; // 旋转到世界坐标轴
 	}
+	DecompositionForceVal CalculateDecompositionForceVal(glm::dvec2 angle, glm::dvec2 force)
+	{
+		double ObjectAngle = EdgeVecToCosAngleFloat(angle);			// 获得力臂角度
+		double Angle = ObjectAngle - EdgeVecToCosAngleFloat(force); // 相差角度
+		double Long = Modulus(force);								// 力大小
+		return {Long * cos(Angle), Long * sin(Angle)};
+	}
 
 	// 计算两个向量的夹角
 	[[nodiscard]] double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2)

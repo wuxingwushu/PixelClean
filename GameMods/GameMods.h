@@ -53,4 +53,7 @@ public:
 
 	//游戏 TCP事件
 	virtual void GameTCPLoop() = 0;
+
+	//游戏 UI
+	virtual void GameUI() {};
 };

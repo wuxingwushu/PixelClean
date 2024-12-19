@@ -518,6 +518,8 @@ namespace GAME {
 			ImGui::Text(u8"如果只看得到监视窗口去设置中关掉监视器 ! ");
 			ImGui::End();
 
+			mGameMods->GameUI();
+
 			if (Global::ConsoleBool) {
 				InterFace->ConsoleInterface();//控制台
 			}

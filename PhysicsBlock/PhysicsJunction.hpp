@@ -11,13 +11,16 @@
 namespace PhysicsBlock
 {
 
+    /**
+     * @brief 绳结 */
     struct CordKnot
     {
-        glm::dvec2 *pos;        // 对象位置
-        double *angle;          // 对象角度
-        glm::dvec2 relativePos; // 相对位置
+        PhysicsFormwork *ptr;   // 对象指针（空指针为固定位置）
+        glm::dvec2 relativePos; // 相对位置\固定位置
     };
 
+    /**
+     * @brief 绳子类型 */
     enum CordType
     {
         cord,   // 绳子
@@ -32,13 +35,38 @@ namespace PhysicsBlock
     class PhysicsJunction
     {
     private:
-        CordKnot knot1;
-        CordKnot knot2;
-        CordType type;
+        CordKnot objectA;                  // 被绑定对象A
+        CordKnot objectB;                  // 被绑定对象B
+        const CordType type;                     // 绳子类型
+        PhysicsParticle *PhysicsParticleS; // 绳子每个结点
+        unsigned int KnotSize;             // 结点数B
+        double Length;                     // 绳子每小段的长度
+        double coefficient = 1;            // 弹簧系数
+
+        /**
+         * @brief 解算他两受力
+         * @param pos 固定位置
+         * @param B 物理粒子 */
+        void PhysicsAnalytic(glm::dvec2 pos, PhysicsParticle *B);
+        /**
+         * @brief 解算他两受力
+         * @param A 物理粒子
+         * @param B 物理粒子 */
+        void PhysicsAnalytic(PhysicsParticle *A, PhysicsParticle *B);
+        /**
+         * @brief 解算他两受力
+         * @param A 物理形状
+         * @param Arm 形状质心偏移位置
+         * @param B 物理粒子 */
+        void PhysicsAnalytic(PhysicsShape *A, glm::dvec2 Arm, PhysicsParticle *B);
 
     public:
-        PhysicsJunction(CordKnot Knot1, CordKnot Knot2, CordType Type) : knot1(Knot1), knot2(Knot2), type(Type) {};
-        ~PhysicsJunction() {};
+        PhysicsJunction(CordKnot object1, CordKnot object2, const CordType Type);
+        ~PhysicsJunction();
+
+        /**
+         * @brief 计算绳子每个节点的受力 */
+        void BearForceAnalytic();
     };
 
 }

@@ -20,8 +20,32 @@ namespace PhysicsBlock
         glm::uvec2 GridWindSize{0};          // 网格风大小
         MapFormwork *wMapFormwork = nullptr; // 地图对象
 
-        std::vector<PhysicsParticle*> PhysicsParticleS;
-        std::vector<PhysicsShape*> PhysicsShapeS;
+        std::vector<PhysicsFormwork *> PhysicsFormworkS;
+
+        /**
+         * @brief 两个形状物理碰撞处理
+         * @param a 形状A(这个是被压的)
+         * @param b 形状B
+         * @note 被压的：重力方向在下端的那个物体 */
+        void PhysicsProcess(PhysicsShape *a, PhysicsShape *b);
+        void PhysicsProcess(PhysicsParticle *a, PhysicsShape *b);
+        void PhysicsProcess(PhysicsShape *a, PhysicsParticle *b);
+
+        /**
+         * @brief 动量守恒定律
+         * @param a 物体A
+         * @param b 物体B
+         * @warning 理想碰撞，力都转换为速度，没有转换为角速度(可以理解为球体相撞) */
+        void EnergyConservation(PhysicsParticle* a, PhysicsParticle* b);
+
+        /**
+         * @brief 形状碰撞能量守恒尝试
+         * @param a 被撞物体A
+         * @param b 物体B
+         * @param CollisionDrop 碰撞点
+         * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内) */
+        void EnergyConservation(PhysicsShape* a, PhysicsShape* b, glm::dvec2 CollisionDrop, double Vertical);
+
     public:
         /**
          * @brief 构建函数
@@ -30,12 +54,17 @@ namespace PhysicsBlock
         PhysicsWorld(glm::dvec2 GravityAcceleration, const bool Wind);
         ~PhysicsWorld();
 
-        void AddObject(PhysicsShape* Object){
-            PhysicsShapeS.push_back(Object);
+        void AddObject(PhysicsFormwork *Object)
+        {
+            PhysicsFormworkS.push_back(Object);
         }
-        void AddObject(PhysicsParticle* Object){
-            PhysicsParticleS.push_back(Object);
-        }
+
+        /**
+         * @brief 获取位置上的对象
+         * @param pos 位置
+         * @return 对象指针
+         * @retval nullptr 没有对象 */
+        PhysicsFormwork* Get(glm::dvec2 pos);
 
         /**
          * @brief 设置地图

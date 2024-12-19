@@ -27,6 +27,8 @@ namespace PhysicsBlock
          * @note 必须在地图范围内 */
         void SetCentrality(glm::dvec2 Centrality);
 
+        /*=========MapFormwork=========*/
+
         /**
          * @brief 获取地图模拟场大小
          * @return 地图大小

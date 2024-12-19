@@ -40,9 +40,9 @@ namespace PhysicsBlock
 
     private:
         /**
-         * @brief 外骨骼處理單元
-         * @param x 格子坐標x
-         * @param y 格子坐標y */
+         * @brief 外骨骼处理單元
+         * @param x 格子坐标x
+         * @param y 格子坐标y */
         void OutlineUnit(int x, int y);
     };
 

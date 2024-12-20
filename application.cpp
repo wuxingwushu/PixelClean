@@ -478,7 +478,7 @@ namespace GAME {
 	}
 
 	void Application::GameLoop() {
-
+		
 		mGameMods->GameLoop(mCurrentFrame);
 
 		int winwidth, winheight;
@@ -489,6 +489,9 @@ namespace GAME {
 		huoqdedian.x += mCamera->getCameraPos().x;
 		huoqdedian.y += mCamera->getCameraPos().y;
 
+		
+		
+		Global::ClickWindow = false;
 		//ImGui显示录制
 		if (Global::Monitor) {
 			ImGui_ImplVulkan_NewFrame();
@@ -498,6 +501,10 @@ namespace GAME {
 			ImGui::PushFont(InterFace->Font);
 			
 			ImGui::Begin(u8"监视器 ");
+			ImVec2 window_size = ImGui::GetWindowSize();
+			if ((CursorPosX < window_size.x) && (CursorPosY < window_size.y)) {
+				Global::ClickWindow = true;
+			}
 			ImGui::SetWindowPos(ImVec2(0, 0));
 			ImGui::Text(u8"相机位置：%10.1f  |  %10.1f  |  %10.1f", mCamera->getCameraPos().x, mCamera->getCameraPos().y, mCamera->getCameraPos().z);
 			ImGui::Text(u8"鼠标角度：%10.3f", m_angle * 180 / M_PI);
@@ -537,6 +544,7 @@ namespace GAME {
 			ImGui::PopFont();
 			ImGui::Render();
 		}
+		
 	}
 
 	void Application::Render() {

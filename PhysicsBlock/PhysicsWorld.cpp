@@ -49,6 +49,16 @@ namespace PhysicsBlock
         {
             ForceCollisionDrop /= DropSize;
             a->AddForce(ForceCollisionDrop, b->force);
+            /*double angle = abs(EdgeVecToCosAngleFloat(ForceCollisionDrop - b->pos) - EdgeVecToCosAngleFloat(a->speed - b->speed));
+            CollisionInfoD info;
+            if (angle < 1.57) {
+                info = a->BresenhamDetection(b->pos, ForceCollisionDrop);
+                EnergyConservation(a, b, ForceCollisionDrop, a->angle + (info.Direction * 1.57));
+            }
+            else {
+                info = b->BresenhamDetection(a->pos, ForceCollisionDrop);
+                EnergyConservation(b, a, ForceCollisionDrop, b->angle + (info.Direction * 1.57));
+            }*/
         }
     }
 
@@ -123,15 +133,20 @@ namespace PhysicsBlock
 
     void PhysicsWorld::EnergyConservation(PhysicsShape *a, PhysicsShape *b, glm::dvec2 CollisionDrop, double Vertical)
     {
-        glm::dvec2 SpeedD = b->speed - a->speed;                      // 速度差
-        glm::dvec2 PosD = a->pos - CollisionDrop;                     // 碰撞点指向A物体的距离
-        double SpeedAngle = EdgeVecToCosAngleFloat(SpeedD);           // 速度的角度
-        double SpeedA = Modulus(SpeedD) * cos(SpeedAngle - Vertical); // 垂直法向量的速度
-        double CBAngle = EdgeVecToCosAngleFloat(PosD);                // 碰撞点 指向 A 的角度
+        glm::dvec2 SpeedD = b->speed - a->speed;     // 速度差
+        glm::dvec2 PosArmB = CollisionDrop - b->pos; // B物体 指向 碰撞点 的距离
+        glm::dvec2 PosArmA = a->pos - CollisionDrop; // 碰撞点 指向 A物体 的距离
+
+        DecompositionForce dfB = CalculateDecompositionForce(PosArmB, SpeedD);        // 速度差 到 碰撞点 的分速度
+        DecompositionForce dfP = CalculateDecompositionForce(Vertical, dfB.Parallel); // 碰撞点 跟 法向量 的分速度
+        DecompositionForce dfA = CalculateDecompositionForce(PosArmA, dfP.Parallel);  // 边垂直力 到 A物体 的分速度
+
+#if EnergyConservationOptimum == 0
+        /*------------ A ------------*/
         /*************移动*************/
-        double SpeedVal = SpeedA * cos(CBAngle - Vertical); // 被移动的速度
-        double Momentum = SpeedVal * b->mass;               // 动量
-        double KineticEnergy = Momentum * b->mass;          // 动能
+        double SpeedVal = Modulus(dfA.Parallel);   // 被移动的速度
+        double Momentum = SpeedVal * b->mass;      // 动量
+        double KineticEnergy = Momentum * b->mass; // 动能
 
         // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
         double A = b->mass + (pow(b->mass, 2) / a->mass);
@@ -143,18 +158,10 @@ namespace PhysicsBlock
         double Bs = ((-B + discriminant) + (-B - discriminant)) / (2 * A); // B速度前 + B速度后
         Bs = -(SpeedVal + Bs);                                             // B物体的速度 变化量（被改变，大小，没有调整方向）
         double As = (Momentum - (Bs * b->mass)) / a->mass;                 // A物体的速度 变化量（被改变，大小，没有调整方向）
+        a->speed += vec2angle({As, 0}, EdgeVecToCosAngleFloat(dfA.Parallel));
 
-        a->speed += vec2angle({As, 0}, CBAngle);
-        b->speed += vec2angle({Bs - SpeedVal, 0}, CBAngle);
-
-
-        double NL = b->mass * pow(Modulus(b->speed), 2);
-
-        
         /*************转动*************/
-        double AngleVal = SpeedA * sin(CBAngle - Vertical);
-        b->speed += vec2angle({AngleVal, 0}, EdgeVecToCosAngleFloat(b->speed));
-        //b->speed += vec2angle({sqrt((Bs - SpeedVal) * (Bs - SpeedVal) + AngleVal * AngleVal), 0}, CBAngle);// 将这速度转换为角速度
+        double AngleVal = Modulus(dfA.Vartical);                        // 被转动的速度
         double HornKineticEnergy = AngleVal * AngleVal * b->mass;       // 角动能 = 动能 （能量守恒定律）
         double AngleSpeed = sqrt(HornKineticEnergy / b->MomentInertia); // B角速度
         double HornMomentum = AngleSpeed * b->MomentInertia;            // 角动量
@@ -169,37 +176,102 @@ namespace PhysicsBlock
         double Bas = ((-B + discriminant) + (-B - discriminant)) / (2 * A);        // B角速度前 + B角速度后
         Bas = -(AngleSpeed + Bas);                                                 // B物体的角速度 变化量
         double Aas = (HornMomentum - (Bas * b->MomentInertia)) / a->MomentInertia; // A物体的角速度 变化量
+        a->angleSpeed += Aas;
 
-        a->angleSpeed -= Aas;
-        b->angleSpeed += Bas;
+        /*------------ B ------------*/
+        /*************移动*************/
+        dfB = CalculateDecompositionForce(-PosArmB, -dfP.Parallel);
+        SpeedVal = Modulus(dfB.Parallel);   // 被移动的速度
+        Momentum = SpeedVal * a->mass;      // 动量
+        KineticEnergy = Momentum * a->mass; // 动能
+
+        // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
+        A = a->mass + (pow(a->mass, 2) / b->mass);
+        B = (Momentum * (-a->mass) * -2) / b->mass;
+        C = (-KineticEnergy) + (pow(Momentum, 2) / b->mass);
+
+        discriminant = B * B - (4 * A * C);
+        discriminant = sqrt(discriminant);
+        Bs = ((-B + discriminant) + (-B - discriminant)) / (2 * A); // B速度前 + B速度后
+        Bs = -(SpeedVal + Bs);                                      // B物体的速度 变化量（被改变，大小，没有调整方向）
+        As = (Momentum - (Bs * a->mass)) / b->mass;                 // A物体的速度 变化量（被改变，大小，没有调整方向）
+        b->speed += vec2angle({As, 0}, EdgeVecToCosAngleFloat(dfB.Parallel));
+
+        /*************转动*************/
+        AngleVal = Modulus(dfB.Vartical);                        // 被转动的速度
+        HornKineticEnergy = AngleVal * AngleVal * a->mass;       // 角动能 = 动能 （能量守恒定律）
+        AngleSpeed = sqrt(HornKineticEnergy / a->MomentInertia); // B角速度
+        HornMomentum = AngleSpeed * a->MomentInertia;            // 角动量
+
+        // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
+        A = a->MomentInertia + (pow(a->MomentInertia, 2) / b->MomentInertia);
+        B = (HornMomentum * (-a->MomentInertia) * -2) / b->MomentInertia;
+        C = (-HornKineticEnergy) + (pow(HornMomentum, 2) / b->MomentInertia);
+
+        discriminant = B * B - (4 * A * C);
+        discriminant = sqrt(discriminant);
+        Bas = ((-B + discriminant) + (-B - discriminant)) / (2 * A);        // B角速度前 + B角速度后
+        Bas = -(AngleSpeed + Bas);                                          // B物体的角速度 变化量
+        Aas = (HornMomentum - (Bas * a->MomentInertia)) / b->MomentInertia; // A物体的角速度 变化量
+        b->angleSpeed += Aas;
+#else
+        /*------------ A ------------*/
+        /*************移动*************/
+        double SpeedVal = Modulus(dfA.Parallel); // 被移动的速度
+
+        // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
+        double A = (b->mass + a->mass);
+        double B = (SpeedVal * b->mass * 2);
+        double Bs = (-B) / A;                              // B速度前 + B速度后
+        Bs = -(SpeedVal + Bs);                             // B物体的速度 变化量（被改变，大小，没有调整方向）
+        double As = ((SpeedVal - Bs) * b->mass) / a->mass; // A物体的速度 变化量（被改变，大小，没有调整方向）
+        a->speed += vec2angle({As, 0}, EdgeVecToCosAngleFloat(dfA.Parallel));
+
+        /*************转动*************/
+        double AngleVal = Modulus(dfA.Vartical);                        // 被转动的速度
+        double HornKineticEnergy = AngleVal * AngleVal * b->mass;       // 角动能 = 动能 （能量守恒定律）
+        double AngleSpeed = sqrt(HornKineticEnergy / b->MomentInertia); // B角速度
+        double HornMomentum = AngleSpeed * b->MomentInertia;            // 角动量
+
+        // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
+        A = b->MomentInertia + a->MomentInertia;
+        B = HornMomentum * 2;
+        double Bas = (-B) / A;                                                     // B角速度前 + B角速度后
+        Bas = -(AngleSpeed + Bas);                                                 // B物体的角速度 变化量
+        double Aas = (HornMomentum - (Bas * b->MomentInertia)) / a->MomentInertia; // A物体的角速度 变化量
+        a->angleSpeed += Aas;
+
+        /*------------ B ------------*/
+        /*************移动*************/
+        dfB = CalculateDecompositionForce(-PosArmB, -dfP.Parallel);
+        SpeedVal = Modulus(dfB.Parallel); // 被移动的速度
+
+        // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
+        A = (a->mass + b->mass);
+        B = (SpeedVal * a->mass * 2);
+        Bs = (-B) / A;                              // B速度前 + B速度后
+        Bs = -(SpeedVal + Bs);                      // B物体的速度 变化量（被改变，大小，没有调整方向）
+        As = ((SpeedVal - Bs) * a->mass) / b->mass; // A物体的速度 变化量（被改变，大小，没有调整方向）
+        b->speed += vec2angle({As, 0}, EdgeVecToCosAngleFloat(dfB.Parallel));
+
+        /*************转动*************/
+        AngleVal = Modulus(dfB.Vartical);                        // 被转动的速度
+        HornKineticEnergy = AngleVal * AngleVal * a->mass;       // 角动能 = 动能 （能量守恒定律）
+        AngleSpeed = sqrt(HornKineticEnergy / a->MomentInertia); // B角速度
+        HornMomentum = AngleSpeed * a->MomentInertia;            // 角动量
+
+        // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
+        A = b->MomentInertia + a->MomentInertia;
+        B = HornMomentum * 2;
+        Bas = (-B) / A;                                                     // B角速度前 + B角速度后
+        Bas = -(AngleSpeed + Bas);                                          // B物体的角速度 变化量
+        Aas = (HornMomentum - (Bas * a->MomentInertia)) / b->MomentInertia; // A物体的角速度 变化量
+        b->angleSpeed += Aas;
+#endif
     }
 
     void PhysicsWorld::PhysicsEmulator(double time)
     {
-        PhysicsShape PhysicsShape1({0, 0}, {2, 2});
-        for (size_t i = 0; i < (PhysicsShape1.width * PhysicsShape1.height); i++)
-        {
-            PhysicsShape1.at(i).Collision = true;
-            PhysicsShape1.at(i).Entity = true;
-            PhysicsShape1.at(i).mass = 1;
-        }
-        PhysicsShape1.UpdateInfo();
-        PhysicsShape PhysicsShape2({1.5, 2}, {2, 2});
-        for (size_t i = 0; i < (PhysicsShape2.width * PhysicsShape2.height); i++)
-        {
-            PhysicsShape2.at(i).Collision = true;
-            PhysicsShape2.at(i).Entity = true;
-            PhysicsShape2.at(i).mass = 1;
-        }
-        PhysicsShape2.UpdateInfo();
-        PhysicsShape2.speed = {0, -1};
-        double D = PhysicsShape1.mass * pow(Modulus(PhysicsShape1.speed), 2) + PhysicsShape2.mass * pow(Modulus(PhysicsShape2.speed), 2);
-        D += PhysicsShape1.MomentInertia * pow(PhysicsShape1.angleSpeed, 2) + PhysicsShape2.MomentInertia * pow(PhysicsShape2.angleSpeed, 2);
-        EnergyConservation(&PhysicsShape1, &PhysicsShape2, {0.75, 1}, (-3.1415926 / 2));
-        D = 0;
-        D = PhysicsShape1.mass * pow(Modulus(PhysicsShape1.speed), 2) + PhysicsShape2.mass * pow(Modulus(PhysicsShape2.speed), 2);
-        D += PhysicsShape1.MomentInertia * pow(PhysicsShape1.angleSpeed, 2) + PhysicsShape2.MomentInertia * pow(PhysicsShape2.angleSpeed, 2);
-
         // 根据 Y 轴重力加速度 正负进行排序
         if (GravityAcceleration.y < 0)
         {
@@ -218,7 +290,7 @@ namespace PhysicsBlock
                       });
         }
 
-        if (PhysicsFormworkS.size() > 1)
+        if (PhysicsFormworkS.size() > 1 && 0)
         {
             PhysicsFormwork *JS; // 被解算受力的对象
             PhysicsFormwork *DX; // 和谁受力解算
@@ -258,6 +330,11 @@ namespace PhysicsBlock
                     }
                 }
             }
+        }
+
+        for (auto i : PhysicsFormworkS)
+        {
+            i->PhysicsEmulator(time, GravityAcceleration);
         }
     }
 
@@ -304,6 +381,27 @@ namespace PhysicsBlock
             }
         }
         return nullptr;
+    }
+
+    double PhysicsWorld::GetWorldEnergy() {
+        double Energy = 0;
+        for (auto i : PhysicsFormworkS)
+        {
+            switch (i->PFGetType())
+            {
+            case PhysicsObjectEnum::shape:
+                Energy += ((PhysicsShape*)i)->mass * ModulusLength(((PhysicsShape*)i)->speed);
+                Energy += ((PhysicsShape*)i)->MomentInertia * (((PhysicsShape*)i)->angleSpeed * ((PhysicsShape*)i)->angleSpeed);
+                    break;
+            case PhysicsObjectEnum::particle:
+                Energy += ((PhysicsParticle*)i)->mass * ModulusLength(((PhysicsParticle*)i)->speed);
+                break;
+
+            default:
+                break;
+            }
+        }
+        return Energy / 2;
     }
 
 }

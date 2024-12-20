@@ -25,6 +25,12 @@ namespace PhysicsBlock
          * @brief 获取位置
          * @return 位置 */
         virtual glm::dvec2 PFGetPos(){ return {0,0}; }
+
+        /**
+         * @brief 物理仿真
+         * @param time 时间差
+         * @param Ga 重力加速度 */
+        virtual void PhysicsEmulator(double time, glm::dvec2 Ga) {};
     };
 
 }

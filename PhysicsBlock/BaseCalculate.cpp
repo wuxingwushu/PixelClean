@@ -314,17 +314,26 @@ namespace PhysicsBlock
 	}
 
 	// 求解分解力
-	[[nodiscard]] DecompositionForce CalculateDecompositionForce(glm::dvec2 angle, glm::dvec2 force)
+	DecompositionForce CalculateDecompositionForce(glm::dvec2 angle, glm::dvec2 force)
 	{
-		double ObjectAngle = EdgeVecToCosAngleFloat(angle);			// 获得力臂角度
-		double Angle = ObjectAngle - EdgeVecToCosAngleFloat(force); // 相差角度
-		double Long = Modulus(force);								// 力大小
-		double ParallelLong = Long * cos(Angle);					// 平行力大小
-		double VerticalLong = Long * sin(Angle);					// 垂直力大小
-		double CosL = cos(ObjectAngle);
-		double SinL = sin(ObjectAngle);
-		return {glm::dvec2{ParallelLong * CosL, ParallelLong * SinL}, glm::dvec2{VerticalLong * -SinL, VerticalLong * CosL}}; // 旋转到世界坐标轴
+		double ObjectAngle = EdgeVecToCosAngleFloat(angle); // 获得力臂角度
+		return CalculateDecompositionForce(ObjectAngle, force);
 	}
+
+	DecompositionForce CalculateDecompositionForce(double angle, glm::dvec2 force)
+	{
+		double Fangle = EdgeVecToCosAngleFloat(force);
+		double Angle = angle - Fangle;			 // 相差角度
+		double Long = Modulus(force);			 // 力大小
+		double ParallelLong = Long * cos(Angle); // 平行力大小
+		double VerticalLong = Long * sin(Angle); // 垂直力大小
+		double CosL = cos(angle);
+		double SinL = sin(angle);
+		//return { vec2angle({0, -VerticalLong}, {CosL, SinL}), vec2angle({ParallelLong, 0}, {CosL, SinL}) }; // 旋转到世界坐标轴
+		return { { VerticalLong * SinL, -VerticalLong * CosL }, { ParallelLong * CosL, ParallelLong * SinL } }; // 旋转到世界坐标轴
+
+	}
+
 	DecompositionForceVal CalculateDecompositionForceVal(glm::dvec2 angle, glm::dvec2 force)
 	{
 		double ObjectAngle = EdgeVecToCosAngleFloat(angle);			// 获得力臂角度

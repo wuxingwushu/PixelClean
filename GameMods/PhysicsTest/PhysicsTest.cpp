@@ -4,6 +4,8 @@
 #include "../../Opcode/OpcodeFunction.h"
 #include "../../Physics/DestroyMode.h"
 #include "../../GlobalVariable.h"
+#include "../../PhysicsBlock/BaseCalculate.hpp"
+#include "../../PhysicsBlock/ImGuiPhysics.hpp"
 
 
 namespace GAME {
@@ -11,6 +13,10 @@ namespace GAME {
 
 	PhysicsTest::PhysicsTest(Configuration wConfiguration) : Configuration{ wConfiguration }
 	{
+		m_position.x = 0;
+		m_position.y = 0;
+		m_position.z = 50;
+
 		// 添加视觉辅助
 		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
 		mAuxiliaryVision->initUniformManager(
@@ -19,7 +25,7 @@ namespace GAME {
 		);
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
-		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0, -9.8}, false);
+		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0, 0}, false);
 		mMapStatic = new PhysicsBlock::MapStatic(3,3);
 		for (size_t i = 0; i < 9; i++)
 		{
@@ -28,15 +34,41 @@ namespace GAME {
 		}
 		mMapStatic->at(0).Entity = false;
 		mMapStatic->at(0).Collision = false;
-		for (size_t x = 0; x < mMapStatic->width; x++)
+		/*for (size_t x = 0; x < mMapStatic->width; x++)
 		{
 			for (size_t y = 0; y < mMapStatic->height; y++)
 			{
 				if (mMapStatic->at(x, y).Entity) {
-					ShowStop({ x, y });
+					ShowSquare({ x, y });
 				}
 			}
+		}*/
+
+		PhysicsBlock::PhysicsShape* PhysicsShape1 = new PhysicsBlock::PhysicsShape({ 0, 0 }, { 2, 2 });
+		for (size_t i = 0; i < (PhysicsShape1->width * PhysicsShape1->height); i++)
+		{
+			PhysicsShape1->at(i).Collision = true;
+			PhysicsShape1->at(i).Entity = true;
+			PhysicsShape1->at(i).mass = 3;
 		}
+		PhysicsShape1->UpdateInfo();
+		PhysicsShape1->UpdateOutline();
+		PhysicsShape1->CollisionR = 1.414;
+		PhysicsShape1->angle = 3.1415926 / 4;
+		PhysicsBlock::PhysicsShape* PhysicsShape2 = new PhysicsBlock::PhysicsShape({ 1, 2 }, { 2, 2 });
+		for (size_t i = 0; i < (PhysicsShape2->width * PhysicsShape2->height); i++)
+		{
+			PhysicsShape2->at(i).Collision = true;
+			PhysicsShape2->at(i).Entity = true;
+			PhysicsShape2->at(i).mass = 1;
+		}
+		PhysicsShape2->UpdateInfo();
+		PhysicsShape2->UpdateOutline();
+		PhysicsShape2->CollisionR = 1.414;
+		PhysicsShape2->speed = { 0, -1 };
+
+		mPhysicsWorld->AddObject(PhysicsShape1);
+		mPhysicsWorld->AddObject(PhysicsShape2);
 	}
 
 	PhysicsTest::~PhysicsTest()
@@ -97,8 +129,27 @@ namespace GAME {
 	void PhysicsTest::GameUI() {
 		ImGui::Begin(u8"属性 ");
 		ImVec2 window_size = ImGui::GetWindowSize();
+		if (((Global::mWidth - window_size.x) < CursorPosX) && (window_size.y > CursorPosY)) {
+			Global::ClickWindow = true;
+		}
 		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
-		ImGui::Text(u8"属性");
+
+		if (PhysicsFormworkPtr) {
+			switch (PhysicsFormworkPtr->PFGetType())
+			{
+			case PhysicsBlock::PhysicsObjectEnum::shape:
+				ImGui::Text(u8"shape");
+				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsShape*)PhysicsFormworkPtr);
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::particle:
+				ImGui::Text(u8"particle");
+				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr);
+				break;
+			default:
+				ImGui::Text(u8"无");
+				break;
+			}
+		}
 
 		ImGui::End();
 	}
@@ -115,57 +166,84 @@ namespace GAME {
 		huoqdedian.y += mCamera->getCameraPos().y;
 
 
-		static glm::dvec2 beang{ 0 }, end{ 0 };
+		static glm::dvec2 beang{ 0 }, beang2{ 0 }, Opos{ 0 }, end{ 0 };
 
-
-		//点击左键
-		if (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-			beang = { huoqdedian.x, huoqdedian.y };
+		// 不在窗口上才可以操作
+		if (!Global::ClickWindow) {
+			//点击左键
+			static int Z_fangzhifanfuvhufa;// 避免反复触发
+			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+			if (Leftan == GLFW_PRESS) {
+				if (Z_fangzhifanfuvhufa != Leftan) {
+					beang = { huoqdedian.x, huoqdedian.y };
+					PhysicsFormworkPtr = mPhysicsWorld->Get(beang);
+					if (PhysicsFormworkPtr) {
+						Opos = PhysicsFormworkPtr->PFGetPos();
+					}
+					else {
+						glm::vec3 pmPos = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
+						pmPos *= -mCamera->getCameraPos().z / pmPos.z;
+						Opos = { mCamera->getCameraPos().x , mCamera->getCameraPos().y };
+						beang = { pmPos.x, pmPos.y };
+						Opos += beang;
+					}
+					
+				}
+				else {
+					if (PhysicsFormworkPtr) {
+						beang2 = { huoqdedian.x, huoqdedian.y };
+						((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos = Opos + (beang2 - beang);
+					}
+					else {
+						glm::vec3 pmPos = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
+						pmPos *= -mCamera->getCameraPos().z / pmPos.z;
+						m_position.x = Opos.x - pmPos.x;
+						m_position.y = Opos.y - pmPos.y;
+					}
+				}
+			}Z_fangzhifanfuvhufa = Leftan;
+			//点击右键
+			static int fangzhifanfuvhufa;// 避免反复触发
+			Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+			if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan) {
+				end = { huoqdedian.x, huoqdedian.y };
+			}fangzhifanfuvhufa = Leftan;
 		}
-		//点击右键
-		static int fangzhifanfuvhufa;// 避免反复触发
-		int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
-		if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan) {
-			end = { huoqdedian.x, huoqdedian.y };
-		}fangzhifanfuvhufa = Leftan;
+		
 
 		mAuxiliaryVision->Begin();
 
-		PhysicsBlock::CollisionInfoD stop = mMapStatic->FMBresenhamDetection(beang, end);
-		if (stop.Collision) {
-			mAuxiliaryVision->AddSpot({ stop.pos, 0 }, { 0,0,1,1 });
-		}
+		mPhysicsWorld->PhysicsEmulator(TOOL::FPStime);
 
+		PhysicsBlock::PhysicsShape* PhysicsShapePtr;
+		PhysicsBlock::PhysicsParticle* PhysicsParticlePtr;
+		for (auto i : *mPhysicsWorld->GetPhysicsFormworkS())
 		{
-			glm::ivec2 start1 = beang, end1 = end;
-			int dx = abs(end1.x - start1.x);
-			int dy = abs(end1.y - start1.y);
-			int sx = (start1.x < end1.x) ? 1 : -1;
-			int sy = (start1.y < end1.y) ? 1 : -1;
-			int err = dx - dy;
-			int e2;
-			while (true)
+			switch (i->PFGetType())
 			{
-				mAuxiliaryVision->AddSpot({ (glm::dvec2)start1 + glm::dvec2{0.5,0.5}, 0 }, { 0,1,1,1 });
-				if (end1.x == start1.x && end1.y == start1.y)
+			case PhysicsBlock::PhysicsObjectEnum::shape:
+				PhysicsShapePtr = (PhysicsBlock::PhysicsShape*)i;
+				glm::dvec2 POS = PhysicsShapePtr->pos;
+				for (size_t x = 0; x < PhysicsShapePtr->width; x++)
 				{
-					break;
+					for (size_t y = 0; y < PhysicsShapePtr->height; y++)
+					{
+						if (PhysicsShapePtr->at(x, y).Entity) {
+							ShowSquare(SquarePhysics::vec2angle(glm::dvec2{ x, y } - PhysicsShapePtr->CentreMass, PhysicsShapePtr->angle) + POS, PhysicsShapePtr->angle);
+						}
+					}
 				}
-				e2 = 2 * err;
-				if (e2 > -dy)
-				{
-					err -= dy;
-					start1.x += sx;
-				}
-				if (e2 < dx)
-				{
-					err += dx;
-					start1.y += sy;
-				}
+				
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::particle:
+				PhysicsParticlePtr = (PhysicsBlock::PhysicsParticle*)i;
+				mAuxiliaryVision->AddSpot({ PhysicsParticlePtr->pos, 0 }, { 1,0,0,1 });
+				break;
+
+			default:
+				break;
 			}
 		}
-
-		mAuxiliaryVision->Line({ beang,0 }, { 1,0,0,1 } , { end,0 }, {0,1,0,1});
 
 		mAuxiliaryVision->End();
 
@@ -199,6 +277,27 @@ namespace GAME {
 				event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
 			}
 		}
+	}
+
+
+	void PhysicsTest::ShowStaticSquare(glm::dvec2 pos, double angle) {
+		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({ 0,1 }, angle);
+		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({ 1,0 }, angle);
+		glm::dvec2 jiao3 = PhysicsBlock::vec2angle({ 1,1 }, angle);
+		mAuxiliaryVision->AddStaticLine({ pos,0 }, { pos + jiao1,0 }, { 1,0,0,1 });
+		mAuxiliaryVision->AddStaticLine({ pos,0 }, { pos + jiao2,0 }, { 1,0,0,1 });
+		mAuxiliaryVision->AddStaticLine({ pos + jiao3,0 }, { pos + jiao1,0 }, { 1,0,0,1 });
+		mAuxiliaryVision->AddStaticLine({ pos + jiao3,0 }, { pos + jiao2,0 }, { 1,0,0,1 });
+	}
+
+	void PhysicsTest::ShowSquare(glm::dvec2 pos, double angle) {
+		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({ 0,1 }, angle);
+		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({ 1,0 }, angle);
+		glm::dvec2 jiao3 = PhysicsBlock::vec2angle({ 1,1 }, angle);
+		mAuxiliaryVision->AddLine({ pos,0 }, { pos + jiao1,0 }, { 1,0,0,1 });
+		mAuxiliaryVision->AddLine({ pos,0 }, { pos + jiao2,0 }, { 1,0,0,1 });
+		mAuxiliaryVision->AddLine({ pos + jiao3,0 }, { pos + jiao1,0 }, { 1,0,0,1 });
+		mAuxiliaryVision->AddLine({ pos + jiao3,0 }, { pos + jiao2,0 }, { 1,0,0,1 });
 	}
 
 }

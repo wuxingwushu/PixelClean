@@ -26,6 +26,8 @@ namespace Global {
 	extern bool MultiplePeopleMode;	//多人模式
 	extern bool ServerOrClient;		//服务器还是客户端
 
+	extern bool ClickWindow;// 鼠标是否 是点击窗口
+
 	/***************************	INI	***************************/
 	void Read();//读取
 	void Storage();//储存

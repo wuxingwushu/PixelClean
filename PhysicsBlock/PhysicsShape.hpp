@@ -60,18 +60,18 @@ namespace PhysicsBlock
         /*=========PhysicsParticle=========*/
 
         /**
-         * @brief 物理仿真
-         * @param time 时间差
-         * @param Ga 重力加速度 */
-        virtual void PhysicsEmulator(double time, glm::dvec2 Ga);
-
-        /**
          * @brief 物理演戏
          * @param time 时间差
          * @param Ga 重力加速度 */
         virtual glm::dvec2 PhysicsPlayact(double time, glm::dvec2 Ga);
 
         /*=========PhysicsFormwork=========*/
+
+        /**
+         * @brief 物理仿真
+         * @param time 时间差
+         * @param Ga 重力加速度 */
+        virtual void PhysicsEmulator(double time, glm::dvec2 Ga);
 
         /**
          * @brief 获取对象类型

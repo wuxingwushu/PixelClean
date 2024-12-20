@@ -176,6 +176,7 @@ namespace PhysicsBlock
 	 * @param force 受力
 	 * @return 分解力 */
 	DecompositionForce CalculateDecompositionForce(glm::dvec2 angle, glm::dvec2 force);
+	DecompositionForce CalculateDecompositionForce(double angle, glm::dvec2 force);
 	DecompositionForceVal CalculateDecompositionForceVal(glm::dvec2 angle, glm::dvec2 force);
 
 	/**

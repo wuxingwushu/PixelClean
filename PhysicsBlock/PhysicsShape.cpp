@@ -15,9 +15,9 @@ namespace PhysicsBlock
     CollisionInfoI PhysicsShape::DropCollision(glm::dvec2 Pos)
     {
         Pos -= pos;
-        Pos = vec2angle(Pos + CentreMass, angle);
+        Pos = vec2angle(Pos, -angle);
         CollisionInfoI info;
-        info.pos = ToInt(Pos);
+        info.pos = ToInt(Pos + CentreMass);
         if (Pos.x == width)
         {
             info.pos.x = width - 1;
@@ -107,7 +107,7 @@ namespace PhysicsBlock
     {
         PhysicsParticle::PhysicsEmulator(time, Ga);           // 位置的物理演算
         double AddAngleSpeed = torque / MomentInertia * time; // 角速度的增加量
-        angle = (angleSpeed + (AddAngleSpeed / 2)) * time;    // 角度
+        angle += (angleSpeed + (AddAngleSpeed / 2)) * time;    // 角度
         angleSpeed += AddAngleSpeed;                          // 角速度
         torque = 0;                                           // 清空扭矩
     }

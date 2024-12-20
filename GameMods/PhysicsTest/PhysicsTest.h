@@ -40,15 +40,13 @@ namespace GAME {
 		virtual void GameUI();
 
 	private:
-		void ShowStop(glm::dvec2 pos) {
-			mAuxiliaryVision->AddStaticLine({ pos.x,pos.y,0 }, { pos.x + 1,pos.y,0 }, { 1,0,0,1 });
-			mAuxiliaryVision->AddStaticLine({ pos.x,pos.y,0 }, { pos.x,pos.y + 1,0 }, { 1,0,0,1 });
-			mAuxiliaryVision->AddStaticLine({ pos.x,pos.y + 1,0 }, { pos.x + 1,pos.y + 1,0 }, { 1,0,0,1 });
-			mAuxiliaryVision->AddStaticLine({ pos.x + 1,pos.y,0 }, { pos.x + 1,pos.y + 1,0 }, { 1,0,0,1 });
-		}
+		void ShowStaticSquare(glm::dvec2 pos, double angle = 0);
+		void ShowSquare(glm::dvec2 pos, double angle = 0);
 
 		PhysicsBlock::PhysicsWorld* mPhysicsWorld;
 		PhysicsBlock::MapStatic* mMapStatic;
+
+		PhysicsBlock::PhysicsFormwork* PhysicsFormworkPtr = nullptr;
 	};
 
 }

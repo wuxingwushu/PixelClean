@@ -31,6 +31,8 @@ namespace Global {
 	bool MultiplePeopleMode = false;
 	bool ServerOrClient = true;
 
+	bool ClickWindow = false;
+
 	/***************************	INI	***************************/
 	void Read() {
 		inih::INIReader Ini{ IniPath_ini };

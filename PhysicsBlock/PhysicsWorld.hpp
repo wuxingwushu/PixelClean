@@ -4,6 +4,7 @@
 #include "PhysicsShape.hpp"    // 有形状物体
 #include "PhysicsParticle.hpp" // 物理粒子
 
+
 namespace PhysicsBlock
 {
 
@@ -43,7 +44,8 @@ namespace PhysicsBlock
          * @param a 被撞物体A
          * @param b 物体B
          * @param CollisionDrop 碰撞点
-         * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内) */
+         * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内)
+         * @warning 碰撞点在两质心线段上的，（动能 和 角动能 才守恒） */
         void EnergyConservation(PhysicsShape* a, PhysicsShape* b, glm::dvec2 CollisionDrop, double Vertical);
 
     public:
@@ -75,6 +77,17 @@ namespace PhysicsBlock
          * @brief 物理仿真
          * @param time 时间差 */
         void PhysicsEmulator(double time);
+
+        /**
+         * @brief 获取世界内的能量
+         * @return 能量 */
+        double GetWorldEnergy();
+
+        std::vector<PhysicsFormwork*>* GetPhysicsFormworkS() {
+            return &PhysicsFormworkS;
+        }
+
+
     };
 
 }

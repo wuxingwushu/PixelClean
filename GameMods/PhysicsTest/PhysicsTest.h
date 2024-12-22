@@ -43,10 +43,11 @@ namespace GAME {
 		void ShowStaticSquare(glm::dvec2 pos, double angle = 0);
 		void ShowSquare(glm::dvec2 pos, double angle = 0);
 
-		PhysicsBlock::PhysicsWorld* mPhysicsWorld;
-		PhysicsBlock::MapStatic* mMapStatic;
+		bool PhysicsSwitch = false;// 物理世界的开关
+		PhysicsBlock::PhysicsWorld* mPhysicsWorld;// 物理世界
+		PhysicsBlock::MapStatic* mMapStatic;// 地图
 
-		PhysicsBlock::PhysicsFormwork* PhysicsFormworkPtr = nullptr;
+		PhysicsBlock::PhysicsFormwork* PhysicsFormworkPtr = nullptr;// 选择的物理对象
 	};
 
 }

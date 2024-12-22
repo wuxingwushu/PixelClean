@@ -134,21 +134,37 @@ namespace GAME {
 		}
 		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
 
+		if (PhysicsSwitch) {
+			if (ImGui::Button("关闭物理")) {
+				PhysicsSwitch = false;
+			}
+		}
+		else {
+			if (ImGui::Button("开启物理")) {
+				PhysicsSwitch = true;
+			}
+		}
+		
+
 		if (PhysicsFormworkPtr) {
 			switch (PhysicsFormworkPtr->PFGetType())
 			{
 			case PhysicsBlock::PhysicsObjectEnum::shape:
-				ImGui::Text(u8"shape");
+				ImGui::Text(u8"Shape");
 				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsShape*)PhysicsFormworkPtr);
 				break;
 			case PhysicsBlock::PhysicsObjectEnum::particle:
-				ImGui::Text(u8"particle");
+				ImGui::Text(u8"Particle");
 				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr);
 				break;
 			default:
-				ImGui::Text(u8"无");
+				ImGui::Text(u8"nullptr");
 				break;
 			}
+		}
+		else {
+			ImGui::Text(u8"World");
+			PhysicsBlock::PhysicsShapeUI(mPhysicsWorld);
 		}
 
 		ImGui::End();
@@ -178,7 +194,7 @@ namespace GAME {
 					beang = { huoqdedian.x, huoqdedian.y };
 					PhysicsFormworkPtr = mPhysicsWorld->Get(beang);
 					if (PhysicsFormworkPtr) {
-						Opos = PhysicsFormworkPtr->PFGetPos();
+						Opos = PhysicsFormworkPtr->PFGetPos() - beang;
 					}
 					else {
 						glm::vec3 pmPos = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
@@ -192,7 +208,7 @@ namespace GAME {
 				else {
 					if (PhysicsFormworkPtr) {
 						beang2 = { huoqdedian.x, huoqdedian.y };
-						((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos = Opos + (beang2 - beang);
+						((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos = Opos + beang2;
 					}
 					else {
 						glm::vec3 pmPos = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
@@ -213,7 +229,7 @@ namespace GAME {
 
 		mAuxiliaryVision->Begin();
 
-		mPhysicsWorld->PhysicsEmulator(TOOL::FPStime);
+		if(PhysicsSwitch)mPhysicsWorld->PhysicsEmulator(TOOL::FPStime);
 
 		PhysicsBlock::PhysicsShape* PhysicsShapePtr;
 		PhysicsBlock::PhysicsParticle* PhysicsParticlePtr;

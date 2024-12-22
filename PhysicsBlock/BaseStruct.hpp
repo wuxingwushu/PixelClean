@@ -42,9 +42,9 @@ namespace PhysicsBlock
             GridBlockType type; // 类型
             struct
             {
-                unsigned char Entity : 1; // 实体
+                bool Entity : 1; // 实体
                 bool Collision : 1;       // 碰撞
-                unsigned char Event : 1;  // 碰撞事件
+                bool Event : 1;  // 碰撞事件
             };
         };
     };

@@ -13,7 +13,7 @@ namespace PhysicsBlock
      * @note 重力加速度， 网格风 */
     class PhysicsWorld
     {
-    private:
+    public:
         glm::dvec2 GravityAcceleration;      // 重力加速度
         const bool WindBool;                 // 是否开启网格风
         glm::dvec2 Wind{0};                  // 风

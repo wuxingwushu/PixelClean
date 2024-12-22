@@ -48,6 +48,7 @@ namespace PhysicsBlock
 
     void PhysicsShape::UpdateInfo()
     {
+        glm::dvec2 UsedCentreMass = CentreMass;//旧质心
         mass = 0;
         unsigned int Size = 0;    // 实体格子数
         unsigned int i;           // 存储网格索引
@@ -72,6 +73,9 @@ namespace PhysicsBlock
         CentreMass /= mass;
         CentreShape += glm::dvec2{0.5, 0.5}; // 移动到格子的中心
         CentreMass += glm::dvec2{0.5, 0.5};  // 移动到格子的中心
+
+        // 因为位置是指 质心 在世界坐标的位置，质心改了，位置也需要进行偏移
+        pos += vec2angle(CentreMass - UsedCentreMass, angle);
 
         MomentInertia = 0; // 清空转动惯量
         glm::dvec2 lpos;   // 存储临时位置

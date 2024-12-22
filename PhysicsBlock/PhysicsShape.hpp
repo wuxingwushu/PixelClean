@@ -18,7 +18,7 @@ namespace PhysicsBlock
         glm::dvec2 CentreMass{0};  // 质心
         glm::dvec2 CentreShape{0}; // 几何中心
         double torque = 0;         // 扭矩
-        double CollisionR;         // 碰撞半径
+        double CollisionR = 1;         // 碰撞半径
     public:
         /**
          * @brief 构造函数

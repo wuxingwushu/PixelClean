@@ -7,7 +7,7 @@ namespace PhysicsBlock
     void MapStatic::SetCentrality(glm::dvec2 Centrality)
     {
         // 限定点在范围内
-        if ((Centrality.x < 0) || (Centrality.y < 0) || (Centrality.x > width) || (Centrality.y < height))
+        if ((Centrality.x < 0) || (Centrality.y < 0) || (Centrality.x > width) || (Centrality.y > height))
         {
             return;
         }

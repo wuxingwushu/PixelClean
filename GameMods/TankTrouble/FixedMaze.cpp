@@ -96,18 +96,18 @@ namespace GAME {
 		int Ay = -(numberY / 2);
 		int Bx = numberX + Ax;
 		int By = numberY + Ay;
-		mOriginX = unsigned int(-Ax);
-		mOriginY = unsigned int(-Ay);
+		mOriginX = (unsigned int)(-Ax);
+		mOriginY = (unsigned int)(-Ay);
 		mFixedSizeTerrain->SetOrigin(mOriginX, mOriginY);
 
 
 
 
 		float mPositions[12] = {
-			Ax, Ay, 0.0f,
-			Bx, Ay, 0.0f,
-			Bx, By, 0.0f,
-			Ax, By, 0.0f,
+			(float)Ax, (float)Ay, 0.0f,
+			(float)Bx, (float)Ay, 0.0f,
+			(float)Bx, (float)By, 0.0f,
+			(float)Ax, (float)By, 0.0f,
 		};
 
 		float mUVs[8] = {
@@ -132,9 +132,9 @@ namespace GAME {
 	}
 
 	void MixColors_2(unsigned char* color, const unsigned char* Hcolor) {
-		color[0] = unsigned char(Hcolor[0] * 0.3f);
-		color[1] = unsigned char(Hcolor[1] * 0.3f);
-		color[2] = unsigned char(Hcolor[2] * 0.3f);
+		color[0] = (unsigned char)(Hcolor[0] * 0.3f);
+		color[1] = (unsigned char)(Hcolor[1] * 0.3f);
+		color[2] = (unsigned char)(Hcolor[2] * 0.3f);
 		color[3] = 255;
 	}
 

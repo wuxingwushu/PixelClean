@@ -37,7 +37,7 @@ namespace PhysicsBlock
     private:
         CordKnot objectA;                  // 被绑定对象A
         CordKnot objectB;                  // 被绑定对象B
-        const CordType type;                     // 绳子类型
+        const CordType type;               // 绳子类型
         PhysicsParticle *PhysicsParticleS; // 绳子每个结点
         unsigned int KnotSize;             // 结点数B
         double Length;                     // 绳子每小段的长度

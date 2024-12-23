@@ -15,7 +15,7 @@ namespace PhysicsBlock
         PhysicsParticleS = (PhysicsParticle *)new char[sizeof(PhysicsParticle) * KnotSize];
         for (size_t i = 0; i < KnotSize; ++i)
         {
-            new (&PhysicsParticleS[i]) PhysicsParticle(glm::dvec2(objectA.ptr->PFGetPos() + distance + (distance * (double)i)), 0.1);
+            //new (&PhysicsParticleS[i]) PhysicsParticle(glm::dvec2(objectA.ptr->PFGetPos() + distance + (distance * (double)i)), 0.1);
         }
     }
 

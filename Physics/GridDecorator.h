@@ -152,7 +152,7 @@ namespace SquarePhysics {
 
 		
 		//（输入是 Object 的 mPixelAttributeS 数组索引两个点，返回是 mPixelAttributeS 数组索引）
-		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End) {
+		virtual CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End) {
 			Start += Origin;
 			End += Origin;
 			int dx = abs(End.x - Start.x);

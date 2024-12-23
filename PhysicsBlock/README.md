@@ -11,6 +11,8 @@ MapFormwork 模板地图
 MapStatic 静态地图
 MapDynamic 动态地图
 
+PhysicsFormwrok 刚体物理模板
+
 PhysicsJunction 物理连接
 
 PhysicsWorld 物理世界
@@ -29,7 +31,12 @@ F(MapFormwork\n模板地图)
 G(MapDynamic\n动态地图)
 W(PhysicsWorld\n物理世界)
 
+PF(PhysicsFormwrok\n刚体物理模板)
+
+
+
 C --> D
+PF --> A
 A --> B
 D --> B
 

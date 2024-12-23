@@ -40,8 +40,8 @@ namespace GAME {
 		virtual void GameUI();
 
 	private:
-		void ShowStaticSquare(glm::dvec2 pos, double angle = 0);
-		void ShowSquare(glm::dvec2 pos, double angle = 0);
+		void ShowStaticSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1,0,0,1});
+		void ShowSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1,0,0,1});
 
 		bool PhysicsSwitch = false;// 物理世界的开关
 		PhysicsBlock::PhysicsWorld* mPhysicsWorld;// 物理世界

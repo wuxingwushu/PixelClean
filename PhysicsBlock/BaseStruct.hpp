@@ -42,19 +42,20 @@ namespace PhysicsBlock
             GridBlockType type; // 类型
             struct
             {
-                bool Entity : 1; // 实体
-                bool Collision : 1;       // 碰撞
-                bool Event : 1;  // 碰撞事件
+                bool Entity : 1;    // 实体
+                bool Collision : 1; // 碰撞
+                bool Event : 1;     // 碰撞事件
             };
         };
     };
 
+    // 碰撞在网格的那个边上（x正为右， y正为上）
     enum CheckDirection
     {
-        Up = 0x0U,   // 上
-        Down = 0x1U, // 下
-        Left = 0x2U, // 左
-        Right = 0x3U // 右
+        Right = 0U, // 右
+        Up = 1U,    // 上
+        Left = 2U,  // 左
+        Down = 3U,  // 下
     };
 
     /**
@@ -114,6 +115,12 @@ namespace PhysicsBlock
         Null,     // 无对象
         shape,    // 形状
         particle, // 点
+    };
+
+    struct PhysicsState
+    {
+        glm::dvec2 pos;
+        glm::dvec2 speed;
     };
 
 }

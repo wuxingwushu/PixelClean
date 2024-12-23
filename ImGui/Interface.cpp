@@ -523,14 +523,14 @@ namespace GAME {
 		ImGui::DragFloat(u8"字体大小 ", &Global::FontZoomRatio, 0.001f, 1.0f, 10.0f);
 		ImGui::DragFloat(u8"音乐音量 ", &SetMusicVolume, 0.001f, 0.0f, 10.0f);
 		ImGui::DragFloat(u8"音效音量 ", &SetSoundEffectsVolume, 0.001f, 0.0f, 10.0f);
-		ImGui::DragInt(u8"服务器端口 ", &SetServerPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家开设在本地的服务器端口 ");
-		ImGui::InputText(u8"客户端链接IP", SetClientIP, 16, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters); HelpMarker("玩家链接服务器IP");
-		ImGui::DragInt(u8"客户端链接端口)", &SetClientPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker("玩家链接服务器端口");
-		ImGui::Checkbox(u8"VulKan 验证层 ", &SetVulKanValidationLayer); HelpMarker("VulKan 校验层 （部分设备不支持） ");
+		ImGui::DragInt(u8"服务器端口 ", &SetServerPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker2("玩家开设在本地的服务器端口 ");
+		ImGui::InputText(u8"客户端链接IP", SetClientIP, 16, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters); HelpMarker2("玩家链接服务器IP");
+		ImGui::DragInt(u8"客户端链接端口)", &SetClientPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None); HelpMarker2("玩家链接服务器端口");
+		ImGui::Checkbox(u8"VulKan 验证层 ", &SetVulKanValidationLayer); HelpMarker2("VulKan 校验层 （部分设备不支持） ");
 
 		ImGui::Checkbox(u8"监视器 ", &SetMonitor); 
 		if(SetMonitor){ ImGui::SameLine(); ImGui::Checkbox(u8"兼容模式 ", &SetMonitorCompatibleMode); } 
-		HelpMarker("监视器（部分设备不支持） \n兼容模式（会牺牲性能） ");
+		HelpMarker2("监视器（部分设备不支持） \n兼容模式（会牺牲性能） ");
 
 		ImGui::Checkbox(u8"全屏 ", &SetFullScreen);
 
@@ -761,7 +761,7 @@ namespace GAME {
 			ImGui::TableNextColumn();
 			ImGui::Text(u8"百分比 ");
 			ImGui::SameLine();//让一个元素并排
-			HelpMarker(u8"相对与一帧时间的占比 ");
+			HelpMarker2(u8"相对与一帧时间的占比 ");
 
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();

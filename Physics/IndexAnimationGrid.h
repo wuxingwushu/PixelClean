@@ -23,7 +23,7 @@ namespace SquarePhysics {
 			return &LS_PixelAttribute;
 		}
 
-		inline inline void SetCurrentFrame(unsigned int frame) noexcept {
+		inline void SetCurrentFrame(unsigned int frame) noexcept {
 			CurrentFrame = frame;
 			AnimationDeviation = CurrentFrame * (mNumber.x * mNumber.y);
 		}

@@ -35,7 +35,7 @@ namespace PhysicsBlock
          * @brief 物理演戏
          * @param time 时间差
          * @param Ga 重力加速度 */
-        virtual glm::dvec2 PhysicsPlayact(double time, glm::dvec2 Ga);
+        virtual PhysicsState PhysicsPlayact(double time, glm::dvec2 Ga);
 
         /*=========PhysicsFormwork=========*/
 

@@ -32,7 +32,7 @@ namespace PhysicsBlock
 	}
 
 	// 获取模的长度
-	inline double Modulus(glm::dvec2 Modulus)
+	double Modulus(glm::dvec2 Modulus)
 	{
 		return sqrt((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
 	}
@@ -44,7 +44,7 @@ namespace PhysicsBlock
 	}
 
 	// 根据XY算出cos的角度
-	inline double EdgeVecToCosAngleFloat(glm::dvec2 XYedge)
+	double EdgeVecToCosAngleFloat(glm::dvec2 XYedge)
 	{
 		if (XYedge.x == 0)
 		{
@@ -72,22 +72,22 @@ namespace PhysicsBlock
 		return glm::dvec2((pos.x * angle.x) - (pos.y * angle.y), (pos.x * angle.y) + (pos.y * angle.x));
 	}
 
-	inline glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle)
+	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle)
 	{
 		return vec2angle(pos - lingdian, angle) + lingdian;
 	}
 
-	inline glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle)
+	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle)
 	{
 		return vec2angle(pos - lingdian, angle) + lingdian;
 	}
 
-	inline glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle)
+	glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle)
 	{
 		return ToInt(vec2angle(xPos - Pos, angle));
 	}
 
-	inline glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle)
+	glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle)
 	{
 		return ToInt(vec2angle(ePos - sPos, angle));
 	}
@@ -220,7 +220,7 @@ namespace PhysicsBlock
 	}
 
 	// 正方形和点的碰撞检测
-	inline glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY)
+	glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY)
 	{
 		glm::dvec2 PYpos{0.0f, 0.0f};
 		if (((Drop.x >= A1) && (Drop.x <= A2)) && ((Drop.y >= B1) && (Drop.y <= B2)))
@@ -257,7 +257,7 @@ namespace PhysicsBlock
 		return PYpos;
 	}
 
-	inline glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY)
+	glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY)
 	{
 		return SquareToDrop(-R, R, -R, R, Drop, PY);
 	}
@@ -343,7 +343,7 @@ namespace PhysicsBlock
 	}
 
 	// 计算两个向量的夹角
-	[[nodiscard]] double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2)
+	double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2)
 	{
 		// 标准化向量
 		glm::dvec2 normV1 = glm::normalize(V1);

@@ -76,7 +76,7 @@ namespace PhysicsBlock
 	 * @param   lingdian 旋转中心的点坐标
 	 * @param   angle 旋转度数（2 * M_PI 为一圈）
 	 * @return  返回旋转結果*/
-	inline glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle);
+	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle);
 
 	/**
 	 * @brief   dvec2 基於某個坐标的旋转
@@ -84,7 +84,7 @@ namespace PhysicsBlock
 	 * @param   lingdian 旋转中心的点坐标
 	 * @param   angle glm::dvec2 格式 X,Y 存储计算好了的 cos,sin 結果
 	 * @return  返回旋转結果*/
-	inline glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle);
+	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle);
 
 	/**
 	 * @brief   坐标点转换坐标系后取整（向下）
@@ -92,7 +92,7 @@ namespace PhysicsBlock
 	 * @param   xPos 兩個坐标系的距离差
 	 * @param   angle 兩個坐标系的角度差（2 * M_PI 为一圈）
 	 * @return  返回转换后坐标系后的整数坐标*/
-	inline glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle);
+	glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle);
 
 	/**
 	 * @brief   坐标点转换坐标系后取整（向下）
@@ -100,7 +100,7 @@ namespace PhysicsBlock
 	 * @param   xPos 兩個坐标系的距离差
 	 * @param   angle 兩個坐标系的角度差（glm::dvec2 格式 X,Y 存储计算好了的 cos,sin 結果）
 	 * @return  返回转换后坐标系后的整数坐标*/
-	inline glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle);
+	glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle);
 
 	/**
 	 * @brief   线段在 x 为某值的焦点
@@ -140,7 +140,7 @@ namespace PhysicsBlock
 	 * @param dB 正方形 B 的边长
 	 * @param angleB 正方形 B 的角度
 	 * @return 返回 B 应该偏移的距离 */
-	[[nodiscard]] glm::dvec2 SquareToSquare(glm::dvec2 posA, double dA, double angleA, glm::dvec2 posB, double dB, double angleB);
+	glm::dvec2 SquareToSquare(glm::dvec2 posA, double dA, double angleA, glm::dvec2 posB, double dB, double angleB);
 
 	/**
 	 * @brief 矩形和点的碰撞检测
@@ -151,7 +151,7 @@ namespace PhysicsBlock
 	 * @param Drop 点的位置坐标
 	 * @param PY 期望被移动的方向
 	 * @return 返回点应该移动的距离 */
-	inline glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY);
+	glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY);
 
 	/**
 	 * @brief 正方形和点的碰撞检测
@@ -159,16 +159,16 @@ namespace PhysicsBlock
 	 * @param Drop 点的位置坐标
 	 * @param PY 期望被移动的方向
 	 * @return 返回点应该移动的距离 */
-	inline glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY);
+	glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY);
 
 	//正方形和射线的碰撞检测
 	glm::dvec2 SquareToRadial(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY);
 	
 	//扭矩计算
-	[[nodiscard]] double TorqueCalculate(glm::dvec2 Barycenter, glm::dvec2 Spot, glm::dvec2 Force);
+	double TorqueCalculate(glm::dvec2 Barycenter, glm::dvec2 Spot, glm::dvec2 Force);
 
 	//计算夹角
-	[[nodiscard]] double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2);
+	double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2);
 
 	/**
 	 * @brief 求解分解力

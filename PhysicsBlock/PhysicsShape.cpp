@@ -107,6 +107,42 @@ namespace PhysicsBlock
         }
     }
 
+    void PhysicsShape::ApproachDrop(glm::dvec2 drop){
+        glm::dvec2 OutlineDrop = vec2angle({CollisionR, 0}, EdgeVecToCosAngleFloat(drop - pos));
+        CollisionInfoD info = BresenhamDetection(CentreMass + OutlineDrop, CentreMass - OutlineDrop);
+        pos += drop - (info.pos + pos);
+    }
+
+    CollisionInfoI PhysicsShape::PsBresenhamDetection(glm::ivec2 start, glm::ivec2 end){
+        return BresenhamDetection(start, end);
+    }
+
+    CollisionInfoD PhysicsShape::PsBresenhamDetection(glm::dvec2 start, glm::dvec2 end){
+        // 偏移中心位置，对其网格坐标系
+        start -= pos;
+        end -= pos;
+
+        glm::dvec2 Angle = AngleFloatToAngleVec(-angle);
+        start = vec2angle(start, Angle);
+        end = vec2angle(end, Angle);
+
+        // 裁剪线段 让线段都在矩形内
+        PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start + CentreMass, end + CentreMass, width - 0.01, height - 0.01);
+        if (data.Focus)
+        {
+            // 线段碰撞检测
+            CollisionInfoD info = BresenhamDetection(data.start, data.end);
+            if (info.Collision)
+            {
+                // 返回物理坐标系
+                Angle.y = -Angle.y;
+                info.pos = vec2angle(info.pos - CentreMass, Angle) + pos;
+                return info;
+            }
+        }
+        return {false};
+    }
+
     void PhysicsShape::PhysicsEmulator(double time, glm::dvec2 Ga)
     {
         PhysicsParticle::PhysicsEmulator(time, Ga);           // 位置的物理演算
@@ -116,9 +152,10 @@ namespace PhysicsBlock
         torque = 0;                                           // 清空扭矩
     }
 
+    /*
     glm::dvec2 PhysicsShape::PhysicsPlayact(double time, glm::dvec2 Ga)
     {
         return PhysicsParticle::PhysicsPlayact(time, Ga); // 位置的物理演戏
-    }
+    }*/
 
 }

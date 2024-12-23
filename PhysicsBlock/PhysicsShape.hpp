@@ -57,13 +57,34 @@ namespace PhysicsBlock
          * @note 更新： 总重量， 几何中心， 质心， 转动惯量 */
         void UpdateInfo();
 
+        /**
+         * @brief 几何形状靠近这个点
+         * @param drop 点的位置 */
+        void ApproachDrop(glm::dvec2 drop);
+
+        /*=========BaseGrid=========*/
+
+        /**
+         * @brief 线段侦测(int)
+         * @param start 起始位置
+         * @param end 结束位置
+         * @return 碰撞结果信息 */
+        CollisionInfoI PsBresenhamDetection(glm::ivec2 start, glm::ivec2 end);
+
+        /**
+         * @brief 线段侦测(double)
+         * @param start 起始位置
+         * @param end 结束位置
+         * @return 碰撞结果信息(准确位置) */
+        CollisionInfoD PsBresenhamDetection(glm::dvec2 start, glm::dvec2 end);
+
         /*=========PhysicsParticle=========*/
 
         /**
          * @brief 物理演戏
          * @param time 时间差
          * @param Ga 重力加速度 */
-        virtual glm::dvec2 PhysicsPlayact(double time, glm::dvec2 Ga);
+        //virtual glm::dvec2 PhysicsPlayact(double time, glm::dvec2 Ga);
 
         /*=========PhysicsFormwork=========*/
 

@@ -28,10 +28,10 @@ namespace PhysicsBlock
         force = Ga * mass;                         // 清空受力 + 重力加速度
     }
 
-    glm::dvec2 PhysicsParticle::PhysicsPlayact(double time, glm::dvec2 Ga)
+    PhysicsState PhysicsParticle::PhysicsPlayact(double time, glm::dvec2 Ga)
     {
         glm::dvec2 AddSpeed = force / mass * time;      // 增加的速度
-        return pos + (speed + (AddSpeed / 2.0)) * time; // 移动后的位置
+        return {pos + (speed + (AddSpeed / 2.0)) * time, speed + AddSpeed}; // 移动后的位置
     }
 
 }

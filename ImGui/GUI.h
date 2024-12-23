@@ -10,7 +10,7 @@
 #include "Font.h"
 
 
-static void HelpMarker(const char* desc)
+static void HelpMarker2(const char* desc)
 {
     ImGui::SameLine();
     ImGui::TextDisabled("(?)");

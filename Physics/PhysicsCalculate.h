@@ -12,28 +12,28 @@ namespace SquarePhysics {
 	 * @param   val 需要轉換的 double 值
 	 * @return  返回轉換結果
 	 * @note    不是直接丟棄小數點，而是向下取最大的整數*/
-	inline int ToInt(double val);
+	int ToInt(double val);
 
 	/**
 	 * @brief   float 轉 int，向下取整
 	 * @param   val 需要轉換的 float 值
 	 * @return  返回轉換結果
 	 * @note    不是直接丟棄小數點，而是向下取最大的整數*/
-	inline int ToInt(float val);
+	int ToInt(float val);
 
 	/**
 	 * @brief   vec2 轉 ivec2，正負都向下取整
 	 * @param   val 需要轉換的 vec2 值
 	 * @return  返回轉換結果
 	 * @note    不是直接丟棄小數點，而是向下取最大的整數*/
-	inline glm::ivec2 ToIvec2(glm::vec2 val);
+	glm::ivec2 ToIvec2(glm::vec2 val);
 
 	/**
 	 * @brief   dvec2 轉 ivec2，正負都向下取整
 	 * @param   val 需要轉換的 dvec2 值
 	 * @return  返回轉換結果
 	 * @note    不是直接丟棄小數點，而是向下取最大的整數*/
-	inline glm::ivec2 ToIvec2(glm::dvec2 val);
+	glm::ivec2 ToIvec2(glm::dvec2 val);
 
 	/**
 	 * @brief   获取模的长度(没有开方)
@@ -45,7 +45,7 @@ namespace SquarePhysics {
 	 * @brief   获取模的长度
 	 * @param   Modulus 輸入 X,Y 的距離差
 	 * @return  返回 (x*x + y*y)開方 的結果 */
-	inline double Modulus(glm::dvec2 Modulus);
+	double Modulus(glm::dvec2 Modulus);
 
 	//角度，计算对应的cos, sin 
 	glm::dvec2 AngleFloatToAngleVec(double angle);
@@ -54,21 +54,21 @@ namespace SquarePhysics {
 	 * @brief 根據 vec2 計算於 X軸正向 的角度
 	 * @param XYedge 輸入 X,Y 位置
 	 * @return 返回 (x,y) 於 X軸正向 的角度*/
-	inline double EdgeVecToCosAngleFloat(glm::dvec2 XYedge);
+	double EdgeVecToCosAngleFloat(glm::dvec2 XYedge);
 
 	/**
 	 * @brief   vec2 基於零坐標旋轉
 	 * @param   pos 需要旋轉的坐標
 	 * @param   angle 旋轉度數（2 * M_PI 為一圈）
 	 * @return  返回旋轉結果*/
-	inline glm::dvec2 vec2angle(glm::dvec2 pos, double angle);
+	glm::dvec2 vec2angle(glm::dvec2 pos, double angle);
 
 	/**
 	 * @brief   dvec2 基於零坐標旋轉
 	 * @param   pos 需要旋轉的坐標
 	 * @param   angle glm::dvec2 格式 X,Y 儲存計算好了的 cos,sin 結果
 	 * @return  返回旋轉結果*/
-	inline glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle);
+	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle);
 
 	/**
 	 * @brief   dvec2 基於某個坐標的旋轉
@@ -76,7 +76,7 @@ namespace SquarePhysics {
 	 * @param   lingdian 旋轉中心的點坐標
 	 * @param   angle 旋轉度數（2 * M_PI 為一圈）
 	 * @return  返回旋轉結果*/
-	inline glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle);
+	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle);
 
 	/**
 	 * @brief   dvec2 基於某個坐標的旋轉
@@ -84,7 +84,7 @@ namespace SquarePhysics {
 	 * @param   lingdian 旋轉中心的點坐標
 	 * @param   angle glm::dvec2 格式 X,Y 儲存計算好了的 cos,sin 結果
 	 * @return  返回旋轉結果*/
-	inline glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle);
+	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle);
 
 	/**
 	 * @brief   坐標點轉換坐標系後取整（向下）
@@ -92,7 +92,7 @@ namespace SquarePhysics {
 	 * @param   xPos 兩個坐標系的距離差
 	 * @param   angle 兩個坐標系的角度差（2 * M_PI 為一圈）
 	 * @return  返回轉換後坐標系後的整數坐標*/
-	inline glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle);
+	glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle);
 
 	/**
 	 * @brief   坐標點轉換坐標系後取整（向下）
@@ -100,7 +100,7 @@ namespace SquarePhysics {
 	 * @param   xPos 兩個坐標系的距離差
 	 * @param   angle 兩個坐標系的角度差（glm::dvec2 格式 X,Y 儲存計算好了的 cos,sin 結果）
 	 * @return  返回轉換後坐標系後的整數坐標*/
-	inline glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle);
+	glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle);
 
 	/**
 	 * @brief   線段在 x 為某值的焦點
@@ -109,7 +109,7 @@ namespace SquarePhysics {
 	 * @param   x 設置 X 值
 	 * @return  返回線段在 X 為某值的 X軸 於線段的焦點
 	 * @warning 注意求出的焦點可能不在線段上*/
-	inline glm::dvec2 LineXToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double x);
+	glm::dvec2 LineXToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double x);
 
 	/**
 	 * @brief   線段在 Y 為某值的焦點
@@ -118,7 +118,7 @@ namespace SquarePhysics {
 	 * @param   y 設置 Y 值
 	 * @return  返回線段在 Y 為某值的 Y軸 於線段的焦點
 	 * @warning 注意求出的焦點可能不在線段上*/
-	inline glm::dvec2 LineYToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double y);
+	glm::dvec2 LineYToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double y);
 
 
 	/**
@@ -130,7 +130,7 @@ namespace SquarePhysics {
 	 * @param dB 正方形 B 的邊長
 	 * @param angleB 正方形 B 的角度
 	 * @return 返回 B 應該偏移的距離 */
-	[[nodiscard]] glm::dvec2 SquareToSquare(glm::dvec2 posA, unsigned int dA, double angleA, glm::dvec2 posB, unsigned int dB, double angleB);
+	glm::dvec2 SquareToSquare(glm::dvec2 posA, unsigned int dA, double angleA, glm::dvec2 posB, unsigned int dB, double angleB);
 
 	/**
 	 * @brief 矩形和点的碰撞检测
@@ -141,7 +141,7 @@ namespace SquarePhysics {
 	 * @param Drop 點的位置坐標
 	 * @param PY 期望被移動的方向
 	 * @return 返回點應該移動的距離 */
-	inline glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY);
+	glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY);
 
 	/**
 	 * @brief 正方形和点的碰撞检测
@@ -149,19 +149,19 @@ namespace SquarePhysics {
 	 * @param Drop 點的位置坐標
 	 * @param PY 期望被移動的方向
 	 * @return 返回點應該移動的距離 */
-	inline glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY);
+	glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY);
 
 	//正方形和射线的碰撞检测
 	glm::dvec2 SquareToRadial(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY);
 	
 	//扭矩计算
-	[[nodiscard]] double TorqueCalculate(glm::dvec2 Barycenter, glm::dvec2 Spot, glm::dvec2 Force);
+	double TorqueCalculate(glm::dvec2 Barycenter, glm::dvec2 Spot, glm::dvec2 Force);
 
 	//求解分解力
-	[[nodiscard]] DecompositionForce CalculateDecompositionForce(glm::dvec2 angle, glm::dvec2 force);
+	DecompositionForce CalculateDecompositionForce(glm::dvec2 angle, glm::dvec2 force);
 
 	//计算夹角
-	[[nodiscard]] double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2);
+	double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2);
 
 	//计算扭力增加的角速度
 	double calculateRotationSpeed(double torque, glm::dvec2 forceToCenter, double mass, double time);

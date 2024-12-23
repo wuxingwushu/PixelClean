@@ -34,7 +34,7 @@ namespace SquarePhysics {
 		}
 
 		/************************  重写  ************************/
-		virtual [[nodiscard]] bool GetFixedCollisionBool(glm::ivec2 pos) {
+		virtual bool GetFixedCollisionBool(glm::ivec2 pos) {
 			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->CalculateGetPlate(pos.x, pos.y);
 			if (LRigidBodyAndModel != nullptr) {
 				return LRigidBodyAndModel->mGridDecorator.GetFixedCollisionBool({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
@@ -42,7 +42,7 @@ namespace SquarePhysics {
 			return true;
 		}
 
-		virtual [[nodiscard]] float GetFrictionCoefficient(glm::ivec2 pos) {
+		virtual float GetFrictionCoefficient(glm::ivec2 pos) {
 			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->CalculateGetPlate(pos.x, pos.y);
 			if (LRigidBodyAndModel != nullptr) {
 				return LRigidBodyAndModel->mGridDecorator.GetFrictionCoefficient({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });
@@ -59,9 +59,9 @@ namespace SquarePhysics {
 		}
 
 		//路径碰撞判断
-		virtual [[nodiscard]] CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
+		virtual CollisionInfo RadialCollisionDetection(glm::ivec2 Start, glm::ivec2 End);
 
-		[[nodiscard]] bool GetFixedCollisionBoolRadial(glm::ivec2 pos) {
+		bool GetFixedCollisionBoolRadial(glm::ivec2 pos) {
 			RigidBodyAndModel* LRigidBodyAndModel = mGridDecoratorS->GetPlate(pos.x / mSquareSideLength, pos.y / mSquareSideLength);
 			if (LRigidBodyAndModel != nullptr) {
 				return LRigidBodyAndModel->mGridDecorator.GetFixedCollisionBool({ pos.x % mSquareSideLength, pos.y % mSquareSideLength });

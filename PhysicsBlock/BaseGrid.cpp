@@ -87,12 +87,12 @@ namespace PhysicsBlock
                 if (val < 0)
                 {
                     Collisioninfo.pos = LineYToPos(start, end, info.pos.y);
-                    Collisioninfo.Direction = CheckDirection::Up;
+                    Collisioninfo.Direction = CheckDirection::Down;
                 }
                 else if (val > 0)
                 {
                     Collisioninfo.pos = LineYToPos(start, end, info.pos.y + 1);
-                    Collisioninfo.Direction = CheckDirection::Down;
+                    Collisioninfo.Direction = CheckDirection::Up;
                 }
             }
             switch (Collisioninfo.Direction)
@@ -102,11 +102,11 @@ namespace PhysicsBlock
                     val = start.y - end.y;
                     if (val < 0) {
                         Collisioninfo.pos = LineYToPos(start, end, info.pos.y);
-                        Collisioninfo.Direction = CheckDirection::Up;
+                        Collisioninfo.Direction = CheckDirection::Down;
                     }
                     else if (val > 0) {
                         Collisioninfo.pos = LineYToPos(start, end, info.pos.y + 1);
-                        Collisioninfo.Direction = CheckDirection::Down;
+                        Collisioninfo.Direction = CheckDirection::Up;
                     }
                 }
                 break;
@@ -115,11 +115,11 @@ namespace PhysicsBlock
                     val = start.y - end.y;
                     if (val < 0) {
                         Collisioninfo.pos = LineYToPos(start, end, info.pos.y);
-                        Collisioninfo.Direction = CheckDirection::Up;
+                        Collisioninfo.Direction = CheckDirection::Down;
                     }
                     else if (val > 0) {
                         Collisioninfo.pos = LineYToPos(start, end, info.pos.y + 1);
-                        Collisioninfo.Direction = CheckDirection::Down;
+                        Collisioninfo.Direction = CheckDirection::Up;
                     }
                 }
                 break;
@@ -129,11 +129,11 @@ namespace PhysicsBlock
                     val = start.x - end.x;
                     if (val < 0) {
                         Collisioninfo.pos = LineXToPos(start, end, info.pos.x);
-                        Collisioninfo.Direction = CheckDirection::Up;
+                        Collisioninfo.Direction = CheckDirection::Left;
                     }
                     else if (val > 0) {
                         Collisioninfo.pos = LineXToPos(start, end, info.pos.x + 1);
-                        Collisioninfo.Direction = CheckDirection::Down;
+                        Collisioninfo.Direction = CheckDirection::Right;
                     }
                 }
                 break;
@@ -142,11 +142,11 @@ namespace PhysicsBlock
                     val = start.x - end.x;
                     if (val < 0) {
                         Collisioninfo.pos = LineXToPos(start, end, info.pos.x);
-                        Collisioninfo.Direction = CheckDirection::Up;
+                        Collisioninfo.Direction = CheckDirection::Left;
                     }
                     else if (val > 0) {
                         Collisioninfo.pos = LineXToPos(start, end, info.pos.x + 1);
-                        Collisioninfo.Direction = CheckDirection::Down;
+                        Collisioninfo.Direction = CheckDirection::Right;
                     }
                 }
                 break;

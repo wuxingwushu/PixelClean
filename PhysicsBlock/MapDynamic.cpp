@@ -22,7 +22,7 @@ namespace PhysicsBlock
         for (size_t i = 0; i < (width * height); ++i)
         {
             DataBool[i] = false;
-            new (&BaseGridBuffer[i]) BaseGrid(PixelBlockEdgeSize, PixelBlockEdgeSize, &GridBuffer[PixelBlockEdgeSize * PixelBlockEdgeSize * i]);
+            //new(&BaseGridBuffer[i]) BaseGrid(PixelBlockEdgeSize, PixelBlockEdgeSize, &GridBuffer[PixelBlockEdgeSize * PixelBlockEdgeSize * i]);
         }
 
 

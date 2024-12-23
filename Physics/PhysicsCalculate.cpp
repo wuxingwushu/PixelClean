@@ -5,22 +5,22 @@
 
 namespace SquarePhysics {
 
-	inline int ToInt(double val)
+	int ToInt(double val)
 	{
 		return val >= 0 ? ((int)val) : (((int)val) - 1);
 	}
 
-	inline int ToInt(float val)
+	int ToInt(float val)
 	{
 		return val >= 0 ? ((int)val) : (((int)val) - 1);
 	}
 
-	inline glm::ivec2 ToIvec2(glm::vec2 val)
+	glm::ivec2 ToIvec2(glm::vec2 val)
 	{
 		return { ToInt(val.x), ToInt(val.y) };
 	}
 
-	inline glm::ivec2 ToIvec2(glm::dvec2 val)
+	glm::ivec2 ToIvec2(glm::dvec2 val)
 	{
 		return { ToInt(val.x), ToInt(val.y) };
 	}
@@ -31,7 +31,7 @@ namespace SquarePhysics {
 	}
 
 	//获取模的长度
-	inline double Modulus(glm::dvec2 Modulus) {
+	double Modulus(glm::dvec2 Modulus) {
 		return sqrt((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
 	}
 
@@ -41,7 +41,7 @@ namespace SquarePhysics {
 	}
 
 	//根据XY算出cos的角度
-	inline double EdgeVecToCosAngleFloat(glm::dvec2 XYedge) {
+	double EdgeVecToCosAngleFloat(glm::dvec2 XYedge) {
 		if (XYedge.x == 0)
 		{
 			if (XYedge.y == 0)
@@ -55,44 +55,44 @@ namespace SquarePhysics {
 	}
 
 	//vec2旋转
-	inline glm::dvec2 vec2angle(glm::dvec2 pos, double angle) {
+	glm::dvec2 vec2angle(glm::dvec2 pos, double angle) {
 		double cosangle = cos(angle);
 		double sinangle = sin(angle);
 		return glm::dvec2((pos.x * cosangle) - (pos.y * sinangle), (pos.x * sinangle) + (pos.y * cosangle));
 	}
 
 	//vec2旋转
-	inline glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle) {
+	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle) {
 		return glm::dvec2((pos.x * angle.x) - (pos.y * angle.y), (pos.x * angle.y) + (pos.y * angle.x));
 	}
 
-	inline glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle)
+	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle)
 	{
 		return vec2angle(pos - lingdian, angle) + lingdian;
 	}
 
-	inline glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle)
+	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle)
 	{
 		return vec2angle(pos - lingdian, angle) + lingdian;
 	}
 
-	inline glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle)
+	glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle)
 	{
 		return ToIvec2(vec2angle(xPos - Pos, angle));
 	}
 
-	inline glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle)
+	glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle)
 	{
 		return ToIvec2(vec2angle(ePos - sPos, angle));
 	}
 
-	inline glm::dvec2 LineXToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double x)
+	glm::dvec2 LineXToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double x)
 	{
 		double bl = (Bpos.x - x) / (Bpos.x - Apos.x);
 		return { x, (Apos.y - Bpos.y) * bl + Bpos.y };
 	}
 
-	inline glm::dvec2 LineYToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double y)
+	glm::dvec2 LineYToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double y)
 	{
 		double bl = (Bpos.y - y) / (Bpos.y - Apos.y);
 		return { (Apos.x - Bpos.x) * bl + Bpos.x, y };
@@ -143,7 +143,7 @@ namespace SquarePhysics {
 	}
 
 	//正方形和点的碰撞检测
-	inline glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY) {
+	glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY) {
 		glm::dvec2 PYpos{ 0.0f,0.0f };
 		if (((Drop.x >= A1) && (Drop.x <= A2)) && ((Drop.y >= B1) && (Drop.y <= B2))) {//判断这个点是否在另外一个正方形里面
 			if (PY.x > 0) {
@@ -172,7 +172,7 @@ namespace SquarePhysics {
 		return PYpos;
 	}
 
-	inline glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY)
+	glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY)
 	{
 		return SquareToDrop(-R, R, -R, R, Drop, PY);
 	}
@@ -221,7 +221,7 @@ namespace SquarePhysics {
 	}
 
 	//求解分解力
-	[[nodiscard]] DecompositionForce CalculateDecompositionForce(glm::dvec2 angle, glm::dvec2 force) {
+	DecompositionForce CalculateDecompositionForce(glm::dvec2 angle, glm::dvec2 force) {
 		double ObjectAngle = EdgeVecToCosAngleFloat(angle);//获得力臂角度
 		double Angle = ObjectAngle - EdgeVecToCosAngleFloat(force);//相差角度
 		double Long = SquarePhysics::Modulus(force);//力大小
@@ -233,7 +233,7 @@ namespace SquarePhysics {
 	}
 
 	//计算两个向量的夹角
-	[[nodiscard]] double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2) {
+	double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2) {
 		// 标准化向量
 		glm::dvec2 normV1 = glm::normalize(V1);
 		glm::dvec2 normV2 = glm::normalize(V2);

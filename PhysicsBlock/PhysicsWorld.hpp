@@ -23,6 +23,7 @@ namespace PhysicsBlock
 
         std::vector<PhysicsFormwork *> PhysicsFormworkS;
 
+        /*************重力**************/
         /**
          * @brief 两个形状物理碰撞处理
          * @param a 形状A(这个是被压的)
@@ -32,22 +33,36 @@ namespace PhysicsBlock
         void PhysicsProcess(PhysicsParticle *a, PhysicsShape *b);
         void PhysicsProcess(PhysicsShape *a, PhysicsParticle *b);
 
+        /*************动能**************/
         /**
-         * @brief 动量守恒定律
+         * @brief 动能守恒定律
          * @param a 物体A
          * @param b 物体B
          * @warning 理想碰撞，力都转换为速度，没有转换为角速度(可以理解为球体相撞) */
         void EnergyConservation(PhysicsParticle* a, PhysicsParticle* b);
-
         /**
-         * @brief 形状碰撞能量守恒尝试
+         * @brief 形状碰撞动能守恒尝试
          * @param a 被撞物体A
          * @param b 物体B
          * @param CollisionDrop 碰撞点
          * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内)
          * @warning 碰撞点在两质心线段上的，（动能 和 角动能 才守恒） */
         void EnergyConservation(PhysicsShape* a, PhysicsShape* b, glm::dvec2 CollisionDrop, double Vertical);
+        /**
+         * @brief 形状碰撞动能守恒尝试
+         * @param a 被撞物体A
+         * @param CollisionDrop 碰撞点
+         * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内)
+         * @warning 碰撞点在两质心线段上的，（动能 和 角动能 才守恒） */
+        void EnergyConservation(PhysicsShape* a, glm::dvec2 CollisionDrop, double Vertical);
 
+        /*************位置约束**************/
+        // 和地图(时间处理（位置，角度碰）， 位置约束)
+        void PositionRestrain(PhysicsShape* a, double time);
+        void PositionRestrain(PhysicsParticle* a, double time);
+        // 相互位置约束
+        void PositionRestrain(PhysicsParticle* a, PhysicsShape* b);
+        void PositionRestrain(PhysicsShape* a, PhysicsShape* b);
     public:
         /**
          * @brief 构建函数

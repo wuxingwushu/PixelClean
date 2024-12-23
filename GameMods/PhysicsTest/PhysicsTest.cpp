@@ -7,44 +7,57 @@
 #include "../../PhysicsBlock/BaseCalculate.hpp"
 #include "../../PhysicsBlock/ImGuiPhysics.hpp"
 
+#include "../../ImGui/imgui_demo.cpp"
 
-namespace GAME {
+namespace GAME
+{
 
-
-	PhysicsTest::PhysicsTest(Configuration wConfiguration) : Configuration{ wConfiguration }
+	PhysicsTest::PhysicsTest(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
 		m_position.x = 0;
 		m_position.y = 0;
 		m_position.z = 50;
 
 		// 添加视觉辅助
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 10000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
-			mCameraVPMatricesBuffer
-		);
+			mCameraVPMatricesBuffer);
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
 		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0, 0}, false);
-		mMapStatic = new PhysicsBlock::MapStatic(3,3);
-		for (size_t i = 0; i < 9; i++)
+#define MapSize 100
+		mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
 		{
-			mMapStatic->at(i).Entity = true;
-			mMapStatic->at(i).Collision = true;
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
 		}
-		mMapStatic->at(0).Entity = false;
-		mMapStatic->at(0).Collision = false;
-		/*for (size_t x = 0; x < mMapStatic->width; x++)
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(0, i).Entity = true;
+			mMapStatic->at(0, i).Collision = true;
+			mMapStatic->at(MapSize - 1, i).Entity = true;
+			mMapStatic->at(MapSize - 1, i).Collision = true;
+			mMapStatic->at(i, 0).Entity = true;
+			mMapStatic->at(i, 0).Collision = true;
+		}
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
+		mPhysicsWorld->SetMapFormwork(mMapStatic);
+		for (size_t x = 0; x < mMapStatic->width; x++)
 		{
 			for (size_t y = 0; y < mMapStatic->height; y++)
 			{
-				if (mMapStatic->at(x, y).Entity) {
-					ShowSquare({ x, y });
+				if (mMapStatic->at(x, y).Entity)
+				{
+					ShowStaticSquare(glm::dvec2{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
 				}
 			}
-		}*/
+		}
 
-		PhysicsBlock::PhysicsShape* PhysicsShape1 = new PhysicsBlock::PhysicsShape({ 0, 0 }, { 2, 2 });
+		PhysicsBlock::PhysicsShape *PhysicsShape1 = new PhysicsBlock::PhysicsShape({0, 0}, {2, 2});
 		for (size_t i = 0; i < (PhysicsShape1->width * PhysicsShape1->height); i++)
 		{
 			PhysicsShape1->at(i).Collision = true;
@@ -55,7 +68,7 @@ namespace GAME {
 		PhysicsShape1->UpdateOutline();
 		PhysicsShape1->CollisionR = 1.414;
 		PhysicsShape1->angle = 3.1415926 / 4;
-		PhysicsBlock::PhysicsShape* PhysicsShape2 = new PhysicsBlock::PhysicsShape({ 1, 2 }, { 2, 2 });
+		PhysicsBlock::PhysicsShape *PhysicsShape2 = new PhysicsBlock::PhysicsShape({1, 2}, {2, 2});
 		for (size_t i = 0; i < (PhysicsShape2->width * PhysicsShape2->height); i++)
 		{
 			PhysicsShape2->at(i).Collision = true;
@@ -65,7 +78,7 @@ namespace GAME {
 		PhysicsShape2->UpdateInfo();
 		PhysicsShape2->UpdateOutline();
 		PhysicsShape2->CollisionR = 1.414;
-		PhysicsShape2->speed = { 0, -1 };
+		PhysicsShape2->speed = {0, -1};
 
 		mPhysicsWorld->AddObject(PhysicsShape1);
 		mPhysicsWorld->AddObject(PhysicsShape2);
@@ -79,7 +92,7 @@ namespace GAME {
 
 	void PhysicsTest::MouseMove(double xpos, double ypos)
 	{
-		//mCamera->onMouseMove(xpos, ypos);
+		// mCamera->onMouseMove(xpos, ypos);
 	}
 
 	void PhysicsTest::MouseRoller(int z)
@@ -105,10 +118,13 @@ namespace GAME {
 			m_position.y -= TOOL::FPStime * 20;
 			break;
 		case GameKeyEnum::ESC:
-			if (Global::ConsoleBool) {
+			if (Global::ConsoleBool)
+			{
 				Global::ConsoleBool = false;
 				InterFace->ConsoleFocusHere = true;
-			}else {
+			}
+			else
+			{
 				InterFace->SetInterFaceBool();
 			}
 			break;
@@ -126,43 +142,54 @@ namespace GAME {
 		mAuxiliaryVision->GetCommandBuffer(wThreadCommandBufferS, Format_i);
 	}
 
-	void PhysicsTest::GameUI() {
+	void PhysicsTest::GameUI()
+	{
+		ImGui::ShowDemoWindow();
+
 		ImGui::Begin(u8"属性 ");
 		ImVec2 window_size = ImGui::GetWindowSize();
-		if (((Global::mWidth - window_size.x) < CursorPosX) && (window_size.y > CursorPosY)) {
+		if (((Global::mWidth - window_size.x) < CursorPosX) && (window_size.y > CursorPosY))
+		{
 			Global::ClickWindow = true;
 		}
 		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
 
-		if (PhysicsSwitch) {
-			if (ImGui::Button("关闭物理")) {
+		if (PhysicsSwitch)
+		{
+			if (ImGui::Button("关闭物理"))
+			{
 				PhysicsSwitch = false;
 			}
 		}
-		else {
-			if (ImGui::Button("开启物理")) {
+		else
+		{
+			if (ImGui::Button("开启物理"))
+			{
 				PhysicsSwitch = true;
 			}
 		}
-		
 
-		if (PhysicsFormworkPtr) {
+		ImGui::Text("世界总动能：%d", mPhysicsWorld->GetWorldEnergy());
+
+		if (PhysicsFormworkPtr)
+		{
 			switch (PhysicsFormworkPtr->PFGetType())
 			{
 			case PhysicsBlock::PhysicsObjectEnum::shape:
 				ImGui::Text(u8"Shape");
-				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsShape*)PhysicsFormworkPtr);
+				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr);
 				break;
 			case PhysicsBlock::PhysicsObjectEnum::particle:
 				ImGui::Text(u8"Particle");
-				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr);
+				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr);
 				break;
 			default:
 				ImGui::Text(u8"nullptr");
 				break;
 			}
 		}
-		else {
+		else
+		{
 			ImGui::Text(u8"World");
 			PhysicsBlock::PhysicsShapeUI(mPhysicsWorld);
 		}
@@ -181,79 +208,94 @@ namespace GAME {
 		huoqdedian.x += mCamera->getCameraPos().x;
 		huoqdedian.y += mCamera->getCameraPos().y;
 
-
-		static glm::dvec2 beang{ 0 }, beang2{ 0 }, Opos{ 0 }, end{ 0 };
+		static glm::dvec2 beang{0}, beang2{0}, Opos{0}, end{0};
 
 		// 不在窗口上才可以操作
-		if (!Global::ClickWindow) {
-			//点击左键
-			static int Z_fangzhifanfuvhufa;// 避免反复触发
+		if (!Global::ClickWindow)
+		{
+			// 点击左键
+			static int Z_fangzhifanfuvhufa; // 避免反复触发
 			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-			if (Leftan == GLFW_PRESS) {
-				if (Z_fangzhifanfuvhufa != Leftan) {
-					beang = { huoqdedian.x, huoqdedian.y };
+			if (Leftan == GLFW_PRESS)
+			{
+				if (Z_fangzhifanfuvhufa != Leftan)
+				{
+					beang = {huoqdedian.x, huoqdedian.y};
 					PhysicsFormworkPtr = mPhysicsWorld->Get(beang);
-					if (PhysicsFormworkPtr) {
+					if (PhysicsFormworkPtr)
+					{
 						Opos = PhysicsFormworkPtr->PFGetPos() - beang;
 					}
-					else {
+					else
+					{
 						glm::vec3 pmPos = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 						pmPos *= -mCamera->getCameraPos().z / pmPos.z;
-						Opos = { mCamera->getCameraPos().x , mCamera->getCameraPos().y };
-						beang = { pmPos.x, pmPos.y };
-						Opos += beang;
+						Opos = {mCamera->getCameraPos().x, mCamera->getCameraPos().y};
+						Opos += glm::dvec2{pmPos.x, pmPos.y};
 					}
-					
 				}
-				else {
-					if (PhysicsFormworkPtr) {
-						beang2 = { huoqdedian.x, huoqdedian.y };
-						((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos = Opos + beang2;
+				else
+				{
+					if (PhysicsFormworkPtr)
+					{
+						beang2 = {huoqdedian.x, huoqdedian.y};
+						((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->pos = Opos + beang2;
 					}
-					else {
+					else
+					{
 						glm::vec3 pmPos = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 						pmPos *= -mCamera->getCameraPos().z / pmPos.z;
 						m_position.x = Opos.x - pmPos.x;
 						m_position.y = Opos.y - pmPos.y;
 					}
 				}
-			}Z_fangzhifanfuvhufa = Leftan;
-			//点击右键
-			static int fangzhifanfuvhufa;// 避免反复触发
+			}
+			Z_fangzhifanfuvhufa = Leftan;
+			// 点击右键
+			static int fangzhifanfuvhufa; // 避免反复触发
 			Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
-			if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan) {
-				end = { huoqdedian.x, huoqdedian.y };
-			}fangzhifanfuvhufa = Leftan;
+			if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan)
+			{
+				end = {huoqdedian.x, huoqdedian.y};
+			}
+			fangzhifanfuvhufa = Leftan;
 		}
-		
 
 		mAuxiliaryVision->Begin();
 
-		if(PhysicsSwitch)mPhysicsWorld->PhysicsEmulator(TOOL::FPStime);
+		if (PhysicsSwitch)
+			mPhysicsWorld->PhysicsEmulator(TOOL::FPStime);
 
-		PhysicsBlock::PhysicsShape* PhysicsShapePtr;
-		PhysicsBlock::PhysicsParticle* PhysicsParticlePtr;
+		mAuxiliaryVision->Line({beang, 0}, {1, 0, 0, 1}, {end, 0}, {1, 0, 0, 1});
+
+		PhysicsBlock::PhysicsShape *PhysicsShapePtr;
+		PhysicsBlock::PhysicsParticle *PhysicsParticlePtr;
+		PhysicsBlock::CollisionInfoD info;
 		for (auto i : *mPhysicsWorld->GetPhysicsFormworkS())
 		{
 			switch (i->PFGetType())
 			{
 			case PhysicsBlock::PhysicsObjectEnum::shape:
-				PhysicsShapePtr = (PhysicsBlock::PhysicsShape*)i;
-				glm::dvec2 POS = PhysicsShapePtr->pos;
+				PhysicsShapePtr = (PhysicsBlock::PhysicsShape *)i;
 				for (size_t x = 0; x < PhysicsShapePtr->width; x++)
 				{
 					for (size_t y = 0; y < PhysicsShapePtr->height; y++)
 					{
-						if (PhysicsShapePtr->at(x, y).Entity) {
-							ShowSquare(SquarePhysics::vec2angle(glm::dvec2{ x, y } - PhysicsShapePtr->CentreMass, PhysicsShapePtr->angle) + POS, PhysicsShapePtr->angle);
+						if (PhysicsShapePtr->at(x, y).Entity)
+						{
+							ShowSquare(SquarePhysics::vec2angle(glm::dvec2{x, y} - PhysicsShapePtr->CentreMass, PhysicsShapePtr->angle) + PhysicsShapePtr->pos, PhysicsShapePtr->angle);
 						}
 					}
 				}
-				
+				/*info = PhysicsShapePtr->PsBresenhamDetection(beang, end);
+				if (info.Collision)
+				{
+					mAuxiliaryVision->Spot({info.pos, 0}, {0, 1, 0, 1});
+				}*/
 				break;
 			case PhysicsBlock::PhysicsObjectEnum::particle:
-				PhysicsParticlePtr = (PhysicsBlock::PhysicsParticle*)i;
-				mAuxiliaryVision->AddSpot({ PhysicsParticlePtr->pos, 0 }, { 1,0,0,1 });
+				PhysicsParticlePtr = (PhysicsBlock::PhysicsParticle *)i;
+				mAuxiliaryVision->Spot({PhysicsParticlePtr->pos, 0}, {1, 0, 0, 1});
 				break;
 
 			default:
@@ -263,10 +305,10 @@ namespace GAME {
 
 		mAuxiliaryVision->End();
 
-		//更新Camera变换矩阵
+		// 更新Camera变换矩阵
 		mCamera->update();
-		VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
-		mVPMatrices->mViewMatrix = mCamera->getViewMatrix();//获取ViewMatrix数据
+		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
+		mVPMatrices->mViewMatrix = mCamera->getViewMatrix(); // 获取ViewMatrix数据
 		mCameraVPMatricesBuffer[mCurrentFrame]->endupdateBufferByMap();
 	}
 
@@ -275,45 +317,50 @@ namespace GAME {
 		mAuxiliaryVision->initCommandBuffer();
 	}
 
-	//游戏停止界面循环
-	void PhysicsTest::GameStopInterfaceLoop(unsigned int mCurrentFrame) {
-		if (InterFace->GetInterfaceIndexes() == InterFaceEnum_::ViceInterface_Enum && Global::MultiplePeopleMode && !Global::ServerOrClient) {
-			
+	// 游戏停止界面循环
+	void PhysicsTest::GameStopInterfaceLoop(unsigned int mCurrentFrame)
+	{
+		if (InterFace->GetInterfaceIndexes() == InterFaceEnum_::ViceInterface_Enum && Global::MultiplePeopleMode && !Global::ServerOrClient)
+		{
 		}
 	}
 
-	//游戏 TCP事件
-	void PhysicsTest::GameTCPLoop() {
+	// 游戏 TCP事件
+	void PhysicsTest::GameTCPLoop()
+	{
 		if (Global::MultiplePeopleMode)
 		{
-			if (Global::ServerOrClient) {
+			if (Global::ServerOrClient)
+			{
 				event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
 			}
-			else {
+			else
+			{
 				event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
 			}
 		}
 	}
 
-
-	void PhysicsTest::ShowStaticSquare(glm::dvec2 pos, double angle) {
-		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({ 0,1 }, angle);
-		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({ 1,0 }, angle);
-		glm::dvec2 jiao3 = PhysicsBlock::vec2angle({ 1,1 }, angle);
-		mAuxiliaryVision->AddStaticLine({ pos,0 }, { pos + jiao1,0 }, { 1,0,0,1 });
-		mAuxiliaryVision->AddStaticLine({ pos,0 }, { pos + jiao2,0 }, { 1,0,0,1 });
-		mAuxiliaryVision->AddStaticLine({ pos + jiao3,0 }, { pos + jiao1,0 }, { 1,0,0,1 });
-		mAuxiliaryVision->AddStaticLine({ pos + jiao3,0 }, { pos + jiao2,0 }, { 1,0,0,1 });
+	void PhysicsTest::ShowStaticSquare(glm::dvec2 pos, double angle, glm::vec4 color)
+	{
+		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, angle);
+		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, angle);
+		glm::dvec2 jiao3 = PhysicsBlock::vec2angle({1, 1}, angle);
+		mAuxiliaryVision->AddStaticLine({pos, 0}, {pos + jiao1, 0}, color);
+		mAuxiliaryVision->AddStaticLine({pos, 0}, {pos + jiao2, 0}, color);
+		mAuxiliaryVision->AddStaticLine({pos + jiao3, 0}, {pos + jiao1, 0}, color);
+		mAuxiliaryVision->AddStaticLine({pos + jiao3, 0}, {pos + jiao2, 0}, color);
 	}
 
-	void PhysicsTest::ShowSquare(glm::dvec2 pos, double angle) {
-		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({ 0,1 }, angle);
-		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({ 1,0 }, angle);
-		glm::dvec2 jiao3 = PhysicsBlock::vec2angle({ 1,1 }, angle);
-		mAuxiliaryVision->AddLine({ pos,0 }, { pos + jiao1,0 }, { 1,0,0,1 });
-		mAuxiliaryVision->AddLine({ pos,0 }, { pos + jiao2,0 }, { 1,0,0,1 });
-		mAuxiliaryVision->AddLine({ pos + jiao3,0 }, { pos + jiao1,0 }, { 1,0,0,1 });
-		mAuxiliaryVision->AddLine({ pos + jiao3,0 }, { pos + jiao2,0 }, { 1,0,0,1 });
+	void PhysicsTest::ShowSquare(glm::dvec2 pos, double angle, glm::vec4 color)
+	{
+		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, angle);
+		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, angle);
+		glm::dvec2 jiao3 = PhysicsBlock::vec2angle({1, 1}, angle);
+		mAuxiliaryVision->Line({pos, 0}, color, {pos + jiao1, 0}, color);
+		mAuxiliaryVision->Line({pos, 0}, color, {pos + jiao2, 0}, color);
+		mAuxiliaryVision->Line({pos + jiao3, 0}, color, {pos + jiao1, 0}, color);
+		mAuxiliaryVision->Line({pos + jiao3, 0}, color, {pos + jiao2, 0}, color);
 	}
 
 }

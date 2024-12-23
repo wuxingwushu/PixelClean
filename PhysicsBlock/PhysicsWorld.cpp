@@ -270,6 +270,71 @@ namespace PhysicsBlock
 #endif
     }
 
+    void PhysicsWorld::EnergyConservation(PhysicsShape *a, glm::dvec2 CollisionDrop, double Vertical)
+    {
+        glm::dvec2 V = vec2angle({Modulus(a->speed), 0}, Vertical);
+        DecompositionForce dfB = CalculateDecompositionForce(a->pos - CollisionDrop, V);
+        a->speed = dfB.Parallel;
+        a->angleSpeed += sqrt(ModulusLength(dfB.Vartical) * a->mass / a->MomentInertia);
+    }
+
+    void PhysicsWorld::PositionRestrain(PhysicsShape *a, double time)
+    {
+        glm::dvec2 OutlineDrop, Qpos = a->pos;
+        a->PhysicsEmulator(time, GravityAcceleration);
+        CollisionInfoD info;
+        for (size_t k = 0; k < a->OutlineSize; ++k)
+        {
+            OutlineDrop = vec2angle(a->OutlineSet[k] - a->CentreMass, a->angle);
+            info = wMapFormwork->FMBresenhamDetection(Qpos + OutlineDrop, a->pos + OutlineDrop);
+            if (info.Collision)
+            {
+                if (info.Direction & 0x1)
+                { // 上下边
+                    a->pos.y += info.pos.y - (OutlineDrop.y + a->pos.y);
+                    a->speed.y = 0;
+                }
+                else
+                { // 左右边
+                    a->pos.x += info.pos.x - (OutlineDrop.x + a->pos.x);
+                    a->speed.x = 0;
+                }
+            }
+        }
+    }
+
+    void PhysicsWorld::PositionRestrain(PhysicsParticle *a, double time)
+    {
+        glm::dvec2 Qpos = a->pos;
+        a->PhysicsEmulator(time, GravityAcceleration);
+        CollisionInfoD info = wMapFormwork->FMBresenhamDetection(Qpos, a->pos);
+        if (info.Collision)
+        {
+            Qpos = info.pos - a->pos;
+            if (info.Direction & 0x1)
+            { // 上下边
+                Qpos.x = -Qpos.x;
+                //a->speed.y = -a->speed.y;
+                a->speed.y = 0;
+            }
+            else
+            { // 左右边
+                Qpos.y = -Qpos.y;
+                //a->speed.x = -a->speed.x;
+                a->speed.x = 0;
+            }
+            a->pos = info.pos + Qpos;
+        }
+    }
+
+    void PositionRestrain(PhysicsParticle *a, PhysicsShape *b)
+    {
+    }
+
+    void PositionRestrain(PhysicsShape *a, PhysicsShape *b)
+    {
+    }
+
     void PhysicsWorld::PhysicsEmulator(double time)
     {
         // 根据 Y 轴重力加速度 正负进行排序
@@ -332,9 +397,21 @@ namespace PhysicsBlock
             }
         }
 
+        // 和地图做碰撞检测(时间运动（速度，角速度）， 位置约束)
         for (auto i : PhysicsFormworkS)
         {
-            i->PhysicsEmulator(time, GravityAcceleration);
+            switch (i->PFGetType())
+            {
+            case PhysicsObjectEnum::shape:
+                PositionRestrain((PhysicsShape *)i, time);
+                break;
+            case PhysicsObjectEnum::particle:
+                PositionRestrain((PhysicsParticle *)i, time);
+                break;
+
+            default:
+                break;
+            }
         }
     }
 
@@ -383,18 +460,19 @@ namespace PhysicsBlock
         return nullptr;
     }
 
-    double PhysicsWorld::GetWorldEnergy() {
+    double PhysicsWorld::GetWorldEnergy()
+    {
         double Energy = 0;
         for (auto i : PhysicsFormworkS)
         {
             switch (i->PFGetType())
             {
             case PhysicsObjectEnum::shape:
-                Energy += ((PhysicsShape*)i)->mass * ModulusLength(((PhysicsShape*)i)->speed);
-                Energy += ((PhysicsShape*)i)->MomentInertia * (((PhysicsShape*)i)->angleSpeed * ((PhysicsShape*)i)->angleSpeed);
-                    break;
+                Energy += ((PhysicsShape *)i)->mass * ModulusLength(((PhysicsShape *)i)->speed);
+                Energy += ((PhysicsShape *)i)->MomentInertia * (((PhysicsShape *)i)->angleSpeed * ((PhysicsShape *)i)->angleSpeed);
+                break;
             case PhysicsObjectEnum::particle:
-                Energy += ((PhysicsParticle*)i)->mass * ModulusLength(((PhysicsParticle*)i)->speed);
+                Energy += ((PhysicsParticle *)i)->mass * ModulusLength(((PhysicsParticle *)i)->speed);
                 break;
 
             default:
@@ -403,5 +481,4 @@ namespace PhysicsBlock
         }
         return Energy / 2;
     }
-
 }

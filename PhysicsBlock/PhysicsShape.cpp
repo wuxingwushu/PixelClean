@@ -105,12 +105,18 @@ namespace PhysicsBlock
                 }
             }
         }
+        invMomentInertia = 1.0 / MomentInertia;
     }
 
     void PhysicsShape::ApproachDrop(glm::dvec2 drop){
         glm::dvec2 OutlineDrop = vec2angle({CollisionR, 0}, EdgeVecToCosAngleFloat(drop - pos));
         CollisionInfoD info = BresenhamDetection(CentreMass + OutlineDrop, CentreMass - OutlineDrop);
         pos += drop - (info.pos + pos);
+    }
+
+    CollisionInfoD PhysicsShape::RayCollide(glm::dvec2 Pos, double Angle){
+        glm::dvec2 drop = vec2angle({CollisionR, 0}, Angle);
+        return PsBresenhamDetection(Pos - drop, Pos + drop);
     }
 
     CollisionInfoI PhysicsShape::PsBresenhamDetection(glm::ivec2 start, glm::ivec2 end){
@@ -122,9 +128,9 @@ namespace PhysicsBlock
         start -= pos;
         end -= pos;
 
-        glm::dvec2 Angle = AngleFloatToAngleVec(-angle);
-        start = vec2angle(start, Angle);
-        end = vec2angle(end, Angle);
+        AngleMat Mat(angle);
+        start = Mat.Rotary(start);
+        end = Mat.Rotary(end);
 
         // 裁剪线段 让线段都在矩形内
         PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start + CentreMass, end + CentreMass, width - 0.01, height - 0.01);
@@ -135,21 +141,11 @@ namespace PhysicsBlock
             if (info.Collision)
             {
                 // 返回物理坐标系
-                Angle.y = -Angle.y;
-                info.pos = vec2angle(info.pos - CentreMass, Angle) + pos;
+                info.pos = Mat.Anticlockwise(info.pos - CentreMass) + pos;
                 return info;
             }
         }
         return {false};
-    }
-
-    void PhysicsShape::PhysicsEmulator(double time, glm::dvec2 Ga)
-    {
-        PhysicsParticle::PhysicsEmulator(time, Ga);           // 位置的物理演算
-        double AddAngleSpeed = torque / MomentInertia * time; // 角速度的增加量
-        angle += (angleSpeed + (AddAngleSpeed / 2)) * time;    // 角度
-        angleSpeed += AddAngleSpeed;                          // 角速度
-        torque = 0;                                           // 清空扭矩
     }
 
     /*

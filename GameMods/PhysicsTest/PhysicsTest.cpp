@@ -169,7 +169,7 @@ namespace GAME
 			}
 		}
 
-		ImGui::Text("世界总动能：%d", mPhysicsWorld->GetWorldEnergy());
+		ImGui::Text("世界总动能：%f", mPhysicsWorld->GetWorldEnergy());
 
 		if (PhysicsFormworkPtr)
 		{

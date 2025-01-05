@@ -1,6 +1,7 @@
 #define _USE_MATH_DEFINES // 这个要放在第一行
 #include <cmath>
 #include "BaseCalculate.hpp"
+#include <utility>
 
 namespace PhysicsBlock
 {
@@ -69,6 +70,7 @@ namespace PhysicsBlock
 	// vec2旋转
 	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle)
 	{
+		// 实现旋转矩阵效果
 		return glm::dvec2((pos.x * angle.x) - (pos.y * angle.y), (pos.x * angle.y) + (pos.y * angle.x));
 	}
 
@@ -393,4 +395,43 @@ namespace PhysicsBlock
 		return Shortes + Intersect;
 	}
 
+
+
+	inline double Dot(const glm::dvec2& a, const glm::dvec2& b)
+	{
+		return a.x * b.x + a.y * b.y;
+	}
+	/**
+	 * @brief 投影
+	 * @param a 
+	 * @param b 
+	 * @return  */
+	inline double Cross(const glm::dvec2& a, const glm::dvec2& b)
+	{
+		return a.x * b.y - a.y * b.x;
+	}
+
+	// 顺时针 转 90度， s 缩放比
+	inline glm::dvec2 Cross(const glm::dvec2& a, double s)
+	{
+		return glm::dvec2(s * a.y, -s * a.x);
+	}
+
+	// 逆时针 转 90度， s 缩放比
+	inline glm::dvec2 Cross(double s, const glm::dvec2& a)
+	{
+		return glm::dvec2(-s * a.y, s * a.x);
+	}
+
+	/**
+	 * @brief 返回合理范围内的数
+	 * @param a 值
+	 * @param low 最低
+	 * @param high 最高
+	 * @return 合理值
+	 * @note a 不合理就返回和他最近的合理值 */
+	inline double Clamp(double a, double low, double high)
+	{
+		return std::max(low, std::min(a, high));
+	}
 }

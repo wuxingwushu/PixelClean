@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include "BaseStruct.hpp"
+#include <cmath>
 
 // 移位 > 赋值 > 大小比较 > 加法 > 减法 > 乘法 > 取模 > 除法。
 
@@ -69,6 +70,35 @@ namespace PhysicsBlock
 	 * @param   angle glm::dvec2 格式 X,Y 存储计算好了的 cos,sin 結果
 	 * @return  返回旋转結果*/
 	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle);
+
+	struct AngleMat
+	{
+		double Cos;
+		double Sin;
+
+		AngleMat(double angle){
+			Cos = cos(angle);
+			Sin = sin(angle);
+		}
+
+		/**
+		 * @brief 旋转 angle 度
+		 * @param pos 位置
+		 * @return 旋转结果
+		 * @note 绕 （0，0） 旋转 */
+		glm::dvec2 Rotary(glm::dvec2 pos){
+			return glm::dvec2((pos.x * Cos) - (pos.y * Sin), (pos.x * Sin) + (pos.y * Cos));
+		}
+
+		/**
+		 * @brief 旋转 -angle 度
+		 * @param pos 位置
+		 * @return 旋转结果
+		 * @note 绕 （0，0） 旋转 */
+		glm::dvec2 Anticlockwise(glm::dvec2 pos){
+			return glm::dvec2((pos.x * Cos) + (pos.y * Sin), -(pos.x * Sin) + (pos.y * Cos));
+		}
+	};
 
 	/**
 	 * @brief   dvec2 基於某個坐标的旋转
@@ -202,4 +232,27 @@ namespace PhysicsBlock
 	 * @param drop 点位置
 	 * @return 点到线段的垂直交点 */
 	glm::dvec2 DropUptoLineShortesIntersect(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop);
+
+	inline double Dot(const glm::dvec2& a, const glm::dvec2& b);
+	/**
+	 * @brief 投影
+	 * @param a 
+	 * @param b 
+	 * @return  */
+	inline double Cross(const glm::dvec2& a, const glm::dvec2& b);
+
+	// 顺时针 转 90度， s 缩放比
+	inline glm::dvec2 Cross(const glm::dvec2& a, double s);
+
+	// 逆时针 转 90度， s 缩放比
+	inline glm::dvec2 Cross(double s, const glm::dvec2& a);
+
+	/**
+	 * @brief 返回合理范围内的数
+	 * @param a 值
+	 * @param low 最低
+	 * @param high 最高
+	 * @return 合理值
+	 * @note a 不合理就返回和他最近的合理值 */
+	inline double Clamp(double a, double low, double high);
 }

@@ -14,7 +14,6 @@ namespace PhysicsBlock
 		ImGui::InputDouble(("摩擦因数" + name).c_str(), &Grid->FrictionFactor);
 		if (Grid->Entity) {
 			ImGui::SliderScalar(("血量" + name).c_str(), ImGuiDataType_U8, &Grid->Healthpoint, &min, &max);
-			//ImGui::DragInt("血量", (int*) & Grid->Healthpoint, 0, 255);
 			ImGui::InputDouble(("质量" + name).c_str(), &Grid->mass);
 		}
 		else {
@@ -30,7 +29,6 @@ namespace PhysicsBlock
 		val = Grid->Event;
 		ImGui::Checkbox(("碰撞事件" + name).c_str(), &val);
 		Grid->Event = val;
-
 	}
 
 	void PhysicsShapeUI(PhysicsShape* Object) {
@@ -47,9 +45,9 @@ namespace PhysicsBlock
 		ImGui::InputDouble("扭矩", &Object->torque);
 		Dvec2ImGui("几何中心", &Object->CentreShape);
 
-		for (size_t x = 0; x < Object->width; x++)
+		for (size_t x = 0; x < Object->width; ++x)
 		{
-			for (size_t y = 0; y < Object->height; y++)
+			for (size_t y = 0; y < Object->height; ++y)
 			{
 				GridImGui("(" + std::to_string(x) + "," + std::to_string(y) + ")", &Object->at(x, y));
 			}

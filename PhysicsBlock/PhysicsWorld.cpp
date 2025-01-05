@@ -48,17 +48,18 @@ namespace PhysicsBlock
         if (DropSize > 0)
         {
             ForceCollisionDrop /= DropSize;
-            a->AddForce(ForceCollisionDrop, b->force);
-            /*double angle = abs(EdgeVecToCosAngleFloat(ForceCollisionDrop - b->pos) - EdgeVecToCosAngleFloat(a->speed - b->speed));
-            CollisionInfoD info;
-            if (angle < 1.57) {
-                info = a->BresenhamDetection(b->pos, ForceCollisionDrop);
-                EnergyConservation(a, b, ForceCollisionDrop, a->angle + (info.Direction * 1.57));
+            // 先简单考虑，这个点就代表所有点的效果（其他点可能算出来的支撑或施压）
+            CollisionInfoD InfoD = a->RayCollide(ForceCollisionDrop, EdgeVecToCosAngleFloat(a->pos - ForceCollisionDrop));
+            double Angle = (InfoD.Direction * 3.14159265359 / 2) + a->angle;
+            if(sin(Angle) > 0){
+                CollideGroupS[a].Exert.push_back({b, InfoD.pos, Angle, 0});
+                CollideGroupS[b].Strong.push_back({a, InfoD.pos, -Angle, 0});
+            }else{
+                InfoD = b->RayCollide(ForceCollisionDrop, EdgeVecToCosAngleFloat(b->pos - ForceCollisionDrop));
+                Angle = (InfoD.Direction * 3.14159265359 / 2) + b->angle;
+                CollideGroupS[b].Exert.push_back({a, InfoD.pos, Angle, 0});
+                CollideGroupS[a].Strong.push_back({b, InfoD.pos, -Angle, 0});
             }
-            else {
-                info = b->BresenhamDetection(a->pos, ForceCollisionDrop);
-                EnergyConservation(b, a, ForceCollisionDrop, b->angle + (info.Direction * 1.57));
-            }*/
         }
     }
 
@@ -66,15 +67,16 @@ namespace PhysicsBlock
     {
         if (b->DropCollision(a->pos).Collision)
         {
-            a->AddForce(b->force);
-        }
-    }
-
-    void PhysicsWorld::PhysicsProcess(PhysicsShape *a, PhysicsParticle *b)
-    {
-        if (a->DropCollision(b->pos).Collision)
-        {
-            a->AddForce(b->pos, b->force);
+            // 先简单考虑，这个点就代表所有点的效果（其他点可能算出来的支撑或施压）
+            CollisionInfoD InfoD = b->RayCollide(a->pos, EdgeVecToCosAngleFloat(a->speed));
+            double Angle = (InfoD.Direction * 3.14159265359 / 2) + b->angle;
+            if(sin(Angle) > 0){
+                CollideGroupS[a].Exert.push_back({b, InfoD.pos, Angle, 0});
+                CollideGroupS[b].Strong.push_back({a, InfoD.pos, -Angle, 0});
+            }else{
+                CollideGroupS[b].Exert.push_back({a, InfoD.pos, -Angle, 0});
+                CollideGroupS[a].Strong.push_back({b, InfoD.pos, Angle, 0});
+            }
         }
     }
 
@@ -281,7 +283,6 @@ namespace PhysicsBlock
     void PhysicsWorld::PositionRestrain(PhysicsShape *a, double time)
     {
         glm::dvec2 OutlineDrop, Qpos = a->pos;
-        a->PhysicsEmulator(time, GravityAcceleration);
         CollisionInfoD info;
         for (size_t k = 0; k < a->OutlineSize; ++k)
         {
@@ -306,7 +307,6 @@ namespace PhysicsBlock
     void PhysicsWorld::PositionRestrain(PhysicsParticle *a, double time)
     {
         glm::dvec2 Qpos = a->pos;
-        a->PhysicsEmulator(time, GravityAcceleration);
         CollisionInfoD info = wMapFormwork->FMBresenhamDetection(Qpos, a->pos);
         if (info.Collision)
         {
@@ -384,8 +384,8 @@ namespace PhysicsBlock
                         }
                         if (JS->PFGetType() == PhysicsObjectEnum::shape)
                         {
-                            if (DX->PFGetType() == PhysicsObjectEnum::particle)
-                                PhysicsProcess((PhysicsShape *)JS, (PhysicsParticle *)DX);
+                            //if (DX->PFGetType() == PhysicsObjectEnum::particle)
+                                //PhysicsProcess((PhysicsShape *)JS, (PhysicsParticle *)DX);
                         }
                         else if (JS->PFGetType() == PhysicsObjectEnum::particle)
                         {

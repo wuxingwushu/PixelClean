@@ -3,10 +3,24 @@
 #include "MapFormwork.hpp"     // 地图样板
 #include "PhysicsShape.hpp"    // 有形状物体
 #include "PhysicsParticle.hpp" // 物理粒子
-
+#include <unordered_map>
 
 namespace PhysicsBlock
 {
+
+    struct CollideUnit
+    {
+        PhysicsFormwork *object; // 对象
+        glm::dvec2 drop;         // 受力点
+        double angle;            // 将他排斥的推力方向
+        double pressure;         // 压力大小
+    };
+
+    struct CollideGroup
+    {
+        std::vector<CollideUnit> Strong; // 支撑对象
+        std::vector<CollideUnit> Exert;  // 施压对象
+    };
 
     /**
      * @brief 物理世界
@@ -23,6 +37,8 @@ namespace PhysicsBlock
 
         std::vector<PhysicsFormwork *> PhysicsFormworkS;
 
+        std::unordered_map<PhysicsFormwork *, CollideGroup> CollideGroupS;// 碰撞队
+
         /*************重力**************/
         /**
          * @brief 两个形状物理碰撞处理
@@ -31,7 +47,6 @@ namespace PhysicsBlock
          * @note 被压的：重力方向在下端的那个物体 */
         void PhysicsProcess(PhysicsShape *a, PhysicsShape *b);
         void PhysicsProcess(PhysicsParticle *a, PhysicsShape *b);
-        void PhysicsProcess(PhysicsShape *a, PhysicsParticle *b);
 
         /*************动能**************/
         /**
@@ -39,7 +54,7 @@ namespace PhysicsBlock
          * @param a 物体A
          * @param b 物体B
          * @warning 理想碰撞，力都转换为速度，没有转换为角速度(可以理解为球体相撞) */
-        void EnergyConservation(PhysicsParticle* a, PhysicsParticle* b);
+        void EnergyConservation(PhysicsParticle *a, PhysicsParticle *b);
         /**
          * @brief 形状碰撞动能守恒尝试
          * @param a 被撞物体A
@@ -47,22 +62,23 @@ namespace PhysicsBlock
          * @param CollisionDrop 碰撞点
          * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内)
          * @warning 碰撞点在两质心线段上的，（动能 和 角动能 才守恒） */
-        void EnergyConservation(PhysicsShape* a, PhysicsShape* b, glm::dvec2 CollisionDrop, double Vertical);
+        void EnergyConservation(PhysicsShape *a, PhysicsShape *b, glm::dvec2 CollisionDrop, double Vertical);
         /**
          * @brief 形状碰撞动能守恒尝试
          * @param a 被撞物体A
          * @param CollisionDrop 碰撞点
          * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内)
          * @warning 碰撞点在两质心线段上的，（动能 和 角动能 才守恒） */
-        void EnergyConservation(PhysicsShape* a, glm::dvec2 CollisionDrop, double Vertical);
+        void EnergyConservation(PhysicsShape *a, glm::dvec2 CollisionDrop, double Vertical);
 
         /*************位置约束**************/
         // 和地图(时间处理（位置，角度碰）， 位置约束)
-        void PositionRestrain(PhysicsShape* a, double time);
-        void PositionRestrain(PhysicsParticle* a, double time);
+        void PositionRestrain(PhysicsShape *a, double time);
+        void PositionRestrain(PhysicsParticle *a, double time);
         // 相互位置约束
-        void PositionRestrain(PhysicsParticle* a, PhysicsShape* b);
-        void PositionRestrain(PhysicsShape* a, PhysicsShape* b);
+        void PositionRestrain(PhysicsParticle *a, PhysicsShape *b);
+        void PositionRestrain(PhysicsShape *a, PhysicsShape *b);
+
     public:
         /**
          * @brief 构建函数
@@ -81,7 +97,7 @@ namespace PhysicsBlock
          * @param pos 位置
          * @return 对象指针
          * @retval nullptr 没有对象 */
-        PhysicsFormwork* Get(glm::dvec2 pos);
+        PhysicsFormwork *Get(glm::dvec2 pos);
 
         /**
          * @brief 设置地图
@@ -98,11 +114,10 @@ namespace PhysicsBlock
          * @return 能量 */
         double GetWorldEnergy();
 
-        std::vector<PhysicsFormwork*>* GetPhysicsFormworkS() {
+        std::vector<PhysicsFormwork *> *GetPhysicsFormworkS()
+        {
             return &PhysicsFormworkS;
         }
-
-
     };
 
 }

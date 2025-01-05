@@ -12,13 +12,14 @@ namespace PhysicsBlock
     class PhysicsShape : public PhysicsParticle, public BaseOutline
     {
     public:
-        double MomentInertia = 1;  // 转动惯量
-        double angle = 0;          // 角度
-        double angleSpeed = 0;     // 角速度
-        glm::dvec2 CentreMass{0};  // 质心
-        glm::dvec2 CentreShape{0}; // 几何中心
-        double torque = 0;         // 扭矩
-        double CollisionR = 1;         // 碰撞半径
+        double MomentInertia = 1;    // 转动惯量
+        double invMomentInertia = 1; // 转动惯量倒数
+        double angle = 0;            // 角度
+        double angleSpeed = 0;       // 角速度
+        glm::dvec2 CentreMass{0};    // 质心
+        glm::dvec2 CentreShape{0};   // 几何中心
+        double torque = 0;           // 扭矩
+        double CollisionR = 1;       // 碰撞半径
     public:
         /**
          * @brief 构造函数
@@ -65,6 +66,13 @@ namespace PhysicsBlock
         /*=========BaseGrid=========*/
 
         /**
+         * @brief 射线碰撞检测
+         * @param Pos 射线经过的点
+         * @param Angle 射线角度
+         * @return 返回碰撞点（精准）*/
+        CollisionInfoD RayCollide(glm::dvec2 Pos, double Angle);
+
+        /**
          * @brief 线段侦测(int)
          * @param start 起始位置
          * @param end 结束位置
@@ -84,15 +92,9 @@ namespace PhysicsBlock
          * @brief 物理演戏
          * @param time 时间差
          * @param Ga 重力加速度 */
-        //virtual glm::dvec2 PhysicsPlayact(double time, glm::dvec2 Ga);
+        // virtual glm::dvec2 PhysicsPlayact(double time, glm::dvec2 Ga);
 
         /*=========PhysicsFormwork=========*/
-
-        /**
-         * @brief 物理仿真
-         * @param time 时间差
-         * @param Ga 重力加速度 */
-        virtual void PhysicsEmulator(double time, glm::dvec2 Ga);
 
         /**
          * @brief 获取对象类型
@@ -106,6 +108,22 @@ namespace PhysicsBlock
          * @brief 获取位置
          * @return 位置 */
         virtual glm::dvec2 PFGetPos() { return pos; }
+        /**
+         * @brief 获取质量倒数
+         * @return 质量倒数 */
+        virtual double PFGetInvMass(){ return invMass; }
+        /**
+         * @brief 获取转动惯量倒数
+         * @return 转动惯量倒数 */
+        virtual double PFGetInvI(){ return invMomentInertia; }
+        /**
+         * @brief 速度
+         * @return 位置 */
+        virtual glm::dvec2& PFSpeed() { return speed; };
+        /**
+         * @brief 角速度
+         * @return 质量倒数 */
+        virtual double& PFAngleSpeed() { return angleSpeed; };
     };
 
 }

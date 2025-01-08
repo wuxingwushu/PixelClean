@@ -397,7 +397,7 @@ namespace PhysicsBlock
 
 
 
-	inline double Dot(const glm::dvec2& a, const glm::dvec2& b)
+	double Dot(const glm::dvec2& a, const glm::dvec2& b)
 	{
 		return a.x * b.x + a.y * b.y;
 	}
@@ -406,19 +406,19 @@ namespace PhysicsBlock
 	 * @param a 
 	 * @param b 
 	 * @return  */
-	inline double Cross(const glm::dvec2& a, const glm::dvec2& b)
+	double Cross(const glm::dvec2& a, const glm::dvec2& b)
 	{
 		return a.x * b.y - a.y * b.x;
 	}
 
 	// 顺时针 转 90度， s 缩放比
-	inline glm::dvec2 Cross(const glm::dvec2& a, double s)
+	glm::dvec2 Cross(const glm::dvec2& a, double s)
 	{
 		return glm::dvec2(s * a.y, -s * a.x);
 	}
 
 	// 逆时针 转 90度， s 缩放比
-	inline glm::dvec2 Cross(double s, const glm::dvec2& a)
+	glm::dvec2 Cross(double s, const glm::dvec2& a)
 	{
 		return glm::dvec2(-s * a.y, s * a.x);
 	}
@@ -430,7 +430,7 @@ namespace PhysicsBlock
 	 * @param high 最高
 	 * @return 合理值
 	 * @note a 不合理就返回和他最近的合理值 */
-	inline double Clamp(double a, double low, double high)
+	double Clamp(double a, double low, double high)
 	{
 		return std::max(low, std::min(a, high));
 	}

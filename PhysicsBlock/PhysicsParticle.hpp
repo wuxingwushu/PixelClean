@@ -11,6 +11,7 @@ namespace PhysicsBlock
     class PhysicsParticle : public PhysicsFormwork
     {
     public:
+        glm::dvec2 OldPos{0}; // 上一时刻的位置
         /**
          * @brief 位置
          * @warning 在形状当中是指质心的位置 */
@@ -30,13 +31,19 @@ namespace PhysicsBlock
          * @param Force 力矩 */
         virtual void AddForce(glm::dvec2 Force);
 
+        /*=========PhysicsFormwork=========*/
+
         /**
-         * @brief 物理演戏
+         * @brief 物理外部施加能量对速度的改变
          * @param time 时间差
          * @param Ga 重力加速度 */
-        virtual PhysicsState PhysicsPlayact(double time, glm::dvec2 Ga);
+        virtual void PhysicsSpeed(double time, glm::dvec2 Ga);
 
-        /*=========PhysicsFormwork=========*/
+        /**
+         * @brief 物理速度对物体的改变
+         * @param time 时间差
+         * @param Ga 重力加速度 */
+        virtual void PhysicsPos(double time, glm::dvec2 Ga);
 
         /**
          * @brief 获取对象类型

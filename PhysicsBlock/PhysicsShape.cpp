@@ -148,10 +148,16 @@ namespace PhysicsBlock
         return {false};
     }
 
-    /*
-    glm::dvec2 PhysicsShape::PhysicsPlayact(double time, glm::dvec2 Ga)
+    void PhysicsShape::PhysicsSpeed(double time, glm::dvec2 Ga)
     {
-        return PhysicsParticle::PhysicsPlayact(time, Ga); // 位置的物理演戏
-    }*/
+        PhysicsParticle::PhysicsSpeed(time, Ga);
+        angleSpeed += time * invMomentInertia * torque;
+    }
+
+    void PhysicsShape::PhysicsPos(double time, glm::dvec2 Ga)
+    {
+        PhysicsParticle::PhysicsPos(time, Ga);
+        angle += time * angleSpeed;
+    }
 
 }

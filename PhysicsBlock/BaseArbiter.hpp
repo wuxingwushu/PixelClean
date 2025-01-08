@@ -12,12 +12,13 @@ namespace PhysicsBlock
         glm::dvec2 position; // 碰撞点位置
         glm::dvec2 normal;   // 最佳分离轴 的 法向量
         double separation;   // 最小分离距离
+        unsigned char w_side = 0;  // 小矩形那个边的分离（判别是否是一种力用的）
 
         // ApplyImpulse
         glm::dvec2 r1; // A物体质心 指向 碰撞点 的向量
         glm::dvec2 r2; // B物体质心 指向 碰撞点 的向量
-        double Pn;     // 位移影响量大小
-        double Pt;     // 旋转影响量大小
+        double Pn = 0; // 位移影响量大小
+        double Pt = 0; // 旋转影响量大小
         // double Pnb; // accumulated normal impulse for position bias
 
         // PreStep
@@ -28,7 +29,7 @@ namespace PhysicsBlock
 
     struct ArbiterKey
     {
-        ArbiterKey(PhysicsFormwork *Object1, PhysicsFormwork *Object2)
+        ArbiterKey(void*Object1, void*Object2)
         {
             if (Object1 < Object2)
             {
@@ -42,39 +43,40 @@ namespace PhysicsBlock
             }
         }
         // 碰撞的两个对象
-        PhysicsFormwork *object1;
-        PhysicsFormwork *object2;
+        void*object1;
+        void*object2;
     };
 
     inline bool operator<(const ArbiterKey &a1, const ArbiterKey &a2)
     {
-    	if (a1.object1 < a2.object1)
-    		return true;
+        if (a1.object1 < a2.object1)
+            return true;
 
-    	if (a1.object1 == a2.object1 && a1.object2 < a2.object2)
-    		return true;
+        if (a1.object1 == a2.object1 && a1.object2 < a2.object2)
+            return true;
 
-    	return false;
+        return false;
     }
 
-
-    class BaseArbiter: public ArbiterKey
-    { 
+    class BaseArbiter
+    {
     public:
         Contact contacts[2]; // 碰撞点集合
         int numContacts;     // 碰撞点数量
         double friction;     // 两个物体间的摩擦系数
+
+        ArbiterKey key;
+
     public:
-        BaseArbiter(PhysicsFormwork *Object1, PhysicsFormwork *Object2):
-            ArbiterKey(Object1, Object2){};
-        ~BaseArbiter(){};
+        BaseArbiter(void *Object1, void*Object2) : key(Object1, Object2) {};
+        ~BaseArbiter() {};
 
         // 更新碰撞信息
         virtual void Update(Contact *NewContacts, int numNewContacts) = 0;
         // 预处理
-        virtual void PreStep(float inv_dt) = 0;
+        virtual void PreStep(double inv_dt) = 0;
         // 迭代出结果
         virtual void ApplyImpulse() = 0;
     };
-    
+
 }

@@ -117,10 +117,4 @@ namespace PhysicsBlock
         particle, // 点
     };
 
-    struct PhysicsState
-    {
-        glm::dvec2 pos;
-        glm::dvec2 speed;
-    };
-
 }

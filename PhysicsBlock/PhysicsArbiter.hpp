@@ -1,5 +1,8 @@
 #pragma once
 #include "BaseArbiter.hpp"
+#include "MapFormwork.hpp"
+#include "PhysicsParticle.hpp"
+#include "PhysicsShape.hpp"
 
 namespace PhysicsBlock
 {
@@ -8,8 +11,10 @@ namespace PhysicsBlock
      * @brief 动态形状，动态形状，碰撞解析 */
     class PhysicsArbiterSS : public BaseArbiter
     {
+        PhysicsShape *object1;
+        PhysicsShape *object2;
     public:
-        PhysicsArbiterSS(PhysicsFormwork *Object1, PhysicsFormwork *Object2);
+        PhysicsArbiterSS(PhysicsShape *Object1, PhysicsShape *Object2);
         ~PhysicsArbiterSS(){};
 
         // 更新碰撞信息
@@ -26,8 +31,10 @@ namespace PhysicsBlock
     {
         // object1  动态形状
         // object2  粒子形状
+        PhysicsShape *object1;
+        PhysicsParticle *object2;
     public:
-        PhysicsArbiterSP(PhysicsFormwork *Object1, PhysicsFormwork *Object2);
+        PhysicsArbiterSP(PhysicsShape *Object1, PhysicsParticle *Object2);
         ~PhysicsArbiterSP(){};
 
         // 更新碰撞信息
@@ -43,8 +50,10 @@ namespace PhysicsBlock
     class PhysicsArbiterS : public BaseArbiter
     {
         // object1  动态形状
+        PhysicsShape *object1;
+        MapFormwork *object2;
     public:
-        PhysicsArbiterS(PhysicsFormwork *Object1, PhysicsFormwork *Object2);
+        PhysicsArbiterS(PhysicsShape *Object1, MapFormwork *Object2);
         ~PhysicsArbiterS(){};
 
         // 更新碰撞信息
@@ -60,8 +69,10 @@ namespace PhysicsBlock
     class PhysicsArbiterP : public BaseArbiter
     {
         // object1  粒子形状
+        PhysicsParticle *object1;
+        MapFormwork *object2;
     public:
-        PhysicsArbiterP(PhysicsFormwork *Object1, PhysicsFormwork *Object2);
+        PhysicsArbiterP(PhysicsParticle *Object1, MapFormwork *Object2);
         ~PhysicsArbiterP(){};
 
         // 更新碰撞信息

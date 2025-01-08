@@ -86,15 +86,19 @@ namespace PhysicsBlock
          * @return 碰撞结果信息(准确位置) */
         CollisionInfoD PsBresenhamDetection(glm::dvec2 start, glm::dvec2 end);
 
-        /*=========PhysicsParticle=========*/
+        /*=========PhysicsFormwork=========*/
 
         /**
-         * @brief 物理演戏
+         * @brief 物理外部施加能量对速度的改变
          * @param time 时间差
          * @param Ga 重力加速度 */
-        // virtual glm::dvec2 PhysicsPlayact(double time, glm::dvec2 Ga);
+        virtual void PhysicsSpeed(double time, glm::dvec2 Ga);
 
-        /*=========PhysicsFormwork=========*/
+        /**
+         * @brief 物理速度对物体的改变
+         * @param time 时间差
+         * @param Ga 重力加速度 */
+        virtual void PhysicsPos(double time, glm::dvec2 Ga);
 
         /**
          * @brief 获取对象类型

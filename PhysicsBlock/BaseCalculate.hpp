@@ -233,19 +233,19 @@ namespace PhysicsBlock
 	 * @return 点到线段的垂直交点 */
 	glm::dvec2 DropUptoLineShortesIntersect(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop);
 
-	inline double Dot(const glm::dvec2& a, const glm::dvec2& b);
+	double Dot(const glm::dvec2& a, const glm::dvec2& b);
 	/**
 	 * @brief 投影
 	 * @param a 
 	 * @param b 
 	 * @return  */
-	inline double Cross(const glm::dvec2& a, const glm::dvec2& b);
+	double Cross(const glm::dvec2& a, const glm::dvec2& b);
 
 	// 顺时针 转 90度， s 缩放比
-	inline glm::dvec2 Cross(const glm::dvec2& a, double s);
+	glm::dvec2 Cross(const glm::dvec2& a, double s);
 
 	// 逆时针 转 90度， s 缩放比
-	inline glm::dvec2 Cross(double s, const glm::dvec2& a);
+	glm::dvec2 Cross(double s, const glm::dvec2& a);
 
 	/**
 	 * @brief 返回合理范围内的数
@@ -254,5 +254,5 @@ namespace PhysicsBlock
 	 * @param high 最高
 	 * @return 合理值
 	 * @note a 不合理就返回和他最近的合理值 */
-	inline double Clamp(double a, double low, double high);
+	double Clamp(double a, double low, double high);
 }

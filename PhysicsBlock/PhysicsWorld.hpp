@@ -3,25 +3,11 @@
 #include "MapFormwork.hpp"     // 地图样板
 #include "PhysicsShape.hpp"    // 有形状物体
 #include "PhysicsParticle.hpp" // 物理粒子
-#include <unordered_map>
+#include "PhysicsArbiter.hpp"  // 物理解析單元
+#include <map>
 
 namespace PhysicsBlock
 {
-
-    struct CollideUnit
-    {
-        PhysicsFormwork *object; // 对象
-        glm::dvec2 drop;         // 受力点
-        double angle;            // 将他排斥的推力方向
-        double pressure;         // 压力大小
-    };
-
-    struct CollideGroup
-    {
-        std::vector<CollideUnit> Strong; // 支撑对象
-        std::vector<CollideUnit> Exert;  // 施压对象
-    };
-
     /**
      * @brief 物理世界
      * @note 重力加速度， 网格风 */
@@ -35,49 +21,12 @@ namespace PhysicsBlock
         glm::uvec2 GridWindSize{0};          // 网格风大小
         MapFormwork *wMapFormwork = nullptr; // 地图对象
 
-        std::vector<PhysicsFormwork *> PhysicsFormworkS;
+        std::vector<PhysicsShape*> PhysicsShapeS;
+        std::vector<PhysicsParticle*> PhysicsParticleS;
 
-        std::unordered_map<PhysicsFormwork *, CollideGroup> CollideGroupS;// 碰撞队
+        std::map<ArbiterKey, BaseArbiter*> CollideGroupS;// 碰撞队
 
-        /*************重力**************/
-        /**
-         * @brief 两个形状物理碰撞处理
-         * @param a 形状A(这个是被压的)
-         * @param b 形状B
-         * @note 被压的：重力方向在下端的那个物体 */
-        void PhysicsProcess(PhysicsShape *a, PhysicsShape *b);
-        void PhysicsProcess(PhysicsParticle *a, PhysicsShape *b);
-
-        /*************动能**************/
-        /**
-         * @brief 动能守恒定律
-         * @param a 物体A
-         * @param b 物体B
-         * @warning 理想碰撞，力都转换为速度，没有转换为角速度(可以理解为球体相撞) */
-        void EnergyConservation(PhysicsParticle *a, PhysicsParticle *b);
-        /**
-         * @brief 形状碰撞动能守恒尝试
-         * @param a 被撞物体A
-         * @param b 物体B
-         * @param CollisionDrop 碰撞点
-         * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内)
-         * @warning 碰撞点在两质心线段上的，（动能 和 角动能 才守恒） */
-        void EnergyConservation(PhysicsShape *a, PhysicsShape *b, glm::dvec2 CollisionDrop, double Vertical);
-        /**
-         * @brief 形状碰撞动能守恒尝试
-         * @param a 被撞物体A
-         * @param CollisionDrop 碰撞点
-         * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内)
-         * @warning 碰撞点在两质心线段上的，（动能 和 角动能 才守恒） */
-        void EnergyConservation(PhysicsShape *a, glm::dvec2 CollisionDrop, double Vertical);
-
-        /*************位置约束**************/
-        // 和地图(时间处理（位置，角度碰）， 位置约束)
-        void PositionRestrain(PhysicsShape *a, double time);
-        void PositionRestrain(PhysicsParticle *a, double time);
-        // 相互位置约束
-        void PositionRestrain(PhysicsParticle *a, PhysicsShape *b);
-        void PositionRestrain(PhysicsShape *a, PhysicsShape *b);
+        void HandleCollideGroup(BaseArbiter* Ba);
 
     public:
         /**
@@ -87,9 +36,22 @@ namespace PhysicsBlock
         PhysicsWorld(glm::dvec2 GravityAcceleration, const bool Wind);
         ~PhysicsWorld();
 
-        void AddObject(PhysicsFormwork *Object)
+        void AddObject(PhysicsShape *Object)
         {
-            PhysicsFormworkS.push_back(Object);
+            PhysicsShapeS.push_back(Object);
+        }
+
+        void AddObject(PhysicsParticle *Object)
+        {
+            PhysicsParticleS.push_back(Object);
+        }
+
+        std::vector<PhysicsShape*>& GetPhysicsShape() {
+            return PhysicsShapeS;
+        }
+
+        std::vector<PhysicsParticle*>& GetPhysicsParticle() {
+            return PhysicsParticleS;
         }
 
         /**
@@ -114,10 +76,6 @@ namespace PhysicsBlock
          * @return 能量 */
         double GetWorldEnergy();
 
-        std::vector<PhysicsFormwork *> *GetPhysicsFormworkS()
-        {
-            return &PhysicsFormworkS;
-        }
     };
 
 }

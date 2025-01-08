@@ -25,7 +25,7 @@ namespace GAME
 			mCameraVPMatricesBuffer);
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
-		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0, 0}, false);
+		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0, -9.8}, false);
 #define MapSize 100
 		mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
 		for (int i = 0; i < (MapSize * MapSize); ++i)
@@ -271,36 +271,24 @@ namespace GAME
 		PhysicsBlock::PhysicsShape *PhysicsShapePtr;
 		PhysicsBlock::PhysicsParticle *PhysicsParticlePtr;
 		PhysicsBlock::CollisionInfoD info;
-		for (auto i : *mPhysicsWorld->GetPhysicsFormworkS())
+
+		for (auto i : mPhysicsWorld->GetPhysicsShape())
 		{
-			switch (i->PFGetType())
+			for (size_t x = 0; x < i->width; x++)
 			{
-			case PhysicsBlock::PhysicsObjectEnum::shape:
-				PhysicsShapePtr = (PhysicsBlock::PhysicsShape *)i;
-				for (size_t x = 0; x < PhysicsShapePtr->width; x++)
+				for (size_t y = 0; y < i->height; y++)
 				{
-					for (size_t y = 0; y < PhysicsShapePtr->height; y++)
+					if (i->at(x, y).Entity)
 					{
-						if (PhysicsShapePtr->at(x, y).Entity)
-						{
-							ShowSquare(SquarePhysics::vec2angle(glm::dvec2{x, y} - PhysicsShapePtr->CentreMass, PhysicsShapePtr->angle) + PhysicsShapePtr->pos, PhysicsShapePtr->angle);
-						}
+						ShowSquare(SquarePhysics::vec2angle(glm::dvec2{ x, y } - i->CentreMass, i->angle) + i->pos, i->angle);
 					}
 				}
-				/*info = PhysicsShapePtr->PsBresenhamDetection(beang, end);
-				if (info.Collision)
-				{
-					mAuxiliaryVision->Spot({info.pos, 0}, {0, 1, 0, 1});
-				}*/
-				break;
-			case PhysicsBlock::PhysicsObjectEnum::particle:
-				PhysicsParticlePtr = (PhysicsBlock::PhysicsParticle *)i;
-				mAuxiliaryVision->Spot({PhysicsParticlePtr->pos, 0}, {1, 0, 0, 1});
-				break;
-
-			default:
-				break;
 			}
+		}
+
+		for (auto i : mPhysicsWorld->GetPhysicsParticle())
+		{
+			mAuxiliaryVision->Spot({ i->pos, 0 }, { 1, 0, 0, 1 });
 		}
 
 		mAuxiliaryVision->End();

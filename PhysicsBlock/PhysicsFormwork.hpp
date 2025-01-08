@@ -13,6 +13,20 @@ namespace PhysicsBlock
         PhysicsFormwork(){};
         ~PhysicsFormwork(){};
 
+
+        /**
+         * @brief 物理外部施加能量对速度的改变
+         * @param time 时间差
+         * @param Ga 重力加速度 */
+        virtual void PhysicsSpeed(double time, glm::dvec2 Ga) {};
+
+        /**
+         * @brief 物理速度对物体的改变
+         * @param time 时间差
+         * @param Ga 重力加速度 */
+        virtual void PhysicsPos(double time, glm::dvec2 Ga) {};
+
+
         /**
          * @brief 获取对象类型
          * @return 类型 */

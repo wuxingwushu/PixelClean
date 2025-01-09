@@ -3,11 +3,11 @@
 namespace PhysicsBlock
 {
 
-    PhysicsParticle::PhysicsParticle(glm::dvec2 Pos, double Mass) : pos(Pos), mass(Mass), invMass(1.0 / Mass)
+    PhysicsParticle::PhysicsParticle(glm::dvec2 Pos, double Mass) : OldPos(Pos), pos(Pos), mass(Mass), invMass(1.0 / Mass)
     {
     }
 
-    PhysicsParticle::PhysicsParticle(glm::dvec2 Pos) : pos(Pos)
+    PhysicsParticle::PhysicsParticle(glm::dvec2 Pos) : OldPos(Pos), pos(Pos)
     {
     }
 
@@ -27,6 +27,7 @@ namespace PhysicsBlock
 
     void PhysicsParticle::PhysicsPos(double time, glm::dvec2 Ga)
     {
+        OldPos = pos;
         pos += time * speed;
     }
 

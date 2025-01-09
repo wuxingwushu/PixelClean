@@ -81,7 +81,7 @@ namespace GAME
 		PhysicsShape2->speed = {0, -1};
 
 		mPhysicsWorld->AddObject(PhysicsShape1);
-		mPhysicsWorld->AddObject(PhysicsShape2);
+		//mPhysicsWorld->AddObject(PhysicsShape2);
 	}
 
 	PhysicsTest::~PhysicsTest()
@@ -97,7 +97,7 @@ namespace GAME
 
 	void PhysicsTest::MouseRoller(int z)
 	{
-		m_position.z += z * 10;
+		m_position.z += z * 5;
 	}
 
 	void PhysicsTest::KeyDown(GameKeyEnum moveDirection)

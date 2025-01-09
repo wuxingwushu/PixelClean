@@ -357,7 +357,7 @@ namespace PhysicsBlock
             // 接触时的相对速度
             dv = -object1->speed - Cross(object1->angleSpeed, c->r1);
 
-            glm::dvec2 tangent = Cross(c->normal, 1.0);
+            glm::dvec2 tangent = Cross(c->normal, -1.0);
             double vt = Dot(dv, tangent);        // 作用于对方的角速度
             double dPt = c->massTangent * (-vt); // 旋转速度大小修补值
 

@@ -92,7 +92,7 @@ namespace PhysicsBlock
         }
 
 
-        for (size_t i = 0; i < 10; i++)
+        for (size_t i = 0; i < 100; i++)
         {
             for (auto kv : CollideGroupS) {
                 kv.second->ApplyImpulse();
@@ -102,12 +102,10 @@ namespace PhysicsBlock
         // 移动
         for (auto i : PhysicsShapeS)
         {
-            i->OldPos = i->pos;
             i->PhysicsPos(time, GravityAcceleration);
         }
         for (auto i : PhysicsParticleS)
         {
-            i->OldPos = i->pos;
             i->PhysicsPos(time, GravityAcceleration);
         }
     }

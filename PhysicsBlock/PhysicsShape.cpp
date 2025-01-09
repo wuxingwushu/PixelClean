@@ -71,6 +71,7 @@ namespace PhysicsBlock
         }
         CentreShape /= Size;
         CentreMass /= mass;
+        invMass = 1.0 / mass;
         CentreShape += glm::dvec2{0.5, 0.5}; // 移动到格子的中心
         CentreMass += glm::dvec2{0.5, 0.5};  // 移动到格子的中心
 

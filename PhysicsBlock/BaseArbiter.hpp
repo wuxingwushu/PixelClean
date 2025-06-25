@@ -61,7 +61,7 @@ namespace PhysicsBlock
     class BaseArbiter
     {
     public:
-        Contact contacts[2]; // 碰撞点集合
+        Contact contacts[20]; // 碰撞点集合
         int numContacts;     // 碰撞点数量
         double friction = 0;     // 两个物体间的摩擦系数
 

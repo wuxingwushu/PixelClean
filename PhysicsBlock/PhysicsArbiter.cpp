@@ -34,6 +34,8 @@ namespace PhysicsBlock
             contacts[i].Pn = NewContacts[i].Pn;
             contacts[i].Pt = NewContacts[i].Pt;
         }
+
+        numContacts = numNewContacts;
     }
 
     // 预处理
@@ -163,6 +165,8 @@ namespace PhysicsBlock
             contacts[i].Pn = NewContacts[i].Pn;
             contacts[i].Pt = NewContacts[i].Pt;
         }
+
+        numContacts = numNewContacts;
     }
 
     // 预处理
@@ -290,6 +294,8 @@ namespace PhysicsBlock
             contacts[i].Pn = NewContacts[i].Pn;
             contacts[i].Pt = NewContacts[i].Pt;
         }
+
+        numContacts = numNewContacts;
     }
 
     // 预处理
@@ -406,6 +412,8 @@ namespace PhysicsBlock
             contacts[i].Pn = NewContacts[i].Pn;
             contacts[i].Pt = NewContacts[i].Pt;
         }
+
+        numContacts = numNewContacts;
     }
 
     // 预处理

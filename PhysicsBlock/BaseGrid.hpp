@@ -20,13 +20,13 @@ namespace PhysicsBlock
          * @param y 坐标y
          * @return 格子
          * @warning 坐标范围不安全 */
-        virtual GridBlock &at(int x, int y) { return at(x * width + y); }
+        virtual GridBlock &at(int x, int y) { return at(x * height + y); }
         /**
          * @brief 获取网格
          * @param pos 坐标
          * @return 格子
          * @warning 坐标范围不安全 */
-        virtual GridBlock &at(glm::ivec2 pos) { return at(pos.x * width + pos.y); }
+        virtual GridBlock &at(glm::ivec2 pos) { return at(pos.x * height + pos.y); }
         /**
          * @brief 获取网格
          * @param i 数组索引

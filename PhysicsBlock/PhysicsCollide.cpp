@@ -17,18 +17,42 @@ namespace PhysicsBlock
 
     int Collide(Contact *contacts, PhysicsShape *A, MapFormwork *B)
     {
+#if 1
+        int ContactSize = 0;
+        glm::dvec2 Drop, DropPos;// 骨骼点
+        for (size_t i = 0; i < A->OutlineSize; ++i) {
+            Drop = A->OutlineSet[i] - A->CentreMass;
+            Drop = vec2angle(Drop, A->angle);
+            DropPos = A->pos + Drop;
+            CollisionInfoD info = B->FMBresenhamDetection(A->OldPos, DropPos);
+            if (info.Collision) {
+                if (info.Direction & 0x1) {
+                    contacts[ContactSize].separation = info.pos.y - DropPos.y;
+                }
+                else {
+                    contacts[ContactSize].separation = info.pos.x - DropPos.x;
+                }
+                contacts[ContactSize].separation = abs(contacts[ContactSize].separation); // 碰撞距离差
+                contacts[ContactSize].position = info.pos; // 碰撞点的位置
+                contacts[ContactSize].w_side = info.Direction; // 正方形碰撞边
+                contacts[ContactSize].normal = vec2angle({ -1, 0 }, info.Direction * 3.14159265359 / 2);// （反向作用力法向量）地形不会旋转
+                ++ContactSize;
+            }
+        }
+        return ContactSize;
+#else
         double ContactAccount[2]{ 0, 0 };
         unsigned int ContactSize[2]{ 1, 1 };
         unsigned char ContactDirection[2]{ 255, 255 };// 碰撞到那个边了（255代表没有被使用）
         glm::dvec2 Drop, DropPos;// 骨骼点
         double val;
-        for (size_t i = 0; i < A->OutlineSize; ++i){
+        for (size_t i = 0; i < A->OutlineSize; ++i) {
             Drop = A->OutlineSet[i] - A->CentreMass;
             Drop = vec2angle(Drop, A->angle);
             DropPos = A->pos + Drop;
             CollisionInfoD info = B->FMBresenhamDetection(A->OldPos, DropPos);
-            if(info.Collision){
-                if(info.Direction == ContactDirection[0]){
+            if (info.Collision) {
+                if (info.Direction == ContactDirection[0]) {
                     ++ContactSize[0];
                     if (contacts[0].w_side & 0x1) {
                         val = abs(info.pos.y - DropPos.y);
@@ -38,7 +62,8 @@ namespace PhysicsBlock
                     }
                     contacts[0].position += info.pos * val;
                     ContactAccount[0] += val;
-                }else if(info.Direction == ContactDirection[1]){ 
+                }
+                else if (info.Direction == ContactDirection[1]) {
                     ++ContactSize[1];
                     if (contacts[1].w_side & 0x1) {
                         val = abs(info.pos.y - DropPos.y);
@@ -52,9 +77,10 @@ namespace PhysicsBlock
                 else {
                     if (255 == ContactDirection[0]) {
                         ContactDirection[0] = info.Direction;
-                        if(info.Direction & 0x1){
+                        if (info.Direction & 0x1) {
                             contacts[0].separation = info.pos.y - DropPos.y;
-                        }else{
+                        }
+                        else {
                             contacts[0].separation = info.pos.x - DropPos.x;
                         }
                         contacts[0].separation = abs(contacts[0].separation);
@@ -63,9 +89,10 @@ namespace PhysicsBlock
                     }
                     else if (255 == ContactDirection[1]) {
                         ContactDirection[1] = info.Direction;
-                        if(info.Direction & 0x1){
+                        if (info.Direction & 0x1) {
                             contacts[1].separation = info.pos.y - DropPos.y;
-                        }else{
+                        }
+                        else {
                             contacts[1].separation = info.pos.x - DropPos.x;
                         }
                         contacts[1].separation = abs(contacts[1].separation);
@@ -102,6 +129,7 @@ namespace PhysicsBlock
         contacts[1].separation = ContactAccount[1] / ContactSize[1];// 暂时不理
 
         return ContactDirection[0] == 255 ? 0 : (ContactDirection[1] == 255 ? 1 : 2);
+#endif
     }
 
     int Collide(Contact *contacts, PhysicsParticle *A, MapFormwork *B)

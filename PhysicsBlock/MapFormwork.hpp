@@ -24,6 +24,18 @@ namespace PhysicsBlock
         virtual glm::uvec2 FMGetMapSize() { return glm::uvec2{0}; }
 
         /**
+         * @brief 获取网格是否有障碍物
+         * @param start 网格位置
+         * @return 是否碰撞（true: 碰撞） */
+        virtual bool FMGetCollide(glm::ivec2 start) { return false; }
+
+        /**
+         * @brief 获取是否有障碍物
+         * @param start 世界位置
+         * @return 是否碰撞（true: 碰撞） */
+        virtual bool FMGetCollide(glm::dvec2 start) { return false; }
+
+        /**
          * @brief 地图 线段(Bresenham) 检测
          * @param start 起始位置
          * @param end 结束位置

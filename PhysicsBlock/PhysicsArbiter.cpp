@@ -326,7 +326,7 @@ namespace PhysicsBlock
             c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
 
             // 施加正常+摩擦脉冲
-            glm::dvec2 P = c->Pn * c->normal + c->Pt * tangent;
+            glm::dvec2 P = c->Pn * c->normal - c->Pt * tangent;
 
             object1->speed -= object1->invMass * P;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, P);

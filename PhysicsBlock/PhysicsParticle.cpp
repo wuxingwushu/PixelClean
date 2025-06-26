@@ -27,8 +27,9 @@ namespace PhysicsBlock
 
     void PhysicsParticle::PhysicsPos(double time, glm::dvec2 Ga)
     {
-        OldPos = pos;
+        if (OldPosUpDataBool) { OldPos = pos; }
         pos += time * speed;
+        OldPosUpDataBool = true;
     }
 
 }

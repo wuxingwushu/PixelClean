@@ -63,7 +63,7 @@ namespace PhysicsBlock
     public:
         Contact contacts[20]; // 碰撞点集合
         int numContacts;     // 碰撞点数量
-        double friction = 0;     // 两个物体间的摩擦系数
+        double friction = 0.2;     // 两个物体间的摩擦系数
 
         ArbiterKey key;
 

@@ -11,7 +11,8 @@ namespace PhysicsBlock
     class PhysicsParticle : public PhysicsFormwork
     {
     public:
-        glm::dvec2 OldPos{0}; // 上一时刻的位置
+        glm::dvec2 OldPos{0}; // 上一时刻的位置（ 旧位置不可以在碰撞体内 ）
+        bool OldPosUpDataBool = true; // 是否可以更新位置
         /**
          * @brief 位置
          * @warning 在形状当中是指质心的位置 */

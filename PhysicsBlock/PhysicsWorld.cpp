@@ -25,7 +25,7 @@ namespace PhysicsBlock
         {
             if (CollideGroupS.find(Ba->key) == CollideGroupS.end())
             {
-                CollideGroupS.insert({ Ba->key, Ba });
+                CollideGroupS.insert({Ba->key, Ba});
             }
             else
             {
@@ -52,12 +52,17 @@ namespace PhysicsBlock
         }
 
         // 碰撞检测
-        for (size_t i = 0; i < PhysicsShapeS.size() - 1; ++i)
+        for (size_t i = 0; i < PhysicsShapeS.size(); ++i)
         {
-            for (size_t j = i + 1; j < PhysicsShapeS.size(); ++j)
+            for (size_t j = 0; j < PhysicsShapeS.size(); ++j)
             {
+                if (i == j)
+                {
+                    continue;
+                }
                 if ((PhysicsShapeS[i]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[i]->pos - PhysicsShapeS[j]->pos))
                 {
+                    CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], PhysicsShapeS[j]));
                     continue;
                 }
                 BaseArbiter *ptr = new PhysicsArbiterSS(PhysicsShapeS[i], PhysicsShapeS[j]);
@@ -68,8 +73,11 @@ namespace PhysicsBlock
             {
                 if (PhysicsShapeS[i]->DropCollision(o->pos).Collision)
                 {
+                    o->OldPosUpDataBool = false;// 关闭旧位置更新
                     BaseArbiter *ptr = new PhysicsArbiterSP(PhysicsShapeS[i], o);
                     HandleCollideGroup(ptr);
+                } else {
+                    CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], o));
                 }
             }
         }
@@ -87,14 +95,15 @@ namespace PhysicsBlock
         }
 
         // 预处理
-        for (auto kv : CollideGroupS) {
+        for (auto kv : CollideGroupS)
+        {
             kv.second->PreStep(time);
         }
 
-
-        for (size_t i = 0; i < 100; i++)
+        for (size_t i = 0; i < 10; i++)
         {
-            for (auto kv : CollideGroupS) {
+            for (auto kv : CollideGroupS)
+            {
                 kv.second->ApplyImpulse();
             }
         }
@@ -106,6 +115,10 @@ namespace PhysicsBlock
         }
         for (auto i : PhysicsParticleS)
         {
+            if (wMapFormwork->FMGetCollide(i->pos))
+            {
+                i->OldPosUpDataBool = false;// 关闭旧位置更新
+            }
             i->PhysicsPos(time, GravityAcceleration);
         }
     }

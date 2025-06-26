@@ -1,7 +1,7 @@
 #pragma once
 #include "MapFormwork.hpp"
 #include "BaseGrid.hpp"
-
+#include "BaseCalculate.hpp"
 
 namespace PhysicsBlock
 {
@@ -34,6 +34,23 @@ namespace PhysicsBlock
          * @return 地图大小
          * @note 单位：格子 */
         virtual glm::uvec2 FMGetMapSize() { return glm::uvec2{ width, height }; }
+
+        /**
+         * @brief 获取网格是否有障碍物
+         * @param start 网格位置
+         * @return 是否碰撞（true: 碰撞） */
+        virtual bool FMGetCollide(glm::ivec2 start) {
+            if((start.x >= width) || (start.y >= width)){
+                return false;
+            }
+            return at(start).Collision;
+        }
+
+        /**
+         * @brief 获取是否有障碍物
+         * @param start 世界位置
+         * @return 是否碰撞（true: 碰撞） */
+        virtual bool FMGetCollide(glm::dvec2 start) { return FMGetCollide(ToInt(start + centrality)); }
 
         /**
          * @brief 地图 线段(Bresenham) 检测

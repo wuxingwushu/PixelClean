@@ -2,6 +2,10 @@ BaseStruct 数据结构体
 BaseDefine 常量
 BaseCalculate 基本计算函数
 
+BaseArbiter 基础物理判决
+PhysicsArbiter 物理判决
+PhysicsCollide 物理碰撞
+
 PhysicsShape 物理形状
 PhysicsParticle 物理粒子
 BaseGrid 基础网格
@@ -22,36 +26,52 @@ PhysicsWorld 物理世界
 %% graph 橫向：LR, 豎向：TD
 graph TD
 
-A(PhysicsParticle\n物理粒子)
-B(PhysicsShape\n物理形状)
-C(BaseGrid\n基础网格)
-D(BaseOutline\n基础轮廓)
-E(MapStatic\n静态地图)
-F(MapFormwork\n模板地图)
-G(MapDynamic\n动态地图)
-W(PhysicsWorld\n物理世界)
+PhysicsParticle(PhysicsParticle\n物理粒子)
+PhysicsShape(PhysicsShape\n物理形状)
+BaseGrid(BaseGrid\n基础网格)
+BaseOutline(BaseOutline\n基础轮廓)
+MapStatic(MapStatic\n静态地图)
+MapFormwork(MapFormwork\n模板地图)
+MapDynamic(MapDynamic\n动态地图)
+PhysicsWorld(PhysicsWorld\n物理世界)
+PhysicsFormwrok(PhysicsFormwrok\n刚体物理模板)
 
-PF(PhysicsFormwrok\n刚体物理模板)
-
-
-
-C --> D
-PF --> A
-A --> B
-D --> B
-
-F --> E
-C --> E
-
-F --> G
-C --> G
+PhysicsJunction(PhysicsJunction\n物理连接)
+BaseArbiter(BaseArbiter\n基础物理判决)
+PhysicsArbiter(PhysicsArbiter\n物理判决)
+PhysicsCollide(PhysicsCollide\n物理碰撞)
 
 
-A --> W
-B --> W
+PhysicsFormwrok --> PhysicsParticle
 
-G --> W
-E --> W
+BaseGrid --> BaseOutline
+BaseOutline --> PhysicsShape
+PhysicsParticle --> PhysicsShape
+
+
+MapFormwork --> MapStatic
+BaseGrid --> MapStatic
+
+MapFormwork --> MapDynamic
+BaseGrid --> MapDynamic
+
+BaseArbiter --> PhysicsArbiter
+PhysicsCollide --> PhysicsArbiter
+
+PhysicsParticle --> PhysicsJunction
+PhysicsShape --> PhysicsJunction
+
+PhysicsArbiter --> PhysicsWorld
+PhysicsParticle --> PhysicsWorld
+PhysicsShape --> PhysicsWorld
+MapDynamic --> PhysicsWorld
+MapStatic --> PhysicsWorld
+
+
+
+
 
 
 ```
+
+

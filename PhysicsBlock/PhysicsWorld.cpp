@@ -30,6 +30,7 @@ namespace PhysicsBlock
             else
             {
                 CollideGroupS[Ba->key]->Update(Ba->contacts, Ba->numContacts);
+                delete Ba;
             }
         }
         else
@@ -54,21 +55,6 @@ namespace PhysicsBlock
         // 碰撞检测
         for (size_t i = 0; i < PhysicsShapeS.size(); ++i)
         {
-            for (size_t j = 0; j < PhysicsShapeS.size(); ++j)
-            {
-                if (i == j)
-                {
-                    continue;
-                }
-                if ((PhysicsShapeS[i]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[i]->pos - PhysicsShapeS[j]->pos))
-                {
-                    CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], PhysicsShapeS[j]));
-                    continue;
-                }
-                BaseArbiter *ptr = new PhysicsArbiterSS(PhysicsShapeS[i], PhysicsShapeS[j]);
-                HandleCollideGroup(ptr);
-            }
-
             for (auto o : PhysicsParticleS)
             {
                 if (PhysicsShapeS[i]->DropCollision(o->pos).Collision)
@@ -80,14 +66,31 @@ namespace PhysicsBlock
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], o));
                 }
             }
-        }
 
+            if (i == (PhysicsShapeS.size() - 1))
+            {
+                continue;
+            }
+            for (size_t j = i + 1; j < PhysicsShapeS.size(); ++j)
+            {
+                if ((PhysicsShapeS[i]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[i]->pos - PhysicsShapeS[j]->pos))
+                {
+                    CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], PhysicsShapeS[j]));
+                    continue;
+                }
+                BaseArbiter *ptr = new PhysicsArbiterSS(PhysicsShapeS[i], PhysicsShapeS[j]);
+                HandleCollideGroup(ptr);
+            }
+        }
+        
+        // 处理 网格形状 和 地形的碰撞
         for (auto o : PhysicsShapeS)
         {
             BaseArbiter *ptr = new PhysicsArbiterS(o, wMapFormwork);
             HandleCollideGroup(ptr);
         }
 
+        // 处理 点 和 地形的碰撞
         for (auto o : PhysicsParticleS)
         {
             BaseArbiter *ptr = new PhysicsArbiterP(o, wMapFormwork);

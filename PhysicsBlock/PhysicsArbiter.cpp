@@ -75,7 +75,7 @@ namespace PhysicsBlock
             object1->speed -= object1->invMass * P;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, P);
 
-            object2->speed -= object2->invMass * P;
+            object2->speed += object2->invMass * P;
             object2->angleSpeed += object2->invMomentInertia * Cross(c->r2, P);
         }
     }
@@ -126,7 +126,8 @@ namespace PhysicsBlock
             dPt = c->Pt - oldTangentImpulse;
 
             // 应用接触脉冲
-            glm::dvec2 Pt = dPt * c->normal;
+            // glm::dvec2 Pt = dPt * c->normal;
+            glm::dvec2 Pt = dPt * tangent;
 
             object1->speed -= object1->invMass * Pt;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pt);
@@ -158,12 +159,15 @@ namespace PhysicsBlock
         }
         for (size_t i = 0; i < numNewContacts; ++i)
         {
+            contacts[i] = NewContacts[i];
+            /*
             contacts[i].normal = NewContacts[i].normal;
             contacts[i].position = NewContacts[i].position;
             contacts[i].separation = NewContacts[i].separation;
             contacts[i].w_side = NewContacts[i].w_side;
             contacts[i].Pn = NewContacts[i].Pn;
             contacts[i].Pt = NewContacts[i].Pt;
+            */
         }
 
         numContacts = numNewContacts;
@@ -181,7 +185,7 @@ namespace PhysicsBlock
         {
             c = contacts + i;
             c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
-                                                       // c->r2 = c->position - object2->PFGetPos();// object2 质心 指向碰撞点的 力矩
+            // c->r2 = c->position - object2->PFGetPos();// object2 质心 指向碰撞点的 力矩
 
             double rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
             double R1 = Dot(c->r1, c->r1);
@@ -193,7 +197,7 @@ namespace PhysicsBlock
             glm::dvec2 tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
             double rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
             kTangent += object1->invMomentInertia * (R1 - rt1 * rt1);
-            c->massTangent = 1.0f / kTangent;
+            c->massTangent = 1.0 / kTangent;
 
             c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
 
@@ -204,7 +208,7 @@ namespace PhysicsBlock
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, P);
             // object1->PFAngleSpeed() -= (object1->PFGetInvI() * Cross(c->r1, P) + object2->PFGetInvI() * Cross(c->r2, P));
 
-            object2->speed -= object2->invMass * P;
+            object2->speed += object2->invMass * P;
             // object2->PFAngleSpeed() += object2->PFGetInvI() * Cross(c->r2, P);
         }
     }
@@ -255,10 +259,11 @@ namespace PhysicsBlock
             dPt = c->Pt - oldTangentImpulse;
 
             // 应用接触脉冲
-            glm::dvec2 Pt = dPt * c->normal;
+            // glm::dvec2 Pt = dPt * c->normal;
+            glm::dvec2 Pt = dPt * tangent;
 
             object1->speed -= object1->invMass * Pt;
-            object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pn);
+            object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pt);
 
             object2->speed += object2->invMass * Pt;
             // object2->PFAngleSpeed() += object2->PFGetInvI() * Cross(c->r2, Pt);
@@ -376,7 +381,8 @@ namespace PhysicsBlock
             dPt = c->Pt - oldTangentImpulse;
 
             // 应用接触脉冲
-            glm::dvec2 Pt = dPt * c->normal;
+            // glm::dvec2 Pt = dPt * c->normal;
+            glm::dvec2 Pt = dPt * tangent;
 
             object1->speed -= object1->invMass * Pt;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pt);
@@ -489,7 +495,8 @@ namespace PhysicsBlock
             dPt = c->Pt - oldTangentImpulse;
 
             // 应用接触脉冲
-            glm::dvec2 Pt = dPt * c->normal;
+            //glm::dvec2 Pt = dPt * c->normal;
+            glm::dvec2 Pt = dPt * tangent;
 
             object1->speed -= object1->invMass * Pt;
         }

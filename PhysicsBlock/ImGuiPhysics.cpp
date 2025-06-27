@@ -5,6 +5,7 @@ namespace PhysicsBlock
 {
 	void Dvec2ImGui(std::string name, glm::dvec2* val) {
 		ImGui::InputDouble((name + ".x").c_str(), &val->x);
+		ImGui::SameLine();
 		ImGui::InputDouble((name + ".y").c_str(), &val->y);
 	}
 

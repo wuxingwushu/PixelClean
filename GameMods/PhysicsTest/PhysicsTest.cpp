@@ -56,6 +56,9 @@ namespace GAME
 				}
 			}
 		}
+		
+		PhysicsBlock::PhysicsParticle* PhysicsParticle1 = new PhysicsBlock::PhysicsParticle({ 5,0 }, 1);
+
 
 		PhysicsBlock::PhysicsShape *PhysicsShape1 = new PhysicsBlock::PhysicsShape({0, 0}, {2, 2});
 		for (size_t i = 0; i < (PhysicsShape1->width * PhysicsShape1->height); i++)
@@ -68,7 +71,7 @@ namespace GAME
 		PhysicsShape1->UpdateOutline();
 		PhysicsShape1->CollisionR = 1.414;
 		PhysicsShape1->angle = 3.1415926 / 4;
-		PhysicsBlock::PhysicsShape *PhysicsShape2 = new PhysicsBlock::PhysicsShape({1, 2}, {2, 2});
+		PhysicsBlock::PhysicsShape *PhysicsShape2 = new PhysicsBlock::PhysicsShape({10, 2}, {2, 2});
 		for (size_t i = 0; i < (PhysicsShape2->width * PhysicsShape2->height); i++)
 		{
 			PhysicsShape2->at(i).Collision = true;
@@ -79,9 +82,9 @@ namespace GAME
 		PhysicsShape2->UpdateOutline();
 		PhysicsShape2->CollisionR = 1.414;
 		PhysicsShape2->speed = {0, -1};
-
+		mPhysicsWorld->AddObject(PhysicsParticle1);
 		mPhysicsWorld->AddObject(PhysicsShape1);
-		//mPhysicsWorld->AddObject(PhysicsShape2);
+		mPhysicsWorld->AddObject(PhysicsShape2);
 	}
 
 	PhysicsTest::~PhysicsTest()
@@ -272,6 +275,7 @@ namespace GAME
 		PhysicsBlock::PhysicsParticle *PhysicsParticlePtr;
 		PhysicsBlock::CollisionInfoD info;
 
+		// 渲染物理网格
 		for (auto i : mPhysicsWorld->GetPhysicsShape())
 		{
 			for (size_t x = 0; x < i->width; x++)
@@ -280,15 +284,23 @@ namespace GAME
 				{
 					if (i->at(x, y).Entity)
 					{
-						ShowSquare(SquarePhysics::vec2angle(glm::dvec2{ x, y } - i->CentreMass, i->angle) + i->pos, i->angle);
+						ShowSquare(SquarePhysics::vec2angle(glm::dvec2{ x, y } - i->CentreMass, i->angle) + i->pos, i->angle, { 0, 1, 0, 1 });
 					}
 				}
 			}
 		}
-
+		// 渲染物理点
 		for (auto i : mPhysicsWorld->GetPhysicsParticle())
 		{
-			mAuxiliaryVision->Spot({ i->pos, 0 }, { 1, 0, 0, 1 });
+			mAuxiliaryVision->Spot({ i->pos, 0 }, { 0, 1, 0, 1 });
+		}
+		// 渲染碰撞点
+		for (auto& i : mPhysicsWorld->CollideGroupS)
+		{
+			for (int j = 0; j < i.second->numContacts; ++j)
+			{
+				mAuxiliaryVision->Spot({ i.second->contacts[j].position, 0 }, { 1,0,0,1 });
+			}
 		}
 
 		mAuxiliaryVision->End();

@@ -9,10 +9,15 @@ namespace PhysicsBlock
         Contact() : Pn(0.0), Pt(0.0) /*, Pnb(0.0)*/ {}
 
         // Collide
-        glm::dvec2 position; // 碰撞点位置
-        glm::dvec2 normal;   // 最佳分离轴 的 法向量
-        double separation;   // 最小分离距离
-        unsigned char w_side = 0;  // 小矩形那个边的分离（判别是否是一种力用的）
+        glm::dvec2 position;      // 碰撞点位置
+        glm::dvec2 normal;        // 最佳分离轴 的 法向量
+        double separation;        // 最小分离距离
+        unsigned char w_side = 0; // 小矩形那个边的分离（判别是否是一种力用的）
+
+        // PreStep
+        double massNormal;  // 计算 位移 冲量的分母
+        double massTangent; // 计算 旋转 冲量的分母
+        double bias;        // 物体位置修正值大小？
 
         // ApplyImpulse
         glm::dvec2 r1; // A物体质心 指向 碰撞点 的向量
@@ -20,16 +25,11 @@ namespace PhysicsBlock
         double Pn = 0; // 位移影响量大小
         double Pt = 0; // 旋转影响量大小
         // double Pnb; // accumulated normal impulse for position bias
-
-        // PreStep
-        double massNormal;  // 计算 位移 冲量的分母
-        double massTangent; // 计算 旋转 冲量的分母
-        double bias;        // 物体位置修正值大小？
     };
 
     struct ArbiterKey
     {
-        ArbiterKey(void*Object1, void*Object2)
+        ArbiterKey(void *Object1, void *Object2)
         {
             if (Object1 < Object2)
             {
@@ -43,8 +43,8 @@ namespace PhysicsBlock
             }
         }
         // 碰撞的两个对象
-        void*object1;
-        void*object2;
+        void *object1;
+        void *object2;
     };
 
     inline bool operator<(const ArbiterKey &a1, const ArbiterKey &a2)
@@ -58,17 +58,19 @@ namespace PhysicsBlock
         return false;
     }
 
+    /**
+     * @brief 基础物理裁决 */
     class BaseArbiter
     {
     public:
-        Contact contacts[20]; // 碰撞点集合
-        int numContacts;     // 碰撞点数量
-        double friction = 0.2;     // 两个物体间的摩擦系数
+        Contact contacts[20];  // 碰撞点集合
+        int numContacts;       // 碰撞点数量
+        double friction = 0.2; // 两个物体间的摩擦系数
 
-        ArbiterKey key;
+        ArbiterKey key; // 两个对象的 钥匙键
 
     public:
-        BaseArbiter(void *Object1, void*Object2) : key(Object1, Object2) {};
+        BaseArbiter(void *Object1, void *Object2) : key(Object1, Object2) {};
         ~BaseArbiter() {};
 
         // 更新碰撞信息

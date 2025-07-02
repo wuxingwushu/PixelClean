@@ -266,8 +266,13 @@ namespace GAME
 
 		mAuxiliaryVision->Begin();
 
-		if (PhysicsSwitch)
+		if (PhysicsSwitch) {
 			mPhysicsWorld->PhysicsEmulator(TOOL::FPStime);
+		}
+		else {
+			mPhysicsWorld->PhysicsInformationUpdate();
+		}
+			
 
 		mAuxiliaryVision->Line({beang, 0}, {1, 0, 0, 1}, {end, 0}, {1, 0, 0, 1});
 
@@ -278,6 +283,11 @@ namespace GAME
 		// 渲染物理网格
 		for (auto i : mPhysicsWorld->GetPhysicsShape())
 		{
+			PhysicsBlock::CollisionInfoD info = i->BresenhamDetection(beang, end);
+			if (info.Collision) {
+				mAuxiliaryVision->Spot({ info.pos, 0 }, { 0, 1, 1, 1 });
+			}
+
 			for (size_t x = 0; x < i->width; x++)
 			{
 				for (size_t y = 0; y < i->height; y++)
@@ -299,7 +309,10 @@ namespace GAME
 		{
 			for (int j = 0; j < i.second->numContacts; ++j)
 			{
-				mAuxiliaryVision->Spot({ i.second->contacts[j].position, 0 }, { 1,0,0,1 });
+				mAuxiliaryVision->Spot({ i.second->contacts[j].position, 0 }, { 1,0,0,1 }); // 碰撞点
+				mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position + i.second->contacts[j].r1, 0 }, { 0,0,1,1 });
+				mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position + i.second->contacts[j].r2, 0 }, { 0,0,1,1 });
+
 			}
 		}
 

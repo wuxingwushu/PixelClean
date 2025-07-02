@@ -126,6 +126,62 @@ namespace PhysicsBlock
         }
     }
 
+    void PhysicsWorld::PhysicsInformationUpdate() {
+        // 碰撞检测
+        for (size_t i = 0; i < PhysicsShapeS.size(); ++i)
+        {
+            for (auto o : PhysicsParticleS)
+            {
+                if (PhysicsShapeS[i]->DropCollision(o->pos).Collision)
+                {
+                    o->OldPosUpDataBool = false;// 关闭旧位置更新
+                    BaseArbiter* ptr = new PhysicsArbiterSP(PhysicsShapeS[i], o);
+                    HandleCollideGroup(ptr);
+                }
+                else {
+                    CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], o));
+                }
+            }
+
+            if (i == (PhysicsShapeS.size() - 1))
+            {
+                continue;
+            }
+            for (size_t j = i + 1; j < PhysicsShapeS.size(); ++j)
+            {
+                if ((PhysicsShapeS[i]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[i]->pos - PhysicsShapeS[j]->pos))
+                {
+                    CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], PhysicsShapeS[j]));
+                    continue;
+                }
+                BaseArbiter* ptr = new PhysicsArbiterSS(PhysicsShapeS[i], PhysicsShapeS[j]);
+                HandleCollideGroup(ptr);
+            }
+        }
+
+        // 处理 网格形状 和 地形的碰撞
+        for (auto o : PhysicsShapeS)
+        {
+            o->OldPos = o->pos;
+            BaseArbiter* ptr = new PhysicsArbiterS(o, wMapFormwork);
+            HandleCollideGroup(ptr);
+        }
+
+        // 处理 点 和 地形的碰撞
+        for (auto o : PhysicsParticleS)
+        {
+            o->OldPos = o->pos;
+            BaseArbiter* ptr = new PhysicsArbiterP(o, wMapFormwork);
+            HandleCollideGroup(ptr);
+        }
+
+        // 预处理
+        for (auto kv : CollideGroupS)
+        {
+            kv.second->PreStep(0);
+        }
+    }
+
     void PhysicsWorld::SetMapFormwork(MapFormwork *MapFormwork_)
     {
         wMapFormwork = MapFormwork_;

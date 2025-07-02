@@ -77,6 +77,7 @@ namespace PhysicsBlock
 
         // 因为位置是指 质心 在世界坐标的位置，质心改了，位置也需要进行偏移
         pos += vec2angle(CentreMass - UsedCentreMass, angle);
+        OldPos = pos;
 
         MomentInertia = 0; // 清空转动惯量
         glm::dvec2 lpos;   // 存储临时位置

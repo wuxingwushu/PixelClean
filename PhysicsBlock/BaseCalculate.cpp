@@ -109,6 +109,46 @@ namespace PhysicsBlock
 	SquareFocus LineSquareFocus(glm::dvec2 start, glm::dvec2 end, const double width, const double height)
 	{
 		SquareFocus data{true, start, end};
+		if (end.x == start.x) {
+			if ((start.x > 0) && (start.x <= width)) {
+				if (start.y < 0) {
+					start.y = 0;
+				}else if (start.y > height) {
+					start.y = height;
+				}
+				if (end.y < 0) {
+					end.y = 0;
+				}else if (end.y > height) {
+					end.y = height;
+				}
+				if (start.y == end.y) {
+					data.Focus = false;
+				}
+			}else {
+				data.Focus = false;
+			}
+			return data;
+		}
+		if (start.y == end.y) {
+			if ((start.y > 0) && (start.y <= height)) {
+				if (start.x < 0) {
+					start.x = 0;
+				}else if (start.x > width) {
+					start.x = width;
+				}
+				if (end.x < 0) {
+					end.x = 0;
+				}else if (end.x > width) {
+					end.x = width;
+				}
+				if (start.x == end.x) {
+					data.Focus = false;
+				}
+			}else {
+				data.Focus = false;
+			}
+			return data;
+		}
 		double Difference = (end.x - start.x) / (start.y - end.y);
 		double posy1 = -1;
 		double posy2 = -1;

@@ -71,6 +71,9 @@ namespace PhysicsBlock
          * @param time 时间差 */
         void PhysicsEmulator(double time);
 
+        // 物理信息更新
+        void PhysicsInformationUpdate();
+
         /**
          * @brief 获取世界内的能量
          * @return 能量 */

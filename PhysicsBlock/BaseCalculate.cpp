@@ -123,6 +123,9 @@ namespace PhysicsBlock
 				}
 				if (start.y == end.y) {
 					data.Focus = false;
+				} else {
+					data.start = start;
+					data.end = end;
 				}
 			}else {
 				data.Focus = false;
@@ -143,6 +146,9 @@ namespace PhysicsBlock
 				}
 				if (start.x == end.x) {
 					data.Focus = false;
+				} else {
+					data.start = start;
+					data.end = end;
 				}
 			}else {
 				data.Focus = false;

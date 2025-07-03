@@ -309,9 +309,13 @@ namespace GAME
 		{
 			for (int j = 0; j < i.second->numContacts; ++j)
 			{
-				mAuxiliaryVision->Spot({ i.second->contacts[j].position, 0 }, { 1,0,0,1 }); // 碰撞点
-				mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position + i.second->contacts[j].r1, 0 }, { 0,0,1,1 });
-				mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position + i.second->contacts[j].r2, 0 }, { 0,0,1,1 });
+				// 碰撞点
+				mAuxiliaryVision->Spot({ i.second->contacts[j].position, 0 }, { 1,0,0,1 }); 
+				// 碰撞点 分离 法向量
+				mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position + i.second->contacts[j].normal, 0 }, { 0,1,1,1 });
+				// 指向重心
+				mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position - i.second->contacts[j].r1, 0 }, { 0,0,1,1 });
+				mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position - i.second->contacts[j].r2, 0 }, { 0,0,1,1 });
 
 			}
 		}

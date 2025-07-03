@@ -66,13 +66,17 @@ namespace PhysicsBlock
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], o));
                 }
             }
-
+            /*
             if (i == (PhysicsShapeS.size() - 1))
             {
                 continue;
-            }
-            for (size_t j = i + 1; j < PhysicsShapeS.size(); ++j)
+            }*/
+            for (size_t j = 0; j < PhysicsShapeS.size(); ++j)
             {
+                if (i == j)
+                {
+                    continue;
+                }
                 if ((PhysicsShapeS[i]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[i]->pos - PhysicsShapeS[j]->pos))
                 {
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], PhysicsShapeS[j]));
@@ -143,12 +147,17 @@ namespace PhysicsBlock
                 }
             }
 
+            /*
             if (i == (PhysicsShapeS.size() - 1))
             {
                 continue;
-            }
-            for (size_t j = i + 1; j < PhysicsShapeS.size(); ++j)
+            }*/
+            for (size_t j = 0; j < PhysicsShapeS.size(); ++j)
             {
+                if (i == j)
+                {
+                    continue;
+                }
                 if ((PhysicsShapeS[i]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[i]->pos - PhysicsShapeS[j]->pos))
                 {
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], PhysicsShapeS[j]));

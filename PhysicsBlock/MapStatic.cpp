@@ -26,7 +26,7 @@ namespace PhysicsBlock
         end += centrality;
 
         // 裁剪线段 让线段都在矩形内
-        PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start, end, width - 0.01, height - 0.01);
+        PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start, end, width, height);
         if (data.Focus)
         {
             // 线段碰撞检测

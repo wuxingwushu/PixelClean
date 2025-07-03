@@ -34,7 +34,7 @@ namespace PhysicsBlock
         int e2;
         while (true)
         {
-            if (at(start).Collision)
+            if (GetCollision(start))
             {
                 info.Collision = true;
                 break;
@@ -65,6 +65,12 @@ namespace PhysicsBlock
         CollisionInfoD Collisioninfo{false};
         // 线段碰撞检测
         CollisionInfoI info = BresenhamDetection(ToInt(start), ToInt(end));
+        if (info.pos.x == width) {
+            --info.pos.x;
+        }
+        if (info.pos.y == height) {
+            --info.pos.y;
+        }
         if (info.Collision)
         {
             // 计算出精准位置
@@ -81,7 +87,7 @@ namespace PhysicsBlock
                 Collisioninfo.pos = LineXToPos(start, end, info.pos.x + 1);
                 Collisioninfo.Direction = CheckDirection::Right;
             }
-            if ((Collisioninfo.pos.y < info.pos.y) || (Collisioninfo.pos.y > (info.pos.y + 1)))
+            if ((val == 0) || (Collisioninfo.pos.y < info.pos.y) || (Collisioninfo.pos.y > (info.pos.y + 1)))
             {
                 val = start.y - end.y;
                 if (val < 0)
@@ -124,7 +130,7 @@ namespace PhysicsBlock
                 }
                 break;
                     
-            case CheckDirection::Up:
+            case CheckDirection::Down:
                 if(GetCollision(info.pos.x, info.pos.y - 1)){
                     val = start.x - end.x;
                     if (val < 0) {
@@ -137,7 +143,7 @@ namespace PhysicsBlock
                     }
                 }
                 break;
-            case CheckDirection::Down:
+            case CheckDirection::Up:
                 if(GetCollision(info.pos.x, info.pos.y + 1)){
                     val = start.x - end.x;
                     if (val < 0) {

@@ -54,6 +54,10 @@ namespace PhysicsBlock
             return PhysicsParticleS;
         }
 
+        MapFormwork* GetMapFormwork() {
+            return wMapFormwork;
+        }
+
         /**
          * @brief 获取位置上的对象
          * @param pos 位置

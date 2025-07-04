@@ -1,6 +1,7 @@
 #include "PhysicsWorld.hpp"
-#include <algorithm>
 #include "BaseCalculate.hpp"
+#include "MapStatic.hpp"
+#include <algorithm>
 #include <map>
 #include <iostream>
 
@@ -16,6 +17,21 @@ namespace PhysicsBlock
         if (GridWind != nullptr)
         {
             delete GridWind;
+        }
+        if (wMapFormwork != nullptr) {
+            delete (MapStatic*)wMapFormwork; // 暂时
+        }
+        for (auto i : PhysicsShapeS)
+        {
+            delete i;
+        }
+        for (auto i : PhysicsParticleS)
+        {
+            delete i;
+        }
+        for (auto i : CollideGroupS)
+        {
+            delete i.second;
         }
     }
 
@@ -147,17 +163,12 @@ namespace PhysicsBlock
                 }
             }
 
-            /*
             if (i == (PhysicsShapeS.size() - 1))
             {
                 continue;
-            }*/
-            for (size_t j = 0; j < PhysicsShapeS.size(); ++j)
+            }
+            for (size_t j = i + 1; j < PhysicsShapeS.size(); ++j)
             {
-                if (i == j)
-                {
-                    continue;
-                }
                 if ((PhysicsShapeS[i]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[i]->pos - PhysicsShapeS[j]->pos))
                 {
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], PhysicsShapeS[j]));

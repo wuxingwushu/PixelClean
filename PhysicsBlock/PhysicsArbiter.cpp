@@ -3,7 +3,7 @@
 #include "PhysicsCollide.hpp"
 #include <utility>
 
-#define k_biasFactorVAL 1 // 位置修正量
+#define k_biasFactorVAL 2 // 位置修正量
 
 namespace PhysicsBlock
 {

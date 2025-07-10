@@ -67,6 +67,7 @@ public:
 	glm::vec3 getCameraPos();
 
 	void setCameraPos(glm::vec2 pos);
+	void setCameraPos(glm::vec3 pos);
 
 	glm::mat4 getViewMatrix();
 

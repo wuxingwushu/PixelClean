@@ -34,14 +34,15 @@ namespace PhysicsBlock
      * @note 绳子， 弹簧， 杠杆 */
     class PhysicsJunction
     {
+    public:
+        CordKnot objectA;                   // 被绑定对象A
+        CordKnot objectB;                   // 被绑定对象B
+        unsigned int KnotSize;  // 结点数B
+        PhysicsParticle **PhysicsParticleS; // 绳子每个结点
     private:
-        CordKnot objectA;                  // 被绑定对象A
-        CordKnot objectB;                  // 被绑定对象B
-        const CordType type;               // 绳子类型
-        PhysicsParticle *PhysicsParticleS; // 绳子每个结点
-        unsigned int KnotSize;             // 结点数B
-        double Length;                     // 绳子每小段的长度
-        double coefficient = 1;            // 弹簧系数
+        const CordType type;    // 绳子类型
+        double Length;          // 绳子每小段的长度
+        double coefficient = 1; // 弹簧系数
 
         /**
          * @brief 解算他两受力

@@ -21,14 +21,27 @@ namespace PhysicsBlock
         if (wMapFormwork != nullptr) {
             delete (MapStatic*)wMapFormwork; // 暂时
         }
+        // 物理形状
         for (auto i : PhysicsShapeS)
         {
             delete i;
         }
+        // 物理点
         for (auto i : PhysicsParticleS)
         {
             delete i;
         }
+        // 物理关节
+        for (auto i : PhysicsJointS)
+        {
+            delete i;
+        }
+        // 物理绳子
+        for (auto i : PhysicsJunctionS)
+        {
+            delete i;
+        }
+        // 两个碰撞对象间的信息
         for (auto i : CollideGroupS)
         {
             delete i.second;
@@ -58,6 +71,12 @@ namespace PhysicsBlock
 
     void PhysicsWorld::PhysicsEmulator(double time)
     {
+
+        for (auto j : PhysicsJunctionS)
+        {
+            j->BearForceAnalytic();
+        }
+
         // 外力改变
         for (auto i : PhysicsShapeS)
         {
@@ -82,11 +101,6 @@ namespace PhysicsBlock
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], o));
                 }
             }
-            /*
-            if (i == (PhysicsShapeS.size() - 1))
-            {
-                continue;
-            }*/
             for (size_t j = 0; j < PhysicsShapeS.size(); ++j)
             {
                 if (i == j)
@@ -122,12 +136,21 @@ namespace PhysicsBlock
         {
             kv.second->PreStep(time);
         }
-
-        for (size_t i = 0; i < 10; i++)
+        for (auto J : PhysicsJointS)
+        {
+            J->PreStep(time);
+        }
+        
+        // 迭代结果
+        for (size_t i = 0; i < 10; ++i)
         {
             for (auto kv : CollideGroupS)
             {
                 kv.second->ApplyImpulse();
+            }
+            for (auto J : PhysicsJointS)
+            {
+                J->ApplyImpulse();
             }
         }
 

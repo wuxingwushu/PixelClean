@@ -115,11 +115,18 @@ namespace VulKan {
 			StaticLineVertex.push_back({ Vertex2, color });
 			StaticLineVertexUpData = true;
 		};
+
+		// 清空静态线段
+		inline void ClearStaticLine() { StaticLineVertex.clear(); }
+
 		//静态点（录制外使用）
 		inline void AddStaticSpot(glm::dvec3 pos, glm::vec4 color) {
 			StaticSpotVertex.push_back({ pos, color });
 			StaticSpotVertexUpData = true;
 		};
+
+		// 清空静态点
+		inline void ClearStaticSpot() { StaticSpotVertex.clear(); }
 
 		//动态线段
 		inline constexpr auto GetContinuousLine() noexcept { return ContinuousAuxiliaryLine; }

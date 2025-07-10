@@ -12,10 +12,10 @@ namespace PhysicsBlock
         KnotSize = ToInt(Length) * 2 + 1;
         distance /= (KnotSize + 1);
         Length /= (KnotSize + 1);
-        PhysicsParticleS = (PhysicsParticle *)new char[sizeof(PhysicsParticle) * KnotSize];
+        PhysicsParticleS = new PhysicsParticle *[KnotSize];
         for (size_t i = 0; i < KnotSize; ++i)
         {
-            //new (&PhysicsParticleS[i]) PhysicsParticle(glm::dvec2(objectA.ptr->PFGetPos() + distance + (distance * (double)i)), 0.1);
+            PhysicsParticleS[i] = new PhysicsParticle(glm::dvec2(objectA.ptr->PFGetPos() + distance + (distance * (double)i)), 0.1);
         }
     }
 
@@ -23,7 +23,7 @@ namespace PhysicsBlock
     {
         for (size_t i = 0; i < KnotSize; ++i)
         {
-            PhysicsParticleS[i].~PhysicsParticle();
+            delete PhysicsParticleS[i];
         }
         delete PhysicsParticleS;
     }
@@ -34,7 +34,8 @@ namespace PhysicsBlock
         double distanceVal = Modulus(distance);
         distance /= distanceVal;
         distanceVal -= Length;
-        B->AddForce(distance * coefficient * -distanceVal);
+        distanceVal = distanceVal * distanceVal * (distanceVal > 0 ? -1 : 1);
+        B->AddForce(distance * coefficient * distanceVal);
     }
 
     void PhysicsJunction::PhysicsAnalytic(PhysicsParticle *A, PhysicsParticle *B)
@@ -43,6 +44,7 @@ namespace PhysicsBlock
         double distanceVal = Modulus(distance);
         distance /= distanceVal;
         distanceVal -= Length;
+        distanceVal = distanceVal * distanceVal * (distanceVal > 0 ? -1 : 1);
         A->AddForce(distance * coefficient * distanceVal);
         B->AddForce(distance * coefficient * -distanceVal);
     }
@@ -55,6 +57,7 @@ namespace PhysicsBlock
         double distanceVal = Modulus(distance);
         distance /= distanceVal;
         distanceVal -= Length;
+        distanceVal = distanceVal * distanceVal * (distanceVal > 0 ? -1 : 1);
         A->AddForce(Arm, distance * coefficient * distanceVal);
         B->AddForce(distance * coefficient * -distanceVal);
     }
@@ -65,35 +68,35 @@ namespace PhysicsBlock
         {
             if (objectA.ptr->PFGetType() == PhysicsObjectEnum::particle)
             {
-                PhysicsAnalytic((PhysicsParticle *)objectA.ptr, &PhysicsParticleS[0]);
+                PhysicsAnalytic((PhysicsParticle *)objectA.ptr, PhysicsParticleS[KnotSize - 1]);
             }
             else
             {
-                PhysicsAnalytic((PhysicsShape *)objectA.ptr, objectA.relativePos, &PhysicsParticleS[0]);
+                PhysicsAnalytic((PhysicsShape *)objectA.ptr, objectA.relativePos, PhysicsParticleS[KnotSize - 1]);
             }
         }
         else
         {
-            PhysicsAnalytic(objectA.relativePos, &PhysicsParticleS[0]);
+            PhysicsAnalytic(objectA.relativePos, PhysicsParticleS[KnotSize - 1]);
         }
         if (objectB.ptr != nullptr)
         {
             if (objectB.ptr->PFGetType() == PhysicsObjectEnum::particle)
             {
-                PhysicsAnalytic((PhysicsParticle *)objectB.ptr, &PhysicsParticleS[KnotSize - 1]);
+                PhysicsAnalytic((PhysicsParticle *)objectB.ptr, PhysicsParticleS[0]);
             }
             else
             {
-                PhysicsAnalytic((PhysicsShape *)objectB.ptr, objectB.relativePos, &PhysicsParticleS[KnotSize - 1]);
+                PhysicsAnalytic((PhysicsShape *)objectB.ptr, objectB.relativePos, PhysicsParticleS[0]);
             }
         }
         else
         {
-            PhysicsAnalytic(objectA.relativePos, &PhysicsParticleS[KnotSize - 1]);
+            PhysicsAnalytic(objectA.relativePos, PhysicsParticleS[0]);
         }
         for (size_t i = 0; i < KnotSize - 1; ++i)
         {
-            PhysicsAnalytic(&PhysicsParticleS[i], &PhysicsParticleS[i + 1]);
+            PhysicsAnalytic(PhysicsParticleS[i], PhysicsParticleS[i + 1]);
         }
     }
 

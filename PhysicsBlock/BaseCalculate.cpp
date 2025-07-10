@@ -480,4 +480,13 @@ namespace PhysicsBlock
 	{
 		return std::max(low, std::min(a, high));
 	}
+
+
+	double Random(double lo, double hi)
+	{
+		double r = (double)rand();
+		r /= RAND_MAX;
+		r = (hi - lo) * r + lo;
+		return r;
+	}
 }

@@ -5,7 +5,7 @@ namespace PhysicsBlock
 
     BaseOutline::BaseOutline(const unsigned int Width, const unsigned int Height) : BaseGrid(Width, Height)
     {
-        OutlineSet = new glm::dvec2[Width * Height * 2];
+        OutlineSet = new glm::dvec2[Width * Height * 3];
     }
 
     BaseOutline::~BaseOutline()

@@ -43,11 +43,17 @@ namespace GAME {
 		void ShowStaticSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1,0,0,1});
 		void ShowSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1,0,0,1});
 
-		bool PhysicsSwitch = false;// 物理世界的开关
-		PhysicsBlock::PhysicsWorld* mPhysicsWorld;// 物理世界
+		bool PhysicsSwitch = true;// 物理世界的开关
+		PhysicsBlock::PhysicsWorld* mPhysicsWorld = nullptr;// 物理世界
 		PhysicsBlock::MapStatic* mMapStatic;// 地图
 
 		PhysicsBlock::PhysicsFormwork* PhysicsFormworkPtr = nullptr;// 选择的物理对象
+
+		// 物理信息辅助视觉
+		bool PhysicsAssistantInformation = false; // 是否显示物理辅助信息
+		bool PhysicsCollisionDrop = true; // 显示物理碰撞点
+		bool PhysicsSeparateNormalVector = true; // 显示分离法向量
+		bool PhysicsCollisionDropToCenterOfGravity = true; // 碰撞点指向重心
 	};
 
 }

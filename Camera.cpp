@@ -36,13 +36,22 @@ void Camera::update()
 	m_vMatrix = glm::lookAt(m_position, m_position + m_front, m_up);
 }
 
+// 获取摄像机位置
 glm::vec3 Camera::getCameraPos() {
 	return m_position;
 }
 
+// 设置相机位置
 void Camera::setCameraPos(glm::vec2 pos) {
 	m_position.x = pos.x;
 	m_position.y = pos.y;
+
+	update();
+}
+
+// 设置相机位置
+void Camera::setCameraPos(glm::vec3 pos) {
+	m_position = pos;
 
 	update();
 }

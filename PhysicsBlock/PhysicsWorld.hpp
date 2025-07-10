@@ -4,6 +4,8 @@
 #include "PhysicsShape.hpp"    // 有形状物体
 #include "PhysicsParticle.hpp" // 物理粒子
 #include "PhysicsArbiter.hpp"  // 物理解析單元
+#include "PhysicsJoint.hpp"    // 物理关节
+#include "PhysicsJunction.hpp" // 物理连接
 #include <map>
 
 namespace PhysicsBlock
@@ -23,6 +25,8 @@ namespace PhysicsBlock
 
         std::vector<PhysicsShape*> PhysicsShapeS;
         std::vector<PhysicsParticle*> PhysicsParticleS;
+        std::vector<PhysicsJoint*> PhysicsJointS;
+        std::vector<PhysicsJunction*> PhysicsJunctionS;
 
         std::map<ArbiterKey, BaseArbiter*> CollideGroupS;// 碰撞队
 
@@ -46,12 +50,30 @@ namespace PhysicsBlock
             PhysicsParticleS.push_back(Object);
         }
 
+        void AddObject(PhysicsJoint *Object)
+        {
+            PhysicsJointS.push_back(Object);
+        }
+
+        void AddObject(PhysicsJunction *Object)
+        {
+            PhysicsJunctionS.push_back(Object);
+        }
+
         std::vector<PhysicsShape*>& GetPhysicsShape() {
             return PhysicsShapeS;
         }
 
         std::vector<PhysicsParticle*>& GetPhysicsParticle() {
             return PhysicsParticleS;
+        }
+
+        std::vector<PhysicsJoint*>& GetPhysicsJoint() {
+            return PhysicsJointS;
+        }
+
+        std::vector<PhysicsJunction*>& GetPhysicsJunction() {
+            return PhysicsJunctionS;
         }
 
         MapFormwork* GetMapFormwork() {

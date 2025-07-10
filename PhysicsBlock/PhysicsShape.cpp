@@ -38,7 +38,7 @@ namespace PhysicsBlock
         double ForceDouble = Modulus(Force);                           // 力大小
         double F = ForceDouble * cos(disparity);                       // 垂直力臂的力大小
         PhysicsParticle::AddForce({F * cos(Langle), F * sin(Langle)}); // 转为世界力矩 // 位置移动受到力矩
-        AddTorque(Modulus(Pos), ForceDouble * sin(disparity));         // 旋转受到扭矩
+        AddTorque(Modulus(Pos), ForceDouble * -sin(disparity));         // 旋转受到扭矩
     }
 
     void PhysicsShape::AddTorque(double ArmForce, double Force)
@@ -70,8 +70,13 @@ namespace PhysicsBlock
             }
         }
         CentreShape /= Size;
-        CentreMass /= mass;
         invMass = 1.0 / mass;
+        if (invMass == 0) {
+            mass = DBL_MAX;
+            CentreMass = CentreShape;
+        }else {
+            CentreMass /= mass;
+        }
         CentreShape += glm::dvec2{0.5, 0.5}; // 移动到格子的中心
         CentreMass += glm::dvec2{0.5, 0.5};  // 移动到格子的中心
 
@@ -109,6 +114,9 @@ namespace PhysicsBlock
             }
         }
         invMomentInertia = 1.0 / MomentInertia;
+        if (invMomentInertia == 0) {
+            MomentInertia = DBL_MAX;
+        }
     }
 
     void PhysicsShape::ApproachDrop(glm::dvec2 drop){
@@ -155,6 +163,7 @@ namespace PhysicsBlock
     {
         PhysicsParticle::PhysicsSpeed(time, Ga);
         angleSpeed += time * invMomentInertia * torque;
+        torque = 0;
     }
 
     void PhysicsShape::PhysicsPos(double time, glm::dvec2 Ga)

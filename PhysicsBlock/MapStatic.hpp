@@ -40,7 +40,7 @@ namespace PhysicsBlock
          * @param start 网格位置
          * @return 是否碰撞（true: 碰撞） */
         virtual bool FMGetCollide(glm::ivec2 start) {
-            if((start.x >= width) || (start.y >= width)){
+            if((start.x >= width) || (start.y >= height)){
                 return false;
             }
             return at(start).Collision;
@@ -51,6 +51,14 @@ namespace PhysicsBlock
          * @param start 世界位置
          * @return 是否碰撞（true: 碰撞） */
         virtual bool FMGetCollide(glm::dvec2 start) { return FMGetCollide(ToInt(start + centrality)); }
+
+        /**
+         * @brief 获取网格(不安全)
+         * @param start 网格位置
+         * @warning 范围不安全，超出会报错 */
+        virtual GridBlock& FMGetGridBlock(glm::ivec2 start) {
+            return at(start);
+        }
 
         /**
          * @brief 地图 线段(Bresenham) 检测

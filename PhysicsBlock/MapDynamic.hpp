@@ -83,6 +83,14 @@ namespace PhysicsBlock
         virtual glm::uvec2 FMGetMapSize() { return glm::uvec2{ width * PixelBlockPowerMaxNum, height * PixelBlockPowerMaxNum }; }
 
         /**
+         * @brief 获取网格(不安全)
+         * @param start 网格位置
+         * @warning 范围不安全，超出会报错 */
+        virtual GridBlock& FMGetGridBlock(glm::ivec2 start) {
+            return at(start);
+        }
+
+        /**
          * @brief 地图 线段(Bresenham) 检测
          * @param start 起始位置
          * @param end 结束位置

@@ -19,16 +19,17 @@ namespace PhysicsBlock
             {
                 if (info.Direction & 0x1)
                 {
-                    contacts[ContactSize].separation = info.pos.y - DropPos.y;
+                    contacts->separation = info.pos.y - DropPos.y;
                 }
                 else
                 {
-                    contacts[ContactSize].separation = info.pos.x - DropPos.x;
+                    contacts->separation = info.pos.x - DropPos.x;
                 }
-                contacts[ContactSize].separation = -abs(contacts[ContactSize].separation); // 碰撞距离差
-                contacts[ContactSize].position = info.pos;                                  // 碰撞点的位置
-                contacts[ContactSize].normal = vec2angle({-1, 0}, (info.Direction * (3.14159265359 / 2)) + B->angle); // （反向作用力法向量）地形不会旋转
-                contacts[ContactSize].w_side = ContactSize;                                                           // 边索引 ID
+                contacts->separation = -abs(contacts->separation);                                        // 碰撞距离差
+                contacts->position = info.pos;                                                            // 碰撞点的位置
+                contacts->normal = vec2angle({-1, 0}, (info.Direction * (3.14159265359 / 2)) + B->angle); // （反向作用力法向量）地形不会旋转
+                contacts->w_side = ContactSize;                                                           // 边索引 ID
+                ++contacts;
                 ++ContactSize;
             }
         }
@@ -44,18 +45,18 @@ namespace PhysicsBlock
             {
                 if (info.Direction & 0x1)
                 {
-                    contacts[0].separation = info.pos.y - B->pos.y;
+                    contacts->separation = info.pos.y - B->pos.y;
                 }
                 else
                 {
-                    contacts[0].separation = info.pos.x - B->pos.x;
+                    contacts->separation = info.pos.x - B->pos.x;
                 }
-                contacts[0].separation = -abs(contacts[0].separation);                                      // 碰撞距离差
-                contacts[0].position = info.pos;                                                            // 碰撞点的位置
-                contacts[0].normal = vec2angle({-1, 0}, (info.Direction * (3.14159265359 / 2)) + A->angle); // （反向作用力法向量）地形不会旋转
-                contacts[0].w_side = 0;                                                                     // 边索引 ID
+                contacts->separation = -abs(contacts->separation);                                        // 碰撞距离差
+                contacts->position = info.pos;                                                            // 碰撞点的位置
+                contacts->normal = -vec2angle({-1, 0}, (info.Direction * (3.14159265359 / 2)) + A->angle); // （反向作用力法向量）地形不会旋转
+                contacts->w_side = 0;                                                                     // 边索引 ID
                 // 一直馅在碰撞体，无法更新旧位置（旧位置不可以在碰撞体内）
-                B->OldPos = info.pos + (contacts[0].normal * 0.1);
+                B->OldPos = info.pos + (contacts->normal * 0.1);
                 return 1; // 有碰撞返回碰撞位置
             }
         }
@@ -76,16 +77,17 @@ namespace PhysicsBlock
             {
                 if (info.Direction & 0x1)
                 {
-                    contacts[ContactSize].separation = info.pos.y - DropPos.y;
+                    contacts->separation = info.pos.y - DropPos.y;
                 }
                 else
                 {
-                    contacts[ContactSize].separation = info.pos.x - DropPos.x;
+                    contacts->separation = info.pos.x - DropPos.x;
                 }
-                contacts[ContactSize].separation = -abs(contacts[ContactSize].separation);               // 碰撞距离差
-                contacts[ContactSize].position = info.pos;                                                // 碰撞点的位置
-                contacts[ContactSize].normal = vec2angle({-1, 0}, info.Direction * (3.14159265359 / 2)); // （反向作用力法向量）地形不会旋转
-                contacts[ContactSize].w_side = ContactSize;                                              // 边索引 ID
+                contacts->separation = -abs(contacts->separation);                           // 碰撞距离差
+                contacts->position = info.pos;                                               // 碰撞点的位置
+                contacts->normal = vec2angle({-1, 0}, info.Direction * (3.14159265359 / 2)); // （反向作用力法向量）地形不会旋转
+                contacts->w_side = ContactSize;                                              // 边索引 ID
+                ++contacts;
                 ++ContactSize;
             }
         }
@@ -101,18 +103,18 @@ namespace PhysicsBlock
             {
                 if (info.Direction & 0x1)
                 {
-                    contacts[0].separation = info.pos.y - A->pos.y;
+                    contacts->separation = info.pos.y - A->pos.y;
                 }
                 else
                 {
-                    contacts[0].separation = info.pos.x - A->pos.x;
+                    contacts->separation = info.pos.x - A->pos.x;
                 }
-                contacts[0].separation = -abs(contacts[0].separation); // 碰撞距离差
-                contacts[0].position = info.pos;                       // 碰撞点的位置
-                contacts[0].normal = vec2angle({-1, 0}, info.Direction * (3.14159265359 / 2)); // （反向作用力法向量）地形不会旋转
-                contacts[0].w_side = 0;                                                        // 边索引 ID
+                contacts->separation = -abs(contacts->separation);                           // 碰撞距离差
+                contacts->position = info.pos;                                               // 碰撞点的位置
+                contacts->normal = vec2angle({-1, 0}, info.Direction * (3.14159265359 / 2)); // （反向作用力法向量）地形不会旋转
+                contacts->w_side = 0;                                                        // 边索引 ID
                 // 一直馅在碰撞体，无法更新旧位置（旧位置不可以在碰撞体内）
-                A->OldPos = info.pos - (contacts[0].normal * 0.1);
+                A->OldPos = info.pos - (contacts->normal * 0.1);
                 return 1;
             }
         }

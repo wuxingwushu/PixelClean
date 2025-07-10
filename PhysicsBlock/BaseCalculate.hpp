@@ -255,4 +255,7 @@ namespace PhysicsBlock
 	 * @return 合理值
 	 * @note a 不合理就返回和他最近的合理值 */
 	double Clamp(double a, double low, double high);
+
+
+	double Random(double lo, double hi);
 }

@@ -1,5 +1,6 @@
 #include "GPU.h"
 #include "lodepng.h"
+#include <intrin.h>
 
 struct Pixel {
     float r, g, b, a;
@@ -25,7 +26,7 @@ uint32_t* readFile(uint32_t& length, const char* filename) {
     fclose(fp);
 
     // data padding. 
-    for (int i = filesize; i < filesizepadded; i++) {
+    for (int i = filesize; i < filesizepadded; ++i) {
         str[i] = 0;
     }
 

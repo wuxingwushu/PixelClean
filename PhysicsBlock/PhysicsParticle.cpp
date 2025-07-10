@@ -22,7 +22,11 @@ namespace PhysicsBlock
 
     void PhysicsParticle::PhysicsSpeed(double time, glm::dvec2 Ga)
     {
+        if (invMass == 0)
+		    return;
+
         speed += time * (Ga + invMass * force);
+        force = { 0, 0 };
     }
 
     void PhysicsParticle::PhysicsPos(double time, glm::dvec2 Ga)

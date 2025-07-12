@@ -132,13 +132,14 @@ namespace PhysicsBlock
         }
 
         // 预处理
+        double inv_dt = 1.0 / time;
         for (auto kv : CollideGroupS)
         {
-            kv.second->PreStep(time);
+            kv.second->PreStep(inv_dt);
         }
         for (auto J : PhysicsJointS)
         {
-            J->PreStep(time);
+            J->PreStep(inv_dt);
         }
         
         // 迭代结果

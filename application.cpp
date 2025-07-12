@@ -58,6 +58,7 @@ namespace GAME {
 		default:
 			break;
 		}
+		return nullptr;
 	}
 
 	void Application::DeleteGame(GameModsEnum Game) {
@@ -71,6 +72,9 @@ namespace GAME {
 			break;
 		case TankTrouble_:
 			delete (TankTrouble*)mGameMods;
+			break;
+		case PhysicsTest_:
+			delete (PhysicsTest*)mGameMods;
 			break;
 		default:
 			break;

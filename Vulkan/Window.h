@@ -28,7 +28,10 @@ namespace VulKan {
 
 		[[nodiscard]] inline GLFWwindow* getWindow() const noexcept { return mWindow; }
 
+		// 注册鼠标事件
 		void setApp(GameMods* app);
+
+		// 卸载鼠标事件
 		void ReleaseApp();
 
 		//界面键盘事件

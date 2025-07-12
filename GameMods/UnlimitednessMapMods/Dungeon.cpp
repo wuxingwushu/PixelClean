@@ -143,10 +143,10 @@ namespace GAME {
 			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
 				float MistUVs[] = {
-					UVx * ix + UVpianX,	UVy * iy + UVpianY,
-					UVx * (ix + 1) - UVpianX,	UVy * iy + UVpianY,
-					UVx * (ix + 1) - UVpianX,	UVy * (iy + 1) - UVpianY,
-					UVx * ix + UVpianX,	UVy * (iy + 1) - UVpianY,
+					float(UVx * ix + UVpianX),	float(UVy * iy + UVpianY),
+					float(UVx * (ix + 1) - UVpianX),	float(UVy * iy + UVpianY),
+					float(UVx * (ix + 1) - UVpianX),	float(UVy * (iy + 1) - UVpianY),
+					float(UVx * ix + UVpianX),	float(UVy * (iy + 1) - UVpianY),
 				};
 				mTextureAndBuffer[ix][iy].MistPointerX = ix;
 				mTextureAndBuffer[ix][iy].MistPointerY = iy;

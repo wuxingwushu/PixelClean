@@ -368,7 +368,7 @@ namespace VulKan {
 		std::vector<VkVertexInputBindingDescription> vertexBindingDes{};
 		vertexBindingDes.resize(1);
 		vertexBindingDes[0].binding = 0;
-		vertexBindingDes[0].stride = sizeof(float) * (3 + 4);//线段， 颜色
+		vertexBindingDes[0].stride = sizeof(float) * (3 + 4);//位置， 颜色， 大小
 		vertexBindingDes[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 		std::vector<VkVertexInputAttributeDescription> attributeDes{};

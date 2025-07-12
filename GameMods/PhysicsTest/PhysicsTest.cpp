@@ -15,10 +15,6 @@ namespace GAME
 
 	PhysicsTest::PhysicsTest(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
-		m_position.x = 0;
-		m_position.y = 0;
-		m_position.z = 50;
-
 		// 添加视觉辅助
 		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 10000);
 		mAuxiliaryVision->initUniformManager(
@@ -27,7 +23,7 @@ namespace GAME
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
 		PhysicsBlock::DemoFunS[0](&mPhysicsWorld, mCamera);
-		mMapStatic = (PhysicsBlock::MapStatic*)mPhysicsWorld->GetMapFormwork();
+		mMapStatic = (PhysicsBlock::MapStatic *)mPhysicsWorld->GetMapFormwork();
 		for (size_t x = 0; x < mMapStatic->width; x++)
 		{
 			for (size_t y = 0; y < mMapStatic->height; y++)
@@ -38,10 +34,13 @@ namespace GAME
 				}
 			}
 		}
+
+		PhysicsBlock::AuxiliaryInfoRead();
 	}
 
 	PhysicsTest::~PhysicsTest()
 	{
+		PhysicsBlock::AuxiliaryInfoStorage();
 		delete mAuxiliaryVision;
 		delete mPhysicsWorld;
 	}
@@ -53,10 +52,12 @@ namespace GAME
 
 	void PhysicsTest::MouseRoller(int z)
 	{
-		if (m_position.z <= 10) {
+		if (m_position.z <= 10)
+		{
 			m_position.z += (m_position.z / 2) * z;
 		}
-		else {
+		else
+		{
 			m_position.z += z * 5;
 		}
 	}
@@ -113,19 +114,20 @@ namespace GAME
 		{
 			Global::ClickWindow = true;
 		}
+		// 设置位置，让窗口靠右
 		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
 
-		
-		static int item_current = 0;
-		static int item_Demo_idx = 0;
+		static int item_current = 0; // 储存当前Demo序号
+		static int item_Demo_idx = 0; // ImGui::Combo Demo序号
 		ImGui::Combo("Demo", &item_Demo_idx, PhysicsBlock::DemoNameS, IM_ARRAYSIZE(PhysicsBlock::DemoNameS));
+		// Demo序号 是否发生改变
 		if (item_current != item_Demo_idx)
 		{
 			item_current = item_Demo_idx;
 			PhysicsBlock::DemoFunS[item_Demo_idx](&mPhysicsWorld, mCamera);
-			mMapStatic = (PhysicsBlock::MapStatic*)mPhysicsWorld->GetMapFormwork();
+			mMapStatic = (PhysicsBlock::MapStatic *)mPhysicsWorld->GetMapFormwork();
 			PhysicsFormworkPtr = nullptr;
-			mAuxiliaryVision->ClearStaticLine();// 清空上一个地图的静态网格
+			mAuxiliaryVision->ClearStaticLine(); // 清空上一个地图的静态网格
 			for (size_t x = 0; x < mMapStatic->width; x++)
 			{
 				for (size_t y = 0; y < mMapStatic->height; y++)
@@ -146,12 +148,12 @@ namespace GAME
 		{
 			PhysicsAssistantInformation = !PhysicsAssistantInformation;
 		}
-		if (PhysicsAssistantInformation) {
-			ImGui::Checkbox(u8"显示物理碰撞点", &PhysicsCollisionDrop); HelpMarker2("两个物体的接触点");
-			ImGui::Checkbox(u8"显示分离法向量", &PhysicsSeparateNormalVector); HelpMarker2("两个物体间分离轴的法向量");
-			ImGui::Checkbox(u8"碰撞点指向重心", &PhysicsCollisionDropToCenterOfGravity); HelpMarker2("碰撞点到两个物体重心的连线");
+		if (PhysicsAssistantInformation)
+		{
+			// 物理辅助显示参数的控制UI
+			PhysicsBlock::PhysicsAuxiliaryColorUI();
 		}
-		
+
 		ImGui::Text("世界总动能：%f", mPhysicsWorld->GetWorldEnergy());
 
 		if (PhysicsFormworkPtr)
@@ -174,15 +176,17 @@ namespace GAME
 		else
 		{
 			ImGui::Text(u8"World");
-			if (PhysicsBlock::PhysicsShapeUI(mPhysicsWorld)) {
-				mAuxiliaryVision->ClearStaticLine();// 清空上一个地图的静态网格
+			if (PhysicsBlock::PhysicsShapeUI(mPhysicsWorld))
+			{
+				// 地图发生变动
+				mAuxiliaryVision->ClearStaticLine(); // 清空上一个地图的静态网格
 				for (size_t x = 0; x < mMapStatic->width; x++)
 				{
 					for (size_t y = 0; y < mMapStatic->height; y++)
 					{
 						if (mMapStatic->at(x, y).Entity)
 						{
-							ShowStaticSquare(glm::dvec2{ x, y } - mMapStatic->centrality, 0, { 0, 1, 0, 1 });
+							ShowStaticSquare(glm::dvec2{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
 						}
 					}
 				}
@@ -211,7 +215,7 @@ namespace GAME
 		if (!Global::ClickWindow)
 		{
 			// 点击左键
-			static int Z_fangzhifanfuvhufa; // 避免反复触发
+			static int Z_fangzhifanfuvhufa;	   // 避免反复触发
 			static glm::dvec2 PhysicsShapeArm; //
 			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
 			if (Leftan == GLFW_PRESS)
@@ -223,8 +227,9 @@ namespace GAME
 					if (PhysicsFormworkPtr)
 					{
 						Opos = PhysicsFormworkPtr->PFGetPos() - beang;
-						if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::shape) {
-							PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsShape*)PhysicsFormworkPtr)->angle);
+						if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::shape)
+						{
+							PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->angle);
 							PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
 						}
 					}
@@ -241,17 +246,22 @@ namespace GAME
 					if (PhysicsFormworkPtr)
 					{
 						beang2 = {huoqdedian.x, huoqdedian.y};
-						if (PhysicsSwitch) {
+						if (PhysicsSwitch)
+						{
 							// 开启物理了，就以受力的方式改变位置
-							if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::shape) {
-								PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsShape*)PhysicsFormworkPtr)->angle);
+							if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::shape)
+							{
+								PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->angle);
 								((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->AddForce(lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), (beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())) * 100.0);
-								mAuxiliaryVision->Line({ lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 0 }, { 1, 0, 0, 1 }, { (beang2), 0 }, { 0, 1, 0, 1 });
-							}else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::particle) {
+								mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 0}, {1, 0, 0, 1}, {(beang2), 0}, {0, 1, 0, 1});
+							}
+							else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::particle)
+							{
 								((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->AddForce((Opos + beang2) - ((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->pos);
 							}
 						}
-						else {
+						else
+						{
 							// 没有开启物理，就直接修改位置
 							((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->pos = Opos + beang2;
 						}
@@ -276,17 +286,18 @@ namespace GAME
 			fangzhifanfuvhufa = Leftan;
 		}
 
-		
-
-		if (PhysicsSwitch) {
+		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
+		if (PhysicsSwitch)
+		{
 			mPhysicsWorld->PhysicsEmulator(TOOL::FPStime);
 		}
-		else {
+		else
+		{
 			mPhysicsWorld->PhysicsInformationUpdate();
 		}
-			
+		TOOL::mTimer->StartEnd();
 
-		//mAuxiliaryVision->Line({beang, 0}, {1, 0, 0, 1}, {end, 0}, {1, 0, 0, 1});
+		// mAuxiliaryVision->Line({beang, 0}, {1, 0, 0, 1}, {end, 0}, {1, 0, 0, 1});
 
 		PhysicsBlock::PhysicsShape *PhysicsShapePtr;
 		PhysicsBlock::PhysicsParticle *PhysicsParticlePtr;
@@ -300,6 +311,27 @@ namespace GAME
 			if (info.Collision) {
 				mAuxiliaryVision->Spot({ info.pos, 0 }, { 0, 1, 1, 1 });
 			}*/
+			if (PhysicsAssistantInformation)
+			{
+				// 辅助显示位置
+				if (PhysicsBlock::Auxiliary_PosBool)
+					mAuxiliaryVision->Spot({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
+				// 辅助显示旧位置
+				if (PhysicsBlock::Auxiliary_OldPosBool)
+					mAuxiliaryVision->Spot({i->OldPos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
+				// 辅助显示速度
+				if (PhysicsBlock::Auxiliary_SpeedBool)
+					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
+				// 辅助显示受力
+				if (PhysicsBlock::Auxiliary_ForceBool)
+					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
+				// 辅助显示质心
+				if (PhysicsBlock::Auxiliary_CentreMassBool)
+					mAuxiliaryVision->Spot({i->pos + i->CentreMass, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CentreMassColor));
+				// 辅助显示几何中心
+				if (PhysicsBlock::Auxiliary_CentreShapeBool)
+					mAuxiliaryVision->Spot({i->pos + i->CentreShape, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CentreShapeColor));
+			}
 
 			for (size_t x = 0; x < i->width; x++)
 			{
@@ -307,7 +339,7 @@ namespace GAME
 				{
 					if (i->at(x, y).Entity)
 					{
-						ShowSquare(SquarePhysics::vec2angle(glm::dvec2{ x, y } - i->CentreMass, i->angle) + i->pos, i->angle, { 0, 1, 0, 1 });
+						ShowSquare(SquarePhysics::vec2angle(glm::dvec2{x, y} - i->CentreMass, i->angle) + i->pos, i->angle, {0, 1, 0, 1});
 					}
 				}
 			}
@@ -315,30 +347,50 @@ namespace GAME
 		// 渲染物理点
 		for (auto i : mPhysicsWorld->GetPhysicsParticle())
 		{
-			mAuxiliaryVision->Spot({ i->pos, 0 }, { 0, 1, 0, 1 });
+			if (PhysicsAssistantInformation)
+			{
+				// 辅助显示位置
+				if (PhysicsBlock::Auxiliary_PosBool)
+					mAuxiliaryVision->Spot({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
+				// 辅助显示旧位置
+				if (PhysicsBlock::Auxiliary_OldPosBool)
+					mAuxiliaryVision->Spot({i->OldPos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
+				// 辅助显示速度
+				if (PhysicsBlock::Auxiliary_SpeedBool)
+					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
+				// 辅助显示受力
+				if (PhysicsBlock::Auxiliary_ForceBool)
+					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
+			}
+
+			mAuxiliaryVision->Spot({i->pos, 0}, {0, 1, 0, 1});
 		}
 		// 渲染绳子
 		for (auto i : mPhysicsWorld->GetPhysicsJoint())
 		{
-			
-			mAuxiliaryVision->Line({i->body1->pos, 0 }, {0, 1, 0, 1}, {i->body1->pos + i->r1, 0 }, {0, 1, 0, 1});
-			mAuxiliaryVision->Line({i->body2->pos, 0 }, {0, 1, 0, 1}, {i->body2->pos + i->r2, 0 }, {0, 1, 0, 1});
+
+			mAuxiliaryVision->Line({i->body1->pos, 0}, {0, 1, 0, 1}, {i->body1->pos + i->r1, 0}, {0, 1, 0, 1});
+			mAuxiliaryVision->Line({i->body2->pos, 0}, {0, 1, 0, 1}, {i->body2->pos + i->r2, 0}, {0, 1, 0, 1});
 		}
 
 		// 渲染物理信息
-		if (PhysicsAssistantInformation) {
-			for (auto& i : mPhysicsWorld->CollideGroupS)
+		if (PhysicsAssistantInformation)
+		{
+			for (auto &i : mPhysicsWorld->CollideGroupS)
 			{
 				for (int j = 0; j < i.second->numContacts; ++j)
 				{
 					// 碰撞点
-					if (PhysicsCollisionDrop) mAuxiliaryVision->Spot({ i.second->contacts[j].position, 0 }, { 1,0,0,1 });
+					if (PhysicsBlock::Auxiliary_CollisionDropBool)
+						mAuxiliaryVision->Spot({i.second->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropColor));
 					// 碰撞点 分离 法向量
-					if (PhysicsSeparateNormalVector) mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position + i.second->contacts[j].normal, 0 }, { 0,1,1,1 });
+					if (PhysicsBlock::Auxiliary_SeparateNormalVectorBool)
+						mAuxiliaryVision->Line({i.second->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor), {i.second->contacts[j].position + i.second->contacts[j].normal, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor));
 					// 指向重心
-					if (PhysicsCollisionDropToCenterOfGravity) {
-						mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position - i.second->contacts[j].r1, 0 }, { 0,0,1,1 });
-						mAuxiliaryVision->Line({ i.second->contacts[j].position, 0 }, { 0,0,1,1 }, { i.second->contacts[j].position - i.second->contacts[j].r2, 0 }, { 0,0,1,1 });
+					if (PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityBool)
+					{
+						mAuxiliaryVision->Line({i.second->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor), {i.second->contacts[j].position - i.second->contacts[j].r1, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor));
+						mAuxiliaryVision->Line({i.second->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor), {i.second->contacts[j].position - i.second->contacts[j].r2, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor));
 					}
 				}
 			}

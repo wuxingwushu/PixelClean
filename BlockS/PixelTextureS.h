@@ -13,7 +13,7 @@ namespace GAME {
 
 		~PixelTextureS();
 
-		[[namespace]] VulKan::PixelTexture* getPixelTexture(unsigned int PixelTextureNumber) const {
+		inline VulKan::PixelTexture* getPixelTexture(unsigned int PixelTextureNumber) {
 			return mPixelTextureS[PixelTextureNumber]; 
 		}
 

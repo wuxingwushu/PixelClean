@@ -1,6 +1,5 @@
 #pragma once
-#include <glm/glm.hpp>
-#include "PhysicsFormwork.hpp"
+#include "BaseStruct.hpp"
 
 namespace PhysicsBlock
 {

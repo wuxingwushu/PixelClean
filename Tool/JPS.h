@@ -208,6 +208,7 @@ private:
         default:
             break;
         }
+        return JPSVec2{ 0, 0 };
     }
 
     //获取合法位置
@@ -241,6 +242,7 @@ private:
         default:
             break;
         }
+        return false;
     }
 
     //邻近点的检测

@@ -58,7 +58,7 @@ namespace PhysicsBlock
         {
             for (int y = 0; y < height; ++y)
             {
-                i = x * width + y;
+                i = x * height + y;
                 // 不为空
                 if (at(i).type & GridBlockType::Entity)
                 {
@@ -92,7 +92,7 @@ namespace PhysicsBlock
             for (double y = 0; y < height; ++y)
             {
                 // 不存在跳过
-                i = x * width + y;
+                i = x * height + y;
                 if ((at(i).Entity) == 0)
                 {
                     continue;

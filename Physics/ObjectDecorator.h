@@ -177,6 +177,7 @@ namespace SquarePhysics {
 			if (mDestroyModeCallback != nullptr) {
 				return mDestroyModeCallback(x, y, Bool, Angle, Object, Grid, Data);
 			}
+			return false;
 		}
 
 

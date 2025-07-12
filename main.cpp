@@ -1,4 +1,3 @@
-#pragma once
 #include "application.h"
 #include "Vulkan/Window.h"
 

@@ -341,14 +341,17 @@ namespace PhysicsBlock
 		(*myPhysicsWorld)->AddObject(PhysicsShape2);
 		PhysicsShapeVector.push_back(PhysicsShape2);
 
-		for (size_t i = 0; i < MapSize / 8; i++)
+		for (size_t i = 0; i < MapSize / 8; ++i)
 		{
-			PhysicsBlock::PhysicsShape *PhysicsShape1 = new PhysicsBlock::PhysicsShape({PhysicsShapeVector[PhysicsShapeVector.size() - 1]->pos.x + 2, 0}, {2, 1});
-			for (size_t i = 0; i < (PhysicsShape1->width * PhysicsShape1->height); ++i)
+			PhysicsBlock::PhysicsShape *PhysicsShape1 = new PhysicsBlock::PhysicsShape({PhysicsShapeVector[PhysicsShapeVector.size() - 1]->pos.x + 2, 0.5}, {2, 1});
+			for (size_t x = 0; x < PhysicsShape1->width; ++x)
 			{
-				PhysicsShape1->at(i).Collision = true;
-				PhysicsShape1->at(i).Entity = true;
-				PhysicsShape1->at(i).mass = 1;
+				for (size_t y = 0; y < PhysicsShape1->height; ++y)
+				{
+					PhysicsShape1->at(x, y).Collision = true;
+					PhysicsShape1->at(x, y).Entity = true;
+					PhysicsShape1->at(x, y).mass = 1;
+				}
 			}
 			PhysicsShape1->UpdateInfo();
 			PhysicsShape1->UpdateOutline();

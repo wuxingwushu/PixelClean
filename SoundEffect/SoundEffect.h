@@ -26,7 +26,7 @@ struct SoundStruct
 	SoLoud::handle Handle;
 };
 
-typedef enum SoundType {
+enum SoundType {
 	MP3 = 0,
 	MIDI
 };

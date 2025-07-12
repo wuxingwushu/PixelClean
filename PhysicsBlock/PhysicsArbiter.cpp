@@ -3,7 +3,7 @@
 #include "PhysicsCollide.hpp"
 #include <utility>
 
-#define k_biasFactorVAL 2 // 位置修正量
+#define k_biasFactorVAL 0.2 // 位置修正量
 
 namespace PhysicsBlock
 {
@@ -69,7 +69,7 @@ namespace PhysicsBlock
             kTangent += object1->invMomentInertia * (R1 - rt1 * rt1) + object2->invMomentInertia * (R2 - rt2 * rt2);
             c->massTangent = 1.0 / kTangent;
 
-            c->bias = -k_biasFactor/* *inv_dt */ * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
+            c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
 
             // 施加正常+摩擦脉冲
             glm::dvec2 P = c->Pn * c->normal + c->Pt * tangent;
@@ -197,7 +197,7 @@ namespace PhysicsBlock
             kTangent += object1->invMomentInertia * (R1 - rt1 * rt1);
             c->massTangent = 1.0 / kTangent;
 
-            c->bias = -k_biasFactor/* *inv_dt */ * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
+            c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
 
             // 施加正常+摩擦脉冲
             glm::dvec2 P = c->Pn * c->normal + c->Pt * tangent;
@@ -326,7 +326,7 @@ namespace PhysicsBlock
             kTangent += object1->invMomentInertia * (R1 - rt1 * rt1);
             c->massTangent = 1.0 / kTangent;
 
-            c->bias = -k_biasFactor/* *inv_dt */ * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
+            c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
 
             // 施加正常+摩擦脉冲
             glm::dvec2 P = c->Pn * c->normal - c->Pt * tangent;
@@ -442,7 +442,7 @@ namespace PhysicsBlock
             double rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
             c->massTangent = 1.0 / kNormal;
 
-            c->bias = -k_biasFactor/* *inv_dt */ * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
+            c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
 
             // 施加正常+摩擦脉冲
             glm::dvec2 P = c->Pn * c->normal + c->Pt * tangent;

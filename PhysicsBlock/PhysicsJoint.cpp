@@ -42,7 +42,7 @@ namespace PhysicsBlock
         // 计算位置偏差
         glm::dvec2 dp = (body2->pos + r2) - (body1->pos + r1);
         // 计算位置修正速度值
-        bias = -biasFactor * (1 / inv_dt) * dp;
+        bias = -biasFactor * inv_dt * dp;
 
 
         // 绳子僵硬程度

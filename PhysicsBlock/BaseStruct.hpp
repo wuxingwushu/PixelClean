@@ -1,5 +1,10 @@
 #pragma once
+#define TranslatorLocality 1  // 手动选择库位置
+#if TranslatorLocality
 #include <glm/glm.hpp>
+#else
+#include "../extern/glm/glm.hpp"
+#endif
 
 namespace PhysicsBlock
 {

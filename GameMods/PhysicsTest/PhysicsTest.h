@@ -51,9 +51,6 @@ namespace GAME {
 
 		// 物理信息辅助视觉
 		bool PhysicsAssistantInformation = false; // 是否显示物理辅助信息
-		bool PhysicsCollisionDrop = true; // 显示物理碰撞点
-		bool PhysicsSeparateNormalVector = true; // 显示分离法向量
-		bool PhysicsCollisionDropToCenterOfGravity = true; // 碰撞点指向重心
 	};
 
 }

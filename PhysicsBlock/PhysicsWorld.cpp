@@ -37,7 +37,7 @@ namespace PhysicsBlock
             delete i;
         }
         // 物理绳子
-        for (auto i : PhysicsJunctionS)
+        for (auto i : BaseJunctionS)
         {
             delete i;
         }
@@ -71,12 +71,6 @@ namespace PhysicsBlock
 
     void PhysicsWorld::PhysicsEmulator(double time)
     {
-
-        for (auto j : PhysicsJunctionS)
-        {
-            j->BearForceAnalytic();
-        }
-
         // 外力改变
         for (auto i : PhysicsShapeS)
         {
@@ -141,6 +135,10 @@ namespace PhysicsBlock
         {
             J->PreStep(inv_dt);
         }
+        for (auto J : BaseJunctionS)
+        {
+            J->PreStep(inv_dt);
+        }
         
         // 迭代结果
         for (size_t i = 0; i < 10; ++i)
@@ -153,6 +151,10 @@ namespace PhysicsBlock
             {
                 J->ApplyImpulse();
             }
+        }
+        for (auto J : BaseJunctionS)
+        {
+            J->ApplyImpulse();
         }
 
         // 移动

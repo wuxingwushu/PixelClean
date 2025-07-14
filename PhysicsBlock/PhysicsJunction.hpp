@@ -1,6 +1,7 @@
 #pragma once
 #include "PhysicsParticle.hpp"
 #include "PhysicsShape.hpp"
+#include "BaseCalculate.hpp"
 
 /**
  * 连接约束希望不单单是两个连接段互动，和场景也是可以互动的
@@ -29,45 +30,106 @@ namespace PhysicsBlock
         rubber, // 橡皮筋
     };
 
-    /**
-     * @brief 物理连接
-     * @note 绳子， 弹簧， 杠杆 */
-    class PhysicsJunction
+    #define JISHU 1.0
+
+    class BaseJunction
     {
     public:
-        CordKnot objectA;                   // 被绑定对象A
-        CordKnot objectB;                   // 被绑定对象B
-        unsigned int KnotSize;  // 结点数B
-        PhysicsParticle **PhysicsParticleS; // 绳子每个结点
+        double Length; // 绳子长度
+        double bias{0}; // 距离差
+        glm::dvec2 Normal; // 力的方向
+
+
+        // 预处理
+        virtual void PreStep(double inv_dt) = 0;
+        // 迭代出结果
+        virtual void ApplyImpulse() = 0;
+        // 获取绳子的A端
+        virtual glm::dvec2 GetA() = 0;
+        // 获取绳子的B端
+        virtual glm::dvec2 GetB() = 0;
+
+    };
+
+    class PhysicsJunctionSS :public BaseJunction
+    {
     private:
-        const CordType type;    // 绳子类型
-        double Length;          // 绳子每小段的长度
-        double coefficient = 1; // 弹簧系数
-
-        /**
-         * @brief 解算他两受力
-         * @param pos 固定位置
-         * @param B 物理粒子 */
-        void PhysicsAnalytic(glm::dvec2 pos, PhysicsParticle *B);
-        /**
-         * @brief 解算他两受力
-         * @param A 物理粒子
-         * @param B 物理粒子 */
-        void PhysicsAnalytic(PhysicsParticle *A, PhysicsParticle *B);
-        /**
-         * @brief 解算他两受力
-         * @param A 物理形状
-         * @param Arm 形状质心偏移位置
-         * @param B 物理粒子 */
-        void PhysicsAnalytic(PhysicsShape *A, glm::dvec2 Arm, PhysicsParticle *B);
-
+        PhysicsShape *mParticle1; // 形状
+        glm::dvec2 mArm1;
+        PhysicsShape *mParticle2; // 形状
+        glm::dvec2 mArm2;
     public:
-        PhysicsJunction(CordKnot object1, CordKnot object2, const CordType Type);
-        ~PhysicsJunction();
+        PhysicsJunctionSS(PhysicsShape *Particle1, glm::dvec2 arm1, PhysicsShape *Particle2, glm::dvec2 arm2);
+        ~PhysicsJunctionSS();
 
-        /**
-         * @brief 计算绳子每个节点的受力 */
-        void BearForceAnalytic();
+        // 预处理
+        virtual void PreStep(double inv_dt);
+        // 迭代出结果
+        virtual void ApplyImpulse();
+
+        virtual glm::dvec2 GetA() { return mParticle1->pos + vec2angle(mArm1, mParticle1->angle); };
+
+        virtual glm::dvec2 GetB() { return mParticle2->pos + vec2angle(mArm2, mParticle2->angle); };
+    };
+
+    class PhysicsJunctionS :public BaseJunction
+    {
+    private:
+        glm::dvec2 mRegularDrop;    // 固定点
+        PhysicsShape *mParticle; // 形状
+        glm::dvec2 Arm;
+    public:
+        PhysicsJunctionS(PhysicsShape *Particle, glm::dvec2 arm, glm::dvec2 RegularDrop);
+        ~PhysicsJunctionS();
+
+        // 预处理
+        virtual void PreStep(double inv_dt);
+        // 迭代出结果
+        virtual void ApplyImpulse();
+
+        virtual glm::dvec2 GetA() { return mParticle->pos + vec2angle(Arm, mParticle->angle); };
+
+        virtual glm::dvec2 GetB() { return mRegularDrop; };
+    };
+
+
+
+    class PhysicsJunctionP :public BaseJunction
+    {
+    private:
+        glm::dvec2 mRegularDrop;    // 固定点
+        PhysicsParticle *mParticle; // 粒子
+    public:
+        PhysicsJunctionP(PhysicsParticle *Particle, glm::dvec2 RegularDrop);
+        ~PhysicsJunctionP();
+
+        // 预处理
+        virtual void PreStep(double inv_dt);
+        // 迭代出结果
+        virtual void ApplyImpulse();
+
+        virtual glm::dvec2 GetA() { return mParticle->pos; };
+
+        virtual glm::dvec2 GetB() { return mRegularDrop; };
+    };
+
+    class PhysicsJunctionPP :public BaseJunction
+    {
+    private:
+        PhysicsParticle *mParticle1; // 粒子1
+        PhysicsParticle *mParticle2; // 粒子2
+    public:
+        PhysicsJunctionPP(PhysicsParticle *Particle1, PhysicsParticle *Particle2);
+        ~PhysicsJunctionPP();
+
+        // 预处理
+        virtual void PreStep(double inv_dt);
+        // 迭代出结果
+        virtual void ApplyImpulse();
+
+        virtual glm::dvec2 GetA() { return mParticle1->pos; };
+
+        virtual glm::dvec2 GetB() { return mParticle2->pos; };
     };
 
 }

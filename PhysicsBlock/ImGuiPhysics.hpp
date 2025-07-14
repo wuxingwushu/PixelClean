@@ -40,6 +40,7 @@ namespace PhysicsBlock
 	AuxiliaryExternBoolColor(Force);	   // 受力
 	AuxiliaryExternBoolColor(CentreMass);  // 质心
 	AuxiliaryExternBoolColor(CentreShape); // 几何中心
+	AuxiliaryExternBoolColor(Outline);	   // 外骨骼点
 	// 碰撞信息
 	AuxiliaryExternBoolColor(CollisionDrop);				  // 碰撞点
 	AuxiliaryExternBoolColor(SeparateNormalVector);			  // 分离法向量

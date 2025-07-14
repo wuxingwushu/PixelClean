@@ -117,7 +117,7 @@ namespace GAME
 		// 设置位置，让窗口靠右
 		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
 
-		static int item_current = 0; // 储存当前Demo序号
+		static int item_current = 0;  // 储存当前Demo序号
 		static int item_Demo_idx = 0; // ImGui::Combo Demo序号
 		ImGui::Combo("Demo", &item_Demo_idx, PhysicsBlock::DemoNameS, IM_ARRAYSIZE(PhysicsBlock::DemoNameS));
 		// Demo序号 是否发生改变
@@ -331,6 +331,13 @@ namespace GAME
 				// 辅助显示几何中心
 				if (PhysicsBlock::Auxiliary_CentreShapeBool)
 					mAuxiliaryVision->Spot({i->pos + i->CentreShape, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CentreShapeColor));
+				// 辅助显示外骨骼点
+				if (PhysicsBlock::Auxiliary_OutlineBool) {
+					PhysicsBlock::AngleMat angleMat(i->angle);
+					for	(size_t d = 0; d < i->OutlineSize; ++d) {
+						mAuxiliaryVision->Spot({ i->pos + angleMat.Rotary(i->OutlineSet[d] - i->CentreMass), 0 }, ColorToVec4(PhysicsBlock::Auxiliary_OutlineColor));
+					}
+				}
 			}
 
 			for (size_t x = 0; x < i->width; x++)
@@ -368,11 +375,13 @@ namespace GAME
 		// 渲染绳子
 		for (auto i : mPhysicsWorld->GetPhysicsJoint())
 		{
-
 			mAuxiliaryVision->Line({i->body1->pos, 0}, {0, 1, 0, 1}, {i->body1->pos + i->r1, 0}, {0, 1, 0, 1});
 			mAuxiliaryVision->Line({i->body2->pos, 0}, {0, 1, 0, 1}, {i->body2->pos + i->r2, 0}, {0, 1, 0, 1});
 		}
-
+		for (auto j : mPhysicsWorld->GetBaseJunction())
+		{
+			mAuxiliaryVision->Line({j->GetA(), 0}, {0, 1, 0, 1}, {j->GetB(), 0}, {0, 1, 0, 1});
+		}
 		// 渲染物理信息
 		if (PhysicsAssistantInformation)
 		{

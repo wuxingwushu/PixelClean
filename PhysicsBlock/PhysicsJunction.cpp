@@ -4,100 +4,143 @@
 namespace PhysicsBlock
 {
 
-    PhysicsJunction::PhysicsJunction(CordKnot object1, CordKnot object2, const CordType Type)
-        : objectA(object1), objectB(object2), type(Type)
+    PhysicsJunctionSS::PhysicsJunctionSS(PhysicsShape *Particle1, glm::dvec2 arm1, PhysicsShape *Particle2, glm::dvec2 arm2)
+        : mParticle1(Particle1), mArm1(arm1), mParticle2(Particle2), mArm2(arm2)
     {
-        glm::dvec2 distance = objectB.ptr->PFGetPos() - objectA.ptr->PFGetPos();
-        Length = Modulus(distance);
-        KnotSize = ToInt(Length) * 2 + 1;
-        distance /= (KnotSize + 1);
-        Length /= (KnotSize + 1);
-        PhysicsParticleS = new PhysicsParticle *[KnotSize];
-        for (size_t i = 0; i < KnotSize; ++i)
-        {
-            PhysicsParticleS[i] = new PhysicsParticle(glm::dvec2(objectA.ptr->PFGetPos() + distance + (distance * (double)i)), 0.1);
-        }
+        Length = Modulus(GetA() - GetB());
+    }
+    PhysicsJunctionSS::~PhysicsJunctionSS()
+    {
     }
 
-    PhysicsJunction::~PhysicsJunction()
+    // 预处理
+    void PhysicsJunctionSS::PreStep(double inv_dt)
     {
-        for (size_t i = 0; i < KnotSize; ++i)
-        {
-            delete PhysicsParticleS[i];
-        }
-        delete PhysicsParticleS;
+        glm::dvec2 dp = GetA() - GetB();
+        double L = Modulus(dp);
+        Normal = dp / L;
+        L = L - Length;
+        bias = -0.2 * inv_dt * L;
+
+        glm::dvec2 arm1 = vec2angle(mArm1, mParticle1->angle);
+        glm::dvec2 arm2 = vec2angle(mArm2, mParticle2->angle);
+        glm::dvec2 impulse = Normal * bias * JISHU;
+        mParticle1->speed += mParticle1->invMass * impulse;
+        mParticle1->angleSpeed += mParticle1->invMomentInertia * Cross(arm1, impulse);
+        mParticle2->speed -= mParticle2->invMass * impulse;
+        mParticle2->angleSpeed -= mParticle2->invMomentInertia * Cross(arm2, impulse);
+    }
+    // 迭代出结果
+    void PhysicsJunctionSS::ApplyImpulse()
+    {
+        glm::dvec2 arm1 = vec2angle(mArm1, mParticle1->angle);
+        glm::dvec2 arm2 = vec2angle(mArm2, mParticle2->angle);
+        glm::dvec2 dv = mParticle1->speed + Cross(mParticle1->angleSpeed, arm1) - mParticle2->speed - Cross(mParticle2->angleSpeed, arm2);
+
+        glm::dvec2 impulse = Normal * Dot(-dv, Normal);
+
+        mParticle1->speed += mParticle1->invMass * impulse;
+        mParticle1->angleSpeed += mParticle1->invMomentInertia * Cross(arm1, impulse);
+
+        mParticle2->speed -= mParticle2->invMass * impulse;
+        mParticle2->angleSpeed -= mParticle2->invMomentInertia * Cross(arm2, impulse);
     }
 
-    void PhysicsJunction::PhysicsAnalytic(glm::dvec2 pos, PhysicsParticle *B)
+    PhysicsJunctionS::PhysicsJunctionS(PhysicsShape *Particle, glm::dvec2 arm, glm::dvec2 RegularDrop)
+        : mParticle(Particle), Arm(arm), mRegularDrop(RegularDrop)
     {
-        glm::dvec2 distance = pos - B->pos;
-        double distanceVal = Modulus(distance);
-        distance /= distanceVal;
-        distanceVal -= Length;
-        distanceVal = distanceVal * distanceVal * (distanceVal > 0 ? -1 : 1);
-        B->AddForce(distance * coefficient * distanceVal);
+        Length = Modulus(GetA() - GetB());
+    }
+    PhysicsJunctionS::~PhysicsJunctionS()
+    {
     }
 
-    void PhysicsJunction::PhysicsAnalytic(PhysicsParticle *A, PhysicsParticle *B)
+    // 预处理
+    void PhysicsJunctionS::PreStep(double inv_dt)
     {
-        glm::dvec2 distance = A->pos - B->pos;
-        double distanceVal = Modulus(distance);
-        distance /= distanceVal;
-        distanceVal -= Length;
-        distanceVal = distanceVal * distanceVal * (distanceVal > 0 ? -1 : 1);
-        A->AddForce(distance * coefficient * distanceVal);
-        B->AddForce(distance * coefficient * -distanceVal);
+        glm::dvec2 dp = GetA() - GetB();
+        double L = Modulus(dp);
+        Normal = dp / L;
+        L = L - Length;
+        bias = -0.2 * inv_dt * L;
+
+        glm::dvec2 arm = vec2angle(Arm, mParticle->angle);
+        glm::dvec2 impulse = Normal * bias * JISHU;
+        mParticle->speed += mParticle->invMass * impulse;
+        mParticle->angleSpeed += mParticle->invMomentInertia * Cross(arm, impulse);
+    }
+    // 迭代出结果
+    void PhysicsJunctionS::ApplyImpulse()
+    {
+        glm::dvec2 arm = vec2angle(Arm, mParticle->angle);
+        glm::dvec2 dv = mParticle->speed + Cross(mParticle->angleSpeed, arm);
+
+        glm::dvec2 impulse = Normal * Dot(-dv, Normal);
+
+        mParticle->speed += mParticle->invMass * impulse;
+        mParticle->angleSpeed += mParticle->invMomentInertia * Cross(arm, impulse);
     }
 
-    void PhysicsJunction::PhysicsAnalytic(PhysicsShape *A, glm::dvec2 Arm, PhysicsParticle *B)
+    PhysicsJunctionP::PhysicsJunctionP(PhysicsParticle *Particle, glm::dvec2 RegularDrop)
+        : mParticle(Particle), mRegularDrop(RegularDrop)
     {
-        Arm = vec2angle(Arm, A->angle);
-        Arm = A->pos + Arm;
-        glm::dvec2 distance = A->pos + Arm - B->pos;
-        double distanceVal = Modulus(distance);
-        distance /= distanceVal;
-        distanceVal -= Length;
-        distanceVal = distanceVal * distanceVal * (distanceVal > 0 ? -1 : 1);
-        A->AddForce(Arm, distance * coefficient * distanceVal);
-        B->AddForce(distance * coefficient * -distanceVal);
+        Length = Modulus(GetA() - GetB());
     }
 
-    void PhysicsJunction::BearForceAnalytic()
+    PhysicsJunctionP::~PhysicsJunctionP()
     {
-        if (objectA.ptr != nullptr)
-        {
-            if (objectA.ptr->PFGetType() == PhysicsObjectEnum::particle)
-            {
-                PhysicsAnalytic((PhysicsParticle *)objectA.ptr, PhysicsParticleS[KnotSize - 1]);
-            }
-            else
-            {
-                PhysicsAnalytic((PhysicsShape *)objectA.ptr, objectA.relativePos, PhysicsParticleS[KnotSize - 1]);
-            }
-        }
-        else
-        {
-            PhysicsAnalytic(objectA.relativePos, PhysicsParticleS[KnotSize - 1]);
-        }
-        if (objectB.ptr != nullptr)
-        {
-            if (objectB.ptr->PFGetType() == PhysicsObjectEnum::particle)
-            {
-                PhysicsAnalytic((PhysicsParticle *)objectB.ptr, PhysicsParticleS[0]);
-            }
-            else
-            {
-                PhysicsAnalytic((PhysicsShape *)objectB.ptr, objectB.relativePos, PhysicsParticleS[0]);
-            }
-        }
-        else
-        {
-            PhysicsAnalytic(objectA.relativePos, PhysicsParticleS[0]);
-        }
-        for (size_t i = 0; i < KnotSize - 1; ++i)
-        {
-            PhysicsAnalytic(PhysicsParticleS[i], PhysicsParticleS[i + 1]);
-        }
+    }
+
+    // 预处理
+    void PhysicsJunctionP::PreStep(double inv_dt)
+    {
+        glm::dvec2 dp = GetA() - GetB();
+        double L = Modulus(dp);
+        Normal = dp / L;
+        L = L - Length;
+        bias = -0.2 * inv_dt * L;
+
+        glm::dvec2 impulse = (Normal * bias * JISHU) /* + (Normal * mParticle->speed)*/;
+        mParticle->speed += mParticle->invMass * impulse;
+    }
+
+    // 迭代出结果
+    void PhysicsJunctionP::ApplyImpulse()
+    {
+        glm::dvec2 impulse = Normal * Dot(-mParticle->speed, Normal);
+
+        mParticle->speed += mParticle->invMass * impulse;
+    }
+
+    PhysicsJunctionPP::PhysicsJunctionPP(PhysicsParticle *Particle1, PhysicsParticle *Particle2)
+        : mParticle1(Particle1), mParticle2(Particle2)
+    {
+        Length = Modulus(GetA() - GetB());
+    }
+    PhysicsJunctionPP::~PhysicsJunctionPP()
+    {
+    }
+
+    // 预处理
+    void PhysicsJunctionPP::PreStep(double inv_dt)
+    {
+        glm::dvec2 dp = GetA() - GetB();
+        double L = Modulus(dp);
+        Normal = dp / L;
+        L = L - Length;
+        bias = -0.2 * inv_dt * L;
+
+        glm::dvec2 impulse = Normal * bias * JISHU;
+        mParticle1->speed += mParticle1->invMass * impulse;
+        mParticle2->speed -= mParticle2->invMass * impulse;
+    }
+    // 迭代出结果
+    void PhysicsJunctionPP::ApplyImpulse()
+    {
+        glm::dvec2 impulse = Normal * Dot(mParticle2->speed - mParticle1->speed, Normal);
+
+        mParticle1->speed += mParticle1->invMass * impulse;
+        mParticle2->speed -= mParticle2->invMass * impulse;
     }
 
 }

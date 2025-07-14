@@ -17,6 +17,7 @@ namespace PhysicsBlock
 	AuxiliaryBoolColor(Force);		 // 受力
 	AuxiliaryBoolColor(CentreMass);	 // 质心
 	AuxiliaryBoolColor(CentreShape); // 几何中心
+	AuxiliaryBoolColor(Outline);	 // 外骨骼点
 	// 碰撞信息
 	AuxiliaryBoolColor(CollisionDrop);					// 碰撞点
 	AuxiliaryBoolColor(SeparateNormalVector);			// 分离法向量
@@ -32,6 +33,7 @@ namespace PhysicsBlock
 		AuxiliaryReadBoolColor(Force);						// 受力
 		AuxiliaryReadBoolColor(CentreMass);					// 质心
 		AuxiliaryReadBoolColor(CentreShape);				// 几何中心
+		AuxiliaryReadBoolColor(Outline);	 // 外骨骼点
 		AuxiliaryReadBoolColor(CollisionDrop);					// 碰撞点
 		AuxiliaryReadBoolColor(SeparateNormalVector);			// 分离法向量
 		AuxiliaryReadBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
@@ -47,6 +49,7 @@ namespace PhysicsBlock
 		AuxiliaryStorageBoolColor(Force);					 // 受力
 		AuxiliaryStorageBoolColor(CentreMass);				 // 质心
 		AuxiliaryStorageBoolColor(CentreShape);				 // 几何中心
+		AuxiliaryStorageBoolColor(Outline);	 // 外骨骼点
 		AuxiliaryStorageBoolColor(CollisionDrop);					 // 碰撞点
 		AuxiliaryStorageBoolColor(SeparateNormalVector);			 // 分离法向量
 		AuxiliaryStorageBoolColor(CollisionDropToCenterOfGravity);	 // 碰撞点到两个物体重心的连线
@@ -145,6 +148,7 @@ namespace PhysicsBlock
 		AuxiliaryColorUI("受力", &Auxiliary_ForceBool, Auxiliary_ForceColor);
 		AuxiliaryColorUI("质心", &Auxiliary_CentreMassBool, Auxiliary_CentreMassColor);
 		AuxiliaryColorUI("几何中心", &Auxiliary_CentreShapeBool, Auxiliary_CentreShapeColor);
+		AuxiliaryColorUI("外骨骼点", &Auxiliary_OutlineBool, Auxiliary_OutlineColor);
 		AuxiliaryColorUI("碰撞点", &Auxiliary_CollisionDropBool, Auxiliary_CollisionDropColor);
 		AuxiliaryColorUI("分离法向量", &Auxiliary_SeparateNormalVectorBool, Auxiliary_SeparateNormalVectorColor);
 		AuxiliaryColorUI("碰撞点到两个物体重心的连线", &Auxiliary_CollisionDropToCenterOfGravityBool, Auxiliary_CollisionDropToCenterOfGravityColor);

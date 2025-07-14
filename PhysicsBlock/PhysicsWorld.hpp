@@ -26,7 +26,7 @@ namespace PhysicsBlock
         std::vector<PhysicsShape*> PhysicsShapeS;
         std::vector<PhysicsParticle*> PhysicsParticleS;
         std::vector<PhysicsJoint*> PhysicsJointS;
-        std::vector<PhysicsJunction*> PhysicsJunctionS;
+        std::vector<BaseJunction*> BaseJunctionS;
 
         std::map<ArbiterKey, BaseArbiter*> CollideGroupS;// 碰撞队
 
@@ -55,9 +55,9 @@ namespace PhysicsBlock
             PhysicsJointS.push_back(Object);
         }
 
-        void AddObject(PhysicsJunction *Object)
+        void AddObject(BaseJunction *Object)
         {
-            PhysicsJunctionS.push_back(Object);
+            BaseJunctionS.push_back(Object);
         }
 
         std::vector<PhysicsShape*>& GetPhysicsShape() {
@@ -72,8 +72,8 @@ namespace PhysicsBlock
             return PhysicsJointS;
         }
 
-        std::vector<PhysicsJunction*>& GetPhysicsJunction() {
-            return PhysicsJunctionS;
+        std::vector<BaseJunction*>& GetBaseJunction() {
+            return BaseJunctionS;
         }
 
         MapFormwork* GetMapFormwork() {

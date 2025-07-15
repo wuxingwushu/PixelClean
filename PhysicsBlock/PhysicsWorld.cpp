@@ -151,12 +151,12 @@ namespace PhysicsBlock
             {
                 J->ApplyImpulse();
             }
+            for (auto J : BaseJunctionS)
+            {
+                J->ApplyImpulse();
+            }
         }
-        for (auto J : BaseJunctionS)
-        {
-            J->ApplyImpulse();
-        }
-
+        
         // 移动
         for (auto i : PhysicsShapeS)
         {

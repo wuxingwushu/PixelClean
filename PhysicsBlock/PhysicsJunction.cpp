@@ -9,6 +9,7 @@ namespace PhysicsBlock
     {
         Length = Modulus(GetA() - GetB());
     }
+
     PhysicsJunctionSS::~PhysicsJunctionSS()
     {
     }
@@ -22,28 +23,28 @@ namespace PhysicsBlock
         L = L - Length;
         bias = -0.2 * inv_dt * L;
 
-        glm::dvec2 arm1 = vec2angle(mArm1, mParticle1->angle);
-        glm::dvec2 arm2 = vec2angle(mArm2, mParticle2->angle);
-        glm::dvec2 impulse = Normal * bias * JISHU;
+        mR1 = vec2angle(mArm1, mParticle1->angle);
+        mR2 = vec2angle(mArm2, mParticle2->angle);
+        /*glm::dvec2 impulse = Normal * bias * JISHU;
         mParticle1->speed += mParticle1->invMass * impulse;
         mParticle1->angleSpeed += mParticle1->invMomentInertia * Cross(arm1, impulse);
         mParticle2->speed -= mParticle2->invMass * impulse;
         mParticle2->angleSpeed -= mParticle2->invMomentInertia * Cross(arm2, impulse);
+        */
     }
+
     // 迭代出结果
     void PhysicsJunctionSS::ApplyImpulse()
     {
-        glm::dvec2 arm1 = vec2angle(mArm1, mParticle1->angle);
-        glm::dvec2 arm2 = vec2angle(mArm2, mParticle2->angle);
-        glm::dvec2 dv = mParticle1->speed + Cross(mParticle1->angleSpeed, arm1) - mParticle2->speed - Cross(mParticle2->angleSpeed, arm2);
+        glm::dvec2 dv = mParticle1->speed + Cross(mParticle1->angleSpeed, mR1) - mParticle2->speed - Cross(mParticle2->angleSpeed, mR2);
 
-        glm::dvec2 impulse = Normal * Dot(-dv, Normal);
+        glm::dvec2 impulse = Normal * (Dot(-dv, Normal) + bias);
 
         mParticle1->speed += mParticle1->invMass * impulse;
-        mParticle1->angleSpeed += mParticle1->invMomentInertia * Cross(arm1, impulse);
+        mParticle1->angleSpeed += mParticle1->invMomentInertia * Cross(mR1, impulse);
 
         mParticle2->speed -= mParticle2->invMass * impulse;
-        mParticle2->angleSpeed -= mParticle2->invMomentInertia * Cross(arm2, impulse);
+        mParticle2->angleSpeed -= mParticle2->invMomentInertia * Cross(mR2, impulse);
     }
 
     PhysicsJunctionS::PhysicsJunctionS(PhysicsShape *Particle, glm::dvec2 arm, glm::dvec2 RegularDrop)
@@ -51,6 +52,7 @@ namespace PhysicsBlock
     {
         Length = Modulus(GetA() - GetB());
     }
+
     PhysicsJunctionS::~PhysicsJunctionS()
     {
     }
@@ -64,21 +66,21 @@ namespace PhysicsBlock
         L = L - Length;
         bias = -0.2 * inv_dt * L;
 
-        glm::dvec2 arm = vec2angle(Arm, mParticle->angle);
-        glm::dvec2 impulse = Normal * bias * JISHU;
-        mParticle->speed += mParticle->invMass * impulse;
-        mParticle->angleSpeed += mParticle->invMomentInertia * Cross(arm, impulse);
+        R = vec2angle(Arm, mParticle->angle);
+        // glm::dvec2 impulse = Normal * bias * JISHU;
+        // mParticle->speed += mParticle->invMass * impulse;
+        // mParticle->angleSpeed += mParticle->invMomentInertia * Cross(arm, impulse);
     }
+
     // 迭代出结果
     void PhysicsJunctionS::ApplyImpulse()
     {
-        glm::dvec2 arm = vec2angle(Arm, mParticle->angle);
-        glm::dvec2 dv = mParticle->speed + Cross(mParticle->angleSpeed, arm);
+        glm::dvec2 dv = mParticle->speed + Cross(mParticle->angleSpeed, R);
 
-        glm::dvec2 impulse = Normal * Dot(-dv, Normal);
+        glm::dvec2 impulse = Normal * (Dot(-dv, Normal) + bias);
 
         mParticle->speed += mParticle->invMass * impulse;
-        mParticle->angleSpeed += mParticle->invMomentInertia * Cross(arm, impulse);
+        mParticle->angleSpeed += mParticle->invMomentInertia * Cross(R, impulse);
     }
 
     PhysicsJunctionP::PhysicsJunctionP(PhysicsParticle *Particle, glm::dvec2 RegularDrop)
@@ -100,14 +102,14 @@ namespace PhysicsBlock
         L = L - Length;
         bias = -0.2 * inv_dt * L;
 
-        glm::dvec2 impulse = (Normal * bias * JISHU) /* + (Normal * mParticle->speed)*/;
-        mParticle->speed += mParticle->invMass * impulse;
+        // glm::dvec2 impulse = (Normal * bias * JISHU) /* + (Normal * mParticle->speed)*/;
+        // mParticle->speed += mParticle->invMass * impulse;
     }
 
     // 迭代出结果
     void PhysicsJunctionP::ApplyImpulse()
     {
-        glm::dvec2 impulse = Normal * Dot(-mParticle->speed, Normal);
+        glm::dvec2 impulse = Normal * (Dot(-mParticle->speed, Normal) + bias);
 
         mParticle->speed += mParticle->invMass * impulse;
     }
@@ -117,6 +119,7 @@ namespace PhysicsBlock
     {
         Length = Modulus(GetA() - GetB());
     }
+
     PhysicsJunctionPP::~PhysicsJunctionPP()
     {
     }
@@ -130,14 +133,15 @@ namespace PhysicsBlock
         L = L - Length;
         bias = -0.2 * inv_dt * L;
 
-        glm::dvec2 impulse = Normal * bias * JISHU;
-        mParticle1->speed += mParticle1->invMass * impulse;
-        mParticle2->speed -= mParticle2->invMass * impulse;
+        // glm::dvec2 impulse = Normal * bias * JISHU;
+        // mParticle1->speed += mParticle1->invMass * impulse;
+        // mParticle2->speed -= mParticle2->invMass * impulse;
     }
+
     // 迭代出结果
     void PhysicsJunctionPP::ApplyImpulse()
     {
-        glm::dvec2 impulse = Normal * Dot(mParticle2->speed - mParticle1->speed, Normal);
+        glm::dvec2 impulse = Normal * (Dot(mParticle2->speed - mParticle1->speed, Normal) + bias);
 
         mParticle1->speed += mParticle1->invMass * impulse;
         mParticle2->speed -= mParticle2->invMass * impulse;

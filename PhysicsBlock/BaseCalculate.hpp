@@ -47,7 +47,7 @@ namespace PhysicsBlock
 	 * @return  返回 (x*x + y*y)開方 的結果 */
 	double Modulus(glm::dvec2 Modulus);
 
-	//角度，计算对应的cos, sin 
+	// 角度，计算对应的cos, sin
 	glm::dvec2 AngleFloatToAngleVec(double angle);
 
 	/**
@@ -75,26 +75,41 @@ namespace PhysicsBlock
 		double Cos;
 		double Sin;
 
-		AngleMat(double angle){
+		/**
+		 * @brief 复用旋转器
+		 * @param angle 角度（π）*/
+		AngleMat(double angle)
+		{
 			Cos = cos(angle);
 			Sin = sin(angle);
 		}
 
 		/**
-		 * @brief 旋转 angle 度
+		 * @brief 设置新旋转角度
+		 * @param angle 角度（π）*/
+		void SetAngle(double angle)
+		{
+			Cos = cos(angle);
+			Sin = sin(angle);
+		}
+
+		/**
+		 * @brief 旋转 angle 度（π）
 		 * @param pos 位置
 		 * @return 旋转结果
 		 * @note 绕 （0，0） 旋转 */
-		glm::dvec2 Rotary(glm::dvec2 pos){
+		glm::dvec2 Rotary(glm::dvec2 pos)
+		{
 			return glm::dvec2((pos.x * Cos) - (pos.y * Sin), (pos.x * Sin) + (pos.y * Cos));
 		}
 
 		/**
-		 * @brief 旋转 -angle 度
+		 * @brief 旋转 -angle 度（π）
 		 * @param pos 位置
 		 * @return 旋转结果
 		 * @note 绕 （0，0） 旋转 */
-		glm::dvec2 Anticlockwise(glm::dvec2 pos){
+		glm::dvec2 Anticlockwise(glm::dvec2 pos)
+		{
 			return glm::dvec2((pos.x * Cos) + (pos.y * Sin), -(pos.x * Sin) + (pos.y * Cos));
 		}
 	};
@@ -148,7 +163,7 @@ namespace PhysicsBlock
 	 * @return  返回线段在 Y 为某值的 Y軸 于线段的焦点
 	 * @warning 注意求出的焦点可能不在线段上*/
 	glm::dvec2 LineYToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double y);
-	
+
 	/**
 	 * @brief 裁剪出被矩形覆盖的线段
 	 * @param start 起始位置
@@ -190,13 +205,13 @@ namespace PhysicsBlock
 	 * @return 返回点应该移动的距离 */
 	glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY);
 
-	//正方形和射线的碰撞检测
+	// 正方形和射线的碰撞检测
 	glm::dvec2 SquareToRadial(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY);
-	
-	//扭矩计算
+
+	// 扭矩计算
 	double TorqueCalculate(glm::dvec2 Barycenter, glm::dvec2 Spot, glm::dvec2 Force);
 
-	//计算夹角
+	// 计算夹角
 	double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2);
 
 	/**
@@ -209,12 +224,12 @@ namespace PhysicsBlock
 	DecompositionForceVal CalculateDecompositionForceVal(glm::dvec2 angle, glm::dvec2 force);
 
 	/**
-     * @brief 莫顿码
-     * @param x x 坐标
-     * @param y y 坐标
-     * @return 一维索引值
-     * @note 让二维索引相邻的一维也尽可能相邻 */
-    uint_fast32_t Morton2D(uint_fast16_t x, uint_fast16_t y);
+	 * @brief 莫顿码
+	 * @param x x 坐标
+	 * @param y y 坐标
+	 * @return 一维索引值
+	 * @note 让二维索引相邻的一维也尽可能相邻 */
+	uint_fast32_t Morton2D(uint_fast16_t x, uint_fast16_t y);
 
 	/**
 	 * @brief 点到线段最短距离
@@ -232,19 +247,19 @@ namespace PhysicsBlock
 	 * @return 点到线段的垂直交点 */
 	glm::dvec2 DropUptoLineShortesIntersect(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop);
 
-	double Dot(const glm::dvec2& a, const glm::dvec2& b);
+	double Dot(const glm::dvec2 &a, const glm::dvec2 &b);
 	/**
 	 * @brief 投影
-	 * @param a 
-	 * @param b 
+	 * @param a
+	 * @param b
 	 * @return  */
-	double Cross(const glm::dvec2& a, const glm::dvec2& b);
+	double Cross(const glm::dvec2 &a, const glm::dvec2 &b);
 
 	// 顺时针 转 90度， s 缩放比
-	glm::dvec2 Cross(const glm::dvec2& a, double s);
+	glm::dvec2 Cross(const glm::dvec2 &a, double s);
 
 	// 逆时针 转 90度， s 缩放比
-	glm::dvec2 Cross(double s, const glm::dvec2& a);
+	glm::dvec2 Cross(double s, const glm::dvec2 &a);
 
 	/**
 	 * @brief 返回合理范围内的数
@@ -254,7 +269,6 @@ namespace PhysicsBlock
 	 * @return 合理值
 	 * @note a 不合理就返回和他最近的合理值 */
 	double Clamp(double a, double low, double high);
-
 
 	double Random(double lo, double hi);
 }

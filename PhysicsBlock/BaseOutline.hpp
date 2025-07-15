@@ -11,7 +11,7 @@ namespace PhysicsBlock
     public:
         glm::dvec2 *OutlineSet;   // 轮廓点集合
         unsigned int OutlineSize; // 轮廓点数量
-    //public:
+        
         /**
          * @brief 构建函数
          * @param Width 宽度
@@ -20,23 +20,12 @@ namespace PhysicsBlock
         ~BaseOutline();
 
         /**
-         * @brief 获取网格是否有碰撞
-         * @param x 网格位置x
-         * @param y 网格位置y
-         * @return 是否有障碍物
-         * @retval true 有障碍物
-         * @retval false 没障碍物 */
-        bool Collision(unsigned int x, unsigned int y) {
-            if (x < 0 || y < 0 || x >= width || y >= height)
-            {
-                return false;
-            }
-            return at(x, y).Collision;
-        }
-
-        /**
          * @brief 更新外轮廓点集合 */
         void UpdateOutline();
+
+        /**
+         * @brief 更新外轮廓点集合(轻量版) */
+        void UpdateLightweightOutline();
 
     private:
         /**
@@ -44,7 +33,12 @@ namespace PhysicsBlock
          * @param x 格子坐标x
          * @param y 格子坐标y */
         void OutlineUnit(int x, int y);
+
+        /**
+         * @brief 外骨骼处理單元(轻量版)
+         * @param x 格子坐标x
+         * @param y 格子坐标y */
+        void LightweightOutlineUnit(int x, int y);
     };
 
-    
 }

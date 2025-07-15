@@ -22,7 +22,22 @@ namespace PhysicsBlock
             {
                 if (at(x, y).Collision)
                 {
-                    OutlineUnit(x, y);
+                    LightweightOutlineUnit(x, y);
+                }
+            }
+        }
+    }
+
+    void BaseOutline::UpdateLightweightOutline()
+    {
+        OutlineSize = 0;
+        for (size_t x = 0; x < width; ++x)
+        {
+            for (size_t y = 0; y < height; ++y)
+            {
+                if (at(x, y).Collision)
+                {
+                    LightweightOutlineUnit(x, y);
                 }
             }
         }
@@ -31,25 +46,85 @@ namespace PhysicsBlock
     void BaseOutline::OutlineUnit(int x, int y)
     {
         // 左上角
-        if (!Collision(x - 1, y) || !Collision(x, y - 1) || !Collision(x - 1, y - 1))
+        if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1) || !GetCollision(x - 1, y - 1))
         {
             OutlineSet[OutlineSize] = glm::dvec2{x, y};
             ++OutlineSize;
         }
         // 左下角
-        if (!Collision(x, y + 1))
+        if (!GetCollision(x, y + 1))
         {
             OutlineSet[OutlineSize] = glm::dvec2{x, y + 1};
             ++OutlineSize;
         }
         // 右上角
-        if (!(Collision(x + 1, y - 1) || Collision(x + 1, y)))
+        if (!(GetCollision(x + 1, y - 1) || GetCollision(x + 1, y)))
         {
             OutlineSet[OutlineSize] = glm::dvec2{x + 1, y};
             ++OutlineSize;
         }
         // 右下角
-        if (!(Collision(x + 1, y) || Collision(x + 1, y + 1) || Collision(x, y + 1)))
+        if (!(GetCollision(x + 1, y) || GetCollision(x + 1, y + 1) || GetCollision(x, y + 1)))
+        {
+            OutlineSet[OutlineSize] = glm::dvec2{x + 1, y + 1};
+            ++OutlineSize;
+        }
+    }
+
+    void BaseOutline::LightweightOutlineUnit(int x, int y)
+    {
+        // 左上角
+        if (!GetCollision(x - 1, y - 1))
+        {
+            if (GetCollision(x - 1, y) == GetCollision(x, y - 1))
+            {
+                OutlineSet[OutlineSize] = glm::dvec2{x, y};
+                ++OutlineSize;
+            }
+        }
+        else if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1))
+        {
+            OutlineSet[OutlineSize] = glm::dvec2{x, y};
+            ++OutlineSize;
+        }
+        // 左下角
+        if (!GetCollision(x - 1, y + 1))
+        {
+            if (GetCollision(x - 1, y) == GetCollision(x, y + 1))
+            {
+                OutlineSet[OutlineSize] = glm::dvec2{x, y + 1};
+                ++OutlineSize;
+            }
+        }
+        else if (!GetCollision(x - 1, y) || !GetCollision(x, y + 1))
+        {
+            OutlineSet[OutlineSize] = glm::dvec2{x, y + 1};
+            ++OutlineSize;
+        }
+        // 右上角
+        if (!GetCollision(x + 1, y - 1))
+        {
+            if (GetCollision(x + 1, y) == GetCollision(x, y - 1))
+            {
+                OutlineSet[OutlineSize] = glm::dvec2{x + 1, y};
+                ++OutlineSize;
+            }
+        }
+        else if (!GetCollision(x + 1, y) || !GetCollision(x, y - 1))
+        {
+            OutlineSet[OutlineSize] = glm::dvec2{x + 1, y};
+            ++OutlineSize;
+        }
+        // 右下角
+        if (!GetCollision(x + 1, y + 1))
+        {
+            if (GetCollision(x + 1, y) == GetCollision(x, y + 1))
+            {
+                OutlineSet[OutlineSize] = glm::dvec2{x + 1, y + 1};
+                ++OutlineSize;
+            }
+        }
+        else if (!GetCollision(x + 1, y) || !GetCollision(x, y + 1))
         {
             OutlineSet[OutlineSize] = glm::dvec2{x + 1, y + 1};
             ++OutlineSize;

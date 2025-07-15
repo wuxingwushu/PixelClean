@@ -20,28 +20,30 @@ namespace PhysicsBlock
          * @param y 坐标y
          * @return 格子
          * @warning 坐标范围不安全 */
-        virtual GridBlock &at(int x, int y) { return at(x * height + y); }
+        virtual inline GridBlock &at(int x, int y) { return at(x * height + y); }
         /**
          * @brief 获取网格
          * @param pos 坐标
          * @return 格子
          * @warning 坐标范围不安全 */
-        virtual GridBlock &at(glm::ivec2 pos) { return at(pos.x * height + pos.y); }
+        virtual inline GridBlock &at(glm::ivec2 pos) { return at(pos.x * height + pos.y); }
         /**
          * @brief 获取网格
          * @param i 数组索引
          * @return 格子
          * @warning 范围不安全 */
-        virtual GridBlock &at(unsigned int i) { return Grid[i]; }
+        virtual inline GridBlock &at(unsigned int i) { return Grid[i]; }
 
         /**
          * @brief 获取是否有碰撞
          * @param x 坐标x
          * @param y 坐标y
          * @return 是否碰撞
+         * @retval true 有障碍物
+         * @retval false 没障碍物
          * @note 坐标范围安全
          * @note 范围外返回false */
-        virtual bool GetCollision(unsigned int x, unsigned int y)
+        virtual inline bool GetCollision(unsigned int x, unsigned int y)
         {
             if ((x >= width) || (y >= height))
             {
@@ -54,15 +56,13 @@ namespace PhysicsBlock
          * @brief 获取是否有碰撞
          * @param Pos 坐标
          * @return 是否碰撞
+         * @retval true 有障碍物
+         * @retval false 没障碍物
          * @note 坐标范围安全
          * @note 范围外返回false */
-        virtual bool GetCollision(glm::uvec2 Pos)
+        virtual inline bool GetCollision(glm::uvec2 Pos)
         {
-            if ((Pos.x >= width) || (Pos.y >= height))
-            {
-                return false;
-            }
-            return at(Pos.x, Pos.y).Collision;
+            return GetCollision(Pos.x, Pos.y);
         }
 
     public:

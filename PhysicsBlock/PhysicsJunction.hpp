@@ -30,15 +30,15 @@ namespace PhysicsBlock
         rubber, // 橡皮筋
     };
 
-    #define JISHU 1.0
+#define JISHU 1.0
 
     class BaseJunction
     {
     public:
-        double Length; // 绳子长度
-        double bias{0}; // 距离差
+        double Length;     // 绳子长度
+        double bias{0};    // 距离差
         glm::dvec2 Normal; // 力的方向
-
+        glm::dvec2 P;      //
 
         // 预处理
         virtual void PreStep(double inv_dt) = 0;
@@ -48,16 +48,19 @@ namespace PhysicsBlock
         virtual glm::dvec2 GetA() = 0;
         // 获取绳子的B端
         virtual glm::dvec2 GetB() = 0;
-
     };
 
-    class PhysicsJunctionSS :public BaseJunction
+    class PhysicsJunctionSS : public BaseJunction
     {
     private:
         PhysicsShape *mParticle1; // 形状
         glm::dvec2 mArm1;
+        glm::dvec2 mR1;
         PhysicsShape *mParticle2; // 形状
         glm::dvec2 mArm2;
+        glm::dvec2 mR2;
+
+
     public:
         PhysicsJunctionSS(PhysicsShape *Particle1, glm::dvec2 arm1, PhysicsShape *Particle2, glm::dvec2 arm2);
         ~PhysicsJunctionSS();
@@ -72,12 +75,14 @@ namespace PhysicsBlock
         virtual glm::dvec2 GetB() { return mParticle2->pos + vec2angle(mArm2, mParticle2->angle); };
     };
 
-    class PhysicsJunctionS :public BaseJunction
+    class PhysicsJunctionS : public BaseJunction
     {
     private:
-        glm::dvec2 mRegularDrop;    // 固定点
+        glm::dvec2 mRegularDrop; // 固定点
         PhysicsShape *mParticle; // 形状
         glm::dvec2 Arm;
+        glm::dvec2 R;
+
     public:
         PhysicsJunctionS(PhysicsShape *Particle, glm::dvec2 arm, glm::dvec2 RegularDrop);
         ~PhysicsJunctionS();
@@ -92,9 +97,7 @@ namespace PhysicsBlock
         virtual glm::dvec2 GetB() { return mRegularDrop; };
     };
 
-
-
-    class PhysicsJunctionP :public BaseJunction
+    class PhysicsJunctionP : public BaseJunction
     {
     private:
         glm::dvec2 mRegularDrop;    // 固定点
@@ -113,7 +116,7 @@ namespace PhysicsBlock
         virtual glm::dvec2 GetB() { return mRegularDrop; };
     };
 
-    class PhysicsJunctionPP :public BaseJunction
+    class PhysicsJunctionPP : public BaseJunction
     {
     private:
         PhysicsParticle *mParticle1; // 粒子1

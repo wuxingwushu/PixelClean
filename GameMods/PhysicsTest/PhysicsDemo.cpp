@@ -467,6 +467,19 @@ namespace PhysicsBlock
 
 		PhysicsBlock::PhysicsJunctionSS *PhysicsJunction4 = new PhysicsBlock::PhysicsJunctionSS(PhysicsShape2, {0.75, -0.75}, PhysicsShape3, {-0.75, 0.75});
 		(*myPhysicsWorld)->AddObject(PhysicsJunction4);
+
+		PhysicsShape2 = new PhysicsBlock::PhysicsShape({ 5.1, -2 }, { 2, 2 });
+		for (size_t i = 0; i < (PhysicsShape2->width * PhysicsShape2->height); ++i)
+		{
+			PhysicsShape2->at(i).Collision = true;
+			PhysicsShape2->at(i).Entity = true;
+			PhysicsShape2->at(i).mass = 1;
+		}
+		PhysicsShape2->UpdateInfo();
+		PhysicsShape2->UpdateOutline();
+		PhysicsShape2->CollisionR = 1.414;
+		PhysicsShape2->angle = 0;
+		(*myPhysicsWorld)->AddObject(PhysicsShape2);
 	}
 
 }

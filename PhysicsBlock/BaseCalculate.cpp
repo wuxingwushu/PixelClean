@@ -6,22 +6,22 @@
 namespace PhysicsBlock
 {
 
-	int ToInt(double val)
+	inline int ToInt(double val)
 	{
 		return val >= 0 ? ((int)val) : (((int)val) - 1);
 	}
 
-	int ToInt(float val)
+	inline int ToInt(float val)
 	{
 		return val >= 0 ? ((int)val) : (((int)val) - 1);
 	}
 
-	glm::ivec2 ToInt(glm::vec2 val)
+	inline glm::ivec2 ToInt(glm::vec2 val)
 	{
 		return {ToInt(val.x), ToInt(val.y)};
 	}
 
-	glm::ivec2 ToInt(glm::dvec2 val)
+	inline glm::ivec2 ToInt(glm::dvec2 val)
 	{
 		return {ToInt(val.x), ToInt(val.y)};
 	}

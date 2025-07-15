@@ -2,6 +2,7 @@
 #include "MapFormwork.hpp"
 #include "BaseGrid.hpp"
 #include "BaseCalculate.hpp"
+#include <vector>
 
 namespace PhysicsBlock
 {
@@ -26,6 +27,8 @@ namespace PhysicsBlock
          * @param Centrality 中心位置
          * @note 必须在地图范围内 */
         void SetCentrality(glm::dvec2 Centrality);
+
+        std::vector<glm::dvec2> GetLightweightOutline(int x_, int y_, int w_, int h_);
 
         /*=========MapFormwork=========*/
 

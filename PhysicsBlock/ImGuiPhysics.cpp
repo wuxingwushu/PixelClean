@@ -86,13 +86,13 @@ namespace PhysicsBlock
 		ImGui::InputDouble(("摩擦因数" + name).c_str(), &Grid->FrictionFactor);
 		if (Grid->Entity)
 		{
-			ImGui::SliderScalar(("血量" + name).c_str(), ImGuiDataType_U64, &Grid->Healthpoint, &min, &max);
+			ImGui::SliderScalar(("血量" + name).c_str(), ImGuiDataType_U8, &Grid->Healthpoint, &min, &max);
 			ImGui::InputDouble(("质量" + name).c_str(), &Grid->mass);
 		}
 		else
 		{
-			ImGui::SliderScalar(("距离场" + name).c_str(), ImGuiDataType_U64, &Grid->DistanceField, &min, &max);
-			ImGui::SliderScalar(("方向场" + name).c_str(), ImGuiDataType_U64, &Grid->DirectionField, &min, &max);
+			ImGui::SliderScalar(("距离场" + name).c_str(), ImGuiDataType_U8, &Grid->DistanceField, &min, &max);
+			ImGui::SliderScalar(("方向场" + name).c_str(), ImGuiDataType_U8, &Grid->DirectionField, &min, &max);
 		}
 		bool val = Grid->Entity;
 		ImGui::Checkbox(("实体" + name).c_str(), &val);

@@ -58,9 +58,11 @@ namespace PhysicsBlock
 
 	void Dvec2ImGui(std::string name, glm::dvec2 *val)
 	{
-		ImGui::InputDouble((name + ".x").c_str(), &val->x);
-		ImGui::SameLine();
-		ImGui::InputDouble((name + ".y").c_str(), &val->y);
+		//ImGui::InputDouble((name + ".x").c_str(), &val->x);
+		ImGui::DragScalar((name + ".x").c_str(), ImGuiDataType_Double, &val->x, 0.0005f, NULL, NULL, "%.10f");
+		//ImGui::SameLine();
+		//ImGui::InputDouble((name + ".y").c_str(), &val->y);
+		ImGui::DragScalar((name + ".y").c_str(), ImGuiDataType_Double, &val->y, 0.0005f, NULL, NULL, "%.10f");
 	}
 
 	bool GridImGui(std::string name, GridBlock *Grid)
@@ -83,11 +85,13 @@ namespace PhysicsBlock
 
 		unsigned char min = 0, max = 255;
 		ImGui::Text(name.c_str());
-		ImGui::InputDouble(("摩擦因数" + name).c_str(), &Grid->FrictionFactor);
+		//ImGui::InputDouble(("摩擦因数" + name).c_str(), &Grid->FrictionFactor);
+		ImGui::DragScalar(("摩擦因数" + name).c_str(), ImGuiDataType_Double, &Grid->FrictionFactor, 0.0005f, NULL, NULL, "%.10f");
 		if (Grid->Entity)
 		{
 			ImGui::SliderScalar(("血量" + name).c_str(), ImGuiDataType_U8, &Grid->Healthpoint, &min, &max);
-			ImGui::InputDouble(("质量" + name).c_str(), &Grid->mass);
+			//ImGui::InputDouble(("质量" + name).c_str(), &Grid->mass);
+			ImGui::DragScalar(("质量" + name).c_str(), ImGuiDataType_Double, &Grid->mass, 0.0005f, NULL, NULL, "%.10f");
 		}
 		else
 		{
@@ -157,13 +161,48 @@ namespace PhysicsBlock
 	bool PhysicsShapeUI(PhysicsShape *Object)
 	{
 		bool UpData = PhysicsShapeUI((PhysicsParticle *)Object);
-		ImGui::InputDouble("角度", &Object->angle);
-		ImGui::InputDouble("角速度", &Object->angleSpeed);
+		//ImGui::InputDouble("角度", &Object->angle);
+		//ImGui::InputDouble("角速度", &Object->angleSpeed);
+		ImGui::DragScalar("角度", ImGuiDataType_Double, &Object->angle, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("角速度", ImGuiDataType_Double, &Object->angleSpeed, 0.0005f, NULL, NULL, "%.10f");
 		Dvec2ImGui("质心", &Object->CentreMass);
-		ImGui::InputDouble("碰撞半径", &Object->CollisionR);
-		ImGui::InputDouble("转动惯量", &Object->MomentInertia);
-		ImGui::InputDouble("扭矩", &Object->torque);
+		//ImGui::InputDouble("碰撞半径", &Object->CollisionR);
+		//ImGui::InputDouble("转动惯量", &Object->MomentInertia);
+		//ImGui::InputDouble("扭矩", &Object->torque);
+		ImGui::DragScalar("碰撞半径", ImGuiDataType_Double, &Object->CollisionR, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("转动惯量", ImGuiDataType_Double, &Object->MomentInertia, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("扭矩", ImGuiDataType_Double, &Object->torque, 0.0005f, NULL, NULL, "%.10f");
 		Dvec2ImGui("几何中心", &Object->CentreShape);
+
+		if (ImGui::TreeNode("骨骼点", "骨骼点: %d", Object->OutlineSize))
+		{
+			// 使用 map 统计每个坐标点出现的次数
+			std::map<std::pair<int, int>, int> pointCount;
+
+			// 第一次遍历：统计每个点出现的次数
+			for (size_t i = 0; i < Object->OutlineSize; ++i)
+			{
+				auto point = std::make_pair(Object->OutlineSet[i].x, Object->OutlineSet[i].y);
+				pointCount[point]++;
+			}
+
+			// 第二次遍历：绘制每个点，根据出现次数决定颜色
+			for (size_t i = 0; i < Object->OutlineSize; ++i)
+			{
+				auto point = std::make_pair(Object->OutlineSet[i].x, Object->OutlineSet[i].y);
+				ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // 默认颜色：紫色
+
+				// 如果这个点出现超过一次，换成另一种颜色，比如绿色
+				if (pointCount[point] > 1)
+				{
+					color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 绿色
+				}
+
+				ImGui::TextColored(color, "(%d, %d)", point.first, point.second);
+			}
+
+			ImGui::TreePop();
+		}
 
 		static glm::ivec2 GridPos{0};
 		for (int y = Object->height - 1; y >= 0; --y)
@@ -200,7 +239,8 @@ namespace PhysicsBlock
 		Dvec2ImGui("位置", &Object->pos);
 		Dvec2ImGui("速度", &Object->speed);
 		Dvec2ImGui("受力", &Object->force);
-		ImGui::InputDouble("质量", &Object->mass);
+		//ImGui::InputDouble("质量", &Object->mass);
+		ImGui::DragScalar("质量", ImGuiDataType_Double, &Object->mass, 0.0005f, NULL, NULL, "%.10f");
 
 		return false;
 	}

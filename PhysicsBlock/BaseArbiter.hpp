@@ -47,6 +47,7 @@ namespace PhysicsBlock
         // 碰撞的两个对象
         void *object1;
         void *object2;
+        char PoolID;
     };
 
     inline bool operator<(const ArbiterKey &a1, const ArbiterKey &a2)

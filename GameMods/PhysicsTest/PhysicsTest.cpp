@@ -117,8 +117,8 @@ namespace GAME
 		// 设置位置，让窗口靠右
 		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
 
-		static int item_current = 0;  // 储存当前Demo序号
-		static int item_Demo_idx = 0; // ImGui::Combo Demo序号
+		static int item_Demo_idx = IM_ARRAYSIZE(PhysicsBlock::DemoNameS) - 1; // ImGui::Combo Demo序号
+		static int item_current = item_Demo_idx + 1;  // 储存当前Demo序号
 		ImGui::Combo("Demo", &item_Demo_idx, PhysicsBlock::DemoNameS, IM_ARRAYSIZE(PhysicsBlock::DemoNameS));
 		// Demo序号 是否发生改变
 		if (item_current != item_Demo_idx)
@@ -327,15 +327,15 @@ namespace GAME
 					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
 				// 辅助显示质心
 				if (PhysicsBlock::Auxiliary_CentreMassBool)
-					mAuxiliaryVision->Spot({i->pos + i->CentreMass, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CentreMassColor));
+					mAuxiliaryVision->Spot({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CentreMassColor));
 				// 辅助显示几何中心
 				if (PhysicsBlock::Auxiliary_CentreShapeBool)
-					mAuxiliaryVision->Spot({i->pos + i->CentreShape, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CentreShapeColor));
+					mAuxiliaryVision->Spot({i->pos - PhysicsBlock::vec2angle(i->CentreMass - i->CentreShape, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_CentreShapeColor));
 				// 辅助显示外骨骼点
 				if (PhysicsBlock::Auxiliary_OutlineBool) {
 					PhysicsBlock::AngleMat angleMat(i->angle);
 					for	(size_t d = 0; d < i->OutlineSize; ++d) {
-						mAuxiliaryVision->Spot({ i->pos + angleMat.Rotary(i->OutlineSet[d] - i->CentreMass), 0 }, ColorToVec4(PhysicsBlock::Auxiliary_OutlineColor));
+						mAuxiliaryVision->Spot({ i->pos + angleMat.Rotary(i->OutlineSet[d]), 0 }, ColorToVec4(PhysicsBlock::Auxiliary_OutlineColor));
 					}
 				}
 			}

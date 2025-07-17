@@ -119,6 +119,25 @@ namespace PhysicsBlock
         }
     }
 
+    void PhysicsShape::UpdateCollisionR() {
+        CollisionR = 0;
+        double R;
+        for (size_t i = 0; i < OutlineSize; i++)
+        {
+            R = ModulusLength(OutlineSet[i]);
+            if (CollisionR < R) {
+                CollisionR = R;
+            }
+        }
+        CollisionR = sqrt(CollisionR);
+    }
+
+    void PhysicsShape::UpdateAll() {
+        UpdateInfo();
+        UpdateOutline(CentreMass);
+        UpdateCollisionR();
+    }
+
     void PhysicsShape::ApproachDrop(glm::dvec2 drop){
         glm::dvec2 OutlineDrop = vec2angle({CollisionR, 0}, EdgeVecToCosAngleFloat(drop - pos));
         CollisionInfoD info = BresenhamDetection(CentreMass + OutlineDrop, CentreMass - OutlineDrop);

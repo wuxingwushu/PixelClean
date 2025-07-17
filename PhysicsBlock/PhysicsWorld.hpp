@@ -8,6 +8,14 @@
 #include "PhysicsJunction.hpp" // 物理连接
 #include <map>
 
+#define MemoryPoolBool 0
+#if MemoryPoolBool
+#if TranslatorLocality
+#include "../Tool/MemoryPool.h"
+#else
+#include "MemoryPool.h"
+#endif
+#endif
 namespace PhysicsBlock
 {
     /**
@@ -31,6 +39,18 @@ namespace PhysicsBlock
         std::map<ArbiterKey, BaseArbiter*> CollideGroupS;// 碰撞队
 
         void HandleCollideGroup(BaseArbiter* Ba);
+        #if MemoryPoolBool
+        MemoryPool<PhysicsArbiterSP, 10 * sizeof(PhysicsArbiterSP)> PoolPhysicsArbiterSP;
+        MemoryPool<PhysicsArbiterSS, 100 * sizeof(PhysicsArbiterSS)> PoolPhysicsArbiterSS;
+        MemoryPool<PhysicsArbiterS, 10 * sizeof(PhysicsArbiterS)> PoolPhysicsArbiterS;
+        MemoryPool<PhysicsArbiterP, 10 * sizeof(PhysicsArbiterP)> PoolPhysicsArbiterP;
+        #endif
+        BaseArbiter* Arbiter(PhysicsShape* S, PhysicsParticle* P);
+        BaseArbiter* Arbiter(PhysicsShape* S1, PhysicsShape* S2);
+        BaseArbiter* Arbiter(PhysicsShape* S, MapFormwork* M);
+        BaseArbiter* Arbiter(PhysicsParticle* P, MapFormwork* M);
+
+        void DeleteArbiter(BaseArbiter* BA);
 
     public:
         /**

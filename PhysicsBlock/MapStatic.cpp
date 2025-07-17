@@ -71,40 +71,23 @@ namespace PhysicsBlock
                     Outline.push_back(glm::dvec2{x, y});
                 }
                 // 左下角
-                if (!GetCollision(x - 1, y + 1))
-                {
-                    if (GetCollision(x - 1, y) == GetCollision(x, y + 1))
-                    {
-                        Outline.push_back(glm::dvec2{x, y + 1});
+                if (!GetCollision(x, y + 1)) {
+                    if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1))) {
+                        Outline.push_back(glm::dvec2{x, y+1});
                     }
-                }
-                else if (!GetCollision(x - 1, y) || !GetCollision(x, y + 1))
-                {
-                    Outline.push_back(glm::dvec2{x, y + 1});
                 }
                 // 右上角
-                if (!GetCollision(x + 1, y - 1))
-                {
-                    if (GetCollision(x + 1, y) == GetCollision(x, y - 1))
-                    {
-                        Outline.push_back(glm::dvec2{x + 1, y});
+                if (!GetCollision(x + 1, y)) {
+                    if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1))) {
+                        Outline.push_back(glm::dvec2{x+1, y});
                     }
-                }
-                else if (!GetCollision(x + 1, y) || !GetCollision(x, y - 1))
-                {
-                    Outline.push_back(glm::dvec2{x + 1, y});
                 }
                 // 右下角
-                if (!GetCollision(x + 1, y + 1))
-                {
-                    if (GetCollision(x + 1, y) == GetCollision(x, y + 1))
+                if (!GetCollision(x + 1, y + 1)) {
+                    if ((GetCollision(x + 1, y) == GetCollision(x, y + 1)) && !GetCollision(x + 1, y))
                     {
-                        Outline.push_back(glm::dvec2{x + 1, y + 1});
+                        Outline.push_back(glm::dvec2{x+1, y+1});
                     }
-                }
-                else if (!GetCollision(x + 1, y) || !GetCollision(x, y + 1))
-                {
-                    Outline.push_back(glm::dvec2{x + 1, y + 1});
                 }
             }
             

@@ -59,6 +59,16 @@ namespace PhysicsBlock
         void UpdateInfo();
 
         /**
+         * @brief 半径计算
+         * @note 更新：半径
+         * @warning 必须先计算 Outline */
+        void UpdateCollisionR();
+
+        /**
+         * @brief 更新全部信息 */
+        void UpdateAll();
+
+        /**
          * @brief 几何形状靠近这个点
          * @param drop 点的位置 */
         void ApproachDrop(glm::dvec2 drop);

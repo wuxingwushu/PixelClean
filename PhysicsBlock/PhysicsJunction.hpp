@@ -30,8 +30,6 @@ namespace PhysicsBlock
         rubber, // 橡皮筋
     };
 
-#define JISHU 1.0
-
     class BaseJunction
     {
     public:
@@ -39,6 +37,52 @@ namespace PhysicsBlock
         double bias{0};    // 距离差
         glm::dvec2 Normal; // 力的方向
         glm::dvec2 P;      //
+
+        CordType Type; // 绳子类型
+
+        void biasType(){
+            switch (Type)
+            {
+            case cord:
+                if (bias > 0) {
+                    bias = 0;
+                }
+                break;
+            case rubber:
+                if (bias > 0) {
+                    bias = 0;
+                }else {
+                    bias /= 100;
+                }
+                break;
+
+            case spring:
+                bias /= 50;
+                break;
+            
+            default:
+                break;
+            }
+        }
+
+        double ElasticityType(){
+            switch (Type)
+            {
+            case cord:
+                return 1;
+                break;
+            case rubber:
+                return 0.005;
+                break;
+            case spring:
+                return 0.005;
+                break;
+            
+            default:
+                break;
+            }
+            return 1;
+        }
 
         // 预处理
         virtual void PreStep(double inv_dt) = 0;
@@ -62,7 +106,7 @@ namespace PhysicsBlock
 
 
     public:
-        PhysicsJunctionSS(PhysicsShape *Particle1, glm::dvec2 arm1, PhysicsShape *Particle2, glm::dvec2 arm2);
+        PhysicsJunctionSS(PhysicsShape *Particle1, glm::dvec2 arm1, PhysicsShape *Particle2, glm::dvec2 arm2, CordType type);
         ~PhysicsJunctionSS();
 
         // 预处理
@@ -84,7 +128,7 @@ namespace PhysicsBlock
         glm::dvec2 R;
 
     public:
-        PhysicsJunctionS(PhysicsShape *Particle, glm::dvec2 arm, glm::dvec2 RegularDrop);
+        PhysicsJunctionS(PhysicsShape *Particle, glm::dvec2 arm, glm::dvec2 RegularDrop, CordType type);
         ~PhysicsJunctionS();
 
         // 预处理
@@ -103,7 +147,7 @@ namespace PhysicsBlock
         glm::dvec2 mRegularDrop;    // 固定点
         PhysicsParticle *mParticle; // 粒子
     public:
-        PhysicsJunctionP(PhysicsParticle *Particle, glm::dvec2 RegularDrop);
+        PhysicsJunctionP(PhysicsParticle *Particle, glm::dvec2 RegularDrop, CordType type);
         ~PhysicsJunctionP();
 
         // 预处理
@@ -122,7 +166,7 @@ namespace PhysicsBlock
         PhysicsParticle *mParticle1; // 粒子1
         PhysicsParticle *mParticle2; // 粒子2
     public:
-        PhysicsJunctionPP(PhysicsParticle *Particle1, PhysicsParticle *Particle2);
+        PhysicsJunctionPP(PhysicsParticle *Particle1, PhysicsParticle *Particle2, CordType type);
         ~PhysicsJunctionPP();
 
         // 预处理

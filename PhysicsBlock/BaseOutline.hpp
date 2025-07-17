@@ -21,11 +21,11 @@ namespace PhysicsBlock
 
         /**
          * @brief 更新外轮廓点集合 */
-        void UpdateOutline();
+        void UpdateOutline(glm::dvec2 CentreMass_);
 
         /**
          * @brief 更新外轮廓点集合(轻量版) */
-        void UpdateLightweightOutline();
+        void UpdateLightweightOutline(glm::dvec2 CentreMass_);
 
     private:
         /**

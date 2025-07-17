@@ -8,6 +8,67 @@
 namespace PhysicsBlock
 {
 
+    inline BaseArbiter* PhysicsWorld::Arbiter(PhysicsShape *S, PhysicsParticle *P)
+    {
+        #if MemoryPoolBool
+        BaseArbiter* ptr = PoolPhysicsArbiterSP.newElement(S, P);
+        ptr->key.PoolID = 0;
+        return ptr;
+        #else
+        return new PhysicsArbiterSP(S, P);
+        #endif
+    }
+    inline BaseArbiter* PhysicsWorld::Arbiter(PhysicsShape *S1, PhysicsShape *S2)
+    {
+        #if MemoryPoolBool
+        BaseArbiter* ptr = PoolPhysicsArbiterSS.newElement(S1, S2);
+        ptr->key.PoolID = 1;
+        return ptr;
+        #else
+        return new PhysicsArbiterSS(S1, S2);
+        #endif
+    }
+    inline BaseArbiter* PhysicsWorld::Arbiter(PhysicsShape *S, MapFormwork *M)
+    {
+        #if MemoryPoolBool
+        BaseArbiter* ptr = PoolPhysicsArbiterS.newElement(S, M);
+        ptr->key.PoolID = 2;
+        return ptr;
+        #else
+        return new PhysicsArbiterS(S, M);
+        #endif
+    }
+    inline BaseArbiter* PhysicsWorld::Arbiter(PhysicsParticle *P, MapFormwork *M)
+    {
+        #if MemoryPoolBool
+        BaseArbiter* ptr = PoolPhysicsArbiterP.newElement(P, M);
+        ptr->key.PoolID = 3;
+        return ptr;
+        #else
+        return new PhysicsArbiterP(P, M);
+        #endif
+    }
+
+    inline void PhysicsWorld::DeleteArbiter(BaseArbiter* BA) {
+        #if MemoryPoolBool
+        if (BA->key.PoolID < 2){
+            if (BA->key.PoolID == 0) {
+                PoolPhysicsArbiterSP.deleteElement((PhysicsArbiterSP*)BA);
+            } else {
+                PoolPhysicsArbiterSS.deleteElement((PhysicsArbiterSS*)BA);
+            }
+        } else {
+            if (BA->key.PoolID == 2) {
+                PoolPhysicsArbiterS.deleteElement((PhysicsArbiterS*)BA);
+            } else {
+                PoolPhysicsArbiterP.deleteElement((PhysicsArbiterP*)BA);
+            }
+        }
+        #else
+        delete BA;
+        #endif
+    }
+
     PhysicsWorld::PhysicsWorld(glm::dvec2 gravityAcceleration, const bool wind) : GravityAcceleration(gravityAcceleration), WindBool(wind)
     {
     }
@@ -18,8 +79,9 @@ namespace PhysicsBlock
         {
             delete GridWind;
         }
-        if (wMapFormwork != nullptr) {
-            delete (MapStatic*)wMapFormwork; // 暂时
+        if (wMapFormwork != nullptr)
+        {
+            delete (MapStatic *)wMapFormwork; // 暂时
         }
         // 物理形状
         for (auto i : PhysicsShapeS)
@@ -44,7 +106,7 @@ namespace PhysicsBlock
         // 两个碰撞对象间的信息
         for (auto i : CollideGroupS)
         {
-            delete i.second;
+            DeleteArbiter(i.second);
         }
     }
 
@@ -59,13 +121,13 @@ namespace PhysicsBlock
             else
             {
                 CollideGroupS[Ba->key]->Update(Ba->contacts, Ba->numContacts);
-                delete Ba;
+                DeleteArbiter(Ba);
             }
         }
         else
         {
             CollideGroupS.erase(Ba->key);
-            delete Ba;
+            DeleteArbiter(Ba);
         }
     }
 
@@ -88,10 +150,12 @@ namespace PhysicsBlock
             {
                 if (PhysicsShapeS[i]->DropCollision(o->pos).Collision)
                 {
-                    o->OldPosUpDataBool = false;// 关闭旧位置更新
-                    BaseArbiter *ptr = new PhysicsArbiterSP(PhysicsShapeS[i], o);
+                    o->OldPosUpDataBool = false; // 关闭旧位置更新
+                    BaseArbiter *ptr = Arbiter(PhysicsShapeS[i], o);
                     HandleCollideGroup(ptr);
-                } else {
+                }
+                else
+                {
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], o));
                 }
             }
@@ -106,22 +170,22 @@ namespace PhysicsBlock
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], PhysicsShapeS[j]));
                     continue;
                 }
-                BaseArbiter *ptr = new PhysicsArbiterSS(PhysicsShapeS[i], PhysicsShapeS[j]);
+                BaseArbiter *ptr = Arbiter(PhysicsShapeS[i], PhysicsShapeS[j]);
                 HandleCollideGroup(ptr);
             }
         }
-        
+
         // 处理 网格形状 和 地形的碰撞
         for (auto o : PhysicsShapeS)
         {
-            BaseArbiter *ptr = new PhysicsArbiterS(o, wMapFormwork);
+            BaseArbiter *ptr = Arbiter(o, wMapFormwork);
             HandleCollideGroup(ptr);
         }
 
         // 处理 点 和 地形的碰撞
         for (auto o : PhysicsParticleS)
         {
-            BaseArbiter *ptr = new PhysicsArbiterP(o, wMapFormwork);
+            BaseArbiter *ptr = Arbiter(o, wMapFormwork);
             HandleCollideGroup(ptr);
         }
 
@@ -139,7 +203,7 @@ namespace PhysicsBlock
         {
             J->PreStep(inv_dt);
         }
-        
+
         // 迭代结果
         for (size_t i = 0; i < 10; ++i)
         {
@@ -156,7 +220,7 @@ namespace PhysicsBlock
                 J->ApplyImpulse();
             }
         }
-        
+
         // 移动
         for (auto i : PhysicsShapeS)
         {
@@ -166,13 +230,14 @@ namespace PhysicsBlock
         {
             if (wMapFormwork->FMGetCollide(i->pos))
             {
-                i->OldPosUpDataBool = false;// 关闭旧位置更新
+                i->OldPosUpDataBool = false; // 关闭旧位置更新
             }
             i->PhysicsPos(time, GravityAcceleration);
         }
     }
 
-    void PhysicsWorld::PhysicsInformationUpdate() {
+    void PhysicsWorld::PhysicsInformationUpdate()
+    {
         // 碰撞检测
         for (size_t i = 0; i < PhysicsShapeS.size(); ++i)
         {
@@ -180,11 +245,12 @@ namespace PhysicsBlock
             {
                 if (PhysicsShapeS[i]->DropCollision(o->pos).Collision)
                 {
-                    o->OldPosUpDataBool = false;// 关闭旧位置更新
-                    BaseArbiter* ptr = new PhysicsArbiterSP(PhysicsShapeS[i], o);
+                    o->OldPosUpDataBool = false; // 关闭旧位置更新
+                    BaseArbiter *ptr = new PhysicsArbiterSP(PhysicsShapeS[i], o);
                     HandleCollideGroup(ptr);
                 }
-                else {
+                else
+                {
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], o));
                 }
             }
@@ -200,7 +266,7 @@ namespace PhysicsBlock
                     CollideGroupS.erase(ArbiterKey(PhysicsShapeS[i], PhysicsShapeS[j]));
                     continue;
                 }
-                BaseArbiter* ptr = new PhysicsArbiterSS(PhysicsShapeS[i], PhysicsShapeS[j]);
+                BaseArbiter *ptr = new PhysicsArbiterSS(PhysicsShapeS[i], PhysicsShapeS[j]);
                 HandleCollideGroup(ptr);
             }
         }
@@ -209,7 +275,7 @@ namespace PhysicsBlock
         for (auto o : PhysicsShapeS)
         {
             o->OldPos = o->pos;
-            BaseArbiter* ptr = new PhysicsArbiterS(o, wMapFormwork);
+            BaseArbiter *ptr = new PhysicsArbiterS(o, wMapFormwork);
             HandleCollideGroup(ptr);
         }
 
@@ -217,7 +283,7 @@ namespace PhysicsBlock
         for (auto o : PhysicsParticleS)
         {
             o->OldPos = o->pos;
-            BaseArbiter* ptr = new PhysicsArbiterP(o, wMapFormwork);
+            BaseArbiter *ptr = new PhysicsArbiterP(o, wMapFormwork);
             HandleCollideGroup(ptr);
         }
 

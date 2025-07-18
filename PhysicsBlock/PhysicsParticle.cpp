@@ -20,7 +20,7 @@ namespace PhysicsBlock
         force += Force; // 累计力矩
     }
 
-    void PhysicsParticle::PhysicsSpeed(double time, glm::dvec2 Ga)
+    void inline PhysicsParticle::PhysicsSpeed(double time, glm::dvec2 Ga)
     {
         if (invMass == 0)
 		    return;
@@ -29,8 +29,13 @@ namespace PhysicsBlock
         force = { 0, 0 };
     }
 
-    void PhysicsParticle::PhysicsPos(double time, glm::dvec2 Ga)
+    void inline PhysicsParticle::PhysicsPos(double time, glm::dvec2 Ga)
     {
+        if (OldPos == pos) {
+            if(StaticNum < 200)++StaticNum;
+        }else{
+            StaticNum = 0;
+        }
         if (OldPosUpDataBool) { OldPos = pos; }
         pos += time * speed;
         OldPosUpDataBool = true;

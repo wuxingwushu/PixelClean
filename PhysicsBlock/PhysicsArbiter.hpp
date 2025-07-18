@@ -6,7 +6,7 @@
 
 namespace PhysicsBlock
 {
-    
+   
     /**
      * @brief 动态形状，动态形状，碰撞解析 */
     class PhysicsArbiterSS : public BaseArbiter
@@ -21,6 +21,7 @@ namespace PhysicsBlock
         virtual void Update(Contact *NewContacts, int numNewContacts);
         // 预处理
         virtual void PreStep(double inv_dt);
+        virtual void PreStep();
         // 迭代出结果
         virtual void ApplyImpulse();
     };
@@ -41,6 +42,7 @@ namespace PhysicsBlock
         virtual void Update(Contact *NewContacts, int numNewContacts);
         // 预处理
         virtual void PreStep(double inv_dt);
+        virtual void PreStep();
         // 迭代出结果
         virtual void ApplyImpulse();
     };
@@ -60,6 +62,7 @@ namespace PhysicsBlock
         virtual void Update(Contact *NewContacts, int numNewContacts);
         // 预处理
         virtual void PreStep(double inv_dt);
+        virtual void PreStep();
         // 迭代出结果
         virtual void ApplyImpulse();
     };
@@ -79,6 +82,7 @@ namespace PhysicsBlock
         virtual void Update(Contact *NewContacts, int numNewContacts);
         // 预处理
         virtual void PreStep(double inv_dt);
+        virtual void PreStep();
         // 迭代出结果
         virtual void ApplyImpulse();
     };

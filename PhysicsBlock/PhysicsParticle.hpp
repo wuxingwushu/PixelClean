@@ -10,6 +10,8 @@ namespace PhysicsBlock
     class PhysicsParticle : public PhysicsFormwork
     {
     public:
+        unsigned char StaticNum = 0; // 静止次数
+
         glm::dvec2 OldPos{0}; // 上一时刻的位置（ 旧位置不可以在碰撞体内 ）
         bool OldPosUpDataBool = true; // 是否可以更新位置
         /**

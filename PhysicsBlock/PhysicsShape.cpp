@@ -158,9 +158,9 @@ namespace PhysicsBlock
         start -= pos;
         end -= pos;
 
-        AngleMat Mat(-angle);
-        start = Mat.Rotary(start);
-        end = Mat.Rotary(end);
+        AngleMat Mat(angle);
+        start = Mat.Anticlockwise(start);
+        end = Mat.Anticlockwise(end);
         
         // 裁剪线段 让线段都在矩形内
         PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start + CentreMass, end + CentreMass, width, height);
@@ -171,21 +171,21 @@ namespace PhysicsBlock
             if (info.Collision)
             {
                 // 返回物理坐标系
-                info.pos = Mat.Anticlockwise(info.pos - CentreMass) + pos;
+                info.pos = Mat.Rotary(info.pos - CentreMass) + pos;
                 return info;
             }
         }
         return {false};
     }
 
-    void PhysicsShape::PhysicsSpeed(double time, glm::dvec2 Ga)
+    void inline PhysicsShape::PhysicsSpeed(double time, glm::dvec2 Ga)
     {
         PhysicsParticle::PhysicsSpeed(time, Ga);
         angleSpeed += time * invMomentInertia * torque;
         torque = 0;
     }
 
-    void PhysicsShape::PhysicsPos(double time, glm::dvec2 Ga)
+    void inline PhysicsShape::PhysicsPos(double time, glm::dvec2 Ga)
     {
         PhysicsParticle::PhysicsPos(time, Ga);
         angle += time * angleSpeed;

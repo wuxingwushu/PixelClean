@@ -80,6 +80,7 @@ namespace PhysicsBlock
         virtual void Update(Contact *NewContacts, int numNewContacts) = 0;
         // 预处理
         virtual void PreStep(double inv_dt) = 0;
+        virtual void PreStep() = 0;
         // 迭代出结果
         virtual void ApplyImpulse() = 0;
     };

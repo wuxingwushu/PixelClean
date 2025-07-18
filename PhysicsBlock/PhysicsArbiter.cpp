@@ -7,6 +7,7 @@
 
 namespace PhysicsBlock
 {
+
     PhysicsArbiterSS::PhysicsArbiterSS(PhysicsShape *Object1, PhysicsShape *Object2) : 
         BaseArbiter(Object1, Object2), object1(Object1), object2(Object2)
     {
@@ -38,6 +39,16 @@ namespace PhysicsBlock
         }
 
         numContacts = numNewContacts;
+    }
+    
+    void PhysicsArbiterSS::PreStep() {
+        Contact *c;
+        for (size_t i = 0; i < numContacts; ++i)
+        {
+            c = contacts + i;
+            c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
+            c->r2 = c->position - object2->pos; // object2 质心 指向碰撞点的 力矩
+        }
     }
 
     // 预处理
@@ -171,6 +182,16 @@ namespace PhysicsBlock
         numContacts = numNewContacts;
     }
 
+    void PhysicsArbiterSP::PreStep() {
+        Contact *c;
+        for (size_t i = 0; i < numContacts; ++i)
+        {
+            c = contacts + i;
+            c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
+            c->r2 = {0,0}; // object2 质心 指向碰撞点的 力矩
+        }
+    }
+
     // 预处理
     void PhysicsArbiterSP::PreStep(double inv_dt)
     {
@@ -183,7 +204,7 @@ namespace PhysicsBlock
         {
             c = contacts + i;
             c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
-            // c->r2 = c->position - object2->PFGetPos();// object2 质心 指向碰撞点的 力矩
+            c->r2 = {0,0}; // object2 质心 指向碰撞点的 力矩
 
             double rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
             double R1 = Dot(c->r1, c->r1);
@@ -298,6 +319,16 @@ namespace PhysicsBlock
         }
 
         numContacts = numNewContacts;
+    }
+
+    void PhysicsArbiterS::PreStep() {
+        Contact *c;
+        for (size_t i = 0; i < numContacts; ++i)
+        {
+            c = contacts + i;
+            c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
+            c->r2 = { 0, 0 };
+        }
     }
 
     // 预处理
@@ -417,6 +448,16 @@ namespace PhysicsBlock
         }
 
         numContacts = numNewContacts;
+    }
+
+    void PhysicsArbiterP::PreStep() {
+        Contact *c;
+        for (size_t i = 0; i < numContacts; ++i)
+        {
+            c = contacts + i;
+            c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
+            c->r2 = { 0, 0 };
+        }
     }
 
     // 预处理

@@ -26,15 +26,18 @@ namespace PhysicsBlock
 	// 铁链
 	void PhysicsDemo6(PhysicsWorld** myPhysicsWorld, Camera* mCamera);
 
-	// 绳子
+	// 杠杆连接
 	void PhysicsDemo7(PhysicsWorld** myPhysicsWorld, Camera* mCamera);
 
 	// 橡皮筋受力
 	void PhysicsDemo8(PhysicsWorld** myPhysicsWorld, Camera* mCamera);
 
+	// 绳子与地形碰撞
+	void PhysicsDemo9(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+
 
 	typedef void (*Funtypedef)(PhysicsWorld** myPhysicsWorld, Camera* mCamera);
-	static Funtypedef DemoFunS[] = { PhysicsDemo0, PhysicsDemo1, PhysicsDemo2, PhysicsDemo3, PhysicsDemo4, PhysicsDemo5, PhysicsDemo6, PhysicsDemo7, PhysicsDemo8 };
-	static const char* DemoNameS[] = { "外骨骼计算", "几何重心", "正方形堆叠", "正方形堆叠金字塔", "点和正方形", "关节", "铁链", "绳子", "橡皮筋受力" };
+	static Funtypedef DemoFunS[] = { PhysicsDemo0, PhysicsDemo1, PhysicsDemo2, PhysicsDemo3, PhysicsDemo4, PhysicsDemo5, PhysicsDemo6, PhysicsDemo7, PhysicsDemo8, PhysicsDemo9 };
+	static const char* DemoNameS[] = { "外骨骼计算", "几何重心", "正方形堆叠", "正方形堆叠金字塔", "点和正方形", "关节", "铁链", "杠杆连接", "橡皮筋受力", "绳子与地形碰撞" };
 
 }

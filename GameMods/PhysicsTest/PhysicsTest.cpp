@@ -198,7 +198,6 @@ namespace GAME
 
 	void PhysicsTest::GameLoop(unsigned int mCurrentFrame)
 	{
-
 		int winwidth, winheight;
 		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
 		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
@@ -289,7 +288,7 @@ namespace GAME
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		if (PhysicsSwitch)
 		{
-			mPhysicsWorld->PhysicsEmulator(TOOL::FPStime);
+			mPhysicsWorld->PhysicsEmulator(1 ? 0.01 : TOOL::FPStime);
 		}
 		else
 		{
@@ -346,7 +345,7 @@ namespace GAME
 				{
 					if (i->at(x, y).Entity)
 					{
-						ShowSquare(SquarePhysics::vec2angle(glm::dvec2{x, y} - i->CentreMass, i->angle) + i->pos, i->angle, {0, 1, 0, 1});
+						ShowSquare(SquarePhysics::vec2angle(glm::dvec2{x, y} - i->CentreMass, i->angle) + i->pos, i->angle, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
 					}
 				}
 			}
@@ -370,7 +369,7 @@ namespace GAME
 					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
 			}
 
-			mAuxiliaryVision->Spot({i->pos, 0}, {0, 1, 0, 1});
+			mAuxiliaryVision->Spot({i->pos, 0}, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
 		}
 		// 渲染绳子
 		for (auto i : mPhysicsWorld->GetPhysicsJoint())
@@ -445,9 +444,10 @@ namespace GAME
 
 	void PhysicsTest::ShowStaticSquare(glm::dvec2 pos, double angle, glm::vec4 color)
 	{
-		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, angle);
-		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, angle);
-		glm::dvec2 jiao3 = PhysicsBlock::vec2angle({1, 1}, angle);
+		glm::dvec2 Angle = PhysicsBlock::AngleFloatToAngleVec(angle);
+		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, Angle);
+		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, Angle);
+		glm::dvec2 jiao3 = jiao2 + jiao1;
 		mAuxiliaryVision->AddStaticLine({pos, 0}, {pos + jiao1, 0}, color);
 		mAuxiliaryVision->AddStaticLine({pos, 0}, {pos + jiao2, 0}, color);
 		mAuxiliaryVision->AddStaticLine({pos + jiao3, 0}, {pos + jiao1, 0}, color);
@@ -456,9 +456,10 @@ namespace GAME
 
 	void PhysicsTest::ShowSquare(glm::dvec2 pos, double angle, glm::vec4 color)
 	{
-		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, angle);
-		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, angle);
-		glm::dvec2 jiao3 = PhysicsBlock::vec2angle({1, 1}, angle);
+		glm::dvec2 Angle = PhysicsBlock::AngleFloatToAngleVec(angle);
+		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, Angle);
+		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, Angle);
+		glm::dvec2 jiao3 = jiao2 + jiao1;
 		mAuxiliaryVision->Line({pos, 0}, color, {pos + jiao1, 0}, color);
 		mAuxiliaryVision->Line({pos, 0}, color, {pos + jiao2, 0}, color);
 		mAuxiliaryVision->Line({pos + jiao3, 0}, color, {pos + jiao1, 0}, color);

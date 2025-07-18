@@ -8,7 +8,7 @@
 #include "PhysicsJunction.hpp" // 物理连接
 #include <map>
 
-#define MemoryPoolBool 0
+#define MemoryPoolBool 1
 #if MemoryPoolBool
 #if TranslatorLocality
 #include "../Tool/MemoryPool.h"
@@ -16,6 +16,16 @@
 #include "MemoryPool.h"
 #endif
 #endif
+
+#define ThreadPoolBool 0
+#if ThreadPoolBool
+#if TranslatorLocality
+#include "../Tool/ThreadPool.h"
+#else
+#include "ThreadPool.h"
+#endif
+#endif
+
 namespace PhysicsBlock
 {
     /**
@@ -45,13 +55,16 @@ namespace PhysicsBlock
         MemoryPool<PhysicsArbiterS, 10 * sizeof(PhysicsArbiterS)> PoolPhysicsArbiterS;
         MemoryPool<PhysicsArbiterP, 10 * sizeof(PhysicsArbiterP)> PoolPhysicsArbiterP;
         #endif
-        BaseArbiter* Arbiter(PhysicsShape* S, PhysicsParticle* P);
-        BaseArbiter* Arbiter(PhysicsShape* S1, PhysicsShape* S2);
-        BaseArbiter* Arbiter(PhysicsShape* S, MapFormwork* M);
-        BaseArbiter* Arbiter(PhysicsParticle* P, MapFormwork* M);
+        void Arbiter(PhysicsShape* S, PhysicsParticle* P);
+        void Arbiter(PhysicsShape* S1, PhysicsShape* S2);
+        void Arbiter(PhysicsShape* S, MapFormwork* M);
+        void Arbiter(PhysicsParticle* P, MapFormwork* M);
 
         void DeleteArbiter(BaseArbiter* BA);
 
+#if ThreadPoolBool
+        ThreadPool mThreadPool;
+#endif
     public:
         /**
          * @brief 构建函数

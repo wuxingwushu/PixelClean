@@ -1,10 +1,11 @@
 #include "ImGuiPhysics.hpp"
-#include "../ini.h"
 #include <string>
 #if TranslatorLocality
 #include "../ImGui/imgui.h"
+#include "../ini.h"
 #else
 #include "../extern/imgui/imgui.h"
+#include "ini.h"
 #endif
 
 namespace PhysicsBlock
@@ -27,13 +28,13 @@ namespace PhysicsBlock
 	void AuxiliaryInfoRead()
 	{
 		inih::INIReader Ini{"PhysicsBlock.ini"};
-		AuxiliaryReadBoolColor(Pos);						// 位置
-		AuxiliaryReadBoolColor(OldPos);						// 旧位置
-		AuxiliaryReadBoolColor(Speed);						// 速度
-		AuxiliaryReadBoolColor(Force);						// 受力
-		AuxiliaryReadBoolColor(CentreMass);					// 质心
-		AuxiliaryReadBoolColor(CentreShape);				// 几何中心
-		AuxiliaryReadBoolColor(Outline);	 // 外骨骼点
+		AuxiliaryReadBoolColor(Pos);							// 位置
+		AuxiliaryReadBoolColor(OldPos);							// 旧位置
+		AuxiliaryReadBoolColor(Speed);							// 速度
+		AuxiliaryReadBoolColor(Force);							// 受力
+		AuxiliaryReadBoolColor(CentreMass);						// 质心
+		AuxiliaryReadBoolColor(CentreShape);					// 几何中心
+		AuxiliaryReadBoolColor(Outline);						// 外骨骼点
 		AuxiliaryReadBoolColor(CollisionDrop);					// 碰撞点
 		AuxiliaryReadBoolColor(SeparateNormalVector);			// 分离法向量
 		AuxiliaryReadBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
@@ -43,23 +44,23 @@ namespace PhysicsBlock
 	void AuxiliaryInfoStorage()
 	{
 		inih::INIReader Ini{"PhysicsBlock.ini"};
-		AuxiliaryStorageBoolColor(Pos);						 // 位置
-		AuxiliaryStorageBoolColor(OldPos);					 // 旧位置
-		AuxiliaryStorageBoolColor(Speed);					 // 速度
-		AuxiliaryStorageBoolColor(Force);					 // 受力
-		AuxiliaryStorageBoolColor(CentreMass);				 // 质心
-		AuxiliaryStorageBoolColor(CentreShape);				 // 几何中心
-		AuxiliaryStorageBoolColor(Outline);	 // 外骨骼点
-		AuxiliaryStorageBoolColor(CollisionDrop);					 // 碰撞点
-		AuxiliaryStorageBoolColor(SeparateNormalVector);			 // 分离法向量
-		AuxiliaryStorageBoolColor(CollisionDropToCenterOfGravity);	 // 碰撞点到两个物体重心的连线
-		inih::INIWriter::write_Gai("PhysicsBlock.ini", Ini); // 保存
+		AuxiliaryStorageBoolColor(Pos);							   // 位置
+		AuxiliaryStorageBoolColor(OldPos);						   // 旧位置
+		AuxiliaryStorageBoolColor(Speed);						   // 速度
+		AuxiliaryStorageBoolColor(Force);						   // 受力
+		AuxiliaryStorageBoolColor(CentreMass);					   // 质心
+		AuxiliaryStorageBoolColor(CentreShape);					   // 几何中心
+		AuxiliaryStorageBoolColor(Outline);						   // 外骨骼点
+		AuxiliaryStorageBoolColor(CollisionDrop);				   // 碰撞点
+		AuxiliaryStorageBoolColor(SeparateNormalVector);		   // 分离法向量
+		AuxiliaryStorageBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
+		inih::INIWriter::write_Gai("PhysicsBlock.ini", Ini);	   // 保存
 	}
 
 	void Dvec2ImGui(std::string name, glm::dvec2 *val)
 	{
 		ImGui::DragScalar((name + ".x").c_str(), ImGuiDataType_Double, &val->x, 0.0005f, NULL, NULL, "%.10f");
-		//ImGui::SameLine();
+		// ImGui::SameLine();
 		ImGui::DragScalar((name + ".y").c_str(), ImGuiDataType_Double, &val->y, 0.0005f, NULL, NULL, "%.10f");
 	}
 
@@ -80,19 +81,24 @@ namespace PhysicsBlock
 			Static_Collision = Grid->Collision;
 			Static_Event = Grid->Event;
 		}
+#if TranslatorLocality
+		ImGuiDataType_ T = ImGuiDataType_U8;
+#else
+		ImGuiDataType_ T = ImGuiDataType_U64;
+#endif
 
 		unsigned char min = 0, max = 255;
 		ImGui::Text(name.c_str());
 		ImGui::DragScalar(("摩擦因数" + name).c_str(), ImGuiDataType_Double, &Grid->FrictionFactor, 0.0005f, NULL, NULL, "%.10f");
 		if (Grid->Entity)
 		{
-			ImGui::SliderScalar(("血量" + name).c_str(), ImGuiDataType_U8, &Grid->Healthpoint, &min, &max);
+			ImGui::SliderScalar(("血量" + name).c_str(), T, &Grid->Healthpoint, &min, &max);
 			ImGui::DragScalar(("质量" + name).c_str(), ImGuiDataType_Double, &Grid->mass, 0.0005f, NULL, NULL, "%.10f");
 		}
 		else
 		{
-			ImGui::SliderScalar(("距离场" + name).c_str(), ImGuiDataType_U8, &Grid->DistanceField, &min, &max);
-			ImGui::SliderScalar(("方向场" + name).c_str(), ImGuiDataType_U8, &Grid->DirectionField, &min, &max);
+			ImGui::SliderScalar(("距离场" + name).c_str(), T, &Grid->DistanceField, &min, &max);
+			ImGui::SliderScalar(("方向场" + name).c_str(), T, &Grid->DirectionField, &min, &max);
 		}
 		bool val = Grid->Entity;
 		ImGui::Checkbox(("实体" + name).c_str(), &val);
@@ -176,7 +182,7 @@ namespace PhysicsBlock
 				auto point = std::make_pair(Object->OutlineSet[i].x, Object->OutlineSet[i].y);
 				pointCount[point]++;
 				ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // 默认颜色：白色
-				
+
 				// 如果这个点出现超过一次，换成另一种颜色
 				if (pointCount[point] > 1)
 				{

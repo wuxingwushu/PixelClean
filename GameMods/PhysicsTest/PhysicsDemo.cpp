@@ -180,7 +180,7 @@ namespace PhysicsBlock
 		int MapSize = 50;
 
 		// 设置摄像机位置
-		mCamera->setCameraPos({0, 0, 80});
+		mCamera->setCameraPos({0, 0, MapSize * 2});
 
 		// 创建地图
 		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);

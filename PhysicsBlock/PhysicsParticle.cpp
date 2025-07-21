@@ -32,7 +32,7 @@ namespace PhysicsBlock
     void inline PhysicsParticle::PhysicsPos(double time, glm::dvec2 Ga)
     {
         if (OldPos == pos) {
-            if(StaticNum < 200)++StaticNum;
+            if((invMass != 0) && (StaticNum < 200))++StaticNum;
         }else{
             StaticNum = 0;
         }

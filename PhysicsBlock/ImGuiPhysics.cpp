@@ -241,6 +241,9 @@ namespace PhysicsBlock
 		{
 			Dvec2ImGui("风力", &Object->Wind);
 		}
+		ImGui::Text("物理网格：%d", Object->GetPhysicsShape().size());
+		ImGui::Text("物理点：%d", Object->GetPhysicsParticle().size());
+		ImGui::Text("物理圆：%d", Object->GetPhysicsCircle().size());
 
 		bool UpData = false;
 

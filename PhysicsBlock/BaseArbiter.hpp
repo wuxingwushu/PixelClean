@@ -76,6 +76,8 @@ namespace PhysicsBlock
         BaseArbiter(void *Object1, void *Object2) : key(Object1, Object2) {};
         ~BaseArbiter() {};
 
+        virtual void ComputeCollide() = 0;
+
         // 更新碰撞信息
         virtual void Update(Contact *NewContacts, int numNewContacts) = 0;
         // 预处理

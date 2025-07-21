@@ -109,48 +109,74 @@ namespace PhysicsBlock
 	SquareFocus LineSquareFocus(glm::dvec2 start, glm::dvec2 end, const double width, const double height)
 	{
 		SquareFocus data{true, start, end};
-		if (end.x == start.x) {
-			if ((start.x > 0) && (start.x <= width)) {
-				if (start.y < 0) {
+		if (end.x == start.x)
+		{
+			if ((start.x > 0) && (start.x <= width))
+			{
+				if (start.y < 0)
+				{
 					start.y = 0;
-				}else if (start.y > height) {
+				}
+				else if (start.y > height)
+				{
 					start.y = height;
 				}
-				if (end.y < 0) {
+				if (end.y < 0)
+				{
 					end.y = 0;
-				}else if (end.y > height) {
+				}
+				else if (end.y > height)
+				{
 					end.y = height;
 				}
-				if (start.y == end.y) {
+				if (start.y == end.y)
+				{
 					data.Focus = false;
-				} else {
+				}
+				else
+				{
 					data.start = start;
 					data.end = end;
 				}
-			}else {
+			}
+			else
+			{
 				data.Focus = false;
 			}
 			return data;
 		}
-		if (start.y == end.y) {
-			if ((start.y > 0) && (start.y <= height)) {
-				if (start.x < 0) {
+		if (start.y == end.y)
+		{
+			if ((start.y > 0) && (start.y <= height))
+			{
+				if (start.x < 0)
+				{
 					start.x = 0;
-				}else if (start.x > width) {
+				}
+				else if (start.x > width)
+				{
 					start.x = width;
 				}
-				if (end.x < 0) {
+				if (end.x < 0)
+				{
 					end.x = 0;
-				}else if (end.x > width) {
+				}
+				else if (end.x > width)
+				{
 					end.x = width;
 				}
-				if (start.x == end.x) {
+				if (start.x == end.x)
+				{
 					data.Focus = false;
-				} else {
+				}
+				else
+				{
 					data.start = start;
 					data.end = end;
 				}
-			}else {
+			}
+			else
+			{
 				data.Focus = false;
 			}
 			return data;
@@ -377,9 +403,8 @@ namespace PhysicsBlock
 		double VerticalLong = Long * sin(Angle); // 垂直力大小
 		double CosL = cos(angle);
 		double SinL = sin(angle);
-		//return { vec2angle({0, -VerticalLong}, {CosL, SinL}), vec2angle({ParallelLong, 0}, {CosL, SinL}) }; // 旋转到世界坐标轴
-		return { { VerticalLong * SinL, -VerticalLong * CosL }, { ParallelLong * CosL, ParallelLong * SinL } }; // 旋转到世界坐标轴
-
+		// return { vec2angle({0, -VerticalLong}, {CosL, SinL}), vec2angle({ParallelLong, 0}, {CosL, SinL}) }; // 旋转到世界坐标轴
+		return {{VerticalLong * SinL, -VerticalLong * CosL}, {ParallelLong * CosL, ParallelLong * SinL}}; // 旋转到世界坐标轴
 	}
 
 	DecompositionForceVal CalculateDecompositionForceVal(glm::dvec2 angle, glm::dvec2 force)
@@ -441,30 +466,28 @@ namespace PhysicsBlock
 		return Shortes + Intersect;
 	}
 
-
-
-	double Dot(const glm::dvec2& a, const glm::dvec2& b)
+	double Dot(const glm::dvec2 &a, const glm::dvec2 &b)
 	{
 		return a.x * b.x + a.y * b.y;
 	}
 	/**
 	 * @brief 投影
-	 * @param a 
-	 * @param b 
+	 * @param a
+	 * @param b
 	 * @return  */
-	double Cross(const glm::dvec2& a, const glm::dvec2& b)
+	double Cross(const glm::dvec2 &a, const glm::dvec2 &b)
 	{
 		return a.x * b.y - a.y * b.x;
 	}
 
 	// 顺时针 转 90度， s 缩放比
-	glm::dvec2 Cross(const glm::dvec2& a, double s)
+	glm::dvec2 Cross(const glm::dvec2 &a, double s)
 	{
 		return glm::dvec2(s * a.y, -s * a.x);
 	}
 
 	// 逆时针 转 90度， s 缩放比
-	glm::dvec2 Cross(double s, const glm::dvec2& a)
+	glm::dvec2 Cross(double s, const glm::dvec2 &a)
 	{
 		return glm::dvec2(-s * a.y, s * a.x);
 	}
@@ -480,7 +503,6 @@ namespace PhysicsBlock
 	{
 		return std::max(low, std::min(a, high));
 	}
-
 
 	double Random(double lo, double hi)
 	{

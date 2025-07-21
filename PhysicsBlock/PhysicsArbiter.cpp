@@ -11,7 +11,11 @@ namespace PhysicsBlock
     PhysicsArbiterSS::PhysicsArbiterSS(PhysicsShape *Object1, PhysicsShape *Object2) : 
         BaseArbiter(Object1, Object2), object1(Object1), object2(Object2)
     {
-        numContacts = Collide(contacts, Object1, Object2);
+    }
+
+    void PhysicsArbiterSS::ComputeCollide()
+    {
+        numContacts = Collide(contacts, object1, object2);
     }
 
     // 更新碰撞信息
@@ -21,7 +25,7 @@ namespace PhysicsBlock
         {
             for (size_t j = 0; j < numContacts; ++j)
             {
-                if(NewContacts[i].w_side == contacts[j].w_side){
+                if (NewContacts[i].w_side == contacts[j].w_side) {
                     NewContacts[i].Pn = contacts[j].Pn;
                     NewContacts[i].Pt = contacts[j].Pt;
                     break;
@@ -152,7 +156,11 @@ namespace PhysicsBlock
     PhysicsArbiterSP::PhysicsArbiterSP(PhysicsShape *Object1, PhysicsParticle *Object2) : 
         BaseArbiter(Object1, Object2), object1(Object1), object2(Object2)
     {
-        numContacts = Collide(contacts, Object1, Object2);
+    }
+
+    void PhysicsArbiterSP::ComputeCollide()
+    {
+        numContacts = Collide(contacts, object1, object2);
     }
 
     // 更新碰撞信息
@@ -291,7 +299,11 @@ namespace PhysicsBlock
     PhysicsArbiterS::PhysicsArbiterS(PhysicsShape *Object1, MapFormwork *Object2) : 
         BaseArbiter(Object1, Object2), object1(Object1), object2(Object2)
     {
-        numContacts = Collide(contacts, Object1, Object2);
+    }
+
+    void PhysicsArbiterS::ComputeCollide()
+    {
+        numContacts = Collide(contacts, object1, object2);
     }
 
     // 更新碰撞信息
@@ -420,7 +432,11 @@ namespace PhysicsBlock
     PhysicsArbiterP::PhysicsArbiterP(PhysicsParticle *Object1, MapFormwork *Object2) : 
         BaseArbiter(Object1, Object2), object1(Object1), object2(Object2)
     {
-        numContacts = Collide(contacts, Object1, Object2);
+    }
+
+    void PhysicsArbiterP::ComputeCollide()
+    {
+        numContacts = Collide(contacts, object1, object2);
     }
 
     // 更新碰撞信息
@@ -537,6 +553,140 @@ namespace PhysicsBlock
             glm::dvec2 Pt = dPt * tangent;
 
             object1->speed -= object1->invMass * Pt;
+        }
+    }
+
+
+    PhysicsArbiterC::PhysicsArbiterC(PhysicsCircle *Object1, MapFormwork *Object2) : 
+        BaseArbiter(Object1, Object2), object1(Object1), object2(Object2)
+    {
+    }
+
+    void PhysicsArbiterC::ComputeCollide()
+    {
+        numContacts = Collide(contacts, object1, object2);
+    }
+
+    // 更新碰撞信息
+    void PhysicsArbiterC::Update(Contact *NewContacts, int numNewContacts)
+    {
+        for (size_t i = 0; i < numNewContacts; ++i)
+        {
+            for (size_t j = 0; j < numContacts; ++j)
+            {
+                if(NewContacts[i].w_side == contacts[j].w_side){
+                    NewContacts[i].Pn = contacts[j].Pn;
+                    NewContacts[i].Pt = contacts[j].Pt;
+                    break;
+                }
+            }
+        }
+        for (size_t i = 0; i < numNewContacts; ++i)
+        {
+            contacts[i].normal = NewContacts[i].normal;
+            contacts[i].position = NewContacts[i].position;
+            contacts[i].separation = NewContacts[i].separation;
+            contacts[i].w_side = NewContacts[i].w_side;
+            contacts[i].Pn = NewContacts[i].Pn;
+            contacts[i].Pt = NewContacts[i].Pt;
+        }
+
+        numContacts = numNewContacts;
+    }
+
+    void PhysicsArbiterC::PreStep() {
+        Contact *c;
+        for (size_t i = 0; i < numContacts; ++i)
+        {
+            c = contacts + i;
+            c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
+            c->r2 = { 0, 0 };
+        }
+    }
+
+    // 预处理
+    void PhysicsArbiterC::PreStep(double inv_dt)
+    {
+        const double k_allowedPenetration = 0.01; // 容許穿透
+        const double k_biasFactor = k_biasFactorVAL;          // 位置修正量
+
+        // 獲取碰撞點
+        Contact *c;
+        for (size_t i = 0; i < numContacts; ++i)
+        {
+            c = contacts + i;
+            c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
+            c->r2 = { 0, 0 };
+
+            double rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
+            double R1 = Dot(c->r1, c->r1);
+            double kNormal = object1->invMass;
+            double kTangent = kNormal;
+            kNormal += object1->invMomentInertia * (R1 - rn1 * rn1);
+            c->massNormal = 1.0 / kNormal;
+
+            glm::dvec2 tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
+            double rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
+            kTangent += object1->invMomentInertia * (R1 - rt1 * rt1);
+            c->massTangent = 1.0 / kTangent;
+
+            c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
+
+            // 施加正常+摩擦脉冲
+            glm::dvec2 P = c->Pn * c->normal - c->Pt * tangent;
+
+            object1->speed -= object1->invMass * P;
+            object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, P);
+        }
+    }
+
+    // 迭代出结果
+    void PhysicsArbiterC::ApplyImpulse()
+    {
+        Contact *c;
+        for (size_t i = 0; i < numContacts; ++i)
+        {
+            c = contacts + i;
+
+            // 接触时的相对速度
+            glm::dvec2 dv = -object1->speed - Cross(object1->angleSpeed, c->r1);
+
+            // 计算法向脉冲
+            double vn = Dot(dv, c->normal); // 作用于对方的速度
+
+            double dPn = c->massNormal * (-vn + c->bias); // 移动速度大小修补值
+
+            // 夹紧累积的脉冲
+            double Pn0 = c->Pn;
+            c->Pn = std::max(Pn0 + dPn, 0.0);
+            dPn = c->Pn - Pn0;
+
+            // 应用接触脉冲
+            glm::dvec2 Pn = dPn * c->normal;
+
+            object1->speed -= object1->invMass * Pn;
+            object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pn);
+
+            // 接触时的相对速度
+            dv = -object1->speed - Cross(object1->angleSpeed, c->r1);
+
+            glm::dvec2 tangent = Cross(c->normal, -1.0);
+            double vt = Dot(dv, tangent);        // 作用于对方的角速度
+            double dPt = c->massTangent * (-vt); // 旋转速度大小修补值
+
+            // 计算摩擦脉冲
+            double maxPt = friction * c->Pn;
+
+            // 夹具摩擦
+            double oldTangentImpulse = c->Pt;
+            c->Pt = Clamp(oldTangentImpulse + dPt, -maxPt, maxPt);
+            dPt = c->Pt - oldTangentImpulse;
+
+            // 应用接触脉冲
+            glm::dvec2 Pt = dPt * tangent;
+
+            object1->speed -= object1->invMass * Pt;
+            object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pt);
         }
     }
 

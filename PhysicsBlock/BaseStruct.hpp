@@ -1,5 +1,5 @@
 #pragma once
-#define TranslatorLocality 1  // 手动选择库位置
+#define TranslatorLocality 1 // 手动选择库位置
 #if TranslatorLocality
 #include <glm/glm.hpp>
 #else
@@ -120,6 +120,7 @@ namespace PhysicsBlock
         Null,     // 无对象
         shape,    // 形状
         particle, // 点
+        circle,   // 圆
     };
 
 }

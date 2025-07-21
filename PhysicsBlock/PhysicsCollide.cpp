@@ -5,7 +5,7 @@
 
 namespace PhysicsBlock
 {
-    
+
     int Collide(Contact *contacts, PhysicsShape *A, PhysicsShape *B)
     {
         int ContactSize = 0;
@@ -26,10 +26,10 @@ namespace PhysicsBlock
                 {
                     contacts->separation = info.pos.x - DropPos.x;
                 }
-                contacts->separation = -abs(contacts->separation);                                        // 碰撞距离差
-                contacts->position = info.pos;                                                            // 碰撞点的位置
+                contacts->separation = -abs(contacts->separation);                               // 碰撞距离差
+                contacts->position = info.pos;                                                   // 碰撞点的位置
                 contacts->normal = vec2angle({-1, 0}, (info.Direction * (M_PI / 2)) + B->angle); // （反向作用力法向量）地形不会旋转
-                contacts->w_side = ContactSize;                                                           // 边索引 ID
+                contacts->w_side = ContactSize;                                                  // 边索引 ID
                 ++contacts;
                 ++ContactSize;
             }
@@ -54,12 +54,12 @@ namespace PhysicsBlock
                 {
                     contacts->separation = info.pos.x - B->pos.x;
                 }
-                contacts->separation = -abs(contacts->separation);                                        // 碰撞距离差
-                contacts->position = info.pos;                                                            // 碰撞点的位置
+                contacts->separation = -abs(contacts->separation);                                // 碰撞距离差
+                contacts->position = info.pos;                                                    // 碰撞点的位置
                 contacts->normal = -vec2angle({-1, 0}, (info.Direction * (M_PI / 2)) + A->angle); // （反向作用力法向量）地形不会旋转
-                contacts->w_side = 0;                                                                     // 边索引 ID
+                contacts->w_side = 0;                                                             // 边索引 ID
                 // 一直馅在碰撞体，无法更新旧位置（旧位置不可以在碰撞体内）
-                //B->OldPos = info.pos + (contacts->normal * 0.1);
+                // B->OldPos = info.pos + (contacts->normal * 0.1);
                 return 1; // 有碰撞返回碰撞位置
             }
         }
@@ -86,23 +86,24 @@ namespace PhysicsBlock
                 {
                     contacts->separation = info.pos.x - DropPos.x;
                 }
-                contacts->separation = -abs(contacts->separation);                           // 碰撞距离差
-                contacts->position = info.pos;                                               // 碰撞点的位置
+                contacts->separation = -abs(contacts->separation);                  // 碰撞距离差
+                contacts->position = info.pos;                                      // 碰撞点的位置
                 contacts->normal = vec2angle({-1, 0}, info.Direction * (M_PI / 2)); // （反向作用力法向量）地形不会旋转
-                contacts->w_side = ContactSize;                                              // 边索引 ID
+                contacts->w_side = ContactSize;                                     // 边索引 ID
                 ++contacts;
                 ++ContactSize;
             }
         }
         /**************************************/ // 临时处理方法（待日后优化）
         // 计算附近地形的碰撞点
-        MapStatic* LMapStatic = (MapStatic*)B;
+        MapStatic *LMapStatic = (MapStatic *)B;
         int KD = 1;
         std::vector<glm::dvec2> Outline = LMapStatic->GetLightweightOutline(ToInt(A->pos.x - A->CollisionR) - KD, ToInt(A->pos.y - A->CollisionR) - KD, ToInt(A->pos.x + A->CollisionR) + KD, ToInt(A->pos.y + A->CollisionR) + KD);
         for (size_t i = 0; i < Outline.size(); ++i)
         {
             Drop = Outline[i] - LMapStatic->centrality;
-            if (!A->DropCollision(Drop).Collision) {
+            if (!A->DropCollision(Drop).Collision)
+            {
                 continue;
             }
             CollisionInfoD info = A->PsBresenhamDetection(Drop - (A->pos - Drop), Drop);
@@ -116,10 +117,10 @@ namespace PhysicsBlock
                 {
                     contacts->separation = info.pos.x - Drop.x;
                 }
-                contacts->separation = -abs(contacts->separation);                           // 碰撞距离差
-                contacts->position = info.pos;                                               // 碰撞点的位置
+                contacts->separation = -abs(contacts->separation);                              // 碰撞距离差
+                contacts->position = info.pos;                                                  // 碰撞点的位置
                 contacts->normal = -vec2angle({-1, 0}, info.Direction * (M_PI / 2) + A->angle); // （反向作用力法向量）地形不会旋转
-                contacts->w_side = ContactSize;                                              // 边索引 ID
+                contacts->w_side = ContactSize;                                                 // 边索引 ID
                 ++contacts;
                 ++ContactSize;
             }
@@ -143,16 +144,72 @@ namespace PhysicsBlock
                 {
                     contacts->separation = info.pos.x - A->pos.x;
                 }
-                contacts->separation = -abs(contacts->separation);                           // 碰撞距离差
-                contacts->position = info.pos;                                               // 碰撞点的位置
+                contacts->separation = -abs(contacts->separation);                  // 碰撞距离差
+                contacts->position = info.pos;                                      // 碰撞点的位置
                 contacts->normal = vec2angle({-1, 0}, info.Direction * (M_PI / 2)); // （反向作用力法向量）地形不会旋转
-                contacts->w_side = 0;                                                        // 边索引 ID
+                contacts->w_side = 0;                                               // 边索引 ID
                 // 一直馅在碰撞体，无法更新旧位置（旧位置不可以在碰撞体内）
                 A->OldPos = info.pos - (contacts->normal * 0.1);
                 return 1;
             }
         }
         return 0;
+    }
+
+    int Collide(Contact *contacts, PhysicsCircle *A, MapFormwork *B)
+    {
+        int ContactSize = 0;
+
+        std::vector<glm::dvec2> Cd{
+            A->pos + glm::dvec2{A->radius, 0},
+            A->pos + glm::dvec2{0, A->radius},
+            A->pos + glm::dvec2{-A->radius, 0},
+            A->pos + glm::dvec2{0, -A->radius}};
+        
+        for (auto d : Cd)
+        {
+            CollisionInfoD info = B->FMBresenhamDetection(A->OldPos, d);
+            if (info.Collision)
+            {
+                if (info.Direction & 0x1)
+                {
+                    contacts->separation = info.pos.y - d.y;
+                }
+                else
+                {
+                    contacts->separation = info.pos.x - d.x;
+                }
+                contacts->separation = -abs(contacts->separation);                  // 碰撞距离差
+                contacts->position = info.pos;                                      // 碰撞点的位置
+                contacts->normal = vec2angle({-1, 0}, info.Direction * (M_PI / 2)); // （反向作用力法向量）地形不会旋转
+                contacts->w_side = ContactSize;                                     // 边索引 ID
+                ++contacts;
+                ++ContactSize;
+            }
+        }
+        
+
+        MapStatic *LMapStatic = (MapStatic *)B;
+        int KD = 2;
+        std::vector<glm::dvec2> Outline = LMapStatic->GetLightweightOutline(ToInt(A->pos.x - A->radius) - KD, ToInt(A->pos.y - A->radius) - KD, ToInt(A->pos.x + A->radius) + KD, ToInt(A->pos.y + A->radius) + KD);
+        double L;
+        double angle;
+        for (auto d : Outline)
+        {
+            d -= LMapStatic->centrality;
+            L = Modulus(d - A->pos);
+            if (A->radius > L)
+            {
+                contacts->separation = L - A->radius;                       // 碰撞距离
+                angle = EdgeVecToCosAngleFloat(d - A->pos);                 // 计算出角度
+                contacts->normal = vec2angle({1, 0}, angle);               // （反向作用力法向量）地形不会旋转
+                contacts->position = contacts->normal * A->radius + A->pos; // 碰撞点的位置
+                contacts->w_side = ContactSize;                                    // 边索引 ID
+                ++contacts;
+                ++ContactSize;
+            }
+        }
+        return ContactSize;
     }
 
 }

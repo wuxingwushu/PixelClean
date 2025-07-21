@@ -17,8 +17,9 @@
 #endif
 #endif
 
-#define ThreadPoolBool 0
+#define ThreadPoolBool 1
 #if ThreadPoolBool
+#include <mutex>
 #if TranslatorLocality
 #include "../Tool/ThreadPool.h"
 #else
@@ -41,28 +42,39 @@ namespace PhysicsBlock
         glm::uvec2 GridWindSize{0};          // 网格风大小
         MapFormwork *wMapFormwork = nullptr; // 地图对象
 
+        double inv_dt;
+
         std::vector<PhysicsShape*> PhysicsShapeS;
         std::vector<PhysicsParticle*> PhysicsParticleS;
         std::vector<PhysicsJoint*> PhysicsJointS;
         std::vector<BaseJunction*> BaseJunctionS;
+        std::vector<PhysicsCircle*> PhysicsCircleS;
 
         std::map<ArbiterKey, BaseArbiter*> CollideGroupS;// 碰撞队
-
+        
         void HandleCollideGroup(BaseArbiter* Ba);
         #if MemoryPoolBool
-        MemoryPool<PhysicsArbiterSP, 10 * sizeof(PhysicsArbiterSP)> PoolPhysicsArbiterSP;
-        MemoryPool<PhysicsArbiterSS, 100 * sizeof(PhysicsArbiterSS)> PoolPhysicsArbiterSS;
-        MemoryPool<PhysicsArbiterS, 10 * sizeof(PhysicsArbiterS)> PoolPhysicsArbiterS;
-        MemoryPool<PhysicsArbiterP, 10 * sizeof(PhysicsArbiterP)> PoolPhysicsArbiterP;
+        std::mutex mLockSP;
+        std::mutex mLockSS;
+        std::mutex mLockS;
+        std::mutex mLockP;
+        std::mutex mLockC;
+        MemoryPool<PhysicsArbiterSP, 10000 * sizeof(PhysicsArbiterSP)> PoolPhysicsArbiterSP;
+        MemoryPool<PhysicsArbiterSS, 10000 * sizeof(PhysicsArbiterSS)> PoolPhysicsArbiterSS;
+        MemoryPool<PhysicsArbiterS, 10000 * sizeof(PhysicsArbiterS)> PoolPhysicsArbiterS;
+        MemoryPool<PhysicsArbiterP, 10000 * sizeof(PhysicsArbiterP)> PoolPhysicsArbiterP;
+        MemoryPool<PhysicsArbiterC, 10000 * sizeof(PhysicsArbiterC)> PoolPhysicsArbiterC;
         #endif
         void Arbiter(PhysicsShape* S, PhysicsParticle* P);
         void Arbiter(PhysicsShape* S1, PhysicsShape* S2);
         void Arbiter(PhysicsShape* S, MapFormwork* M);
         void Arbiter(PhysicsParticle* P, MapFormwork* M);
+        void Arbiter(PhysicsCircle* P, MapFormwork* M);
 
         void DeleteArbiter(BaseArbiter* BA);
 
 #if ThreadPoolBool
+        std::mutex mLock;
         ThreadPool mThreadPool;
 #endif
     public:
@@ -92,6 +104,10 @@ namespace PhysicsBlock
         {
             BaseJunctionS.push_back(Object);
         }
+        void AddObject(PhysicsCircle *Object)
+        {
+            PhysicsCircleS.push_back(Object);
+        }
 
         std::vector<PhysicsShape*>& GetPhysicsShape() {
             return PhysicsShapeS;
@@ -107,6 +123,10 @@ namespace PhysicsBlock
 
         std::vector<BaseJunction*>& GetBaseJunction() {
             return BaseJunctionS;
+        }
+
+        std::vector<PhysicsCircle*>& GetPhysicsCircle() {
+            return PhysicsCircleS;
         }
 
         MapFormwork* GetMapFormwork() {

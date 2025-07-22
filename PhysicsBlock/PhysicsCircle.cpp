@@ -4,7 +4,7 @@ namespace PhysicsBlock
 {
 
     PhysicsCircle::PhysicsCircle(glm::dvec2 Pos, double Radius, double Mass)
-    : PhysicsParticle(Pos, Mass), radius(Radius), angleSpeed(0)
+    : PhysicsAngle(Pos, Mass), radius(Radius)
     {
     }
     

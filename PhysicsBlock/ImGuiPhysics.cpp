@@ -82,9 +82,9 @@ namespace PhysicsBlock
 			Static_Event = Grid->Event;
 		}
 #if TranslatorLocality
-		ImGuiDataType_ T = ImGuiDataType_U8;
+		ImGuiDataType_ T = ImGuiDataType_U8;// 这是正确的参数
 #else
-		ImGuiDataType_ T = ImGuiDataType_U64;
+		ImGuiDataType_ T = ImGuiDataType_U64;// 这只是占位符而已（在另外一台电脑，防止报错，实际不使用）
 #endif
 
 		unsigned char min = 0, max = 255;
@@ -201,7 +201,7 @@ namespace PhysicsBlock
 			for (size_t x = 0; x < Object->width; ++x)
 			{
 				ImGui::PushID(x * Object->height + y);
-				if (ImGui::Selectable("", Object->at(x, y).Collision, 0, ImVec2(25, 25)))
+				if (ImGui::Selectable("", Object->at(x, y).Collision, 0, ImVec2(5, 5)))
 				{
 					GridPos = {x, y};
 				}
@@ -244,9 +244,12 @@ namespace PhysicsBlock
 		ImGui::Text("物理网格：%d", Object->GetPhysicsShape().size());
 		ImGui::Text("物理点：%d", Object->GetPhysicsParticle().size());
 		ImGui::Text("物理圆：%d", Object->GetPhysicsCircle().size());
+		ImGui::Text("关节：%d", Object->GetPhysicsJoint().size());
+		ImGui::Text("绳子：%d", Object->GetBaseJunction().size());
 
 		bool UpData = false;
 
+		/*
 		MapFormwork *Map = Object->GetMapFormwork();
 		for (int y = Map->FMGetMapSize().y - 1; y >= 0; --y)
 		{
@@ -264,6 +267,7 @@ namespace PhysicsBlock
 				ImGui::PopID();
 			}
 		}
+		*/
 		return UpData;
 	}
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "BaseStruct.hpp"
+#include <functional>
 
 namespace PhysicsBlock
 {
@@ -30,17 +31,6 @@ namespace PhysicsBlock
     {
         ArbiterKey(void *Object1, void *Object2)
         {
-            /*if (Object1 < Object2)
-            {
-                object1 = Object1;
-                object2 = Object2;
-            }
-            else
-            {
-                object1 = Object2;
-                object2 = Object1;
-            }*/
-
             object1 = Object1;
             object2 = Object2;
         }
@@ -48,18 +38,37 @@ namespace PhysicsBlock
         void *object1;
         void *object2;
         char PoolID;
+
+        inline bool operator<(const ArbiterKey &a1) const
+        {
+            if (a1.object1 < object1)
+                return true;
+
+            if (a1.object1 == object1 && a1.object2 < object2)
+                return true;
+
+            return false;
+        }
+
+        inline bool operator==(const ArbiterKey &a1) const
+        {
+            return (a1.object1 == object1) && (a1.object2 == object2);
+        }
     };
 
-    inline bool operator<(const ArbiterKey &a1, const ArbiterKey &a2)
+    struct ArbiterKeyHash
     {
-        if (a1.object1 < a2.object1)
-            return true;
+        inline std::size_t operator()(const ArbiterKey &key) const
+        {
+            auto hash_combine = [](std::size_t a, std::size_t b) {
+                return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
+            };
 
-        if (a1.object1 == a2.object1 && a1.object2 < a2.object2)
-            return true;
-
-        return false;
-    }
+            std::size_t h1 = std::hash<void*>{}(key.object1);
+            std::size_t h2 = std::hash<void*>{}(key.object2);
+            return hash_combine(h1, h2);
+        }
+    };
 
     /**
      * @brief 基础物理裁决 */
@@ -76,6 +85,7 @@ namespace PhysicsBlock
         BaseArbiter(void *Object1, void *Object2) : key(Object1, Object2) {};
         ~BaseArbiter() {};
 
+        // 计算两个物体的碰撞点
         virtual void ComputeCollide() = 0;
 
         // 更新碰撞信息

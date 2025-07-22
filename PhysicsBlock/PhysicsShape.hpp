@@ -1,5 +1,5 @@
 #pragma once
-#include "PhysicsParticle.hpp"
+#include "PhysicsAngle.hpp"
 #include "BaseOutline.hpp"
 #include "BaseDefine.h"
 #include "PhysicsFormwork.hpp"
@@ -9,16 +9,11 @@ namespace PhysicsBlock
 
     /**
      * @brief 物理形状 */
-    class PhysicsShape : public PhysicsParticle, public BaseOutline
+    class PhysicsShape : public PhysicsAngle, public BaseOutline
     {
     public:
-        double MomentInertia = 1;    // 转动惯量
-        double invMomentInertia = 1; // 转动惯量倒数
-        double angle = 0;            // 角度
-        double angleSpeed = 0;       // 角速度
         glm::dvec2 CentreMass{0};    // 质心
         glm::dvec2 CentreShape{0};   // 几何中心
-        double torque = 0;           // 扭矩
         double CollisionR = 1;       // 碰撞半径
     public:
         /**

@@ -5,6 +5,9 @@ namespace PhysicsBlock
 
     PhysicsParticle::PhysicsParticle(glm::dvec2 Pos, double Mass) : OldPos(Pos), pos(Pos), mass(Mass), invMass(1.0 / Mass)
     {
+        if (mass == DBL_MAX) {
+            invMass = 0;
+        }
     }
 
     PhysicsParticle::PhysicsParticle(glm::dvec2 Pos) : OldPos(Pos), pos(Pos)

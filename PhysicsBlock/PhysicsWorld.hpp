@@ -7,6 +7,7 @@
 #include "PhysicsJoint.hpp"    // 物理关节
 #include "PhysicsJunction.hpp" // 物理连接
 #include <map>
+#include <unordered_map>
 
 #define MemoryPoolBool 1
 #if MemoryPoolBool
@@ -29,6 +30,65 @@
 
 namespace PhysicsBlock
 {
+
+#if MemoryPoolBool
+#if ThreadPoolBool
+#define AuxiliaryMemoryPool(Arbiter_, Type1, Name1, Type2, Name2)  \
+    std::mutex mLock##Name1##Name2;                                \
+    MemoryPool<Arbiter_, 1000 * sizeof(Arbiter_)> Pool##Arbiter_; \
+    void Arbiter(Type1 *Name1, Type2 *Name2);
+
+#define AuxiliaryArbiter(Arbiter_, Type1, Name1, Type2, Name2, ID) \
+    inline void PhysicsWorld::Arbiter(Type1 *Name1, Type2 *Name2)  \
+    {                                                              \
+        BaseArbiter *ptr;                                          \
+        mLock##Name1##Name2.lock();                                \
+        ptr = Pool##Arbiter_.newElement(Name1, Name2);             \
+        mLock##Name1##Name2.unlock();                              \
+        ptr->key.PoolID = ID;                                      \
+        HandleCollideGroup(ptr);                                   \
+    }
+
+#define AuxiliaryDelete(Arbiter_, Type1, Name1, Type2, Name2, ID) \
+    case ID:                                                      \
+    {                                                             \
+        std::unique_lock<std::mutex> lock(mLock##Name1##Name2);   \
+        Pool##Arbiter_.deleteElement((Arbiter_ *)BA);             \
+    }                                                             \
+    break;
+#else
+#define AuxiliaryMemoryPool(Arbiter_, Type1, Name1, Type2, Name2)  \
+    MemoryPool<Arbiter_, 10000 * sizeof(Arbiter_)> Pool##Arbiter_; \
+    void Arbiter(Type1 *Name1, Type2 *Name2);
+
+#define AuxiliaryArbiter(Arbiter_, Type1, Name1, Type2, Name2, ID) \
+    inline void PhysicsWorld::Arbiter(Type1 *Name1, Type2 *Name2)  \
+    {                                                              \
+        BaseArbiter *ptr;                                          \
+        ptr = Pool##Arbiter_.newElement(Name1, Name2);             \
+        ptr->key.PoolID = ID;                                      \
+        HandleCollideGroup(ptr);                                   \
+    }
+
+#define AuxiliaryDelete(Arbiter_, Type1, Name1, Type2, Name2, ID) \
+    case ID:                                                      \
+    {                                                             \
+        Pool##Arbiter_.deleteElement((Arbiter_ *)BA);             \
+    }                                                             \
+    break;
+#endif
+
+#else
+#define AuxiliaryMemoryPool(Arbiter_, Type1, Name1, Type2, Name2) \
+    void Arbiter(Type1 *Name1, Type2 *Name2);
+
+#define AuxiliaryArbiter(Arbiter_, Type1, Name1, Type2, Name2, ID) \
+    inline void PhysicsWorld::Arbiter(Type1 *Name1, Type2 *Name2)  \
+    {                                                              \
+        HandleCollideGroup(new Arbiter_(Name1, Name2));            \
+    }
+#endif
+
     /**
      * @brief 物理世界
      * @note 重力加速度， 网格风 */
@@ -43,35 +103,27 @@ namespace PhysicsBlock
         MapFormwork *wMapFormwork = nullptr; // 地图对象
 
         double inv_dt;
-
-        std::vector<PhysicsShape*> PhysicsShapeS;
-        std::vector<PhysicsParticle*> PhysicsParticleS;
-        std::vector<PhysicsJoint*> PhysicsJointS;
-        std::vector<BaseJunction*> BaseJunctionS;
-        std::vector<PhysicsCircle*> PhysicsCircleS;
-
-        std::map<ArbiterKey, BaseArbiter*> CollideGroupS;// 碰撞队
         
-        void HandleCollideGroup(BaseArbiter* Ba);
-        #if MemoryPoolBool
-        std::mutex mLockSP;
-        std::mutex mLockSS;
-        std::mutex mLockS;
-        std::mutex mLockP;
-        std::mutex mLockC;
-        MemoryPool<PhysicsArbiterSP, 10000 * sizeof(PhysicsArbiterSP)> PoolPhysicsArbiterSP;
-        MemoryPool<PhysicsArbiterSS, 10000 * sizeof(PhysicsArbiterSS)> PoolPhysicsArbiterSS;
-        MemoryPool<PhysicsArbiterS, 10000 * sizeof(PhysicsArbiterS)> PoolPhysicsArbiterS;
-        MemoryPool<PhysicsArbiterP, 10000 * sizeof(PhysicsArbiterP)> PoolPhysicsArbiterP;
-        MemoryPool<PhysicsArbiterC, 10000 * sizeof(PhysicsArbiterC)> PoolPhysicsArbiterC;
-        #endif
-        void Arbiter(PhysicsShape* S, PhysicsParticle* P);
-        void Arbiter(PhysicsShape* S1, PhysicsShape* S2);
-        void Arbiter(PhysicsShape* S, MapFormwork* M);
-        void Arbiter(PhysicsParticle* P, MapFormwork* M);
-        void Arbiter(PhysicsCircle* P, MapFormwork* M);
+        std::vector<PhysicsShape *> PhysicsShapeS;
+        std::vector<PhysicsParticle *> PhysicsParticleS;
+        std::vector<PhysicsJoint *> PhysicsJointS;
+        std::vector<BaseJunction *> BaseJunctionS;
+        std::vector<PhysicsCircle *> PhysicsCircleS;
 
-        void DeleteArbiter(BaseArbiter* BA);
+        std::map<ArbiterKey, BaseArbiter *> CollideGroupS; // 碰撞队
+
+        void HandleCollideGroup(BaseArbiter *Ba);
+
+        AuxiliaryMemoryPool(PhysicsArbiterCP, PhysicsCircle, C, PhysicsParticle, P);
+        AuxiliaryMemoryPool(PhysicsArbiterSP, PhysicsShape, S, PhysicsParticle, P);
+        AuxiliaryMemoryPool(PhysicsArbiterSS, PhysicsShape, S1, PhysicsShape, S2);
+        AuxiliaryMemoryPool(PhysicsArbiterS, PhysicsShape, S, MapFormwork, M);
+        AuxiliaryMemoryPool(PhysicsArbiterP, PhysicsParticle, P, MapFormwork, M);
+        AuxiliaryMemoryPool(PhysicsArbiterC, PhysicsCircle, C, MapFormwork, M);
+        AuxiliaryMemoryPool(PhysicsArbiterCS, PhysicsCircle, C, PhysicsShape, S);
+        AuxiliaryMemoryPool(PhysicsArbiterCC, PhysicsCircle, C1, PhysicsCircle, C2);
+
+        void DeleteArbiter(BaseArbiter *BA);
 
 #if ThreadPoolBool
         std::mutex mLock;
@@ -109,27 +161,33 @@ namespace PhysicsBlock
             PhysicsCircleS.push_back(Object);
         }
 
-        std::vector<PhysicsShape*>& GetPhysicsShape() {
+        std::vector<PhysicsShape *> &GetPhysicsShape()
+        {
             return PhysicsShapeS;
         }
 
-        std::vector<PhysicsParticle*>& GetPhysicsParticle() {
+        std::vector<PhysicsParticle *> &GetPhysicsParticle()
+        {
             return PhysicsParticleS;
         }
 
-        std::vector<PhysicsJoint*>& GetPhysicsJoint() {
+        std::vector<PhysicsJoint *> &GetPhysicsJoint()
+        {
             return PhysicsJointS;
         }
 
-        std::vector<BaseJunction*>& GetBaseJunction() {
+        std::vector<BaseJunction *> &GetBaseJunction()
+        {
             return BaseJunctionS;
         }
 
-        std::vector<PhysicsCircle*>& GetPhysicsCircle() {
+        std::vector<PhysicsCircle *> &GetPhysicsCircle()
+        {
             return PhysicsCircleS;
         }
 
-        MapFormwork* GetMapFormwork() {
+        MapFormwork *GetMapFormwork()
+        {
             return wMapFormwork;
         }
 
@@ -157,7 +215,6 @@ namespace PhysicsBlock
          * @brief 获取世界内的能量
          * @return 能量 */
         double GetWorldEnergy();
-
     };
 
 }

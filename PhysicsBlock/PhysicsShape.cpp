@@ -4,7 +4,7 @@
 namespace PhysicsBlock
 {
 
-    PhysicsShape::PhysicsShape(glm::dvec2 Pos, glm::ivec2 Size) : PhysicsParticle(Pos), BaseOutline(Size.x, Size.y)
+    PhysicsShape::PhysicsShape(glm::dvec2 Pos, glm::ivec2 Size) : PhysicsAngle(Pos), BaseOutline(Size.x, Size.y)
     {
     }
 

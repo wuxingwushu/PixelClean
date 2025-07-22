@@ -6,7 +6,7 @@ namespace PhysicsBlock
 
     /**
      * @brief 物理粒子
-     * @note 位置，速度，受力，质量 */
+     * @note 位置，速度，受力，质量，质量倒数，静止次数，上一次刻的位置 */
     class PhysicsParticle : public PhysicsFormwork
     {
     public:

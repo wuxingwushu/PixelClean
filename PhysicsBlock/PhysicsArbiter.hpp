@@ -1,7 +1,5 @@
 #pragma once
-#include "BaseArbiter.hpp"
-#include "MapFormwork.hpp"
-#include "PhysicsParticle.hpp"
+#include "PhysicsBaseArbiter.hpp"
 #include "PhysicsShape.hpp"
 #include "PhysicsCircle.hpp"
 
@@ -10,113 +8,99 @@ namespace PhysicsBlock
    
     /**
      * @brief 动态形状，动态形状，碰撞解析 */
-    class PhysicsArbiterSS : public BaseArbiter
+    class PhysicsArbiterSS : public PhysicsBaseArbiterAA
     {
-        PhysicsShape *object1;
-        PhysicsShape *object2;
     public:
-        PhysicsArbiterSS(PhysicsShape *Object1, PhysicsShape *Object2);
+        PhysicsArbiterSS(PhysicsShape *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
         ~PhysicsArbiterSS(){};
 
+        // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        // 更新碰撞信息
-        virtual void Update(Contact *NewContacts, int numNewContacts);
-        // 预处理
-        virtual void PreStep(double inv_dt);
-        virtual void PreStep();
-        // 迭代出结果
-        virtual void ApplyImpulse();
     };
 
     /**
      * @brief 动态形状，粒子形状，碰撞解析 */
-    class PhysicsArbiterSP : public BaseArbiter
+    class PhysicsArbiterSP : public PhysicsBaseArbiterAD
     {
-        // object1  动态形状
-        // object2  粒子形状
-        PhysicsShape *object1;
-        PhysicsParticle *object2;
     public:
-        PhysicsArbiterSP(PhysicsShape *Object1, PhysicsParticle *Object2);
+        PhysicsArbiterSP(PhysicsShape *Object1, PhysicsParticle *Object2):PhysicsBaseArbiterAD(Object1, Object2){};
         ~PhysicsArbiterSP(){};
 
+        // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        // 更新碰撞信息
-        virtual void Update(Contact *NewContacts, int numNewContacts);
-        // 预处理
-        virtual void PreStep(double inv_dt);
-        virtual void PreStep();
-        // 迭代出结果
-        virtual void ApplyImpulse();
     };
 
     /**
      * @brief 动态形状，地形，碰撞解析 */
-    class PhysicsArbiterS : public BaseArbiter
+    class PhysicsArbiterS : public PhysicsBaseArbiterA
     {
-        // object1  动态形状
-        PhysicsShape *object1;
-        MapFormwork *object2;
     public:
-        PhysicsArbiterS(PhysicsShape *Object1, MapFormwork *Object2);
+        PhysicsArbiterS(PhysicsShape *Object1, MapFormwork *Object2):PhysicsBaseArbiterA(Object1, Object2){};
         ~PhysicsArbiterS(){};
 
+        // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        // 更新碰撞信息
-        virtual void Update(Contact *NewContacts, int numNewContacts);
-        // 预处理
-        virtual void PreStep(double inv_dt);
-        virtual void PreStep();
-        // 迭代出结果
-        virtual void ApplyImpulse();
     };
 
     /**
      * @brief 粒子形状，地形，碰撞解析 */
-    class PhysicsArbiterP : public BaseArbiter
+    class PhysicsArbiterP : public PhysicsBaseArbiterD
     {
-        // object1  粒子形状
-        PhysicsParticle *object1;
-        MapFormwork *object2;
     public:
-        PhysicsArbiterP(PhysicsParticle *Object1, MapFormwork *Object2);
+        PhysicsArbiterP(PhysicsParticle *Object1, MapFormwork *Object2):PhysicsBaseArbiterD(Object1, Object2){};
         ~PhysicsArbiterP(){};
 
+        // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        // 更新碰撞信息
-        virtual void Update(Contact *NewContacts, int numNewContacts);
-        // 预处理
-        virtual void PreStep(double inv_dt);
-        virtual void PreStep();
-        // 迭代出结果
-        virtual void ApplyImpulse();
     };
 
 
     /**
-     * @brief 动态形状，地形，碰撞解析 */
-    class PhysicsArbiterC : public BaseArbiter
+     * @brief 圆，地形，碰撞解析 */
+    class PhysicsArbiterC : public PhysicsBaseArbiterA
     {
-        // object1  动态形状
-        PhysicsCircle *object1;
-        MapFormwork *object2;
     public:
-        PhysicsArbiterC(PhysicsCircle *Object1, MapFormwork *Object2);
+        PhysicsArbiterC(PhysicsCircle *Object1, MapFormwork *Object2):PhysicsBaseArbiterA(Object1, Object2){};
         ~PhysicsArbiterC(){};
 
+        // 计算俩物体的碰撞
         virtual void ComputeCollide();
+    };
 
-        // 更新碰撞信息
-        virtual void Update(Contact *NewContacts, int numNewContacts);
-        // 预处理
-        virtual void PreStep(double inv_dt);
-        virtual void PreStep();
-        // 迭代出结果
-        virtual void ApplyImpulse();
+    /**
+     * @brief 圆，地形，碰撞解析 */
+    class PhysicsArbiterCS : public PhysicsBaseArbiterAA
+    {
+    public:
+        PhysicsArbiterCS(PhysicsCircle *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
+        ~PhysicsArbiterCS(){};
+
+        // 计算俩物体的碰撞
+        virtual void ComputeCollide();
+    };
+
+    /**
+     * @brief 圆，地形，碰撞解析 */
+    class PhysicsArbiterCP : public PhysicsBaseArbiterAD
+    {
+    public:
+        PhysicsArbiterCP(PhysicsCircle *Object1, PhysicsParticle *Object2):PhysicsBaseArbiterAD(Object1, Object2){};
+        ~PhysicsArbiterCP(){};
+
+        // 计算俩物体的碰撞
+        virtual void ComputeCollide();
+    };
+
+    /**
+     * @brief 圆，地形，碰撞解析 */
+    class PhysicsArbiterCC : public PhysicsBaseArbiterAD
+    {
+    public:
+        PhysicsArbiterCC(PhysicsCircle *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAD(Object1, Object2){};
+        ~PhysicsArbiterCC(){};
+
+        // 计算俩物体的碰撞
+        virtual void ComputeCollide();
     };
     
 }

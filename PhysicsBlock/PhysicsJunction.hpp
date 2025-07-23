@@ -17,7 +17,7 @@ namespace PhysicsBlock
     struct CordKnot
     {
         PhysicsFormwork *ptr;   // 对象指针（空指针为固定位置）
-        glm::dvec2 relativePos; // 相对位置\固定位置
+        Vec2_ relativePos; // 相对位置\固定位置
     };
 
     /**
@@ -33,10 +33,10 @@ namespace PhysicsBlock
     class BaseJunction
     {
     public:
-        double Length;     // 绳子长度
-        double bias{0};    // 距离差
-        glm::dvec2 Normal; // 力的方向
-        glm::dvec2 P;      //
+        FLOAT_ Length;     // 绳子长度
+        FLOAT_ bias{0};    // 距离差
+        Vec2_ Normal; // 力的方向
+        Vec2_ P;      //
 
         CordType Type; // 绳子类型
 
@@ -65,7 +65,7 @@ namespace PhysicsBlock
             }
         }
 
-        double ElasticityType(){
+        FLOAT_ ElasticityType(){
             switch (Type)
             {
             case cord:
@@ -85,79 +85,79 @@ namespace PhysicsBlock
         }
 
         // 预处理
-        virtual void PreStep(double inv_dt) = 0;
+        virtual void PreStep(FLOAT_ inv_dt) = 0;
         // 迭代出结果
         virtual void ApplyImpulse() = 0;
         // 获取绳子的A端
-        virtual glm::dvec2 GetA() = 0;
+        virtual Vec2_ GetA() = 0;
         // 获取绳子的B端
-        virtual glm::dvec2 GetB() = 0;
+        virtual Vec2_ GetB() = 0;
     };
 
     class PhysicsJunctionSS : public BaseJunction
     {
     private:
         PhysicsShape *mParticle1; // 形状
-        glm::dvec2 mArm1;
-        glm::dvec2 mR1;
+        Vec2_ mArm1;
+        Vec2_ mR1;
         PhysicsShape *mParticle2; // 形状
-        glm::dvec2 mArm2;
-        glm::dvec2 mR2;
+        Vec2_ mArm2;
+        Vec2_ mR2;
 
 
     public:
-        PhysicsJunctionSS(PhysicsShape *Particle1, glm::dvec2 arm1, PhysicsShape *Particle2, glm::dvec2 arm2, CordType type);
+        PhysicsJunctionSS(PhysicsShape *Particle1, Vec2_ arm1, PhysicsShape *Particle2, Vec2_ arm2, CordType type);
         ~PhysicsJunctionSS();
 
         // 预处理
-        virtual void PreStep(double inv_dt);
+        virtual void PreStep(FLOAT_ inv_dt);
         // 迭代出结果
         virtual void ApplyImpulse();
 
-        virtual glm::dvec2 GetA() { return mParticle1->pos + vec2angle(mArm1, mParticle1->angle); };
+        virtual Vec2_ GetA() { return mParticle1->pos + vec2angle(mArm1, mParticle1->angle); };
 
-        virtual glm::dvec2 GetB() { return mParticle2->pos + vec2angle(mArm2, mParticle2->angle); };
+        virtual Vec2_ GetB() { return mParticle2->pos + vec2angle(mArm2, mParticle2->angle); };
     };
 
     class PhysicsJunctionS : public BaseJunction
     {
     private:
-        glm::dvec2 mRegularDrop; // 固定点
+        Vec2_ mRegularDrop; // 固定点
         PhysicsShape *mParticle; // 形状
-        glm::dvec2 Arm;
-        glm::dvec2 R;
+        Vec2_ Arm;
+        Vec2_ R;
 
     public:
-        PhysicsJunctionS(PhysicsShape *Particle, glm::dvec2 arm, glm::dvec2 RegularDrop, CordType type);
+        PhysicsJunctionS(PhysicsShape *Particle, Vec2_ arm, Vec2_ RegularDrop, CordType type);
         ~PhysicsJunctionS();
 
         // 预处理
-        virtual void PreStep(double inv_dt);
+        virtual void PreStep(FLOAT_ inv_dt);
         // 迭代出结果
         virtual void ApplyImpulse();
 
-        virtual glm::dvec2 GetA() { return mParticle->pos + vec2angle(Arm, mParticle->angle); };
+        virtual Vec2_ GetA() { return mParticle->pos + vec2angle(Arm, mParticle->angle); };
 
-        virtual glm::dvec2 GetB() { return mRegularDrop; };
+        virtual Vec2_ GetB() { return mRegularDrop; };
     };
 
     class PhysicsJunctionP : public BaseJunction
     {
     private:
-        glm::dvec2 mRegularDrop;    // 固定点
+        Vec2_ mRegularDrop;    // 固定点
         PhysicsParticle *mParticle; // 粒子
     public:
-        PhysicsJunctionP(PhysicsParticle *Particle, glm::dvec2 RegularDrop, CordType type);
+        PhysicsJunctionP(PhysicsParticle *Particle, Vec2_ RegularDrop, CordType type);
         ~PhysicsJunctionP();
 
         // 预处理
-        virtual void PreStep(double inv_dt);
+        virtual void PreStep(FLOAT_ inv_dt);
         // 迭代出结果
         virtual void ApplyImpulse();
 
-        virtual glm::dvec2 GetA() { return mParticle->pos; };
+        virtual Vec2_ GetA() { return mParticle->pos; };
 
-        virtual glm::dvec2 GetB() { return mRegularDrop; };
+        virtual Vec2_ GetB() { return mRegularDrop; };
     };
 
     class PhysicsJunctionPP : public BaseJunction
@@ -170,13 +170,13 @@ namespace PhysicsBlock
         ~PhysicsJunctionPP();
 
         // 预处理
-        virtual void PreStep(double inv_dt);
+        virtual void PreStep(FLOAT_ inv_dt);
         // 迭代出结果
         virtual void ApplyImpulse();
 
-        virtual glm::dvec2 GetA() { return mParticle1->pos; };
+        virtual Vec2_ GetA() { return mParticle1->pos; };
 
-        virtual glm::dvec2 GetB() { return mParticle2->pos; };
+        virtual Vec2_ GetB() { return mParticle2->pos; };
     };
 
 }

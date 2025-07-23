@@ -9,6 +9,18 @@
 namespace PhysicsBlock
 {
 
+#if 0
+#define FLOAT_ float
+#define Vec2_ glm::vec2
+#define Mat2_ glm::mat2
+#define MyImGuiDataType ImGuiDataType_Float
+#else
+#define FLOAT_ double
+#define Vec2_ glm::dvec2
+#define Mat2_ glm::dmat2
+#define MyImGuiDataType ImGuiDataType_Double
+#endif
+
     /**
      * @brief 格子類型 */
     enum GridBlockType
@@ -24,7 +36,7 @@ namespace PhysicsBlock
     struct GridBlock
     {
 
-        double FrictionFactor; // 摩擦因数
+        FLOAT_ FrictionFactor; // 摩擦因数
 
         // 格子在不同状态，有些变量是没必要的（不可能同时存在）
         union
@@ -32,7 +44,7 @@ namespace PhysicsBlock
             struct
             {
                 unsigned char Healthpoint; // 血量
-                double mass;               // 质量
+                FLOAT_ mass;               // 质量
             };
             struct
             {
@@ -73,7 +85,7 @@ namespace PhysicsBlock
     };
 
     /**
-     * @brief 碰撞信息(double)
+     * @brief 碰撞信息(FLOAT_)
      * @note 存储碰撞检测后的结果和信息 */
     struct CollisionInfoD
     {
@@ -87,21 +99,21 @@ namespace PhysicsBlock
                 // CheckDirection Direction : 2; // 碰撞边 /* 使用这个后赋值enum值后存储的反而是负值 */
             };
         };
-        glm::dvec2 pos; // 碰撞位置
+        Vec2_ pos; // 碰撞位置
     };
 
     /**
      * @brief 受力分解结果 */
     struct DecompositionForce
     {
-        glm::dvec2 Vartical; // 垂直
-        glm::dvec2 Parallel; // 平行
+        Vec2_ Vartical; // 垂直
+        Vec2_ Parallel; // 平行
     };
 
     struct DecompositionForceVal
     {
-        double Vartical; // 垂直
-        double Parallel; // 平行
+        FLOAT_ Vartical; // 垂直
+        FLOAT_ Parallel; // 平行
     };
 
     /**
@@ -109,8 +121,8 @@ namespace PhysicsBlock
     struct SquareFocus
     {
         bool Focus;       // 是否与矩形相交
-        glm::dvec2 start; // 起始位置
-        glm::dvec2 end;   // 结束位置
+        Vec2_ start; // 起始位置
+        Vec2_ end;   // 结束位置
     };
 
     /**

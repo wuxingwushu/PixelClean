@@ -13,7 +13,7 @@ namespace PhysicsBlock
     {
     }
 
-    void PhysicsJoint::Set(PhysicsShape *Body1, PhysicsShape *Body2, const glm::dvec2 anchor)
+    void PhysicsJoint::Set(PhysicsShape *Body1, PhysicsShape *Body2, const Vec2_ anchor)
     {
         body1 = Body1;
         body2 = Body2;
@@ -31,7 +31,7 @@ namespace PhysicsBlock
 	    biasFactor = 0.2;
     }
 
-    void PhysicsJoint::PreStep(double inv_dt)
+    void PhysicsJoint::PreStep(FLOAT_ inv_dt)
     {
         AngleMat AngleMat1(body1->angle);
         AngleMat AngleMat2(body2->angle);
@@ -40,31 +40,31 @@ namespace PhysicsBlock
         r2 = AngleMat2.Rotary(localAnchor2);
         
         // 计算位置偏差
-        glm::dvec2 dp = (body2->pos + r2) - (body1->pos + r1);
+        Vec2_ dp = (body2->pos + r2) - (body1->pos + r1);
         // 计算位置修正速度值
         bias = -biasFactor * inv_dt * dp;
 
 
         // 绳子僵硬程度
-        glm::dmat2 K1;
+        Mat2_ K1;
         K1[0][0] = body1->invMass + body2->invMass;
         K1[0][1] = 0;
         K1[1][0] = 0;
         K1[1][1] = body1->invMass + body2->invMass;
         // 物体1 的 转动惯量的影响
-        glm::dmat2 K2;
+        Mat2_ K2;
         K2[0][0] = body1->invMomentInertia * r1.y * r1.y;
         K2[0][1] = -body1->invMomentInertia * r1.x * r1.y;
         K2[1][0] = -body1->invMomentInertia * r1.x * r1.y;
         K2[1][1] = body1->invMomentInertia * r1.x * r1.x;
         // 物体2 的 转动惯量的影响
-        glm::dmat2 K3;
+        Mat2_ K3;
         K3[0][0] = body2->invMomentInertia * r2.y * r2.y;
         K3[0][1] = -body2->invMomentInertia * r2.x * r2.y;
         K3[1][0] = -body2->invMomentInertia * r2.x * r2.y;
         K3[1][1] = body2->invMomentInertia * r2.x * r2.x;
 
-        glm::dmat2 K = K1 + K2 + K3;
+        Mat2_ K = K1 + K2 + K3;
 	    K[0][0] += softness;
 	    K[1][1] += softness;
 	    M = glm::inverse(K);
@@ -78,8 +78,8 @@ namespace PhysicsBlock
 
     void PhysicsJoint::ApplyImpulse()
     {
-        glm::dvec2 dv = body2->speed + Cross(body2->angleSpeed, r2) - body1->speed - Cross(body1->angleSpeed, r1);
-        glm::dvec2 impulse = M * (bias - dv - softness * P);
+        Vec2_ dv = body2->speed + Cross(body2->angleSpeed, r2) - body1->speed - Cross(body1->angleSpeed, r1);
+        Vec2_ impulse = M * (bias - dv - softness * P);
 
         body1->speed -= body1->invMass * impulse;
 		body1->angleSpeed -= body1->invMomentInertia * Cross(r1, impulse);

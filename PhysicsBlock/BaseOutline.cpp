@@ -5,7 +5,7 @@ namespace PhysicsBlock
 
     BaseOutline::BaseOutline(const unsigned int Width, const unsigned int Height) : BaseGrid(Width, Height)
     {
-        OutlineSet = new glm::dvec2[Width * Height * 3];
+        OutlineSet = new Vec2_[Width * Height * 3];
     }
 
     BaseOutline::~BaseOutline()
@@ -13,7 +13,7 @@ namespace PhysicsBlock
         delete OutlineSet;
     }
 
-    void BaseOutline::UpdateOutline(glm::dvec2 CentreMass_)
+    void BaseOutline::UpdateOutline(Vec2_ CentreMass_)
     {
         OutlineSize = 0;
         for (size_t x = 0; x < width; ++x)
@@ -32,7 +32,7 @@ namespace PhysicsBlock
         }
     }
 
-    void BaseOutline::UpdateLightweightOutline(glm::dvec2 CentreMass_)
+    void BaseOutline::UpdateLightweightOutline(Vec2_ CentreMass_)
     {
         OutlineSize = 0;
         for (size_t x = 0; x < width; ++x)
@@ -56,25 +56,25 @@ namespace PhysicsBlock
         // 左上角
         if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1) || !GetCollision(x - 1, y - 1))
         {
-            OutlineSet[OutlineSize] = glm::dvec2{x, y};
+            OutlineSet[OutlineSize] = Vec2_{x, y};
             ++OutlineSize;
         }
         // 左下角
         if (!GetCollision(x, y + 1))
         {
-            OutlineSet[OutlineSize] = glm::dvec2{x, y + 1};
+            OutlineSet[OutlineSize] = Vec2_{x, y + 1};
             ++OutlineSize;
         }
         // 右上角
         if (!(GetCollision(x + 1, y - 1) || GetCollision(x + 1, y)))
         {
-            OutlineSet[OutlineSize] = glm::dvec2{x + 1, y};
+            OutlineSet[OutlineSize] = Vec2_{x + 1, y};
             ++OutlineSize;
         }
         // 右下角
         if (!(GetCollision(x + 1, y) || GetCollision(x + 1, y + 1) || GetCollision(x, y + 1)))
         {
-            OutlineSet[OutlineSize] = glm::dvec2{x + 1, y + 1};
+            OutlineSet[OutlineSize] = Vec2_{x + 1, y + 1};
             ++OutlineSize;
         }
     }
@@ -86,26 +86,26 @@ namespace PhysicsBlock
         {
             if (GetCollision(x - 1, y) == GetCollision(x, y - 1))
             {
-                OutlineSet[OutlineSize] = glm::dvec2{x, y};
+                OutlineSet[OutlineSize] = Vec2_{x, y};
                 ++OutlineSize;
             }
         }
         else if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1))
         {
-            OutlineSet[OutlineSize] = glm::dvec2{x, y};
+            OutlineSet[OutlineSize] = Vec2_{x, y};
             ++OutlineSize;
         }
         // 左下角
         if (!GetCollision(x, y + 1)) {
             if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1))) {
-                OutlineSet[OutlineSize] = glm::dvec2{x, y + 1};
+                OutlineSet[OutlineSize] = Vec2_{x, y + 1};
                 ++OutlineSize;
             }
         }
         // 右上角
         if (!GetCollision(x + 1, y)) {
             if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1))) {
-                OutlineSet[OutlineSize] = glm::dvec2{x + 1, y};
+                OutlineSet[OutlineSize] = Vec2_{x + 1, y};
                 ++OutlineSize;
             }
         }
@@ -113,7 +113,7 @@ namespace PhysicsBlock
         if (!GetCollision(x + 1, y + 1)) {
             if ((GetCollision(x + 1, y) == GetCollision(x, y + 1)) && !GetCollision(x + 1, y))
             {
-                OutlineSet[OutlineSize] = glm::dvec2{x + 1, y + 1};
+                OutlineSet[OutlineSize] = Vec2_{x + 1, y + 1};
                 ++OutlineSize;
             }
         }

@@ -12,7 +12,7 @@ namespace PhysicsBlock
     class MapStatic : public BaseGrid, public MapFormwork
     {
     public:
-        glm::dvec2 centrality{0, 0}; // 中心位置
+        Vec2_ centrality{0, 0}; // 中心位置
     public:
         /**
          * @brief 构造函数
@@ -26,9 +26,9 @@ namespace PhysicsBlock
          * @brief 设置地图那个位置为中心
          * @param Centrality 中心位置
          * @note 必须在地图范围内 */
-        void SetCentrality(glm::dvec2 Centrality);
+        void SetCentrality(Vec2_ Centrality);
 
-        std::vector<glm::dvec2> GetLightweightOutline(int x_, int y_, int w_, int h_);
+        std::vector<Vec2_> GetLightweightOutline(int x_, int y_, int w_, int h_);
 
         /*=========MapFormwork=========*/
 
@@ -53,7 +53,7 @@ namespace PhysicsBlock
          * @brief 获取是否有障碍物
          * @param start 世界位置
          * @return 是否碰撞（true: 碰撞） */
-        virtual bool FMGetCollide(glm::dvec2 start) { return FMGetCollide(ToInt(start + centrality)); }
+        virtual bool FMGetCollide(Vec2_ start) { return FMGetCollide(ToInt(start + centrality)); }
 
         /**
          * @brief 获取网格(不安全)
@@ -77,7 +77,7 @@ namespace PhysicsBlock
          * @param end 结束位置
          * @return 第一个碰撞的位置(准确位置)
          * @note 会将线段裁剪出被地图覆盖的部分 */
-        virtual CollisionInfoD FMBresenhamDetection(glm::dvec2 start, glm::dvec2 end);
+        virtual CollisionInfoD FMBresenhamDetection(Vec2_ start, Vec2_ end);
     };
 
 }

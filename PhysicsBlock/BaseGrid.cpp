@@ -60,7 +60,7 @@ namespace PhysicsBlock
         return info;
     }
 
-    CollisionInfoD BaseGrid::BresenhamDetection(glm::dvec2 start, glm::dvec2 end)
+    CollisionInfoD BaseGrid::BresenhamDetection(Vec2_ start, Vec2_ end)
     {
         CollisionInfoD Collisioninfo{false};
         // 线段碰撞检测
@@ -76,7 +76,7 @@ namespace PhysicsBlock
             // 计算出精准位置
             Collisioninfo.Collision = true;
             Collisioninfo.pos = info.pos;
-            double val = start.x - end.x;
+            FLOAT_ val = start.x - end.x;
             if (val < 0)
             {
                 Collisioninfo.pos = LineXToPos(start, end, info.pos.x);

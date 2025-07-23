@@ -4,7 +4,7 @@
 namespace PhysicsBlock
 {
 
-    PhysicsShape::PhysicsShape(glm::dvec2 Pos, glm::ivec2 Size) : PhysicsAngle(Pos), BaseOutline(Size.x, Size.y)
+    PhysicsShape::PhysicsShape(Vec2_ Pos, glm::ivec2 Size) : PhysicsAngle(Pos), BaseOutline(Size.x, Size.y)
     {
     }
 
@@ -12,7 +12,7 @@ namespace PhysicsBlock
     {
     }
 
-    CollisionInfoI PhysicsShape::DropCollision(glm::dvec2 Pos)
+    CollisionInfoI PhysicsShape::DropCollision(Vec2_ Pos)
     {
         Pos -= pos;
         Pos = vec2angle(Pos, -angle);
@@ -30,25 +30,25 @@ namespace PhysicsBlock
         return info;
     }
 
-    void PhysicsShape::AddForce(glm::dvec2 Pos, glm::dvec2 Force)
+    void PhysicsShape::AddForce(Vec2_ Pos, Vec2_ Force)
     {
         Pos -= pos;                                                    // 质心指向受力点的力矩
-        double Langle = EdgeVecToCosAngleFloat(Pos);                   // 力臂角度
-        double disparity = Langle - EdgeVecToCosAngleFloat(Force);     // 力矩角度
-        double ForceDouble = Modulus(Force);                           // 力大小
-        double F = ForceDouble * cos(disparity);                       // 垂直力臂的力大小
+        FLOAT_ Langle = EdgeVecToCosAngleFloat(Pos);                   // 力臂角度
+        FLOAT_ disparity = Langle - EdgeVecToCosAngleFloat(Force);     // 力矩角度
+        FLOAT_ ForceFLOAT_ = Modulus(Force);                           // 力大小
+        FLOAT_ F = ForceFLOAT_ * cos(disparity);                       // 垂直力臂的力大小
         PhysicsParticle::AddForce({F * cos(Langle), F * sin(Langle)}); // 转为世界力矩 // 位置移动受到力矩
-        AddTorque(Modulus(Pos), ForceDouble * -sin(disparity));         // 旋转受到扭矩
+        AddTorque(Modulus(Pos), ForceFLOAT_ * -sin(disparity));         // 旋转受到扭矩
     }
 
-    void PhysicsShape::AddTorque(double ArmForce, double Force)
+    void PhysicsShape::AddTorque(FLOAT_ ArmForce, FLOAT_ Force)
     {
         torque += ArmForce * Force; // 累加扭矩
     }
 
     void PhysicsShape::UpdateInfo()
     {
-        glm::dvec2 UsedCentreMass = CentreMass;//旧质心
+        Vec2_ UsedCentreMass = CentreMass;//旧质心
         mass = 0;
         unsigned int Size = 0;    // 实体格子数
         unsigned int i;           // 存储网格索引
@@ -65,7 +65,7 @@ namespace PhysicsBlock
                     mass += at(i).mass;
                     ++Size;
                     CentreShape += glm::ivec2{x, y};
-                    CentreMass += (glm::dvec2{x, y} * at(i).mass);
+                    CentreMass += (Vec2_{x, y} * at(i).mass);
                 }
             }
         }
@@ -77,19 +77,19 @@ namespace PhysicsBlock
         }else {
             CentreMass /= mass;
         }
-        CentreShape += glm::dvec2{0.5, 0.5}; // 移动到格子的中心
-        CentreMass += glm::dvec2{0.5, 0.5};  // 移动到格子的中心
+        CentreShape += Vec2_{0.5, 0.5}; // 移动到格子的中心
+        CentreMass += Vec2_{0.5, 0.5};  // 移动到格子的中心
 
         // 因为位置是指 质心 在世界坐标的位置，质心改了，位置也需要进行偏移
         pos += vec2angle(CentreMass - UsedCentreMass, angle);
         OldPos = pos;
 
         MomentInertia = 0; // 清空转动惯量
-        glm::dvec2 lpos;   // 存储临时位置
-        double Lmass;      // 用于存储切割出的小正方形的质量
-        for (double x = 0; x < width; ++x)
+        Vec2_ lpos;   // 存储临时位置
+        FLOAT_ Lmass;      // 用于存储切割出的小正方形的质量
+        for (FLOAT_ x = 0; x < width; ++x)
         {
-            for (double y = 0; y < height; ++y)
+            for (FLOAT_ y = 0; y < height; ++y)
             {
                 // 不存在跳过
                 i = x * height + y;
@@ -121,7 +121,7 @@ namespace PhysicsBlock
 
     void PhysicsShape::UpdateCollisionR() {
         CollisionR = 0;
-        double R;
+        FLOAT_ R;
         for (size_t i = 0; i < OutlineSize; i++)
         {
             R = ModulusLength(OutlineSet[i]);
@@ -138,14 +138,14 @@ namespace PhysicsBlock
         UpdateCollisionR();
     }
 
-    void PhysicsShape::ApproachDrop(glm::dvec2 drop){
-        glm::dvec2 OutlineDrop = vec2angle({CollisionR, 0}, EdgeVecToCosAngleFloat(drop - pos));
+    void PhysicsShape::ApproachDrop(Vec2_ drop){
+        Vec2_ OutlineDrop = vec2angle({CollisionR, 0}, EdgeVecToCosAngleFloat(drop - pos));
         CollisionInfoD info = BresenhamDetection(CentreMass + OutlineDrop, CentreMass - OutlineDrop);
         pos += drop - (info.pos + pos);
     }
 
-    CollisionInfoD PhysicsShape::RayCollide(glm::dvec2 Pos, double Angle){
-        glm::dvec2 drop = vec2angle({CollisionR, 0}, Angle);
+    CollisionInfoD PhysicsShape::RayCollide(Vec2_ Pos, FLOAT_ Angle){
+        Vec2_ drop = vec2angle({CollisionR, 0}, Angle);
         return PsBresenhamDetection(Pos - drop, Pos + drop);
     }
 
@@ -153,7 +153,7 @@ namespace PhysicsBlock
         return BresenhamDetection(start, end);
     }
 
-    CollisionInfoD PhysicsShape::PsBresenhamDetection(glm::dvec2 start, glm::dvec2 end){
+    CollisionInfoD PhysicsShape::PsBresenhamDetection(Vec2_ start, Vec2_ end){
         // 偏移中心位置，对其网格坐标系
         start -= pos;
         end -= pos;
@@ -178,14 +178,14 @@ namespace PhysicsBlock
         return {false};
     }
 
-    void inline PhysicsShape::PhysicsSpeed(double time, glm::dvec2 Ga)
+    void inline PhysicsShape::PhysicsSpeed(FLOAT_ time, Vec2_ Ga)
     {
         PhysicsParticle::PhysicsSpeed(time, Ga);
         angleSpeed += time * invMomentInertia * torque;
         torque = 0;
     }
 
-    void inline PhysicsShape::PhysicsPos(double time, glm::dvec2 Ga)
+    void inline PhysicsShape::PhysicsPos(FLOAT_ time, Vec2_ Ga)
     {
         PhysicsParticle::PhysicsPos(time, Ga);
         angle += time * angleSpeed;

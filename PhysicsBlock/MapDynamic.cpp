@@ -108,7 +108,7 @@ namespace PhysicsBlock
         return BresenhamDetection(start, end);
     }
 
-    CollisionInfoD MapDynamic::FMBresenhamDetection(glm::dvec2 start, glm::dvec2 end)
+    CollisionInfoD MapDynamic::FMBresenhamDetection(Vec2_ start, Vec2_ end)
     {
         // 偏移中心位置，对其网格坐标系
         start += centrality;

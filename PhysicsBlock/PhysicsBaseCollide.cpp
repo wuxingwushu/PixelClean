@@ -9,7 +9,7 @@ namespace PhysicsBlock
     unsigned int Collide(Contact *contacts, PhysicsShape *ShapeA, PhysicsShape *ShapeB)
     {
         int ContactSize = 0;
-        glm::dvec2 Drop, DropPos; // 骨骼点
+        Vec2_ Drop, DropPos; // 骨骼点
         for (size_t i = 0; i < ShapeA->OutlineSize; ++i)
         {
             Drop = ShapeA->OutlineSet[i];
@@ -93,7 +93,7 @@ namespace PhysicsBlock
     unsigned int Collide(Contact *contacts, PhysicsShape *Shape, MapFormwork *Map)
     {
         int ContactSize = 0;
-        glm::dvec2 Drop, DropPos; // 骨骼点
+        Vec2_ Drop, DropPos; // 骨骼点
         for (size_t i = 0; i < Shape->OutlineSize; ++i)
         {
             Drop = Shape->OutlineSet[i];
@@ -122,7 +122,7 @@ namespace PhysicsBlock
         // 计算附近地形的碰撞点
         MapStatic *LMapStatic = (MapStatic *)Map;
         int KD = 1;
-        std::vector<glm::dvec2> Outline = LMapStatic->GetLightweightOutline(ToInt(Shape->pos.x - Shape->CollisionR) - KD, ToInt(Shape->pos.y - Shape->CollisionR) - KD, ToInt(Shape->pos.x + Shape->CollisionR) + KD, ToInt(Shape->pos.y + Shape->CollisionR) + KD);
+        std::vector<Vec2_> Outline = LMapStatic->GetLightweightOutline(ToInt(Shape->pos.x - Shape->CollisionR) - KD, ToInt(Shape->pos.y - Shape->CollisionR) - KD, ToInt(Shape->pos.x + Shape->CollisionR) + KD, ToInt(Shape->pos.y + Shape->CollisionR) + KD);
         for (size_t i = 0; i < Outline.size(); ++i)
         {
             Drop = Outline[i] - LMapStatic->centrality;
@@ -173,7 +173,7 @@ namespace PhysicsBlock
                 contacts->normal = vec2angle({-1, 0}, info.Direction * (M_PI / 2)); // （反向作用力法向量）地形不会旋转
                 contacts->w_side = 0;                                               // 边索引 ID
                 // 一直馅在碰撞体，无法更新旧位置（旧位置不可以在碰撞体内）
-                Particle->OldPos = info.pos - (contacts->normal * 0.1);
+                Particle->OldPos = info.pos - (contacts->normal * FLOAT_(0.1));
                 return 1;
             }
         }
@@ -184,11 +184,11 @@ namespace PhysicsBlock
     {
         int ContactSize = 0;
 
-        std::vector<glm::dvec2> Cd{
-            Circle->pos + glm::dvec2{Circle->radius, 0},
-            Circle->pos + glm::dvec2{0, Circle->radius},
-            Circle->pos + glm::dvec2{-Circle->radius, 0},
-            Circle->pos + glm::dvec2{0, -Circle->radius}};
+        std::vector<Vec2_> Cd{
+            Circle->pos + Vec2_{Circle->radius, 0},
+            Circle->pos + Vec2_{0, Circle->radius},
+            Circle->pos + Vec2_{-Circle->radius, 0},
+            Circle->pos + Vec2_{0, -Circle->radius}};
 
         for (auto d : Cd)
         {
@@ -214,9 +214,9 @@ namespace PhysicsBlock
 
         MapStatic *LMapStatic = (MapStatic *)Map;
         int KD = 2;
-        std::vector<glm::dvec2> Outline = LMapStatic->GetLightweightOutline(ToInt(Circle->pos.x - Circle->radius) - KD, ToInt(Circle->pos.y - Circle->radius) - KD, ToInt(Circle->pos.x + Circle->radius) + KD, ToInt(Circle->pos.y + Circle->radius) + KD);
-        double L;
-        double angle;
+        std::vector<Vec2_> Outline = LMapStatic->GetLightweightOutline(ToInt(Circle->pos.x - Circle->radius) - KD, ToInt(Circle->pos.y - Circle->radius) - KD, ToInt(Circle->pos.x + Circle->radius) + KD, ToInt(Circle->pos.y + Circle->radius) + KD);
+        FLOAT_ L;
+        FLOAT_ angle;
         for (auto d : Outline)
         {
             d -= LMapStatic->centrality;
@@ -237,12 +237,12 @@ namespace PhysicsBlock
 
     unsigned int Collide(Contact *contacts, PhysicsCircle *Circle, PhysicsParticle *Particle)
     {
-        glm::dvec2 dp = Particle->pos - Circle->pos;
-        double L = Modulus(dp);
+        Vec2_ dp = Particle->pos - Circle->pos;
+        FLOAT_ L = Modulus(dp);
         if (Circle->radius > L)
         {
             contacts->separation = L - Circle->radius;                            // 碰撞距离
-            double angle = EdgeVecToCosAngleFloat(dp);                            // 计算出角度
+            FLOAT_ angle = EdgeVecToCosAngleFloat(dp);                            // 计算出角度
             contacts->normal = vec2angle({1, 0}, angle);                          // （反向作用力法向量）地形不会旋转
             contacts->position = contacts->normal * Circle->radius + Circle->pos; // 碰撞点的位置
             contacts->w_side = 0;                                                 // 边索引 ID
@@ -253,12 +253,12 @@ namespace PhysicsBlock
 
     unsigned int Collide(Contact *contacts, PhysicsCircle *CircleA, PhysicsCircle *CircleB)
     {
-        glm::dvec2 dp = CircleB->pos - CircleA->pos;
-        double L = Modulus(dp);
+        Vec2_ dp = CircleB->pos - CircleA->pos;
+        FLOAT_ L = Modulus(dp);
         if ((CircleA->radius + CircleB->radius) > L)
         {
             contacts->separation = L - CircleB->radius;                             // 碰撞距离
-            double angle = EdgeVecToCosAngleFloat(dp);                              // 计算出角度
+            FLOAT_ angle = EdgeVecToCosAngleFloat(dp);                              // 计算出角度
             contacts->normal = vec2angle({1, 0}, angle);                            // （反向作用力法向量）地形不会旋转
             contacts->position = contacts->normal * CircleA->radius + CircleA->pos; // 碰撞点的位置
             contacts->w_side = 0;                                                   // 边索引 ID
@@ -273,9 +273,9 @@ namespace PhysicsBlock
 
         AngleMat Mat(Shape->angle);
 
-        glm::dvec2 Rx = Mat.Rotary({Circle->radius, 0});
-        glm::dvec2 Ry = Mat.Rotary({0, Circle->radius});
-        std::vector<glm::dvec2> Cd{
+        Vec2_ Rx = Mat.Rotary({Circle->radius, 0});
+        Vec2_ Ry = Mat.Rotary({0, Circle->radius});
+        std::vector<Vec2_> Cd{
             Circle->pos + Rx,
             Circle->pos + Ry,
             Circle->pos - Rx,
@@ -303,9 +303,9 @@ namespace PhysicsBlock
             }
         }
 
-        double L;
-        double angle;
-        glm::dvec2 dp;
+        FLOAT_ L;
+        FLOAT_ angle;
+        Vec2_ dp;
         for (size_t i = 0; i < Shape->OutlineSize; i++)
         {
             dp = Shape->pos + Mat.Rotary(Shape->OutlineSet[i]) - Circle->pos;

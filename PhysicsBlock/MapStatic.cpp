@@ -4,7 +4,7 @@
 namespace PhysicsBlock
 {
 
-    void MapStatic::SetCentrality(glm::dvec2 Centrality)
+    void MapStatic::SetCentrality(Vec2_ Centrality)
     {
         // 限定点在范围内
         if ((Centrality.x < 0) || (Centrality.y < 0) || (Centrality.x > width) || (Centrality.y > height))
@@ -19,7 +19,7 @@ namespace PhysicsBlock
         return BresenhamDetection(start, end);
     }
 
-    CollisionInfoD MapStatic::FMBresenhamDetection(glm::dvec2 start, glm::dvec2 end)
+    CollisionInfoD MapStatic::FMBresenhamDetection(Vec2_ start, Vec2_ end)
     {
         // 偏移中心位置，对其网格坐标系
         start += centrality;
@@ -42,14 +42,14 @@ namespace PhysicsBlock
     }
 
 
-    std::vector<glm::dvec2> MapStatic::GetLightweightOutline(int x_, int y_, int w_, int h_)
+    std::vector<Vec2_> MapStatic::GetLightweightOutline(int x_, int y_, int w_, int h_)
     {
         x_ += centrality.x;
         y_ += centrality.y;
         w_ += centrality.x;
         h_ += centrality.y;
 
-        std::vector<glm::dvec2> Outline;
+        std::vector<Vec2_> Outline;
 
         for (int x = x_; x < w_; ++x)
         {
@@ -63,30 +63,30 @@ namespace PhysicsBlock
                 {
                     if (GetCollision(x - 1, y) == GetCollision(x, y - 1))
                     {
-                        Outline.push_back(glm::dvec2{x, y});
+                        Outline.push_back(Vec2_{x, y});
                     }
                 }
                 else if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1))
                 {
-                    Outline.push_back(glm::dvec2{x, y});
+                    Outline.push_back(Vec2_{x, y});
                 }
                 // 左下角
                 if (!GetCollision(x, y + 1)) {
                     if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1))) {
-                        Outline.push_back(glm::dvec2{x, y+1});
+                        Outline.push_back(Vec2_{x, y+1});
                     }
                 }
                 // 右上角
                 if (!GetCollision(x + 1, y)) {
                     if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1))) {
-                        Outline.push_back(glm::dvec2{x+1, y});
+                        Outline.push_back(Vec2_{x+1, y});
                     }
                 }
                 // 右下角
                 if (!GetCollision(x + 1, y + 1)) {
                     if ((GetCollision(x + 1, y) == GetCollision(x, y + 1)) && !GetCollision(x + 1, y))
                     {
-                        Outline.push_back(glm::dvec2{x+1, y+1});
+                        Outline.push_back(Vec2_{x+1, y+1});
                     }
                 }
             }

@@ -16,7 +16,7 @@ namespace PhysicsBlock
     private:
         const unsigned int width;         // 板块 X 的数量
         const unsigned int height;        // 板块 Y 的数量
-        glm::dvec2 centrality{0, 0};      // 中心位置
+        Vec2_ centrality{0, 0};      // 中心位置
         MovePlate<BaseGrid *> mMovePlate; // 板块移动控制台
         BaseGrid *BaseGridBuffer;         // 所有板块网格
         GridBlock *GridBuffer;            // 每个板块网格的数据
@@ -27,9 +27,9 @@ namespace PhysicsBlock
          * @param y 坐标y
          * @return 格子 */
         BaseGrid **atGrid(int x, int y) { return mMovePlate.CalculateGetPlate(x, y); }
-        BaseGrid **atGrid(double x, double y) { return mMovePlate.CalculateGetPlate(x, y); }
+        BaseGrid **atGrid(FLOAT_ x, FLOAT_ y) { return mMovePlate.CalculateGetPlate(x, y); }
         BaseGrid **atGrid(glm::ivec2 pos) { return atGrid(pos.x, pos.y); }
-        BaseGrid **atGrid(glm::dvec2 pos) { return atGrid(pos.x, pos.y); }
+        BaseGrid **atGrid(Vec2_ pos) { return atGrid(pos.x, pos.y); }
 
     public:
         /**
@@ -60,17 +60,17 @@ namespace PhysicsBlock
          * @param x 坐标x
          * @param y 坐标y
          * @return 格子 */
-        GridBlock &at(double x, double y) { return at(ToInt(x), ToInt(y)); }
+        GridBlock &at(FLOAT_ x, FLOAT_ y) { return at(ToInt(x), ToInt(y)); }
         /**
          * @brief 获取格子
          * @param pos 坐标
          * @return 格子 */
-        GridBlock &at(glm::dvec2 pos) { return at(ToInt(pos)); }
+        GridBlock &at(Vec2_ pos) { return at(ToInt(pos)); }
 
         /**
          * @brief 更新玩家位置
          * @param pos 新位置 */
-        MovePlateInfo Updata(glm::dvec2 pos){
+        MovePlateInfo Updata(Vec2_ pos){
             return mMovePlate.UpData(pos.x, pos.y);
         }
 
@@ -102,7 +102,7 @@ namespace PhysicsBlock
          * @param start 起始位置
          * @param end 结束位置
          * @return 第一个碰撞的位置(准确位置) */
-        virtual CollisionInfoD FMBresenhamDetection(glm::dvec2 start, glm::dvec2 end);
+        virtual CollisionInfoD FMBresenhamDetection(Vec2_ start, Vec2_ end);
     };
 
 }

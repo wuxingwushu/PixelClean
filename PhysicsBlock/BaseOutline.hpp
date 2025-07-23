@@ -9,7 +9,7 @@ namespace PhysicsBlock
     class BaseOutline : public BaseGrid
     {
     public:
-        glm::dvec2 *OutlineSet;   // 轮廓点集合
+        Vec2_ *OutlineSet;   // 轮廓点集合
         unsigned int OutlineSize; // 轮廓点数量
         
         /**
@@ -21,11 +21,11 @@ namespace PhysicsBlock
 
         /**
          * @brief 更新外轮廓点集合 */
-        void UpdateOutline(glm::dvec2 CentreMass_);
+        void UpdateOutline(Vec2_ CentreMass_);
 
         /**
          * @brief 更新外轮廓点集合(轻量版) */
-        void UpdateLightweightOutline(glm::dvec2 CentreMass_);
+        void UpdateLightweightOutline(Vec2_ CentreMass_);
 
     private:
         /**

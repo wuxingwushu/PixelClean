@@ -10,25 +10,25 @@ namespace PhysicsBlock
     class PhysicsAngle : public PhysicsParticle
     {
     public:
-        double MomentInertia = 1;    // 转动惯量
-        double invMomentInertia = 1; // 转动惯量倒数
-        double angle = 0;            // 角度
-        double angleSpeed = 0;       // 角速度
-        double torque = 0;           // 扭矩
+        FLOAT_ MomentInertia = 1;    // 转动惯量
+        FLOAT_ invMomentInertia = 1; // 转动惯量倒数
+        FLOAT_ angle = 0;            // 角度
+        FLOAT_ angleSpeed = 0;       // 角速度
+        FLOAT_ torque = 0;           // 扭矩
         
-        PhysicsAngle(glm::dvec2 Pos, double Mass):PhysicsParticle(Pos, Mass){}
-        PhysicsAngle(glm::dvec2 Pos):PhysicsParticle(Pos){}
+        PhysicsAngle(Vec2_ Pos, FLOAT_ Mass):PhysicsParticle(Pos, Mass){}
+        PhysicsAngle(Vec2_ Pos):PhysicsParticle(Pos){}
         ~PhysicsAngle(){}
 
         /*=========PhysicsFormwork=========*/
         /**
          * @brief 获取转动惯量倒数
          * @return 转动惯量倒数 */
-        virtual double PFGetInvI(){ return invMomentInertia; }
+        virtual FLOAT_ PFGetInvI(){ return invMomentInertia; }
         /**
          * @brief 角速度
          * @return 质量倒数 */
-        virtual double& PFAngleSpeed() { return angleSpeed; };
+        virtual FLOAT_& PFAngleSpeed() { return angleSpeed; };
     };
     
 }

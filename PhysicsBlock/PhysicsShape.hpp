@@ -12,15 +12,15 @@ namespace PhysicsBlock
     class PhysicsShape : public PhysicsAngle, public BaseOutline
     {
     public:
-        glm::dvec2 CentreMass{0};    // 质心
-        glm::dvec2 CentreShape{0};   // 几何中心
-        double CollisionR = 1;       // 碰撞半径
+        Vec2_ CentreMass{0};    // 质心
+        Vec2_ CentreShape{0};   // 几何中心
+        FLOAT_ CollisionR = 1;       // 碰撞半径
     public:
         /**
          * @brief 构造函数
          * @param Pos 位置
          * @param Size 网格大小 */
-        PhysicsShape(glm::dvec2 Pos, glm::ivec2 Size);
+        PhysicsShape(Vec2_ Pos, glm::ivec2 Size);
         ~PhysicsShape();
 
         GridBlock &Gridat(unsigned int i) { return at(i); }
@@ -29,24 +29,24 @@ namespace PhysicsBlock
          * @brief 检测点是否点击到网格
          * @param pos 位置(世界位置)
          * @return 是否点击，网格位置 */
-        CollisionInfoI DropCollision(glm::dvec2 pos);
+        CollisionInfoI DropCollision(Vec2_ pos);
 
         /**
          * @brief 受力（移动，旋转）
          * @param Pos 受力位置（世界位置）
          * @param Force 力矩 */
-        void AddForce(glm::dvec2 Pos, glm::dvec2 Force);
+        void AddForce(Vec2_ Pos, Vec2_ Force);
 
         /**
          * @brief 受力（移动）
          * @param Force 力矩 */
-        void AddForce(glm::dvec2 Force) { PhysicsParticle::AddForce(Force); };
+        void AddForce(Vec2_ Force) { PhysicsParticle::AddForce(Force); };
 
         /**
          * @brief 受力（旋转）
          * @param ArmForce 力臂
          * @param Force 力大小 */
-        void AddTorque(double ArmForce, double Force);
+        void AddTorque(FLOAT_ ArmForce, FLOAT_ Force);
 
         /**
          * @brief 信息更新
@@ -66,7 +66,7 @@ namespace PhysicsBlock
         /**
          * @brief 几何形状靠近这个点
          * @param drop 点的位置 */
-        void ApproachDrop(glm::dvec2 drop);
+        void ApproachDrop(Vec2_ drop);
 
         /*=========BaseGrid=========*/
 
@@ -75,7 +75,7 @@ namespace PhysicsBlock
          * @param Pos 射线经过的点
          * @param Angle 射线角度
          * @return 返回碰撞点（精准）*/
-        CollisionInfoD RayCollide(glm::dvec2 Pos, double Angle);
+        CollisionInfoD RayCollide(Vec2_ Pos, FLOAT_ Angle);
 
         /**
          * @brief 线段侦测(int)
@@ -85,11 +85,11 @@ namespace PhysicsBlock
         CollisionInfoI PsBresenhamDetection(glm::ivec2 start, glm::ivec2 end);
 
         /**
-         * @brief 线段侦测(double)
+         * @brief 线段侦测(FLOAT_)
          * @param start 起始位置
          * @param end 结束位置
          * @return 碰撞结果信息(准确位置) */
-        CollisionInfoD PsBresenhamDetection(glm::dvec2 start, glm::dvec2 end);
+        CollisionInfoD PsBresenhamDetection(Vec2_ start, Vec2_ end);
 
         /*=========PhysicsFormwork=========*/
 
@@ -97,13 +97,13 @@ namespace PhysicsBlock
          * @brief 物理外部施加能量对速度的改变
          * @param time 时间差
          * @param Ga 重力加速度 */
-        virtual void PhysicsSpeed(double time, glm::dvec2 Ga);
+        virtual void PhysicsSpeed(FLOAT_ time, Vec2_ Ga);
 
         /**
          * @brief 物理速度对物体的改变
          * @param time 时间差
          * @param Ga 重力加速度 */
-        virtual void PhysicsPos(double time, glm::dvec2 Ga);
+        virtual void PhysicsPos(FLOAT_ time, Vec2_ Ga);
 
         /**
          * @brief 获取对象类型
@@ -112,27 +112,27 @@ namespace PhysicsBlock
         /**
          * @brief 获取碰撞半径
          * @return 半径 */
-        virtual double PFGetCollisionR() { return CollisionR; }
+        virtual FLOAT_ PFGetCollisionR() { return CollisionR; }
         /**
          * @brief 获取位置
          * @return 位置 */
-        virtual glm::dvec2 PFGetPos() { return pos; }
+        virtual Vec2_ PFGetPos() { return pos; }
         /**
          * @brief 获取质量倒数
          * @return 质量倒数 */
-        virtual double PFGetInvMass(){ return invMass; }
+        virtual FLOAT_ PFGetInvMass(){ return invMass; }
         /**
          * @brief 获取转动惯量倒数
          * @return 转动惯量倒数 */
-        virtual double PFGetInvI(){ return invMomentInertia; }
+        virtual FLOAT_ PFGetInvI(){ return invMomentInertia; }
         /**
          * @brief 速度
          * @return 位置 */
-        virtual glm::dvec2& PFSpeed() { return speed; };
+        virtual Vec2_& PFSpeed() { return speed; };
         /**
          * @brief 角速度
          * @return 质量倒数 */
-        virtual double& PFAngleSpeed() { return angleSpeed; };
+        virtual FLOAT_& PFAngleSpeed() { return angleSpeed; };
     };
 
 }

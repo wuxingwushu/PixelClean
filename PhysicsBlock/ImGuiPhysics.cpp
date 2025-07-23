@@ -57,17 +57,17 @@ namespace PhysicsBlock
 		inih::INIWriter::write_Gai("PhysicsBlock.ini", Ini);	   // 保存
 	}
 
-	void Dvec2ImGui(std::string name, glm::dvec2 *val)
+	void Dvec2ImGui(std::string name, Vec2_ *val)
 	{
-		ImGui::DragScalar((name + ".x").c_str(), ImGuiDataType_Double, &val->x, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar((name + ".x").c_str(), MyImGuiDataType, &val->x, 0.0005f, NULL, NULL, "%.10f");
 		// ImGui::SameLine();
-		ImGui::DragScalar((name + ".y").c_str(), ImGuiDataType_Double, &val->y, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar((name + ".y").c_str(), MyImGuiDataType, &val->y, 0.0005f, NULL, NULL, "%.10f");
 	}
 
 	bool GridImGui(std::string name, GridBlock *Grid)
 	{
 		static GridBlock *Static_Grid = nullptr;
-		static double Static_mass;
+		static FLOAT_ Static_mass;
 		static bool Static_Entity;
 		static bool Static_Collision;
 		static bool Static_Event;
@@ -89,11 +89,11 @@ namespace PhysicsBlock
 
 		unsigned char min = 0, max = 255;
 		ImGui::Text(name.c_str());
-		ImGui::DragScalar(("摩擦因数" + name).c_str(), ImGuiDataType_Double, &Grid->FrictionFactor, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar(("摩擦因数" + name).c_str(), MyImGuiDataType, &Grid->FrictionFactor, 0.0005f, NULL, NULL, "%.10f");
 		if (Grid->Entity)
 		{
 			ImGui::SliderScalar(("血量" + name).c_str(), T, &Grid->Healthpoint, &min, &max);
-			ImGui::DragScalar(("质量" + name).c_str(), ImGuiDataType_Double, &Grid->mass, 0.0005f, NULL, NULL, "%.10f");
+			ImGui::DragScalar(("质量" + name).c_str(), MyImGuiDataType, &Grid->mass, 0.0005f, NULL, NULL, "%.10f");
 		}
 		else
 		{
@@ -163,12 +163,12 @@ namespace PhysicsBlock
 	bool PhysicsShapeUI(PhysicsShape *Object)
 	{
 		bool UpData = PhysicsShapeUI((PhysicsParticle *)Object);
-		ImGui::DragScalar("角度", ImGuiDataType_Double, &Object->angle, 0.0005f, NULL, NULL, "%.10f");
-		ImGui::DragScalar("角速度", ImGuiDataType_Double, &Object->angleSpeed, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("角度", MyImGuiDataType, &Object->angle, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("角速度", MyImGuiDataType, &Object->angleSpeed, 0.0005f, NULL, NULL, "%.10f");
 		Dvec2ImGui("质心", &Object->CentreMass);
-		ImGui::DragScalar("碰撞半径", ImGuiDataType_Double, &Object->CollisionR, 0.0005f, NULL, NULL, "%.10f");
-		ImGui::DragScalar("转动惯量", ImGuiDataType_Double, &Object->MomentInertia, 0.0005f, NULL, NULL, "%.10f");
-		ImGui::DragScalar("扭矩", ImGuiDataType_Double, &Object->torque, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("碰撞半径", MyImGuiDataType, &Object->CollisionR, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("转动惯量", MyImGuiDataType, &Object->MomentInertia, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("扭矩", MyImGuiDataType, &Object->torque, 0.0005f, NULL, NULL, "%.10f");
 		Dvec2ImGui("几何中心", &Object->CentreShape);
 
 		if (ImGui::TreeNode("骨骼点", "骨骼点: %d", Object->OutlineSize))
@@ -229,7 +229,7 @@ namespace PhysicsBlock
 		Dvec2ImGui("位置", &Object->pos);
 		Dvec2ImGui("速度", &Object->speed);
 		Dvec2ImGui("受力", &Object->force);
-		ImGui::DragScalar("质量", ImGuiDataType_Double, &Object->mass, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("质量", MyImGuiDataType, &Object->mass, 0.0005f, NULL, NULL, "%.10f");
 
 		return false;
 	}

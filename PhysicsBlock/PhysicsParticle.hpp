@@ -12,26 +12,26 @@ namespace PhysicsBlock
     public:
         unsigned char StaticNum = 0; // 静止次数
 
-        glm::dvec2 OldPos{0}; // 上一时刻的位置（ 旧位置不可以在碰撞体内 ）
+        Vec2_ OldPos{0}; // 上一时刻的位置（ 旧位置不可以在碰撞体内 ）
         bool OldPosUpDataBool = true; // 是否可以更新位置
         /**
          * @brief 位置
          * @warning 在形状当中是指质心的位置 */
-        glm::dvec2 pos{0};
-        glm::dvec2 speed{0}; // 速度
-        glm::dvec2 force{0}; // 受力
-        double mass = 0;     // 质量
-        double invMass = 0;  // 质量倒数
+        Vec2_ pos{0};
+        Vec2_ speed{0}; // 速度
+        Vec2_ force{0}; // 受力
+        FLOAT_ mass = 0;     // 质量
+        FLOAT_ invMass = 0;  // 质量倒数
 
     public:
-        PhysicsParticle(glm::dvec2 Pos, double Mass);
-        PhysicsParticle(glm::dvec2 Pos);
+        PhysicsParticle(Vec2_ Pos, FLOAT_ Mass);
+        PhysicsParticle(Vec2_ Pos);
         ~PhysicsParticle();
 
         /**
          * @brief 添加 一个受力
          * @param Force 力矩 */
-        virtual void AddForce(glm::dvec2 Force);
+        virtual void AddForce(Vec2_ Force);
 
         /*=========PhysicsFormwork=========*/
 
@@ -39,13 +39,13 @@ namespace PhysicsBlock
          * @brief 物理外部施加能量对速度的改变
          * @param time 时间差
          * @param Ga 重力加速度 */
-        virtual void PhysicsSpeed(double time, glm::dvec2 Ga);
+        virtual void PhysicsSpeed(FLOAT_ time, Vec2_ Ga);
 
         /**
          * @brief 物理速度对物体的改变
          * @param time 时间差
          * @param Ga 重力加速度 */
-        virtual void PhysicsPos(double time, glm::dvec2 Ga);
+        virtual void PhysicsPos(FLOAT_ time, Vec2_ Ga);
 
         /**
          * @brief 获取对象类型
@@ -54,26 +54,26 @@ namespace PhysicsBlock
         /**
          * @brief 获取位置
          * @return 位置 */
-        virtual glm::dvec2 PFGetPos() { return pos; }
+        virtual Vec2_ PFGetPos() { return pos; }
         /**
          * @brief 获取质量倒数
          * @return 质量倒数 */
-        virtual double PFGetInvMass(){ return invMass; }
+        virtual FLOAT_ PFGetInvMass(){ return invMass; }
         /**
          * @brief 获取转动惯量倒数
          * @return 转动惯量倒数 */
-        virtual double PFGetInvI(){ 
+        virtual FLOAT_ PFGetInvI(){ 
             assert(0 && "[Error]: 粒子不存在转动惯量!");
             return 0;
         }
         /**
          * @brief 速度
          * @return 位置 */
-        virtual glm::dvec2& PFSpeed() { return speed; };
+        virtual Vec2_& PFSpeed() { return speed; };
         /**
          * @brief 角速度
          * @return 质量倒数 */
-        virtual double& PFAngleSpeed() {
+        virtual FLOAT_& PFAngleSpeed() {
             assert(0 && "[Error]: 粒子不存在角速度!");
             return invMass;
         };

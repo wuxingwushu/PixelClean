@@ -88,11 +88,11 @@ namespace PhysicsBlock
         CollisionInfoI BresenhamDetection(glm::ivec2 start, glm::ivec2 end);
 
         /**
-         * @brief 线段侦测(double)
+         * @brief 线段侦测(FLOAT_)
          * @param start 起始位置
          * @param end 结束位置
          * @return 碰撞结果信息(准确位置) */
-        CollisionInfoD BresenhamDetection(glm::dvec2 start, glm::dvec2 end);
+        CollisionInfoD BresenhamDetection(Vec2_ start, Vec2_ end);
     };
 
 }

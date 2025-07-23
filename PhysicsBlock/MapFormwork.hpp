@@ -33,7 +33,7 @@ namespace PhysicsBlock
          * @brief 获取是否有障碍物
          * @param start 世界位置
          * @return 是否碰撞（true: 碰撞） */
-        virtual bool FMGetCollide(glm::dvec2 start) { return false; }
+        virtual bool FMGetCollide(Vec2_ start) { return false; }
 
         /**
          * @brief 获取网格(不安全)
@@ -53,7 +53,7 @@ namespace PhysicsBlock
          * @param start 起始位置
          * @param end 结束位置
          * @return 第一个碰撞的位置(准确位置) */
-        virtual CollisionInfoD FMBresenhamDetection(glm::dvec2 start, glm::dvec2 end) { return CollisionInfoD{}; }
+        virtual CollisionInfoD FMBresenhamDetection(Vec2_ start, Vec2_ end) { return CollisionInfoD{}; }
     };
 
 }

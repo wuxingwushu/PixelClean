@@ -27,25 +27,25 @@ namespace PhysicsBlock
 	}
 
 	// 获取模的长度(没有开方)
-	double ModulusLength(glm::dvec2 Modulus)
+	FLOAT_ ModulusLength(Vec2_ Modulus)
 	{
 		return ((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
 	}
 
 	// 获取模的长度
-	double Modulus(glm::dvec2 Modulus)
+	FLOAT_ Modulus(Vec2_ Modulus)
 	{
 		return sqrt((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
 	}
 
 	// 角度，计算对应的cos, sin
-	glm::dvec2 AngleFloatToAngleVec(double angle)
+	Vec2_ AngleFloatToAngleVec(FLOAT_ angle)
 	{
 		return {cos(angle), sin(angle)};
 	}
 
 	// 根据XY算出cos的角度
-	double EdgeVecToCosAngleFloat(glm::dvec2 XYedge)
+	FLOAT_ EdgeVecToCosAngleFloat(Vec2_ XYedge)
 	{
 		if (XYedge.x == 0)
 		{
@@ -55,58 +55,58 @@ namespace PhysicsBlock
 			}
 			return XYedge.y < 0 ? -M_PI_2 : M_PI_2;
 		}
-		double BeveledEdge = acos(XYedge.x / Modulus(XYedge));
+		FLOAT_ BeveledEdge = acos(XYedge.x / Modulus(XYedge));
 		return XYedge.y < 0 ? -BeveledEdge : BeveledEdge;
 	}
 
 	// vec2旋转
-	glm::dvec2 vec2angle(glm::dvec2 pos, double angle)
+	Vec2_ vec2angle(Vec2_ pos, FLOAT_ angle)
 	{
-		double cosangle = cos(angle);
-		double sinangle = sin(angle);
+		FLOAT_ cosangle = cos(angle);
+		FLOAT_ sinangle = sin(angle);
 		return vec2angle(pos, {cosangle, sinangle});
 	}
 
 	// vec2旋转
-	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle)
+	Vec2_ vec2angle(Vec2_ pos, Vec2_ angle)
 	{
 		// 实现旋转矩阵效果
-		return glm::dvec2((pos.x * angle.x) - (pos.y * angle.y), (pos.x * angle.y) + (pos.y * angle.x));
+		return Vec2_((pos.x * angle.x) - (pos.y * angle.y), (pos.x * angle.y) + (pos.y * angle.x));
 	}
 
-	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle)
+	Vec2_ vec2PosAngle(Vec2_ pos, Vec2_ lingdian, FLOAT_ angle)
 	{
 		return vec2angle(pos - lingdian, angle) + lingdian;
 	}
 
-	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle)
+	Vec2_ vec2PosAngle(Vec2_ pos, Vec2_ lingdian, Vec2_ angle)
 	{
 		return vec2angle(pos - lingdian, angle) + lingdian;
 	}
 
-	glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle)
+	glm::ivec2 ToIntPos(Vec2_ Pos, Vec2_ xPos, FLOAT_ angle)
 	{
 		return ToInt(vec2angle(xPos - Pos, angle));
 	}
 
-	glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle)
+	glm::ivec2 ToIntPos(Vec2_ sPos, Vec2_ ePos, Vec2_ angle)
 	{
 		return ToInt(vec2angle(ePos - sPos, angle));
 	}
 
-	glm::dvec2 LineXToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double x)
+	Vec2_ LineXToPos(Vec2_ Apos, Vec2_ Bpos, FLOAT_ x)
 	{
-		double bl = (Bpos.x - x) / (Bpos.x - Apos.x);
+		FLOAT_ bl = (Bpos.x - x) / (Bpos.x - Apos.x);
 		return {x, (Apos.y - Bpos.y) * bl + Bpos.y};
 	}
 
-	glm::dvec2 LineYToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double y)
+	Vec2_ LineYToPos(Vec2_ Apos, Vec2_ Bpos, FLOAT_ y)
 	{
-		double bl = (Bpos.y - y) / (Apos.y - Bpos.y);
+		FLOAT_ bl = (Bpos.y - y) / (Apos.y - Bpos.y);
 		return {(Bpos.x - Apos.x) * bl + Bpos.x, y};
 	}
 
-	SquareFocus LineSquareFocus(glm::dvec2 start, glm::dvec2 end, const double width, const double height)
+	SquareFocus LineSquareFocus(Vec2_ start, Vec2_ end, const FLOAT_ width, const FLOAT_ height)
 	{
 		SquareFocus data{true, start, end};
 		if (end.x == start.x)
@@ -181,11 +181,11 @@ namespace PhysicsBlock
 			}
 			return data;
 		}
-		double Difference = (end.x - start.x) / (start.y - end.y);
-		double posy1 = -1;
-		double posy2 = -1;
-		double posx1 = -1;
-		double posx2 = -1;
+		FLOAT_ Difference = (end.x - start.x) / (start.y - end.y);
+		FLOAT_ posy1 = -1;
+		FLOAT_ posy2 = -1;
+		FLOAT_ posx1 = -1;
+		FLOAT_ posx2 = -1;
 
 		if (data.start.x < 0)
 		{
@@ -249,54 +249,54 @@ namespace PhysicsBlock
 	}
 
 	// 正方形和正方形的碰撞检测（A为静态刚体，B为动态刚体）
-	glm::dvec2 SquareToSquare(glm::dvec2 posA, double dA, double angleA, glm::dvec2 posB, double dB, double angleB)
+	Vec2_ SquareToSquare(Vec2_ posA, FLOAT_ dA, FLOAT_ angleA, Vec2_ posB, FLOAT_ dB, FLOAT_ angleB)
 	{
-		double rA = dA / 2; // 边长的一半
-		double rB = dB / 2;
-		glm::dvec2 Pos{posB - posA};			 // 两个正方形的  X  Y  的间距
+		FLOAT_ rA = dA / 2; // 边长的一半
+		FLOAT_ rB = dB / 2;
+		Vec2_ Pos{posB - posA};			 // 两个正方形的  X  Y  的间距
 		if (Modulus(Pos) > ((rA + rB) * 1.415f)) // 距離絕對碰不到
 		{
-			return glm::dvec2(0, 0);
+			return Vec2_(0, 0);
 		}
-		double Angle = angleB - angleA; // 两个正方形的角度差
+		FLOAT_ Angle = angleB - angleA; // 两个正方形的角度差
 		Angle += M_PI_4;
-		double cosangle = cos(Angle);
-		double sinangle = sin(Angle);
+		FLOAT_ cosangle = cos(Angle);
+		FLOAT_ sinangle = sin(Angle);
 
-		double Acosangle = cos(angleA);
-		double Asinangle = sin(angleA);
-		double SquareR = rB * 1.4142135623730951;
-		glm::dvec2 PYDrop = {SquareR * cosangle, SquareR * sinangle};
+		FLOAT_ Acosangle = cos(angleA);
+		FLOAT_ Asinangle = sin(angleA);
+		FLOAT_ SquareR = rB * 1.4142135623730951;
+		Vec2_ PYDrop = {SquareR * cosangle, SquareR * sinangle};
 
-		glm::dvec2 QPYpos{0.0f, 0.0f};							   // 补偿距离
-		glm::dvec2 QPos = vec2angle(Pos, {Acosangle, -Asinangle}); // 以 A 为坐标系，B 正方形的四个点进行判断是否在内
+		Vec2_ QPYpos{0.0f, 0.0f};							   // 补偿距离
+		Vec2_ QPos = vec2angle(Pos, {Acosangle, -Asinangle}); // 以 A 为坐标系，B 正方形的四个点进行判断是否在内
 		QPYpos += SquareToDrop(rA, (QPos - PYDrop), QPos);
-		QPYpos += SquareToDrop(rA, (QPos + QPYpos + glm::dvec2{PYDrop.y, -PYDrop.x}), QPos);
-		QPYpos += SquareToDrop(rA, (QPos + QPYpos + glm::dvec2{-PYDrop.y, PYDrop.x}), QPos);
+		QPYpos += SquareToDrop(rA, (QPos + QPYpos + Vec2_{PYDrop.y, -PYDrop.x}), QPos);
+		QPYpos += SquareToDrop(rA, (QPos + QPYpos + Vec2_{-PYDrop.y, PYDrop.x}), QPos);
 		QPYpos += SquareToDrop(rA, (QPos + QPYpos + PYDrop), QPos);
 
 		QPYpos = vec2angle(QPYpos, {Acosangle, Asinangle});
 
 		sinangle = -sinangle;
-		double Bcosangle = cos(angleB);
-		double Bsinangle = sin(angleB);
+		FLOAT_ Bcosangle = cos(angleB);
+		FLOAT_ Bsinangle = sin(angleB);
 		SquareR = rA * 1.4142135623730951;
 		PYDrop = {SquareR * cosangle, SquareR * sinangle};
 
-		glm::dvec2 HPYpos{0.0f, 0.0f};										   // 补偿距离
-		glm::dvec2 HPos = vec2angle(-(QPYpos + Pos), {Bcosangle, -Bsinangle}); // 以 B 为坐标系，A 正方形的四个点进行判断是否在内
+		Vec2_ HPYpos{0.0f, 0.0f};										   // 补偿距离
+		Vec2_ HPos = vec2angle(-(QPYpos + Pos), {Bcosangle, -Bsinangle}); // 以 B 为坐标系，A 正方形的四个点进行判断是否在内
 		HPYpos -= SquareToDrop(rB, (HPos - PYDrop), HPos);
-		HPYpos -= SquareToDrop(rB, (HPos + HPYpos + glm::dvec2{PYDrop.y, -PYDrop.x}), HPos);
-		HPYpos -= SquareToDrop(rB, (HPos + HPYpos + glm::dvec2{-PYDrop.y, PYDrop.x}), HPos);
+		HPYpos -= SquareToDrop(rB, (HPos + HPYpos + Vec2_{PYDrop.y, -PYDrop.x}), HPos);
+		HPYpos -= SquareToDrop(rB, (HPos + HPYpos + Vec2_{-PYDrop.y, PYDrop.x}), HPos);
 		HPYpos -= SquareToDrop(rB, (HPos + HPYpos + PYDrop), HPos);
 
 		return QPYpos + vec2angle(HPYpos, {Bcosangle, Bsinangle}); // 返回需要矫正的距离
 	}
 
 	// 正方形和点的碰撞检测
-	glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY)
+	Vec2_ SquareToDrop(FLOAT_ A1, FLOAT_ A2, FLOAT_ B1, FLOAT_ B2, Vec2_ Drop, Vec2_ PY)
 	{
-		glm::dvec2 PYpos{0.0f, 0.0f};
+		Vec2_ PYpos{0.0f, 0.0f};
 		if (((Drop.x >= A1) && (Drop.x <= A2)) && ((Drop.y >= B1) && (Drop.y <= B2)))
 		{ // 判断这个点是否在另外一个正方形里面
 			if (PY.x > 0)
@@ -331,15 +331,15 @@ namespace PhysicsBlock
 		return PYpos;
 	}
 
-	glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY)
+	Vec2_ SquareToDrop(FLOAT_ R, Vec2_ Drop, Vec2_ PY)
 	{
 		return SquareToDrop(-R, R, -R, R, Drop, PY);
 	}
 
-	glm::dvec2 SquareToRadial(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY)
+	Vec2_ SquareToRadial(FLOAT_ A1, FLOAT_ A2, FLOAT_ B1, FLOAT_ B2, Vec2_ Drop, Vec2_ PY)
 	{
-		glm::dvec2 PYpos{0.0f, 0.0f};
-		double angle = EdgeVecToCosAngleFloat(PY);
+		Vec2_ PYpos{0.0f, 0.0f};
+		FLOAT_ angle = EdgeVecToCosAngleFloat(PY);
 		if (((Drop.x >= A1) && (Drop.x <= A2)) && ((Drop.y >= B1) && (Drop.y <= B2)))
 		{ // 判断这个点是否在另外一个正方形里面
 			if (PY.x > 0)
@@ -378,58 +378,58 @@ namespace PhysicsBlock
 	}
 
 	// 扭矩计算
-	double TorqueCalculate(glm::dvec2 Barycenter, glm::dvec2 Spot, glm::dvec2 Force)
+	FLOAT_ TorqueCalculate(Vec2_ Barycenter, Vec2_ Spot, Vec2_ Force)
 	{
 		glm::vec2 MoveAngle = Barycenter - Spot;
-		double AngleA = EdgeVecToCosAngleFloat(MoveAngle);
-		double AngleB = EdgeVecToCosAngleFloat(Force);
-		double Length = Modulus(MoveAngle);
+		FLOAT_ AngleA = EdgeVecToCosAngleFloat(MoveAngle);
+		FLOAT_ AngleB = EdgeVecToCosAngleFloat(Force);
+		FLOAT_ Length = Modulus(MoveAngle);
 		return Modulus(Force) * Length * sin(AngleA - AngleB);
 	}
 
 	// 求解分解力
-	DecompositionForce CalculateDecompositionForce(glm::dvec2 angle, glm::dvec2 force)
+	DecompositionForce CalculateDecompositionForce(Vec2_ angle, Vec2_ force)
 	{
-		double ObjectAngle = EdgeVecToCosAngleFloat(angle); // 获得力臂角度
+		FLOAT_ ObjectAngle = EdgeVecToCosAngleFloat(angle); // 获得力臂角度
 		return CalculateDecompositionForce(ObjectAngle, force);
 	}
 
-	DecompositionForce CalculateDecompositionForce(double angle, glm::dvec2 force)
+	DecompositionForce CalculateDecompositionForce(FLOAT_ angle, Vec2_ force)
 	{
-		double Fangle = EdgeVecToCosAngleFloat(force);
-		double Angle = angle - Fangle;			 // 相差角度
-		double Long = Modulus(force);			 // 力大小
-		double ParallelLong = Long * cos(Angle); // 平行力大小
-		double VerticalLong = Long * sin(Angle); // 垂直力大小
-		double CosL = cos(angle);
-		double SinL = sin(angle);
+		FLOAT_ Fangle = EdgeVecToCosAngleFloat(force);
+		FLOAT_ Angle = angle - Fangle;			 // 相差角度
+		FLOAT_ Long = Modulus(force);			 // 力大小
+		FLOAT_ ParallelLong = Long * cos(Angle); // 平行力大小
+		FLOAT_ VerticalLong = Long * sin(Angle); // 垂直力大小
+		FLOAT_ CosL = cos(angle);
+		FLOAT_ SinL = sin(angle);
 		// return { vec2angle({0, -VerticalLong}, {CosL, SinL}), vec2angle({ParallelLong, 0}, {CosL, SinL}) }; // 旋转到世界坐标轴
 		return {{VerticalLong * SinL, -VerticalLong * CosL}, {ParallelLong * CosL, ParallelLong * SinL}}; // 旋转到世界坐标轴
 	}
 
-	DecompositionForceVal CalculateDecompositionForceVal(glm::dvec2 angle, glm::dvec2 force)
+	DecompositionForceVal CalculateDecompositionForceVal(Vec2_ angle, Vec2_ force)
 	{
-		double ObjectAngle = EdgeVecToCosAngleFloat(angle);			// 获得力臂角度
-		double Angle = ObjectAngle - EdgeVecToCosAngleFloat(force); // 相差角度
-		double Long = Modulus(force);								// 力大小
+		FLOAT_ ObjectAngle = EdgeVecToCosAngleFloat(angle);			// 获得力臂角度
+		FLOAT_ Angle = ObjectAngle - EdgeVecToCosAngleFloat(force); // 相差角度
+		FLOAT_ Long = Modulus(force);								// 力大小
 		return {Long * cos(Angle), Long * sin(Angle)};
 	}
 
 	// 计算两个向量的夹角
-	double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2)
+	FLOAT_ CalculateIncludedAngle(Vec2_ V1, Vec2_ V2)
 	{
 		// 标准化向量
-		glm::dvec2 normV1 = glm::normalize(V1);
-		glm::dvec2 normV2 = glm::normalize(V2);
+		Vec2_ normV1 = glm::normalize(V1);
+		Vec2_ normV2 = glm::normalize(V2);
 
 		// 计算向量点乘
-		double dotProduct = glm::dot(normV1, normV2);
+		FLOAT_ dotProduct = glm::dot(normV1, normV2);
 
 		// 计算夹角（弧度）
-		double angleRad = glm::acos(dotProduct);
+		FLOAT_ angleRad = glm::acos(dotProduct);
 
 		// 将弧度转换为角度（可选）
-		// double angleDeg = glm::degrees(angleRad);
+		// FLOAT_ angleDeg = glm::degrees(angleRad);
 
 		return angleRad;
 	}
@@ -449,24 +449,24 @@ namespace PhysicsBlock
 	}
 
 	// 点到线段最短距离
-	double DropUptoLineShortes(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop)
+	FLOAT_ DropUptoLineShortes(Vec2_ start, Vec2_ end, Vec2_ drop)
 	{
-		double angle = EdgeVecToCosAngleFloat(end - start);
-		glm::dvec2 Shortes = LineYToPos(start, end, drop.y);
+		FLOAT_ angle = EdgeVecToCosAngleFloat(end - start);
+		Vec2_ Shortes = LineYToPos(start, end, drop.y);
 		return (drop.x - Shortes.x) * cos(M_PI / 2 - angle);
 	}
 
 	// 点到线段最短距离在线段上的交点
-	glm::dvec2 DropUptoLineShortesIntersect(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop)
+	Vec2_ DropUptoLineShortesIntersect(Vec2_ start, Vec2_ end, Vec2_ drop)
 	{
-		double angle = EdgeVecToCosAngleFloat(end - start);
-		glm::dvec2 Shortes = LineYToPos(start, end, drop.y);
-		glm::dvec2 Intersect = {(drop.x - Shortes.x) * sin(M_PI / 2 - angle), 0};
+		FLOAT_ angle = EdgeVecToCosAngleFloat(end - start);
+		Vec2_ Shortes = LineYToPos(start, end, drop.y);
+		Vec2_ Intersect = {(drop.x - Shortes.x) * sin(M_PI / 2 - angle), 0};
 		Intersect = vec2angle(Intersect, angle);
 		return Shortes + Intersect;
 	}
 
-	double Dot(const glm::dvec2 &a, const glm::dvec2 &b)
+	FLOAT_ Dot(const Vec2_ &a, const Vec2_ &b)
 	{
 		return a.x * b.x + a.y * b.y;
 	}
@@ -475,21 +475,21 @@ namespace PhysicsBlock
 	 * @param a
 	 * @param b
 	 * @return  */
-	double Cross(const glm::dvec2 &a, const glm::dvec2 &b)
+	FLOAT_ Cross(const Vec2_ &a, const Vec2_ &b)
 	{
 		return a.x * b.y - a.y * b.x;
 	}
 
 	// 顺时针 转 90度， s 缩放比
-	glm::dvec2 Cross(const glm::dvec2 &a, double s)
+	Vec2_ Cross(const Vec2_ &a, FLOAT_ s)
 	{
-		return glm::dvec2(s * a.y, -s * a.x);
+		return Vec2_(s * a.y, -s * a.x);
 	}
 
 	// 逆时针 转 90度， s 缩放比
-	glm::dvec2 Cross(double s, const glm::dvec2 &a)
+	Vec2_ Cross(FLOAT_ s, const Vec2_ &a)
 	{
-		return glm::dvec2(-s * a.y, s * a.x);
+		return Vec2_(-s * a.y, s * a.x);
 	}
 
 	/**
@@ -499,14 +499,14 @@ namespace PhysicsBlock
 	 * @param high 最高
 	 * @return 合理值
 	 * @note a 不合理就返回和他最近的合理值 */
-	double Clamp(double a, double low, double high)
+	FLOAT_ Clamp(FLOAT_ a, FLOAT_ low, FLOAT_ high)
 	{
 		return std::max(low, std::min(a, high));
 	}
 
-	double Random(double lo, double hi)
+	FLOAT_ Random(FLOAT_ lo, FLOAT_ hi)
 	{
-		double r = (double)rand();
+		FLOAT_ r = (FLOAT_)rand();
 		r /= RAND_MAX;
 		r = (hi - lo) * r + lo;
 		return r;

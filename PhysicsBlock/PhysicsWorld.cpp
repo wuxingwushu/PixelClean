@@ -62,7 +62,7 @@ namespace PhysicsBlock
 #endif
     }
 
-    PhysicsWorld::PhysicsWorld(glm::dvec2 gravityAcceleration, const bool wind) : GravityAcceleration(gravityAcceleration), WindBool(wind)
+    PhysicsWorld::PhysicsWorld(Vec2_ gravityAcceleration, const bool wind) : GravityAcceleration(gravityAcceleration), WindBool(wind)
     {
     }
 
@@ -136,7 +136,7 @@ namespace PhysicsBlock
         DeleteArbiter(Ba);
     }
 
-    void PhysicsWorld::PhysicsEmulator(double time)
+    void PhysicsWorld::PhysicsEmulator(FLOAT_ time)
     {
         // 外力改变
         for (auto i : PhysicsShapeS)
@@ -360,7 +360,7 @@ namespace PhysicsBlock
 #endif
 
         // 预处理
-        double inv_dt = 1.0 / time;
+        FLOAT_ inv_dt = 1.0 / time;
         std::vector<BaseArbiter *> BaseArbiterVector;
         for (auto kv : CollideGroupS)
         {
@@ -677,14 +677,14 @@ namespace PhysicsBlock
         {
             delete GridWind;
         }
-        GridWind = new glm::dvec2[GridWindSize.x * GridWindSize.y];
+        GridWind = new Vec2_[GridWindSize.x * GridWindSize.y];
         for (size_t i = 0; i < (GridWindSize.x * GridWindSize.y); i++)
         {
-            GridWind[i] = glm::dvec2{0};
+            GridWind[i] = Vec2_{0};
         }
     }
 
-    PhysicsFormwork *PhysicsWorld::Get(glm::dvec2 pos)
+    PhysicsFormwork *PhysicsWorld::Get(Vec2_ pos)
     {
         for (auto i : PhysicsShapeS)
         {
@@ -699,9 +699,9 @@ namespace PhysicsBlock
         return nullptr;
     }
 
-    double PhysicsWorld::GetWorldEnergy()
+    FLOAT_ PhysicsWorld::GetWorldEnergy()
     {
-        double Energy = 0;
+        FLOAT_ Energy = 0;
         for (auto i : PhysicsShapeS)
         {
             Energy += i->mass * ModulusLength(i->speed);

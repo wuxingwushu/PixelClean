@@ -3,14 +3,14 @@
 namespace PhysicsBlock
 {
 
-    PhysicsParticle::PhysicsParticle(glm::dvec2 Pos, double Mass) : OldPos(Pos), pos(Pos), mass(Mass), invMass(1.0 / Mass)
+    PhysicsParticle::PhysicsParticle(Vec2_ Pos, FLOAT_ Mass) : OldPos(Pos), pos(Pos), mass(Mass), invMass(1.0 / Mass)
     {
         if (mass == DBL_MAX) {
             invMass = 0;
         }
     }
 
-    PhysicsParticle::PhysicsParticle(glm::dvec2 Pos) : OldPos(Pos), pos(Pos)
+    PhysicsParticle::PhysicsParticle(Vec2_ Pos) : OldPos(Pos), pos(Pos)
     {
     }
 
@@ -18,12 +18,12 @@ namespace PhysicsBlock
     {
     }
 
-    void PhysicsParticle::AddForce(glm::dvec2 Force)
+    void PhysicsParticle::AddForce(Vec2_ Force)
     {
         force += Force; // 累计力矩
     }
 
-    void inline PhysicsParticle::PhysicsSpeed(double time, glm::dvec2 Ga)
+    void inline PhysicsParticle::PhysicsSpeed(FLOAT_ time, Vec2_ Ga)
     {
         if (invMass == 0)
 		    return;
@@ -32,7 +32,7 @@ namespace PhysicsBlock
         force = { 0, 0 };
     }
 
-    void inline PhysicsParticle::PhysicsPos(double time, glm::dvec2 Ga)
+    void inline PhysicsParticle::PhysicsPos(FLOAT_ time, Vec2_ Ga)
     {
         if (OldPos == pos) {
             if((invMass != 0) && (StaticNum < 200))++StaticNum;

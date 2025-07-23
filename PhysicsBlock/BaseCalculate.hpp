@@ -8,8 +8,8 @@ namespace PhysicsBlock
 {
 
 	/**
-	 * @brief   double 转 int，向下取整
-	 * @param   val 需要转换的 double 值
+	 * @brief   FLOAT_ 转 int，向下取整
+	 * @param   val 需要转换的 FLOAT_ 值
 	 * @return  返回转换結果
 	 * @note    不是直接丢弃小数点，而是向下取最大的整数*/
 	int ToInt(double val);
@@ -39,46 +39,46 @@ namespace PhysicsBlock
 	 * @brief   获取模的长度(没有开方)
 	 * @param   Modulus 輸入 X,Y 的距离差
 	 * @return  返回 x*x + y*y 的結果 */
-	double ModulusLength(glm::dvec2 Modulus);
+	FLOAT_ ModulusLength(Vec2_ Modulus);
 
 	/**
 	 * @brief   获取模的长度
 	 * @param   Modulus 輸入 X,Y 的距离差
 	 * @return  返回 (x*x + y*y)開方 的結果 */
-	double Modulus(glm::dvec2 Modulus);
+	FLOAT_ Modulus(Vec2_ Modulus);
 
 	// 角度，计算对应的cos, sin
-	glm::dvec2 AngleFloatToAngleVec(double angle);
+	Vec2_ AngleFloatToAngleVec(FLOAT_ angle);
 
 	/**
 	 * @brief 根據 vec2 计算於 X軸正向 的角度
 	 * @param XYedge 輸入 X,Y 位置
 	 * @return 返回 (x,y) 於 X軸正向 的角度*/
-	double EdgeVecToCosAngleFloat(glm::dvec2 XYedge);
+	FLOAT_ EdgeVecToCosAngleFloat(Vec2_ XYedge);
 
 	/**
 	 * @brief   vec2 基於零坐标旋转
 	 * @param   pos 需要旋转的坐标
 	 * @param   angle 旋转度数（2 * M_PI 为一圈）
 	 * @return  返回旋转結果*/
-	glm::dvec2 vec2angle(glm::dvec2 pos, double angle);
+	Vec2_ vec2angle(Vec2_ pos, FLOAT_ angle);
 
 	/**
 	 * @brief   dvec2 基於零坐标旋转
 	 * @param   pos 需要旋转的坐标
-	 * @param   angle glm::dvec2 格式 X,Y 存储计算好了的 cos,sin 結果
+	 * @param   angle Vec2_ 格式 X,Y 存储计算好了的 cos,sin 結果
 	 * @return  返回旋转結果*/
-	glm::dvec2 vec2angle(glm::dvec2 pos, glm::dvec2 angle);
+	Vec2_ vec2angle(Vec2_ pos, Vec2_ angle);
 
 	struct AngleMat
 	{
-		double Cos;
-		double Sin;
+		FLOAT_ Cos;
+		FLOAT_ Sin;
 
 		/**
 		 * @brief 复用旋转器
 		 * @param angle 角度（π）*/
-		AngleMat(double angle)
+		AngleMat(FLOAT_ angle)
 		{
 			Cos = cos(angle);
 			Sin = sin(angle);
@@ -87,7 +87,7 @@ namespace PhysicsBlock
 		/**
 		 * @brief 设置新旋转角度
 		 * @param angle 角度（π）*/
-		void SetAngle(double angle)
+		void SetAngle(FLOAT_ angle)
 		{
 			Cos = cos(angle);
 			Sin = sin(angle);
@@ -98,9 +98,9 @@ namespace PhysicsBlock
 		 * @param pos 位置
 		 * @return 旋转结果
 		 * @note 绕 （0，0） 旋转 */
-		glm::dvec2 Rotary(glm::dvec2 pos)
+		Vec2_ Rotary(Vec2_ pos)
 		{
-			return glm::dvec2((pos.x * Cos) - (pos.y * Sin), (pos.x * Sin) + (pos.y * Cos));
+			return Vec2_((pos.x * Cos) - (pos.y * Sin), (pos.x * Sin) + (pos.y * Cos));
 		}
 
 		/**
@@ -108,9 +108,9 @@ namespace PhysicsBlock
 		 * @param pos 位置
 		 * @return 旋转结果
 		 * @note 绕 （0，0） 旋转 */
-		glm::dvec2 Anticlockwise(glm::dvec2 pos)
+		Vec2_ Anticlockwise(Vec2_ pos)
 		{
-			return glm::dvec2((pos.x * Cos) + (pos.y * Sin), -(pos.x * Sin) + (pos.y * Cos));
+			return Vec2_((pos.x * Cos) + (pos.y * Sin), -(pos.x * Sin) + (pos.y * Cos));
 		}
 	};
 
@@ -120,15 +120,15 @@ namespace PhysicsBlock
 	 * @param   lingdian 旋转中心的点坐标
 	 * @param   angle 旋转度数（2 * M_PI 为一圈）
 	 * @return  返回旋转結果*/
-	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, double angle);
+	Vec2_ vec2PosAngle(Vec2_ pos, Vec2_ lingdian, FLOAT_ angle);
 
 	/**
 	 * @brief   dvec2 基於某個坐标的旋转
 	 * @param   pos 需要旋转的点坐标
 	 * @param   lingdian 旋转中心的点坐标
-	 * @param   angle glm::dvec2 格式 X,Y 存储计算好了的 cos,sin 結果
+	 * @param   angle Vec2_ 格式 X,Y 存储计算好了的 cos,sin 結果
 	 * @return  返回旋转結果*/
-	glm::dvec2 vec2PosAngle(glm::dvec2 pos, glm::dvec2 lingdian, glm::dvec2 angle);
+	Vec2_ vec2PosAngle(Vec2_ pos, Vec2_ lingdian, Vec2_ angle);
 
 	/**
 	 * @brief   坐标点转换坐标系后取整（向下）
@@ -136,15 +136,15 @@ namespace PhysicsBlock
 	 * @param   xPos 兩個坐标系的距离差
 	 * @param   angle 兩個坐标系的角度差（2 * M_PI 为一圈）
 	 * @return  返回转换后坐标系后的整数坐标*/
-	glm::ivec2 ToIntPos(glm::dvec2 Pos, glm::dvec2 xPos, double angle);
+	glm::ivec2 ToIntPos(Vec2_ Pos, Vec2_ xPos, FLOAT_ angle);
 
 	/**
 	 * @brief   坐标点转换坐标系后取整（向下）
 	 * @param   Pos 需要转换的点坐标
 	 * @param   xPos 兩個坐标系的距离差
-	 * @param   angle 兩個坐标系的角度差（glm::dvec2 格式 X,Y 存储计算好了的 cos,sin 結果）
+	 * @param   angle 兩個坐标系的角度差（Vec2_ 格式 X,Y 存储计算好了的 cos,sin 結果）
 	 * @return  返回转换后坐标系后的整数坐标*/
-	glm::ivec2 ToIntPos(glm::dvec2 sPos, glm::dvec2 ePos, glm::dvec2 angle);
+	glm::ivec2 ToIntPos(Vec2_ sPos, Vec2_ ePos, Vec2_ angle);
 
 	/**
 	 * @brief   线段在 x 为某值的焦点
@@ -153,7 +153,7 @@ namespace PhysicsBlock
 	 * @param   x 設置 X 值
 	 * @return  返回线段在 X 为某值的 X軸 于线段的焦点
 	 * @warning 注意求出的焦点可能不在线段上*/
-	glm::dvec2 LineXToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double x);
+	Vec2_ LineXToPos(Vec2_ Apos, Vec2_ Bpos, FLOAT_ x);
 
 	/**
 	 * @brief   线段在 Y 为某值的焦点
@@ -162,7 +162,7 @@ namespace PhysicsBlock
 	 * @param   y 設置 Y 值
 	 * @return  返回线段在 Y 为某值的 Y軸 于线段的焦点
 	 * @warning 注意求出的焦点可能不在线段上*/
-	glm::dvec2 LineYToPos(glm::dvec2 Apos, glm::dvec2 Bpos, double y);
+	Vec2_ LineYToPos(Vec2_ Apos, Vec2_ Bpos, FLOAT_ y);
 
 	/**
 	 * @brief 裁剪出被矩形覆盖的线段
@@ -173,7 +173,7 @@ namespace PhysicsBlock
 	 * @return 是否相交，处理后的始终位置
 	 * @note 是以原点(0, 0) 和 (width, height) 的矩形
 	 * @note LineXToPos 和 LineYToPos 推算得来 */
-	SquareFocus LineSquareFocus(glm::dvec2 start, glm::dvec2 end, const double width, const double height);
+	SquareFocus LineSquareFocus(Vec2_ start, Vec2_ end, const FLOAT_ width, const FLOAT_ height);
 
 	/**
 	 * @brief 正方形和正方形的碰撞检测（A为静态刚体，B为动态刚体）
@@ -184,7 +184,7 @@ namespace PhysicsBlock
 	 * @param dB 正方形 B 的边长
 	 * @param angleB 正方形 B 的角度
 	 * @return 返回 B 应该偏移的距离 */
-	glm::dvec2 SquareToSquare(glm::dvec2 posA, double dA, double angleA, glm::dvec2 posB, double dB, double angleB);
+	Vec2_ SquareToSquare(Vec2_ posA, FLOAT_ dA, FLOAT_ angleA, Vec2_ posB, FLOAT_ dB, FLOAT_ angleB);
 
 	/**
 	 * @brief 矩形和点的碰撞检测
@@ -195,7 +195,7 @@ namespace PhysicsBlock
 	 * @param Drop 点的位置坐标
 	 * @param PY 期望被移动的方向
 	 * @return 返回点应该移动的距离 */
-	glm::dvec2 SquareToDrop(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY);
+	Vec2_ SquareToDrop(FLOAT_ A1, FLOAT_ A2, FLOAT_ B1, FLOAT_ B2, Vec2_ Drop, Vec2_ PY);
 
 	/**
 	 * @brief 正方形和点的碰撞检测
@@ -203,25 +203,25 @@ namespace PhysicsBlock
 	 * @param Drop 点的位置坐标
 	 * @param PY 期望被移动的方向
 	 * @return 返回点应该移动的距离 */
-	glm::dvec2 SquareToDrop(double R, glm::dvec2 Drop, glm::dvec2 PY);
+	Vec2_ SquareToDrop(FLOAT_ R, Vec2_ Drop, Vec2_ PY);
 
 	// 正方形和射线的碰撞检测
-	glm::dvec2 SquareToRadial(double A1, double A2, double B1, double B2, glm::dvec2 Drop, glm::dvec2 PY);
+	Vec2_ SquareToRadial(FLOAT_ A1, FLOAT_ A2, FLOAT_ B1, FLOAT_ B2, Vec2_ Drop, Vec2_ PY);
 
 	// 扭矩计算
-	double TorqueCalculate(glm::dvec2 Barycenter, glm::dvec2 Spot, glm::dvec2 Force);
+	FLOAT_ TorqueCalculate(Vec2_ Barycenter, Vec2_ Spot, Vec2_ Force);
 
 	// 计算夹角
-	double CalculateIncludedAngle(glm::dvec2 V1, glm::dvec2 V2);
+	FLOAT_ CalculateIncludedAngle(Vec2_ V1, Vec2_ V2);
 
 	/**
 	 * @brief 求解分解力
 	 * @param angle 力臂
 	 * @param force 受力
 	 * @return 分解力 */
-	DecompositionForce CalculateDecompositionForce(glm::dvec2 angle, glm::dvec2 force);
-	DecompositionForce CalculateDecompositionForce(double angle, glm::dvec2 force);
-	DecompositionForceVal CalculateDecompositionForceVal(glm::dvec2 angle, glm::dvec2 force);
+	DecompositionForce CalculateDecompositionForce(Vec2_ angle, Vec2_ force);
+	DecompositionForce CalculateDecompositionForce(FLOAT_ angle, Vec2_ force);
+	DecompositionForceVal CalculateDecompositionForceVal(Vec2_ angle, Vec2_ force);
 
 	/**
 	 * @brief 莫顿码
@@ -237,7 +237,7 @@ namespace PhysicsBlock
 	 * @param end 线段终点
 	 * @param drop 点位置
 	 * @return 垂直最短距离 */
-	double DropUptoLineShortes(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop);
+	FLOAT_ DropUptoLineShortes(Vec2_ start, Vec2_ end, Vec2_ drop);
 
 	/**
 	 * @brief 点到线段最短距离在线段上的交点
@@ -245,21 +245,21 @@ namespace PhysicsBlock
 	 * @param end 线段终点
 	 * @param drop 点位置
 	 * @return 点到线段的垂直交点 */
-	glm::dvec2 DropUptoLineShortesIntersect(glm::dvec2 start, glm::dvec2 end, glm::dvec2 drop);
+	Vec2_ DropUptoLineShortesIntersect(Vec2_ start, Vec2_ end, Vec2_ drop);
 
-	double Dot(const glm::dvec2 &a, const glm::dvec2 &b);
+	FLOAT_ Dot(const Vec2_ &a, const Vec2_ &b);
 	/**
 	 * @brief 投影
 	 * @param a
 	 * @param b
 	 * @return  */
-	double Cross(const glm::dvec2 &a, const glm::dvec2 &b);
+	FLOAT_ Cross(const Vec2_ &a, const Vec2_ &b);
 
 	// 顺时针 转 90度， s 缩放比
-	glm::dvec2 Cross(const glm::dvec2 &a, double s);
+	Vec2_ Cross(const Vec2_ &a, FLOAT_ s);
 
 	// 逆时针 转 90度， s 缩放比
-	glm::dvec2 Cross(double s, const glm::dvec2 &a);
+	Vec2_ Cross(FLOAT_ s, const Vec2_ &a);
 
 	/**
 	 * @brief 返回合理范围内的数
@@ -268,7 +268,7 @@ namespace PhysicsBlock
 	 * @param high 最高
 	 * @return 合理值
 	 * @note a 不合理就返回和他最近的合理值 */
-	double Clamp(double a, double low, double high);
+	FLOAT_ Clamp(FLOAT_ a, FLOAT_ low, FLOAT_ high);
 
-	double Random(double lo, double hi);
+	FLOAT_ Random(FLOAT_ lo, FLOAT_ hi);
 }

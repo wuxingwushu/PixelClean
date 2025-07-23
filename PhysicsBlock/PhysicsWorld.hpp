@@ -157,10 +157,10 @@ namespace PhysicsBlock
     class PhysicsWorld
     {
     public:
-        glm::dvec2 GravityAcceleration;      // 重力加速度
+        Vec2_ GravityAcceleration;      // 重力加速度
         const bool WindBool;                 // 是否开启网格风
-        glm::dvec2 Wind{0};                  // 风
-        glm::dvec2 *GridWind = nullptr;      // 网格风
+        Vec2_ Wind{0};                  // 风
+        Vec2_ *GridWind = nullptr;      // 网格风
         glm::uvec2 GridWindSize{0};          // 网格风大小
         MapFormwork *wMapFormwork = nullptr; // 地图对象
 
@@ -194,7 +194,7 @@ namespace PhysicsBlock
          * @brief 构建函数
          * @param GravityAcceleration 重力加速度
          * @param Wind 风是否开启 */
-        PhysicsWorld(glm::dvec2 GravityAcceleration, const bool Wind);
+        PhysicsWorld(Vec2_ GravityAcceleration, const bool Wind);
         ~PhysicsWorld();
 
         void AddObject(PhysicsShape *Object)
@@ -257,7 +257,7 @@ namespace PhysicsBlock
          * @param pos 位置
          * @return 对象指针
          * @retval nullptr 没有对象 */
-        PhysicsFormwork *Get(glm::dvec2 pos);
+        PhysicsFormwork *Get(Vec2_ pos);
 
         /**
          * @brief 设置地图
@@ -267,7 +267,7 @@ namespace PhysicsBlock
         /**
          * @brief 物理仿真
          * @param time 时间差 */
-        void PhysicsEmulator(double time);
+        void PhysicsEmulator(FLOAT_ time);
 
         // 物理信息更新
         void PhysicsInformationUpdate();
@@ -275,7 +275,7 @@ namespace PhysicsBlock
         /**
          * @brief 获取世界内的能量
          * @return 能量 */
-        double GetWorldEnergy();
+        FLOAT_ GetWorldEnergy();
     };
 
 }

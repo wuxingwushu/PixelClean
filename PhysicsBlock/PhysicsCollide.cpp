@@ -9,7 +9,7 @@ namespace PhysicsBlock
     int Collide(Contact *contacts, PhysicsShape *A, PhysicsShape *B)
     {
         int ContactSize = 0;
-        glm::dvec2 Drop, DropPos; // 骨骼点
+        Vec2_ Drop, DropPos; // 骨骼点
         for (size_t i = 0; i < A->OutlineSize; ++i)
         {
             Drop = A->OutlineSet[i];
@@ -69,7 +69,7 @@ namespace PhysicsBlock
     int Collide(Contact *contacts, PhysicsShape *A, MapFormwork *B)
     {
         int ContactSize = 0;
-        glm::dvec2 Drop, DropPos; // 骨骼点
+        Vec2_ Drop, DropPos; // 骨骼点
         for (size_t i = 0; i < A->OutlineSize; ++i)
         {
             Drop = A->OutlineSet[i];
@@ -98,7 +98,7 @@ namespace PhysicsBlock
         // 计算附近地形的碰撞点
         MapStatic *LMapStatic = (MapStatic *)B;
         int KD = 1;
-        std::vector<glm::dvec2> Outline = LMapStatic->GetLightweightOutline(ToInt(A->pos.x - A->CollisionR) - KD, ToInt(A->pos.y - A->CollisionR) - KD, ToInt(A->pos.x + A->CollisionR) + KD, ToInt(A->pos.y + A->CollisionR) + KD);
+        std::vector<Vec2_> Outline = LMapStatic->GetLightweightOutline(ToInt(A->pos.x - A->CollisionR) - KD, ToInt(A->pos.y - A->CollisionR) - KD, ToInt(A->pos.x + A->CollisionR) + KD, ToInt(A->pos.y + A->CollisionR) + KD);
         for (size_t i = 0; i < Outline.size(); ++i)
         {
             Drop = Outline[i] - LMapStatic->centrality;
@@ -149,7 +149,7 @@ namespace PhysicsBlock
                 contacts->normal = vec2angle({-1, 0}, info.Direction * (M_PI / 2)); // （反向作用力法向量）地形不会旋转
                 contacts->w_side = 0;                                               // 边索引 ID
                 // 一直馅在碰撞体，无法更新旧位置（旧位置不可以在碰撞体内）
-                A->OldPos = info.pos - (contacts->normal * 0.1);
+                A->OldPos = info.pos - (contacts->normal * FLOAT_(0.1));
                 return 1;
             }
         }
@@ -160,11 +160,11 @@ namespace PhysicsBlock
     {
         int ContactSize = 0;
 
-        std::vector<glm::dvec2> Cd{
-            A->pos + glm::dvec2{A->radius, 0},
-            A->pos + glm::dvec2{0, A->radius},
-            A->pos + glm::dvec2{-A->radius, 0},
-            A->pos + glm::dvec2{0, -A->radius}};
+        std::vector<Vec2_> Cd{
+            A->pos + Vec2_{A->radius, 0},
+            A->pos + Vec2_{0, A->radius},
+            A->pos + Vec2_{-A->radius, 0},
+            A->pos + Vec2_{0, -A->radius}};
         
         for (auto d : Cd)
         {
@@ -191,9 +191,9 @@ namespace PhysicsBlock
 
         MapStatic *LMapStatic = (MapStatic *)B;
         int KD = 2;
-        std::vector<glm::dvec2> Outline = LMapStatic->GetLightweightOutline(ToInt(A->pos.x - A->radius) - KD, ToInt(A->pos.y - A->radius) - KD, ToInt(A->pos.x + A->radius) + KD, ToInt(A->pos.y + A->radius) + KD);
-        double L;
-        double angle;
+        std::vector<Vec2_> Outline = LMapStatic->GetLightweightOutline(ToInt(A->pos.x - A->radius) - KD, ToInt(A->pos.y - A->radius) - KD, ToInt(A->pos.x + A->radius) + KD, ToInt(A->pos.y + A->radius) + KD);
+        FLOAT_ L;
+        FLOAT_ angle;
         for (auto d : Outline)
         {
             d -= LMapStatic->centrality;

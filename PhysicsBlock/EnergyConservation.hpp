@@ -14,28 +14,28 @@ namespace PhysicsBlock
      * @warning 理想碰撞，力都转换为速度，没有转换为角速度(可以理解为球体相撞) */
     void EnergyConservation(PhysicsParticle *a, PhysicsParticle *b)
     {
-        glm::dvec2 Distance = a->pos - b->pos;
-        double DistanceAngle = EdgeVecToCosAngleFloat(Distance);         // 获得相撞的角度
-        double Angle = DistanceAngle - EdgeVecToCosAngleFloat(a->speed); // A相差角度
-        double Long = Modulus(a->speed);                                 // A速度大小
-        double Va = Long * cos(Angle);                                   // A对象撞向B的速度
+        Vec2_ Distance = a->pos - b->pos;
+        FLOAT_ DistanceAngle = EdgeVecToCosAngleFloat(Distance);         // 获得相撞的角度
+        FLOAT_ Angle = DistanceAngle - EdgeVecToCosAngleFloat(a->speed); // A相差角度
+        FLOAT_ Long = Modulus(a->speed);                                 // A速度大小
+        FLOAT_ Va = Long * cos(Angle);                                   // A对象撞向B的速度
         a->speed.y = Long * sin(Angle);                                  // 剩下的速度不参与碰撞（摩擦？）
         Angle = DistanceAngle - EdgeVecToCosAngleFloat(b->speed);        // B相差角度
         Long = Modulus(b->speed);                                        // B速度大小
-        double Vb = Long * cos(Angle);                                   // B对象撞向A的速度
+        FLOAT_ Vb = Long * cos(Angle);                                   // B对象撞向A的速度
         b->speed.y = Long * sin(Angle);                                  // 剩下的速度不参与碰撞（摩擦？）
 #if EnergyConservationOptimum == 0
-        double MomentumA = a->mass * Va;
-        double MomentumB = b->mass * Vb;
-        double KineticEnergy = MomentumA * Va + MomentumB * Vb; // 动能
-        double Momentum = MomentumA + MomentumB;                // 动量
+        FLOAT_ MomentumA = a->mass * Va;
+        FLOAT_ MomentumB = b->mass * Vb;
+        FLOAT_ KineticEnergy = MomentumA * Va + MomentumB * Vb; // 动能
+        FLOAT_ Momentum = MomentumA + MomentumB;                // 动量
 
         // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
-        double A = a->mass + (pow((-a->mass), 2) / b->mass);
-        double B = ((-a->mass) * Momentum * (-2)) / b->mass;
-        double C = (-KineticEnergy) + (pow(Momentum, 2) / b->mass);
+        FLOAT_ A = a->mass + (pow((-a->mass), 2) / b->mass);
+        FLOAT_ B = ((-a->mass) * Momentum * (-2)) / b->mass;
+        FLOAT_ C = (-KineticEnergy) + (pow(Momentum, 2) / b->mass);
 
-        double discriminant = B * B - (4 * A * C);
+        FLOAT_ discriminant = B * B - (4 * A * C);
         if (discriminant >= 0)
         {
             discriminant = sqrt(discriminant);
@@ -53,7 +53,7 @@ namespace PhysicsBlock
             std::cout << "[PhysicsWorld]EnergyConservation: Error" << std::endl;
         }
 #else
-        double Momentum = a->mass * Va + b->mass * Vb;      // 动量
+        FLOAT_ Momentum = a->mass * Va + b->mass * Vb;      // 动量
         a->speed.x = (Momentum * -2) / (b->mass + a->mass); // B速度前 + B速度后    将两个结果相加，方程将会变成这样
         a->speed.x = -(Va + a->speed.x);                    // 其中一个结果是Va之前的速度,（不知道为什么要一个负号， 理论上应该是 减Va。 为什么变成 加Va, 结果还是相反的）
         // 计算另外一个值
@@ -71,11 +71,11 @@ namespace PhysicsBlock
      * @param CollisionDrop 碰撞点
      * @param Vertical 法向量角度(碰撞边的垂直法向量， 向内)
      * @warning 碰撞点在两质心线段上的，（动能 和 角动能 才守恒） */
-    void EnergyConservation(PhysicsShape *a, PhysicsShape *b, glm::dvec2 CollisionDrop, double Vertical)
+    void EnergyConservation(PhysicsShape *a, PhysicsShape *b, Vec2_ CollisionDrop, FLOAT_ Vertical)
     {
-        glm::dvec2 SpeedD = b->speed - a->speed;     // 速度差
-        glm::dvec2 PosArmB = CollisionDrop - b->pos; // B物体 指向 碰撞点 的距离
-        glm::dvec2 PosArmA = a->pos - CollisionDrop; // 碰撞点 指向 A物体 的距离
+        Vec2_ SpeedD = b->speed - a->speed;     // 速度差
+        Vec2_ PosArmB = CollisionDrop - b->pos; // B物体 指向 碰撞点 的距离
+        Vec2_ PosArmA = a->pos - CollisionDrop; // 碰撞点 指向 A物体 的距离
 
         DecompositionForce dfB = CalculateDecompositionForce(PosArmB, SpeedD);        // 速度差 到 碰撞点 的分速度
         DecompositionForce dfP = CalculateDecompositionForce(Vertical, dfB.Parallel); // 碰撞点 跟 法向量 的分速度
@@ -84,27 +84,27 @@ namespace PhysicsBlock
 #if EnergyConservationOptimum == 0
         /*------------ A ------------*/
         /*************移动*************/
-        double SpeedVal = Modulus(dfA.Parallel);   // 被移动的速度
-        double Momentum = SpeedVal * b->mass;      // 动量
-        double KineticEnergy = Momentum * b->mass; // 动能
+        FLOAT_ SpeedVal = Modulus(dfA.Parallel);   // 被移动的速度
+        FLOAT_ Momentum = SpeedVal * b->mass;      // 动量
+        FLOAT_ KineticEnergy = Momentum * b->mass; // 动能
 
         // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
-        double A = b->mass + (pow(b->mass, 2) / a->mass);
-        double B = (Momentum * (-b->mass) * -2) / a->mass;
-        double C = (-KineticEnergy) + (pow(Momentum, 2) / a->mass);
+        FLOAT_ A = b->mass + (pow(b->mass, 2) / a->mass);
+        FLOAT_ B = (Momentum * (-b->mass) * -2) / a->mass;
+        FLOAT_ C = (-KineticEnergy) + (pow(Momentum, 2) / a->mass);
 
-        double discriminant = B * B - (4 * A * C);
+        FLOAT_ discriminant = B * B - (4 * A * C);
         discriminant = sqrt(discriminant);
-        double Bs = ((-B + discriminant) + (-B - discriminant)) / (2 * A); // B速度前 + B速度后
+        FLOAT_ Bs = ((-B + discriminant) + (-B - discriminant)) / (2 * A); // B速度前 + B速度后
         Bs = -(SpeedVal + Bs);                                             // B物体的速度 变化量（被改变，大小，没有调整方向）
-        double As = (Momentum - (Bs * b->mass)) / a->mass;                 // A物体的速度 变化量（被改变，大小，没有调整方向）
+        FLOAT_ As = (Momentum - (Bs * b->mass)) / a->mass;                 // A物体的速度 变化量（被改变，大小，没有调整方向）
         a->speed += vec2angle({As, 0}, EdgeVecToCosAngleFloat(dfA.Parallel));
 
         /*************转动*************/
-        double AngleVal = Modulus(dfA.Vartical);                        // 被转动的速度
-        double HornKineticEnergy = AngleVal * AngleVal * b->mass;       // 角动能 = 动能 （能量守恒定律）
-        double AngleSpeed = sqrt(HornKineticEnergy / b->MomentInertia); // B角速度
-        double HornMomentum = AngleSpeed * b->MomentInertia;            // 角动量
+        FLOAT_ AngleVal = Modulus(dfA.Vartical);                        // 被转动的速度
+        FLOAT_ HornKineticEnergy = AngleVal * AngleVal * b->mass;       // 角动能 = 动能 （能量守恒定律）
+        FLOAT_ AngleSpeed = sqrt(HornKineticEnergy / b->MomentInertia); // B角速度
+        FLOAT_ HornMomentum = AngleSpeed * b->MomentInertia;            // 角动量
 
         // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
         A = b->MomentInertia + (pow(b->MomentInertia, 2) / a->MomentInertia);
@@ -113,9 +113,9 @@ namespace PhysicsBlock
 
         discriminant = B * B - (4 * A * C);
         discriminant = sqrt(discriminant);
-        double Bas = ((-B + discriminant) + (-B - discriminant)) / (2 * A);        // B角速度前 + B角速度后
+        FLOAT_ Bas = ((-B + discriminant) + (-B - discriminant)) / (2 * A);        // B角速度前 + B角速度后
         Bas = -(AngleSpeed + Bas);                                                 // B物体的角速度 变化量
-        double Aas = (HornMomentum - (Bas * b->MomentInertia)) / a->MomentInertia; // A物体的角速度 变化量
+        FLOAT_ Aas = (HornMomentum - (Bas * b->MomentInertia)) / a->MomentInertia; // A物体的角速度 变化量
         a->angleSpeed += Aas;
 
         /*------------ B ------------*/
@@ -157,28 +157,28 @@ namespace PhysicsBlock
 #else
         /*------------ A ------------*/
         /*************移动*************/
-        double SpeedVal = Modulus(dfA.Parallel); // 被移动的速度
+        FLOAT_ SpeedVal = Modulus(dfA.Parallel); // 被移动的速度
 
         // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
-        double A = (b->mass + a->mass);
-        double B = (SpeedVal * b->mass * 2);
-        double Bs = (-B) / A;                              // B速度前 + B速度后
+        FLOAT_ A = (b->mass + a->mass);
+        FLOAT_ B = (SpeedVal * b->mass * 2);
+        FLOAT_ Bs = (-B) / A;                              // B速度前 + B速度后
         Bs = -(SpeedVal + Bs);                             // B物体的速度 变化量（被改变，大小，没有调整方向）
-        double As = ((SpeedVal - Bs) * b->mass) / a->mass; // A物体的速度 变化量（被改变，大小，没有调整方向）
+        FLOAT_ As = ((SpeedVal - Bs) * b->mass) / a->mass; // A物体的速度 变化量（被改变，大小，没有调整方向）
         a->speed += vec2angle({As, 0}, EdgeVecToCosAngleFloat(dfA.Parallel));
 
         /*************转动*************/
-        double AngleVal = Modulus(dfA.Vartical);                        // 被转动的速度
-        double HornKineticEnergy = AngleVal * AngleVal * b->mass;       // 角动能 = 动能 （能量守恒定律）
-        double AngleSpeed = sqrt(HornKineticEnergy / b->MomentInertia); // B角速度
-        double HornMomentum = AngleSpeed * b->MomentInertia;            // 角动量
+        FLOAT_ AngleVal = Modulus(dfA.Vartical);                        // 被转动的速度
+        FLOAT_ HornKineticEnergy = AngleVal * AngleVal * b->mass;       // 角动能 = 动能 （能量守恒定律）
+        FLOAT_ AngleSpeed = sqrt(HornKineticEnergy / b->MomentInertia); // B角速度
+        FLOAT_ HornMomentum = AngleSpeed * b->MomentInertia;            // 角动量
 
         // 一元二次方程 的 ABC，：0 = AX^2 + BX + C
         A = b->MomentInertia + a->MomentInertia;
         B = HornMomentum * 2;
-        double Bas = (-B) / A;                                                     // B角速度前 + B角速度后
+        FLOAT_ Bas = (-B) / A;                                                     // B角速度前 + B角速度后
         Bas = -(AngleSpeed + Bas);                                                 // B物体的角速度 变化量
-        double Aas = (HornMomentum - (Bas * b->MomentInertia)) / a->MomentInertia; // A物体的角速度 变化量
+        FLOAT_ Aas = (HornMomentum - (Bas * b->MomentInertia)) / a->MomentInertia; // A物体的角速度 变化量
         a->angleSpeed += Aas;
 
         /*------------ B ------------*/

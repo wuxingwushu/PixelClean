@@ -47,10 +47,10 @@ namespace PhysicsBlock
     }
 
     // 预处理
-    void PhysicsBaseArbiterAA::PreStep(double inv_dt)
+    void PhysicsBaseArbiterAA::PreStep(FLOAT_ inv_dt)
     {
-        const double k_allowedPenetration = 0.01;    // 容許穿透
-        const double k_biasFactor = k_biasFactorVAL; // 位置修正量
+        const FLOAT_ k_allowedPenetration = 0.01;    // 容許穿透
+        const FLOAT_ k_biasFactor = k_biasFactorVAL; // 位置修正量
 
         // 獲取碰撞點
         Contact *c;
@@ -60,25 +60,25 @@ namespace PhysicsBlock
             c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
             c->r2 = c->position - object2->pos; // object2 质心 指向碰撞点的 力矩
 
-            double rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
-            double rn2 = Dot(c->r2, c->normal); // box2质心指向碰撞点 到 法向量 的 投影
-            double R1 = Dot(c->r1, c->r1);
-            double R2 = Dot(c->r2, c->r2);
-            double kNormal = object1->invMass + object2->invMass;
-            double kTangent = kNormal;
+            FLOAT_ rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
+            FLOAT_ rn2 = Dot(c->r2, c->normal); // box2质心指向碰撞点 到 法向量 的 投影
+            FLOAT_ R1 = Dot(c->r1, c->r1);
+            FLOAT_ R2 = Dot(c->r2, c->r2);
+            FLOAT_ kNormal = object1->invMass + object2->invMass;
+            FLOAT_ kTangent = kNormal;
             kNormal += object1->invMomentInertia * (R1 - rn1 * rn1) + object2->invMomentInertia * (R2 - rn2 * rn2);
             c->massNormal = 1.0 / kNormal;
 
-            glm::dvec2 tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
-            double rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
-            double rt2 = Dot(c->r2, tangent);           // box2质心指向碰撞点 到 垂直法向量 的 投影
+            Vec2_ tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
+            FLOAT_ rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
+            FLOAT_ rt2 = Dot(c->r2, tangent);           // box2质心指向碰撞点 到 垂直法向量 的 投影
             kTangent += object1->invMomentInertia * (R1 - rt1 * rt1) + object2->invMomentInertia * (R2 - rt2 * rt2);
             c->massTangent = 1.0 / kTangent;
 
-            c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
+            c->bias = -k_biasFactor * inv_dt * std::min(FLOAT_(0.0), c->separation + k_allowedPenetration); // 物体位置修正值大小
 
             // 施加正常+摩擦脉冲
-            glm::dvec2 P = c->Pn * c->normal + c->Pt * tangent;
+            Vec2_ P = c->Pn * c->normal + c->Pt * tangent;
 
             object1->speed -= object1->invMass * P;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, P);
@@ -97,20 +97,20 @@ namespace PhysicsBlock
             c = contacts + i;
 
             // 接触时的相对速度
-            glm::dvec2 dv = object2->speed + Cross(object2->angleSpeed, c->r2) - object1->speed - Cross(object1->angleSpeed, c->r1);
+            Vec2_ dv = object2->speed + Cross(object2->angleSpeed, c->r2) - object1->speed - Cross(object1->angleSpeed, c->r1);
 
             // 计算法向脉冲
-            double vn = Dot(dv, c->normal); // 作用于对方的速度
+            FLOAT_ vn = Dot(dv, c->normal); // 作用于对方的速度
 
-            double dPn = c->massNormal * (-vn + c->bias); // 移动速度大小修补值
+            FLOAT_ dPn = c->massNormal * (-vn + c->bias); // 移动速度大小修补值
 
             // 夹紧累积的脉冲
-            double Pn0 = c->Pn;
-            c->Pn = std::max(Pn0 + dPn, 0.0);
+            FLOAT_ Pn0 = c->Pn;
+            c->Pn = std::max(Pn0 + dPn, FLOAT_(0.0));
             dPn = c->Pn - Pn0;
 
             // 应用接触脉冲
-            glm::dvec2 Pn = dPn * c->normal;
+            Vec2_ Pn = dPn * c->normal;
 
             object1->speed -= object1->invMass * Pn;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pn);
@@ -121,20 +121,20 @@ namespace PhysicsBlock
             // 接触时的相对速度
             dv = object2->speed + Cross(object2->angleSpeed, c->r2) - object1->speed - Cross(object1->angleSpeed, c->r1);
 
-            glm::dvec2 tangent = Cross(c->normal, 1.0);
-            double vt = Dot(dv, tangent);        // 作用于对方的角速度
-            double dPt = c->massTangent * (-vt); // 旋转速度大小修补值
+            Vec2_ tangent = Cross(c->normal, 1.0);
+            FLOAT_ vt = Dot(dv, tangent);        // 作用于对方的角速度
+            FLOAT_ dPt = c->massTangent * (-vt); // 旋转速度大小修补值
 
             // 计算摩擦脉冲
-            double maxPt = friction * c->Pn;
+            FLOAT_ maxPt = friction * c->Pn;
 
             // 夹具摩擦
-            double oldTangentImpulse = c->Pt;
+            FLOAT_ oldTangentImpulse = c->Pt;
             c->Pt = Clamp(oldTangentImpulse + dPt, -maxPt, maxPt);
             dPt = c->Pt - oldTangentImpulse;
 
             // 应用接触脉冲
-            glm::dvec2 Pt = dPt * tangent;
+            Vec2_ Pt = dPt * tangent;
 
             object1->speed -= object1->invMass * Pt;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pt);
@@ -185,10 +185,10 @@ namespace PhysicsBlock
     }
 
     // 预处理
-    void PhysicsBaseArbiterAD::PreStep(double inv_dt)
+    void PhysicsBaseArbiterAD::PreStep(FLOAT_ inv_dt)
     {
-        const double k_allowedPenetration = 0.01; // 容許穿透
-        const double k_biasFactor = k_biasFactorVAL;          // 位置修正量
+        const FLOAT_ k_allowedPenetration = 0.01; // 容許穿透
+        const FLOAT_ k_biasFactor = k_biasFactorVAL;          // 位置修正量
 
         // 獲取碰撞點
         Contact *c;
@@ -198,22 +198,22 @@ namespace PhysicsBlock
             c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
             c->r2 = {0,0}; // object2 质心 指向碰撞点的 力矩
 
-            double rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
-            double R1 = Dot(c->r1, c->r1);
-            double kNormal = object1->invMass + object2->invMass;
-            double kTangent = kNormal;
+            FLOAT_ rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
+            FLOAT_ R1 = Dot(c->r1, c->r1);
+            FLOAT_ kNormal = object1->invMass + object2->invMass;
+            FLOAT_ kTangent = kNormal;
             kNormal += object1->invMomentInertia * (R1 - rn1 * rn1);
             c->massNormal = 1.0 / kNormal;
 
-            glm::dvec2 tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
-            double rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
+            Vec2_ tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
+            FLOAT_ rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
             kTangent += object1->invMomentInertia * (R1 - rt1 * rt1);
             c->massTangent = 1.0 / kTangent;
 
-            c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
+            c->bias = -k_biasFactor * inv_dt * std::min(FLOAT_(0.0), c->separation + k_allowedPenetration); // 物体位置修正值大小
 
             // 施加正常+摩擦脉冲
-            glm::dvec2 P = c->Pn * c->normal + c->Pt * tangent;
+            Vec2_ P = c->Pn * c->normal + c->Pt * tangent;
 
             object1->speed -= object1->invMass * P;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, P);
@@ -233,20 +233,20 @@ namespace PhysicsBlock
             c = contacts + i;
 
             // 接触时的相对速度
-            glm::dvec2 dv = object2->speed - object1->speed - Cross(object1->angleSpeed, c->r1);
+            Vec2_ dv = object2->speed - object1->speed - Cross(object1->angleSpeed, c->r1);
 
             // 计算法向脉冲
-            double vn = Dot(dv, c->normal); // 作用于对方的速度
+            FLOAT_ vn = Dot(dv, c->normal); // 作用于对方的速度
 
-            double dPn = c->massNormal * (-vn + c->bias); // 移动速度大小修补值
+            FLOAT_ dPn = c->massNormal * (-vn + c->bias); // 移动速度大小修补值
 
             // 夹紧累积的脉冲
-            double Pn0 = c->Pn;
-            c->Pn = std::max(Pn0 + dPn, 0.0);
+            FLOAT_ Pn0 = c->Pn;
+            c->Pn = std::max(Pn0 + dPn, FLOAT_(0.0));
             dPn = c->Pn - Pn0;
 
             // 应用接触脉冲
-            glm::dvec2 Pn = dPn * c->normal;
+            Vec2_ Pn = dPn * c->normal;
 
             object1->speed -= object1->invMass * Pn;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pn);
@@ -257,20 +257,20 @@ namespace PhysicsBlock
             // 接触时的相对速度
             dv = object2->speed - object1->speed - Cross(object1->angleSpeed, c->r1);
 
-            glm::dvec2 tangent = Cross(c->normal, 1.0);
-            double vt = Dot(dv, tangent);        // 作用于对方的角速度
-            double dPt = c->massTangent * (-vt); // 旋转速度大小修补值
+            Vec2_ tangent = Cross(c->normal, 1.0);
+            FLOAT_ vt = Dot(dv, tangent);        // 作用于对方的角速度
+            FLOAT_ dPt = c->massTangent * (-vt); // 旋转速度大小修补值
 
             // 计算摩擦脉冲
-            double maxPt = friction * c->Pn;
+            FLOAT_ maxPt = friction * c->Pn;
 
             // 夹具摩擦
-            double oldTangentImpulse = c->Pt;
+            FLOAT_ oldTangentImpulse = c->Pt;
             c->Pt = Clamp(oldTangentImpulse + dPt, -maxPt, maxPt);
             dPt = c->Pt - oldTangentImpulse;
 
             // 应用接触脉冲
-            glm::dvec2 Pt = dPt * tangent;
+            Vec2_ Pt = dPt * tangent;
 
             object1->speed -= object1->invMass * Pt;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pt);
@@ -319,10 +319,10 @@ namespace PhysicsBlock
     }
 
     // 预处理
-    void PhysicsBaseArbiterA::PreStep(double inv_dt)
+    void PhysicsBaseArbiterA::PreStep(FLOAT_ inv_dt)
     {
-        const double k_allowedPenetration = 0.01; // 容許穿透
-        const double k_biasFactor = k_biasFactorVAL;          // 位置修正量
+        const FLOAT_ k_allowedPenetration = 0.01; // 容許穿透
+        const FLOAT_ k_biasFactor = k_biasFactorVAL;          // 位置修正量
 
         // 獲取碰撞點
         Contact *c;
@@ -332,22 +332,22 @@ namespace PhysicsBlock
             c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
             c->r2 = { 0, 0 };
 
-            double rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
-            double R1 = Dot(c->r1, c->r1);
-            double kNormal = object1->invMass;
-            double kTangent = kNormal;
+            FLOAT_ rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
+            FLOAT_ R1 = Dot(c->r1, c->r1);
+            FLOAT_ kNormal = object1->invMass;
+            FLOAT_ kTangent = kNormal;
             kNormal += object1->invMomentInertia * (R1 - rn1 * rn1);
             c->massNormal = 1.0 / kNormal;
 
-            glm::dvec2 tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
-            double rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
+            Vec2_ tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
+            FLOAT_ rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
             kTangent += object1->invMomentInertia * (R1 - rt1 * rt1);
             c->massTangent = 1.0 / kTangent;
 
-            c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
+            c->bias = -k_biasFactor * inv_dt * std::min(FLOAT_(0.0), c->separation + k_allowedPenetration); // 物体位置修正值大小
 
             // 施加正常+摩擦脉冲
-            glm::dvec2 P = c->Pn * c->normal - c->Pt * tangent;
+            Vec2_ P = c->Pn * c->normal - c->Pt * tangent;
 
             object1->speed -= object1->invMass * P;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, P);
@@ -363,20 +363,20 @@ namespace PhysicsBlock
             c = contacts + i;
 
             // 接触时的相对速度
-            glm::dvec2 dv = -object1->speed - Cross(object1->angleSpeed, c->r1);
+            Vec2_ dv = -object1->speed - Cross(object1->angleSpeed, c->r1);
 
             // 计算法向脉冲
-            double vn = Dot(dv, c->normal); // 作用于对方的速度
+            FLOAT_ vn = Dot(dv, c->normal); // 作用于对方的速度
 
-            double dPn = c->massNormal * (-vn + c->bias); // 移动速度大小修补值
+            FLOAT_ dPn = c->massNormal * (-vn + c->bias); // 移动速度大小修补值
 
             // 夹紧累积的脉冲
-            double Pn0 = c->Pn;
-            c->Pn = std::max(Pn0 + dPn, 0.0);
+            FLOAT_ Pn0 = c->Pn;
+            c->Pn = std::max(Pn0 + dPn, FLOAT_(0.0));
             dPn = c->Pn - Pn0;
 
             // 应用接触脉冲
-            glm::dvec2 Pn = dPn * c->normal;
+            Vec2_ Pn = dPn * c->normal;
 
             object1->speed -= object1->invMass * Pn;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pn);
@@ -384,20 +384,20 @@ namespace PhysicsBlock
             // 接触时的相对速度
             dv = -object1->speed - Cross(object1->angleSpeed, c->r1);
 
-            glm::dvec2 tangent = Cross(c->normal, -1.0);
-            double vt = Dot(dv, tangent);        // 作用于对方的角速度
-            double dPt = c->massTangent * (-vt); // 旋转速度大小修补值
+            Vec2_ tangent = Cross(c->normal, -1.0);
+            FLOAT_ vt = Dot(dv, tangent);        // 作用于对方的角速度
+            FLOAT_ dPt = c->massTangent * (-vt); // 旋转速度大小修补值
 
             // 计算摩擦脉冲
-            double maxPt = friction * c->Pn;
+            FLOAT_ maxPt = friction * c->Pn;
 
             // 夹具摩擦
-            double oldTangentImpulse = c->Pt;
+            FLOAT_ oldTangentImpulse = c->Pt;
             c->Pt = Clamp(oldTangentImpulse + dPt, -maxPt, maxPt);
             dPt = c->Pt - oldTangentImpulse;
 
             // 应用接触脉冲
-            glm::dvec2 Pt = dPt * tangent;
+            Vec2_ Pt = dPt * tangent;
 
             object1->speed -= object1->invMass * Pt;
             object1->angleSpeed -= object1->invMomentInertia * Cross(c->r1, Pt);
@@ -444,10 +444,10 @@ namespace PhysicsBlock
     }
 
     // 预处理
-    void PhysicsBaseArbiterD::PreStep(double inv_dt)
+    void PhysicsBaseArbiterD::PreStep(FLOAT_ inv_dt)
     {
-        const double k_allowedPenetration = 0.01; // 容許穿透
-        const double k_biasFactor = k_biasFactorVAL;          // 位置修正量
+        const FLOAT_ k_allowedPenetration = 0.01; // 容許穿透
+        const FLOAT_ k_biasFactor = k_biasFactorVAL;          // 位置修正量
 
         // 獲取碰撞點
         Contact *c;
@@ -457,19 +457,19 @@ namespace PhysicsBlock
             c->r1 = c->position - object1->pos; // object1 质心 指向碰撞点的 力矩
             c->r2 = { 0, 0 };
 
-            double rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
-            double R1 = Dot(c->r1, c->r1);
-            double kNormal = object1->invMass;
+            FLOAT_ rn1 = Dot(c->r1, c->normal); // box1质心指向碰撞点 到 法向量 的 投影
+            FLOAT_ R1 = Dot(c->r1, c->r1);
+            FLOAT_ kNormal = object1->invMass;
             c->massNormal = 1.0 / kNormal;
 
-            glm::dvec2 tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
-            double rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
+            Vec2_ tangent = Cross(c->normal, 1.0); // 垂直 normal 的 法向量
+            FLOAT_ rt1 = Dot(c->r1, tangent);           // box1质心指向碰撞点 到 垂直法向量 的 投影
             c->massTangent = 1.0 / kNormal;
 
-            c->bias = -k_biasFactor * inv_dt * std::min(0.0, c->separation + k_allowedPenetration); // 物体位置修正值大小
+            c->bias = -k_biasFactor * inv_dt * std::min(FLOAT_(0.0), c->separation + k_allowedPenetration); // 物体位置修正值大小
 
             // 施加正常+摩擦脉冲
-            glm::dvec2 P = c->Pn * c->normal + c->Pt * tangent;
+            Vec2_ P = c->Pn * c->normal + c->Pt * tangent;
 
             object1->speed -= object1->invMass * P;
         }
@@ -484,40 +484,40 @@ namespace PhysicsBlock
             c = contacts + i;
 
             // 接触时的相对速度
-            glm::dvec2 dv = -object1->speed;
+            Vec2_ dv = -object1->speed;
 
             // 计算法向脉冲
-            double vn = Dot(dv, c->normal); // 作用于对方的速度
+            FLOAT_ vn = Dot(dv, c->normal); // 作用于对方的速度
 
-            double dPn = c->massNormal * (-vn + c->bias); // 移动速度大小修补值
+            FLOAT_ dPn = c->massNormal * (-vn + c->bias); // 移动速度大小修补值
 
             // 夹紧累积的脉冲
-            double Pn0 = c->Pn;
-            c->Pn = std::max(Pn0 + dPn, 0.0);
+            FLOAT_ Pn0 = c->Pn;
+            c->Pn = std::max(Pn0 + dPn, FLOAT_(0.0));
             dPn = c->Pn - Pn0;
 
             // 应用接触脉冲
-            glm::dvec2 Pn = dPn * c->normal;
+            Vec2_ Pn = dPn * c->normal;
 
             object1->speed -= object1->invMass * Pn;
 
             // 接触时的相对速度
             dv = -object1->speed;
 
-            glm::dvec2 tangent = Cross(c->normal, 1.0);
-            double vt = Dot(dv, tangent);        // 作用于对方的角速度
-            double dPt = c->massTangent * (-vt); // 旋转速度大小修补值
+            Vec2_ tangent = Cross(c->normal, 1.0);
+            FLOAT_ vt = Dot(dv, tangent);        // 作用于对方的角速度
+            FLOAT_ dPt = c->massTangent * (-vt); // 旋转速度大小修补值
 
             // 计算摩擦脉冲
-            double maxPt = friction * c->Pn;
+            FLOAT_ maxPt = friction * c->Pn;
 
             // 夹具摩擦
-            double oldTangentImpulse = c->Pt;
+            FLOAT_ oldTangentImpulse = c->Pt;
             c->Pt = Clamp(oldTangentImpulse + dPt, -maxPt, maxPt);
             dPt = c->Pt - oldTangentImpulse;
 
             // 应用接触脉冲
-            glm::dvec2 Pt = dPt * tangent;
+            Vec2_ Pt = dPt * tangent;
 
             object1->speed -= object1->invMass * Pt;
         }

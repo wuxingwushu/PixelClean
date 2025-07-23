@@ -30,7 +30,7 @@ namespace GAME
 			{
 				if (mMapStatic->at(x, y).Entity)
 				{
-					ShowStaticSquare(glm::dvec2{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
+					ShowStaticSquare(Vec2_{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
 				}
 			}
 		}
@@ -134,7 +134,7 @@ namespace GAME
 				{
 					if (mMapStatic->at(x, y).Entity)
 					{
-						ShowStaticSquare(glm::dvec2{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
+						ShowStaticSquare(Vec2_{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
 					}
 				}
 			}
@@ -186,7 +186,7 @@ namespace GAME
 					{
 						if (mMapStatic->at(x, y).Entity)
 						{
-							ShowStaticSquare(glm::dvec2{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
+							ShowStaticSquare(Vec2_{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
 						}
 					}
 				}
@@ -206,7 +206,7 @@ namespace GAME
 		huoqdedian.x += mCamera->getCameraPos().x;
 		huoqdedian.y += mCamera->getCameraPos().y;
 
-		static glm::dvec2 beang{0}, beang2{0}, Opos{0}, end{0};
+		static Vec2_ beang{0}, beang2{0}, Opos{0}, end{0};
 
 		mAuxiliaryVision->Begin();
 
@@ -215,7 +215,7 @@ namespace GAME
 		{
 			// 点击左键
 			static int Z_fangzhifanfuvhufa;	   // 避免反复触发
-			static glm::dvec2 PhysicsShapeArm; //
+			static Vec2_ PhysicsShapeArm; //
 			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
 			if (Leftan == GLFW_PRESS)
 			{
@@ -251,12 +251,12 @@ namespace GAME
 							if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::shape)
 							{
 								PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->angle);
-								((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->AddForce(lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), (beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())) * 100.0);
+								((PhysicsBlock::PhysicsShape*)PhysicsFormworkPtr)->AddForce(lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), (beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())) * FLOAT_(100.0));
 								mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 0}, {1, 0, 0, 1}, {(beang2), 0}, {0, 1, 0, 1});
 							}
 							else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::particle)
 							{
-								((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->AddForce((beang2 - ((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos) * 100.0);
+								((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->AddForce((beang2 - ((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos) * FLOAT_(100.0));
 								mAuxiliaryVision->Line({ ((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos, 0 }, { 1, 0, 0, 1 }, { (beang2), 0 }, { 0, 1, 0, 1 });
 							}
 						}
@@ -346,7 +346,7 @@ namespace GAME
 				{
 					if (i->at(x, y).Entity)
 					{
-						ShowSquare(SquarePhysics::vec2angle(glm::dvec2{x, y} - i->CentreMass, i->angle) + i->pos, i->angle, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
+						ShowSquare(PhysicsBlock::vec2angle(Vec2_{x, y} - i->CentreMass, i->angle) + i->pos, i->angle, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
 					}
 				}
 			}

@@ -33,11 +33,27 @@ namespace PhysicsBlock
 
 #if MemoryPoolBool
 #if ThreadPoolBool
-#define AuxiliaryMemoryPool(Arbiter_, Type1, Name1, Type2, Name2)  \
-    std::mutex mLock##Name1##Name2;                                \
+
+/**
+ * @brief 辅助生成创建对象内存池声明
+ * @param Arbiter_ 处理两种物体碰撞的类
+ * @param Type1 物体1类型
+ * @param Name1 物体1简称
+ * @param Type2 物体2类型
+ * @param Name2 物体2简称 */
+#define AuxiliaryMemoryPool(Arbiter_, Type1, Name1, Type2, Name2) \
+    std::mutex mLock##Name1##Name2;                               \
     MemoryPool<Arbiter_, 1000 * sizeof(Arbiter_)> Pool##Arbiter_; \
     void Arbiter(Type1 *Name1, Type2 *Name2);
 
+/**
+ * @brief 辅助创建对象函数生成
+ * @param Arbiter_ 处理两种物体碰撞的类
+ * @param Type1 物体1类型
+ * @param Name1 物体1简称
+ * @param Type2 物体2类型
+ * @param Name2 物体2简称
+ * @param ID 唯一数字，且和销毁函数统一 */
 #define AuxiliaryArbiter(Arbiter_, Type1, Name1, Type2, Name2, ID) \
     inline void PhysicsWorld::Arbiter(Type1 *Name1, Type2 *Name2)  \
     {                                                              \
@@ -49,6 +65,14 @@ namespace PhysicsBlock
         HandleCollideGroup(ptr);                                   \
     }
 
+/**
+ * @brief 辅助生成销毁对象的代码块
+ * @param Arbiter_ 处理两种物体碰撞的类
+ * @param Type1 物体1类型
+ * @param Name1 物体1简称
+ * @param Type2 物体2类型
+ * @param Name2 物体2简称
+ * @param ID 唯一数字，且和创建函数统一 */
 #define AuxiliaryDelete(Arbiter_, Type1, Name1, Type2, Name2, ID) \
     case ID:                                                      \
     {                                                             \
@@ -57,10 +81,25 @@ namespace PhysicsBlock
     }                                                             \
     break;
 #else
+/**
+ * @brief 辅助生成创建对象内存池声明
+ * @param Arbiter_ 处理两种物体碰撞的类
+ * @param Type1 物体1类型
+ * @param Name1 物体1简称
+ * @param Type2 物体2类型
+ * @param Name2 物体2简称 */
 #define AuxiliaryMemoryPool(Arbiter_, Type1, Name1, Type2, Name2)  \
     MemoryPool<Arbiter_, 10000 * sizeof(Arbiter_)> Pool##Arbiter_; \
     void Arbiter(Type1 *Name1, Type2 *Name2);
 
+/**
+ * @brief 辅助创建对象函数生成
+ * @param Arbiter_ 处理两种物体碰撞的类
+ * @param Type1 物体1类型
+ * @param Name1 物体1简称
+ * @param Type2 物体2类型
+ * @param Name2 物体2简称
+ * @param ID 唯一数字，且和销毁函数统一 */
 #define AuxiliaryArbiter(Arbiter_, Type1, Name1, Type2, Name2, ID) \
     inline void PhysicsWorld::Arbiter(Type1 *Name1, Type2 *Name2)  \
     {                                                              \
@@ -70,6 +109,14 @@ namespace PhysicsBlock
         HandleCollideGroup(ptr);                                   \
     }
 
+/**
+ * @brief 辅助生成销毁对象的代码块
+ * @param Arbiter_ 处理两种物体碰撞的类
+ * @param Type1 物体1类型
+ * @param Name1 物体1简称
+ * @param Type2 物体2类型
+ * @param Name2 物体2简称
+ * @param ID 唯一数字，且和创建函数统一 */
 #define AuxiliaryDelete(Arbiter_, Type1, Name1, Type2, Name2, ID) \
     case ID:                                                      \
     {                                                             \
@@ -79,9 +126,24 @@ namespace PhysicsBlock
 #endif
 
 #else
+/**
+ * @brief 辅助生成创建对象声明
+ * @param Arbiter_ 处理两种物体碰撞的类
+ * @param Type1 物体1类型
+ * @param Name1 物体1简称
+ * @param Type2 物体2类型
+ * @param Name2 物体2简称 */
 #define AuxiliaryMemoryPool(Arbiter_, Type1, Name1, Type2, Name2) \
     void Arbiter(Type1 *Name1, Type2 *Name2);
 
+/**
+ * @brief 辅助创建对象函数生成
+ * @param Arbiter_ 处理两种物体碰撞的类
+ * @param Type1 物体1类型
+ * @param Name1 物体1简称
+ * @param Type2 物体2类型
+ * @param Name2 物体2简称
+ * @param ID 唯一数字，且和销毁函数统一 */
 #define AuxiliaryArbiter(Arbiter_, Type1, Name1, Type2, Name2, ID) \
     inline void PhysicsWorld::Arbiter(Type1 *Name1, Type2 *Name2)  \
     {                                                              \
@@ -102,13 +164,11 @@ namespace PhysicsBlock
         glm::uvec2 GridWindSize{0};          // 网格风大小
         MapFormwork *wMapFormwork = nullptr; // 地图对象
 
-        double inv_dt;
-        
-        std::vector<PhysicsShape *> PhysicsShapeS;
-        std::vector<PhysicsParticle *> PhysicsParticleS;
-        std::vector<PhysicsJoint *> PhysicsJointS;
-        std::vector<BaseJunction *> BaseJunctionS;
-        std::vector<PhysicsCircle *> PhysicsCircleS;
+        std::vector<PhysicsShape *> PhysicsShapeS;       // 物理形状网格
+        std::vector<PhysicsParticle *> PhysicsParticleS; // 物理点
+        std::vector<PhysicsJoint *> PhysicsJointS;       // 物理关节
+        std::vector<BaseJunction *> BaseJunctionS;       // 物理绳子
+        std::vector<PhysicsCircle *> PhysicsCircleS;     // 物理圆
 
         std::map<ArbiterKey, BaseArbiter *> CollideGroupS; // 碰撞队
 
@@ -156,6 +216,7 @@ namespace PhysicsBlock
         {
             BaseJunctionS.push_back(Object);
         }
+
         void AddObject(PhysicsCircle *Object)
         {
             PhysicsCircleS.push_back(Object);

@@ -2,7 +2,7 @@
 #include "BaseCalculate.hpp"
 #include <utility>
 
-#define k_biasFactorVAL 0.2 // 位置修正量
+#define k_biasFactorVAL 0.5 // 位置修正量
 
 namespace PhysicsBlock
 {

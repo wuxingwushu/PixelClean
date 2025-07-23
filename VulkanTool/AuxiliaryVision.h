@@ -10,9 +10,16 @@
 
 namespace VulKan {
 
+	struct AuxiliaryLineSpot
+	{
+		glm::vec3 Pos{};
+		glm::vec4 Color{};
+	};
+
 	struct AuxiliarySpot
 	{
 		glm::vec3 Pos{};
+		float Size;
 		glm::vec4 Color{};
 	};
 
@@ -37,12 +44,20 @@ namespace VulKan {
 	};
 
 
-	typedef unsigned int (*AuxiliaryDataHandle)(AuxiliarySpot* P, void* D, unsigned int Size);
-	struct StaticAuxiliaryData
+	typedef unsigned int (*AuxiliarySpotDataHandle)(AuxiliarySpot* P, void* D, unsigned int Size);
+	struct StaticAuxiliarySpotData
 	{
 		void* Pointer = nullptr;
 		unsigned int Size = 0;
-		AuxiliaryDataHandle Function = nullptr;
+		AuxiliarySpotDataHandle Function = nullptr;
+	};
+
+	typedef unsigned int (*AuxiliaryLineDataHandle)(AuxiliaryLineSpot* P, void* D, unsigned int Size);
+	struct StaticAuxiliaryLineData
+	{
+		void* Pointer = nullptr;
+		unsigned int Size = 0;
+		AuxiliaryLineDataHandle Function = nullptr;
 	};
 
 	
@@ -89,8 +104,9 @@ namespace VulKan {
 		};
 
 		//画点
-		inline void Spot(glm::dvec3 pos, glm::vec4 color) {
+		inline void Spot(glm::dvec3 pos, float size, glm::vec4 color) {
 			SpotPointerHOST->Pos = pos;
+			SpotPointerHOST->Size = size;
 			SpotPointerHOST->Color = color;
 			++SpotPointerHOST;
 			++SpotNumber;
@@ -105,8 +121,8 @@ namespace VulKan {
 			LineVertex.push_back({ Vertex2, color });
 		};
 		//一次性点（录制外使用）
-		inline void AddSpot(glm::dvec3 pos, glm::vec4 color) {
-			SpotVertex.push_back({ pos, color });
+		inline void AddSpot(glm::dvec3 pos, float size, glm::vec4 color) {
+			SpotVertex.push_back({ pos, size, color });
 		};
 
 		//静态线段（录制外使用）
@@ -120,8 +136,8 @@ namespace VulKan {
 		inline void ClearStaticLine() { StaticLineVertex.clear(); }
 
 		//静态点（录制外使用）
-		inline void AddStaticSpot(glm::dvec3 pos, glm::vec4 color) {
-			StaticSpotVertex.push_back({ pos, color });
+		inline void AddStaticSpot(glm::dvec3 pos, float size, glm::vec4 color) {
+			StaticSpotVertex.push_back({ pos, size, color });
 			StaticSpotVertexUpData = true;
 		};
 
@@ -143,25 +159,25 @@ namespace VulKan {
 		inline constexpr void OpenStaticSpotUpData() noexcept { StaticSpotUpData = true; }
 		inline constexpr void OpenStaticLineUpData() noexcept { StaticLineUpData = true; }
 	private://线段
-		AuxiliarySpot* LinePointerHOST = nullptr;
+		AuxiliaryLineSpot* LinePointerHOST = nullptr;
 		unsigned int LineNumber = 0;//当前帧的数量
 		unsigned int LineMax = 0;//上一帧的数量
 		ContinuousMap<glm::dvec2*, AuxiliaryLineData>* ContinuousAuxiliaryLine = nullptr;//两点连线（动态）
 		ContinuousMap<glm::dvec2*, AuxiliaryForceData>* ContinuousAuxiliaryForce = nullptr;//点上的向量（动态）
-		ContinuousMap<void*, StaticAuxiliaryData>* StaticContinuousAuxiliaryLine = nullptr;//线段集（静态）
+		ContinuousMap<void*, StaticAuxiliaryLineData>* StaticContinuousAuxiliaryLine = nullptr;//线段集（静态）
 		bool StaticLineUpData = false;//静态线段是否需要更新
 		unsigned int StaticLineDeviation = 0;//静态数据偏移量
-		std::vector<AuxiliarySpot> LineVertex{};//单纯的位置连线（一次性）
+		std::vector<AuxiliaryLineSpot> LineVertex{};//单纯的位置连线（一次性）
 		bool StaticLineVertexUpData = false;//静态线段是否需要更新
 		unsigned int StaticLineVertexDeviation = 0;//静态数据偏移量
-		std::vector<AuxiliarySpot> StaticLineVertex{};//单纯的位置连线（静态）
+		std::vector<AuxiliaryLineSpot> StaticLineVertex{};//单纯的位置连线（静态）
 		Buffer* AuxiliaryLineS{ nullptr };//线段缓存
 	private://点
 		AuxiliarySpot* SpotPointerHOST = nullptr;
 		unsigned int SpotNumber = 0;//当前帧的数量
 		unsigned int SpotMax = 0;//上一帧的数量
 		ContinuousMap<glm::dvec2*, AuxiliarySpotData>* ContinuousAuxiliarySpot = nullptr;//点集（动态）
-		ContinuousMap<void*, StaticAuxiliaryData>* StaticContinuousAuxiliarySpot = nullptr;//点集（静态）
+		ContinuousMap<void*, StaticAuxiliarySpotData>* StaticContinuousAuxiliarySpot = nullptr;//点集（静态）
 		bool StaticSpotUpData = false;//静态点是否需要更新
 		unsigned int StaticSpotDeviation = 0;//静态数据偏移量
 		std::vector<AuxiliarySpot> SpotVertex{};//单纯的位置点（一次性）

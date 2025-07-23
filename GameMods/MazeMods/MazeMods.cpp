@@ -239,7 +239,8 @@ namespace GAME {
 						mUVDynamicDiagram->mIndexAnimationGrid->GetAngle()
 					) + glm::dvec2(mUVDynamicDiagram->mIndexAnimationGrid->GetPos()), 
 					0
-				}, 
+				},
+				0.25f,
 				glm::vec4{1,0,0,1}
 			);
 		}
@@ -354,6 +355,7 @@ namespace GAME {
 			);
 			mAuxiliaryVision->Spot(
 				{ LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0 },
+				0.25f,
 				{ 0, 0, 1.0f, 1.0f }
 			);
 			mVisualEffect->SetPosAngle(LSObjectDecorator.Object->GetPosX(), LSObjectDecorator.Object->GetPosY(), 0, LSObjectDecorator.Object->GetAngleFloat(), mCurrentFrame);
@@ -384,7 +386,7 @@ namespace GAME {
 			JPSPathfinding->FindPath({ beang.x, beang.y }, { end.x, end.y }, &JPSPath);
 			TOOL::mTimer->MomentEnd();
 			
-			VulKan::StaticAuxiliaryData* PA = mAuxiliaryVision->GetContinuousStaticSpot()->Get(&AStarPath);
+			VulKan::StaticAuxiliarySpotData* PA = mAuxiliaryVision->GetContinuousStaticSpot()->Get(&AStarPath);
 			PA->Size = AStarPath.size();
 			PA->Pointer = &AStarPath;
 			PA->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
@@ -399,10 +401,10 @@ namespace GAME {
 				};
 			mAuxiliaryVision->OpenStaticSpotUpData();
 
-			VulKan::StaticAuxiliaryData* P = mAuxiliaryVision->GetContinuousStaticLine()->Get(&JPSPath);
+			VulKan::StaticAuxiliaryLineData* P = mAuxiliaryVision->GetContinuousStaticLine()->Get(&JPSPath);
 			P->Size = JPSPath.size();
 			P->Pointer = &JPSPath;
-			P->Function = [](VulKan::AuxiliarySpot* P, void* D, unsigned int Size)->unsigned int {
+			P->Function = [](VulKan::AuxiliaryLineSpot* P, void* D, unsigned int Size)->unsigned int {
 				std::vector<JPSVec2>* DataP = (std::vector<JPSVec2>*)D;
 				for (auto& i : *DataP)
 				{
@@ -422,10 +424,12 @@ namespace GAME {
 		fangzhifanfuvhufa = Leftan;
 		mAuxiliaryVision->Spot(
 			{ beang, 0 },
+			0.25f,
 			{ 0, 1.0f, 0, 1.0f }
 		);
 		mAuxiliaryVision->Spot(
 			{ end, 0 },
+			0.25f,
 			{ 1.0f, 0, 0, 1.0f }
 		);
 		

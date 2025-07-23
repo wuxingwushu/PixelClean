@@ -10,14 +10,14 @@ namespace VulKan {
 	{
 		//线段
 		AuxiliaryLineS = new Buffer(
-			wDevice, sizeof(AuxiliarySpot) * Number * 2,
+			wDevice, sizeof(AuxiliaryLineSpot) * Number * 2,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 		ContinuousAuxiliaryLine = new ContinuousMap<glm::dvec2*, AuxiliaryLineData>(Number);
 		ContinuousAuxiliaryForce = new ContinuousMap<glm::dvec2*, AuxiliaryForceData>(Number);
-		StaticContinuousAuxiliaryLine = new ContinuousMap<void*, StaticAuxiliaryData>(Number, ContinuousMap_New);
-		AuxiliarySpot* LP = (AuxiliarySpot*)AuxiliaryLineS->getupdateBufferByMap();
+		StaticContinuousAuxiliaryLine = new ContinuousMap<void*, StaticAuxiliaryLineData>(Number, ContinuousMap_New);
+		AuxiliaryLineSpot* LP = (AuxiliaryLineSpot*)AuxiliaryLineS->getupdateBufferByMap();
 		for (size_t i = 0; i < (Number * 2); ++i)
 		{
 			LP[i].Pos = { i, i, -10000.0 };
@@ -31,12 +31,13 @@ namespace VulKan {
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 		ContinuousAuxiliarySpot = new ContinuousMap<glm::dvec2*, AuxiliarySpotData>(Number);
-		StaticContinuousAuxiliarySpot = new ContinuousMap<void*, StaticAuxiliaryData>(Number, ContinuousMap_New);
-		LP = (AuxiliarySpot*)AuxiliarySpotS->getupdateBufferByMap();
+		StaticContinuousAuxiliarySpot = new ContinuousMap<void*, StaticAuxiliarySpotData>(Number, ContinuousMap_New);
+		AuxiliarySpot* SP = (AuxiliarySpot*)AuxiliarySpotS->getupdateBufferByMap();
 		for (size_t i = 0; i < Number; ++i)
 		{
-			LP[i].Pos = { i, i, -10000.0 };
-			LP[i].Color = { 0, 0, 1.0f, 1.0f };
+			SP[i].Pos = { i, i, -10000.0 };
+			SP[i].Size = 0.2;
+			SP[i].Color = { 0, 0, 1.0f, 1.0f };
 		}
 		AuxiliarySpotS->endupdateBufferByMap();
 	}
@@ -123,7 +124,7 @@ namespace VulKan {
 
 	void AuxiliaryVision::Begin() {
 		//线
-		LinePointerHOST = (AuxiliarySpot*)AuxiliaryLineS->getupdateBufferByMap();
+		LinePointerHOST = (AuxiliaryLineSpot*)AuxiliaryLineS->getupdateBufferByMap();
 		//静态
 		if (StaticLineVertexUpData) {
 			StaticLineVertexUpData = false;

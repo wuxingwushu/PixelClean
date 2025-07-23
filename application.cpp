@@ -41,24 +41,26 @@ namespace GAME {
 	}
 
 	GameMods* Application::GetGame(GameModsEnum Game) {
+		GameMods* GamePtr = nullptr;
 		switch (Game)
 		{
 		case Maze_:
-			return new MazeMods(*this);
+			GamePtr = new MazeMods(*this);
 			break;
 		case Infinite_:
-			return new UnlimitednessMapMods(*this);
+			GamePtr = new UnlimitednessMapMods(*this);
 			break;
 		case TankTrouble_:
-			return new TankTrouble(*this);
+			GamePtr = new TankTrouble(*this);
 			break;
 		case PhysicsTest_:
-			return new PhysicsTest(*this);
+			GamePtr = new PhysicsTest(*this);
 			break;
 		default:
 			break;
 		}
-		return nullptr;
+		TOOL::FPStime = 0.00001;
+		return GamePtr;
 	}
 
 	void Application::DeleteGame(GameModsEnum Game) {

@@ -5,6 +5,30 @@
 #include <map>
 #include <iostream>
 
+// 计算线程任务片段
+#define ThreadTaskAllot(S, E, Size, Tn, TSize) \
+    if (Tn == TSize)                           \
+    {                                          \
+        S = 0;                                 \
+        E = Size;                              \
+    }                                          \
+    else                                       \
+    {                                          \
+        S = Size / TSize;                      \
+        E = Size % TSize;                      \
+        if (Tn < E)                            \
+        {                                      \
+            E = S * Tn + Tn + S + 1;           \
+            S = S * Tn + Tn;                   \
+        }                                      \
+        else                                   \
+        {                                      \
+            int Y = E;                         \
+            E = S * Tn + Y + S;                \
+            S = S * Tn + Y;                    \
+        }                                      \
+    }
+
 namespace PhysicsBlock
 {
     AuxiliaryArbiter(PhysicsArbiterCP, PhysicsCircle, C, PhysicsParticle, P, 0);
@@ -87,27 +111,33 @@ namespace PhysicsBlock
             if (CollideGroupS.find(Ba->key) == CollideGroupS.end())
             {
 #if ThreadPoolBool
-                std::unique_lock<std::mutex> lock(mLock);
+                mLock.lock();
 #endif
                 CollideGroupS.insert({Ba->key, Ba});
+#if ThreadPoolBool
+                mLock.unlock();
+#endif
             }
             else
             {
-                CollideGroupS[Ba->key]->Update(Ba->contacts, Ba->numContacts);
+                BaseArbiter* LBa = CollideGroupS[Ba->key];
+                LBa->Update(Ba->contacts, Ba->numContacts);
                 DeleteArbiter(Ba);
             }
             return;
         }
 #if ThreadPoolBool
-        std::unique_lock<std::mutex> lock(mLock);
+        mLock.lock();
 #endif
         CollideGroupS.erase(Ba->key);
+#if ThreadPoolBool
+        mLock.unlock();
+#endif
         DeleteArbiter(Ba);
     }
 
     void PhysicsWorld::PhysicsEmulator(double time)
     {
-        inv_dt = 1.0 / time;
         // 外力改变
         for (auto i : PhysicsShapeS)
         {
@@ -122,33 +152,27 @@ namespace PhysicsBlock
             o->PhysicsSpeed(time, GravityAcceleration);
         }
 
+#define JFRW 0 /** @brief 是否开启均分任务给每个线程 @warning 不知道为什么开启后性能反而下降了，理论上每个线程处理物体间碰撞物体数量差不多 */
+
         const auto XT_Fun = [this](int T_Num, int Tx)
         {
             bool JZ;
-            int SizeD = PhysicsShapeS.size() / Tx;
-            int SizeY = PhysicsShapeS.size() % Tx;
-            if (T_Num < SizeY)
-            {
-                SizeY = SizeD * T_Num + T_Num + SizeD + 1;
-                SizeD = SizeD * T_Num + T_Num;
-            }
-            else
-            {
-                int Y = SizeY;
-                SizeY = SizeD * T_Num + Y + SizeD;
-                SizeD = SizeD * T_Num + Y;
-            }
+            int SizeD;
+            int SizeY;
+            ThreadTaskAllot(SizeD, SizeY, PhysicsShapeS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 // 静止了，跳过碰撞遍历
                 JZ = (PhysicsShapeS[SizeD]->StaticNum > 10);
 
                 // 和地形的碰撞
-                if (!JZ) Arbiter(PhysicsShapeS[SizeD], wMapFormwork);
+                if (!JZ)
+                    Arbiter(PhysicsShapeS[SizeD], wMapFormwork);
 
                 for (auto o : PhysicsParticleS)
                 {
-                    if (JZ && o->StaticNum > 10) {
+                    if (JZ && (o->StaticNum > 10))
+                    {
                         continue;
                     }
                     if (PhysicsShapeS[SizeD]->DropCollision(o->pos).Collision)
@@ -174,7 +198,8 @@ namespace PhysicsBlock
 
                 for (auto c : PhysicsCircleS)
                 {
-                    if (JZ && c->StaticNum > 10) {
+                    if (JZ && (c->StaticNum > 10))
+                    {
                         continue;
                     }
                     if ((PhysicsShapeS[SizeD]->CollisionR + c->radius) < Modulus(PhysicsShapeS[SizeD]->pos - c->pos))
@@ -194,11 +219,21 @@ namespace PhysicsBlock
                     }
                     Arbiter(c, PhysicsShapeS[SizeD]);
                 }
+#if JFRW
+            }
 
+            SizeD = PhysicsShapeS.size() - int(PhysicsShapeS.size() * sqrt((T_Num + 1) / Tx));
+            SizeY = PhysicsShapeS.size() - int(PhysicsShapeS.size() * sqrt(T_Num / Tx));
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                // 静止了，跳过碰撞遍历
+                JZ = (PhysicsShapeS[SizeD]->StaticNum > 10);
+#endif
                 // 和其他多边形的碰撞
                 for (size_t j = SizeD + 1; j < PhysicsShapeS.size(); ++j)
                 {
-                    if (JZ && PhysicsShapeS[j]->StaticNum > 10) {
+                    if (JZ && (PhysicsShapeS[j]->StaticNum > 10))
+                    {
                         continue;
                     }
                     if ((PhysicsShapeS[SizeD]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[SizeD]->pos - PhysicsShapeS[j]->pos))
@@ -220,30 +255,20 @@ namespace PhysicsBlock
                 }
             }
 
-            SizeD = PhysicsCircleS.size() / Tx;
-            SizeY = PhysicsCircleS.size() % Tx;
-            if (T_Num < SizeY)
-            {
-                SizeY = SizeD * T_Num + T_Num + SizeD + 1;
-                SizeD = SizeD * T_Num + T_Num;
-            }
-            else
-            {
-                int Y = SizeY;
-                SizeY = SizeD * T_Num + Y + SizeD;
-                SizeD = SizeD * T_Num + Y;
-            }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsCircleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 // 静止了，跳过碰撞遍历
                 JZ = (PhysicsCircleS[SizeD]->StaticNum > 10);
 
                 // 和地形的碰撞
-                if (!JZ) Arbiter(PhysicsCircleS[SizeD], wMapFormwork);
+                if (!JZ)
+                    Arbiter(PhysicsCircleS[SizeD], wMapFormwork);
 
                 for (auto o : PhysicsParticleS)
                 {
-                    if (JZ && o->StaticNum > 10) {
+                    if (JZ && (o->StaticNum > 10))
+                    {
                         continue;
                     }
                     if (PhysicsCircleS[SizeD]->radius > Modulus(PhysicsCircleS[SizeD]->pos - o->pos))
@@ -266,10 +291,20 @@ namespace PhysicsBlock
                         }
                     }
                 }
+#if JFRW
+            }
 
+            SizeD = PhysicsCircleS.size() - int(PhysicsCircleS.size() * sqrt((T_Num + 1) / Tx));
+            SizeY = PhysicsCircleS.size() - int(PhysicsCircleS.size() * sqrt(T_Num / Tx));
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                // 静止了，跳过碰撞遍历
+                JZ = (PhysicsCircleS[SizeD]->StaticNum > 10);
+#endif
                 for (size_t j = SizeD + 1; j < PhysicsCircleS.size(); ++j)
                 {
-                    if (JZ && PhysicsCircleS[j]->StaticNum > 10) {
+                    if (JZ && (PhysicsCircleS[j]->StaticNum > 10))
+                    {
                         continue;
                     }
                     if ((PhysicsCircleS[SizeD]->radius + PhysicsCircleS[j]->radius) < Modulus(PhysicsCircleS[SizeD]->pos - PhysicsCircleS[j]->pos))
@@ -295,15 +330,13 @@ namespace PhysicsBlock
 #if ThreadPoolBool
         std::vector<std::future<void>> xTn;
         const int xThreadNum = std::thread::hardware_concurrency();
-        int SizeD = PhysicsShapeS.size() / xThreadNum;
-        int SizeY = PhysicsShapeS.size() % xThreadNum;
         for (size_t i = 0; i < xThreadNum; ++i)
         {
             xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum));
         }
 #else
         // 碰撞检测
-        T_Fun(0, PhysicsShapeS.size());
+        XT_Fun(1, 1);
 #endif
 
         // 处理 点 和 地形的碰撞
@@ -327,9 +360,12 @@ namespace PhysicsBlock
 #endif
 
         // 预处理
+        double inv_dt = 1.0 / time;
+        std::vector<BaseArbiter *> BaseArbiterVector;
         for (auto kv : CollideGroupS)
         {
             kv.second->PreStep(inv_dt);
+            BaseArbiterVector.push_back(kv.second);
         }
         for (auto J : PhysicsJointS)
         {
@@ -340,12 +376,48 @@ namespace PhysicsBlock
             J->PreStep(inv_dt);
         }
 
+#if ThreadPoolBool
+        const auto ApplyImpulseXT_Fun = [this, BaseArbiterVector](int T_Num, int Tx)
+        {
+            bool JZ;
+            int SizeD;
+            int SizeY;
+            ThreadTaskAllot(SizeD, SizeY, BaseArbiterVector.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                BaseArbiterVector[SizeD]->ApplyImpulse();
+            }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsJointS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                PhysicsJointS[SizeD]->ApplyImpulse();
+            }
+            ThreadTaskAllot(SizeD, SizeY, BaseJunctionS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                BaseJunctionS[SizeD]->ApplyImpulse();
+            }
+        };
+        for (size_t di = 0; di < 10; ++di)
+        {
+            xTn.clear();
+            for (size_t i = 0; i < xThreadNum; ++i)
+            {
+                xTn.push_back(mThreadPool.enqueue(ApplyImpulseXT_Fun, i, xThreadNum));
+            }
+            // 等待任务结束
+            for (auto &tf : xTn)
+            {
+                tf.wait();
+            }
+        }
+#else
         // 迭代结果
         for (size_t i = 0; i < 10; ++i)
         {
-            for (auto kv : CollideGroupS)
+            for (auto kv : BaseArbiterVector)
             {
-                kv.second->ApplyImpulse();
+                kv->ApplyImpulse();
             }
             for (auto J : PhysicsJointS)
             {
@@ -357,6 +429,45 @@ namespace PhysicsBlock
             }
         }
 
+#endif
+
+#if 0
+        const auto PhysicsPosXT_Fun = [this, time](int T_Num, int Tx)
+        {
+            bool JZ;
+            int SizeD;
+            int SizeY;
+            ThreadTaskAllot(SizeD, SizeY, PhysicsShapeS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                PhysicsShapeS[SizeD]->PhysicsPos(time, GravityAcceleration);
+            }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                if (wMapFormwork->FMGetCollide(PhysicsParticleS[SizeD]->pos))
+                {
+                    PhysicsParticleS[SizeD]->OldPosUpDataBool = false; // 关闭旧位置更新
+                }
+                PhysicsParticleS[SizeD]->PhysicsPos(time, GravityAcceleration);
+            }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsCircleS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                PhysicsCircleS[SizeD]->PhysicsPos(time, GravityAcceleration);
+            }
+        };
+        xTn.clear();
+        for (size_t i = 0; i < xThreadNum; ++i)
+        {
+            xTn.push_back(mThreadPool.enqueue(PhysicsPosXT_Fun, i, xThreadNum));
+        }
+        // 等待任务结束
+        for (auto &tf : xTn)
+        {
+            tf.wait();
+        }
+#else
         // 移动
         for (auto i : PhysicsShapeS)
         {
@@ -374,6 +485,7 @@ namespace PhysicsBlock
         {
             o->PhysicsPos(time, GravityAcceleration);
         }
+#endif
     }
 
     void PhysicsWorld::PhysicsInformationUpdate()
@@ -381,19 +493,9 @@ namespace PhysicsBlock
         // 碰撞检测
         const auto XT_Fun = [this](int T_Num, int Tx)
         {
-            int SizeD = PhysicsShapeS.size() / Tx;
-            int SizeY = PhysicsShapeS.size() % Tx;
-            if (T_Num < SizeY)
-            {
-                SizeY = SizeD * T_Num + T_Num + SizeD + 1;
-                SizeD = SizeD * T_Num + T_Num;
-            }
-            else
-            {
-                int Y = SizeY;
-                SizeY = SizeD * T_Num + Y + SizeD;
-                SizeD = SizeD * T_Num + Y;
-            }
+            int SizeD;
+            int SizeY;
+            ThreadTaskAllot(SizeD, SizeY, PhysicsShapeS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 // 和地形的碰撞
@@ -441,7 +543,14 @@ namespace PhysicsBlock
                     }
                     Arbiter(c, PhysicsShapeS[SizeD]);
                 }
+#if JFRW
+            }
 
+            SizeD = PhysicsShapeS.size() - int(PhysicsShapeS.size() * sqrt((T_Num + 1) / Tx));
+            SizeY = PhysicsShapeS.size() - int(PhysicsShapeS.size() * sqrt(T_Num / Tx));
+            for (; SizeD < SizeY; ++SizeD)
+            {
+#endif
                 // 和其他多边形的碰撞
                 for (size_t j = SizeD + 1; j < PhysicsShapeS.size(); ++j)
                 {
@@ -464,19 +573,7 @@ namespace PhysicsBlock
                 }
             }
 
-            SizeD = PhysicsCircleS.size() / Tx;
-            SizeY = PhysicsCircleS.size() % Tx;
-            if (T_Num < SizeY)
-            {
-                SizeY = SizeD * T_Num + T_Num + SizeD + 1;
-                SizeD = SizeD * T_Num + T_Num;
-            }
-            else
-            {
-                int Y = SizeY;
-                SizeY = SizeD * T_Num + Y + SizeD;
-                SizeD = SizeD * T_Num + Y;
-            }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsCircleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 // 和地形的碰撞
@@ -504,7 +601,14 @@ namespace PhysicsBlock
                         }
                     }
                 }
+#if JFRW
+            }
 
+            SizeD = PhysicsCircleS.size() - int(PhysicsCircleS.size() * sqrt((T_Num + 1) / Tx));
+            SizeY = PhysicsCircleS.size() - int(PhysicsCircleS.size() * sqrt(T_Num / Tx));
+            for (; SizeD < SizeY; ++SizeD)
+            {
+#endif
                 for (size_t j = SizeD + 1; j < PhysicsCircleS.size(); ++j)
                 {
                     if ((PhysicsCircleS[SizeD]->radius + PhysicsCircleS[j]->radius) < Modulus(PhysicsCircleS[SizeD]->pos - PhysicsCircleS[j]->pos))
@@ -529,16 +633,14 @@ namespace PhysicsBlock
 
 #if ThreadPoolBool
         std::vector<std::future<void>> xTn;
-        const int xThreadNum = std::thread::hardware_concurrency();
-        int SizeD = PhysicsShapeS.size() / xThreadNum;
-        int SizeY = PhysicsShapeS.size() % xThreadNum;
+        const int xThreadNum = std::thread::hardware_concurrency() * 2;
         for (size_t i = 0; i < xThreadNum; ++i)
         {
             xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum));
         }
 #else
         // 碰撞检测
-        T_Fun(0, PhysicsShapeS.size());
+        XT_Fun(1, 1);
 #endif
 
         // 处理 点 和 地形的碰撞

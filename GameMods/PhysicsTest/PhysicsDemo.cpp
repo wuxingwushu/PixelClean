@@ -208,7 +208,7 @@ namespace PhysicsBlock
 		{
 			for (int ypos = xpos; ypos < JZMapSize; ++ypos)
 			{
-				PhysicsBlock::PhysicsShape *PhysicsShape3 = new PhysicsBlock::PhysicsShape({(ypos * 2.2) - JZMapSize - (JZMapSize / 2) - (xpos) + 5, (xpos * 4)}, {2, 2});
+				PhysicsBlock::PhysicsShape *PhysicsShape3 = new PhysicsBlock::PhysicsShape({(ypos * 2.2) - JZMapSize - (JZMapSize / 2) - (xpos) + 5, (xpos * 3) - (MapSize / 2 - 4)}, {2, 2});
 				for (size_t i = 0; i < (PhysicsShape3->width * PhysicsShape3->height); i++)
 				{
 					PhysicsShape3->at(i).Collision = true;

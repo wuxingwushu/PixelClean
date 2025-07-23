@@ -256,7 +256,8 @@ namespace GAME
 							}
 							else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::particle)
 							{
-								((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->AddForce((Opos + beang2) - ((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->pos);
+								((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->AddForce((beang2 - ((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos) * 100.0);
+								mAuxiliaryVision->Line({ ((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos, 0 }, { 1, 0, 0, 1 }, { (beang2), 0 }, { 0, 1, 0, 1 });
 							}
 						}
 						else
@@ -314,10 +315,10 @@ namespace GAME
 			{
 				// 辅助显示位置
 				if (PhysicsBlock::Auxiliary_PosBool)
-					mAuxiliaryVision->Spot({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
+					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
 				// 辅助显示旧位置
 				if (PhysicsBlock::Auxiliary_OldPosBool)
-					mAuxiliaryVision->Spot({i->OldPos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
+					mAuxiliaryVision->Spot({i->OldPos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
 				// 辅助显示速度
 				if (PhysicsBlock::Auxiliary_SpeedBool)
 					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
@@ -326,15 +327,15 @@ namespace GAME
 					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
 				// 辅助显示质心
 				if (PhysicsBlock::Auxiliary_CentreMassBool)
-					mAuxiliaryVision->Spot({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CentreMassColor));
+					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CentreMassColor));
 				// 辅助显示几何中心
 				if (PhysicsBlock::Auxiliary_CentreShapeBool)
-					mAuxiliaryVision->Spot({i->pos - PhysicsBlock::vec2angle(i->CentreMass - i->CentreShape, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_CentreShapeColor));
+					mAuxiliaryVision->Spot({i->pos - PhysicsBlock::vec2angle(i->CentreMass - i->CentreShape, i->angle), 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CentreShapeColor));
 				// 辅助显示外骨骼点
 				if (PhysicsBlock::Auxiliary_OutlineBool) {
 					PhysicsBlock::AngleMat angleMat(i->angle);
 					for	(size_t d = 0; d < i->OutlineSize; ++d) {
-						mAuxiliaryVision->Spot({ i->pos + angleMat.Rotary(i->OutlineSet[d]), 0 }, ColorToVec4(PhysicsBlock::Auxiliary_OutlineColor));
+						mAuxiliaryVision->Spot({ i->pos + angleMat.Rotary(i->OutlineSet[d]), 0 }, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OutlineColor));
 					}
 				}
 			}
@@ -357,10 +358,10 @@ namespace GAME
 			{
 				// 辅助显示位置
 				if (PhysicsBlock::Auxiliary_PosBool)
-					mAuxiliaryVision->Spot({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
+					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
 				// 辅助显示旧位置
 				if (PhysicsBlock::Auxiliary_OldPosBool)
-					mAuxiliaryVision->Spot({i->OldPos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
+					mAuxiliaryVision->Spot({i->OldPos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
 				// 辅助显示速度
 				if (PhysicsBlock::Auxiliary_SpeedBool)
 					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
@@ -369,7 +370,7 @@ namespace GAME
 					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
 			}
 
-			mAuxiliaryVision->Spot({i->pos, 0}, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
+			mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
 		}
 		// 渲染绳子
 		for (auto i : mPhysicsWorld->GetPhysicsJoint())
@@ -390,7 +391,7 @@ namespace GAME
 				{
 					// 碰撞点
 					if (PhysicsBlock::Auxiliary_CollisionDropBool)
-						mAuxiliaryVision->Spot({i.second->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropColor));
+						mAuxiliaryVision->Spot({i.second->contacts[j].position, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropColor));
 					// 碰撞点 分离 法向量
 					if (PhysicsBlock::Auxiliary_SeparateNormalVectorBool)
 						mAuxiliaryVision->Line({i.second->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor), {i.second->contacts[j].position + i.second->contacts[j].normal, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor));

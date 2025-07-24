@@ -1,5 +1,6 @@
 #pragma once
 #include "PhysicsParticle.hpp"
+#include "BaseCalculate.hpp"
 
 namespace PhysicsBlock
 {
@@ -19,6 +20,38 @@ namespace PhysicsBlock
         PhysicsAngle(Vec2_ Pos, FLOAT_ Mass):PhysicsParticle(Pos, Mass){}
         PhysicsAngle(Vec2_ Pos):PhysicsParticle(Pos){}
         ~PhysicsAngle(){}
+
+        /**
+         * @brief 受力（移动，旋转）
+         * @param Pos 受力位置（世界位置）
+         * @param Force 力矩 */
+        void AddForce(Vec2_ Pos, Vec2_ Force)
+        {
+            if (invMass == 0) {
+                return;
+            }
+            Pos -= pos;                                                    // 质心指向受力点的力矩
+            FLOAT_ Langle = EdgeVecToCosAngleFloat(Pos);                   // 力臂角度
+            FLOAT_ disparity = Langle - EdgeVecToCosAngleFloat(Force);     // 力矩角度
+            FLOAT_ ForceFLOAT_ = Modulus(Force);                           // 力大小
+            FLOAT_ F = ForceFLOAT_ * cos(disparity);                       // 垂直力臂的力大小
+            PhysicsParticle::AddForce({ F * cos(Langle), F * sin(Langle) }); // 转为世界力矩 // 位置移动受到力矩
+            AddTorque(Modulus(Pos), ForceFLOAT_ * -sin(disparity));        // 旋转受到扭矩
+        }
+
+        /**
+         * @brief 受力（移动）
+         * @param Force 力矩 */
+        void AddForce(Vec2_ Force) { PhysicsParticle::AddForce(Force); };
+
+        /**
+         * @brief 受力（旋转）
+         * @param ArmForce 力臂
+         * @param Force 力大小 */
+        void AddTorque(FLOAT_ ArmForce, FLOAT_ Force)
+        {
+            torque += ArmForce * Force; // 累加扭矩
+        }
 
         /*=========PhysicsFormwork=========*/
         /**

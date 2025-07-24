@@ -696,6 +696,11 @@ namespace PhysicsBlock
             if (Modulus(i->pos - pos) < 0.25) // 点击位置距离点位置小于 0.25， 就判断选择 点
                 return i;
         }
+        for (auto i : PhysicsCircleS)
+        {
+            if (Modulus(i->pos - pos) < i->radius) // 点击位置距离点位置小于 0.25， 就判断选择 点
+                return i;
+        }
         return nullptr;
     }
 

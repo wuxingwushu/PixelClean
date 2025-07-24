@@ -20,17 +20,24 @@
 #define	fs_spv					ShaderPath"fs.spv"
 #define	WarfareMist_spv			ShaderPath"WarfareMist.spv"
 #define	DungeonWarfareMist_spv	ShaderPath"DungeonWarfareMist.spv"
+// GIT图片
 #define GifFrag					ShaderPath"GifFragShaderF.spv"
 #define GifVert					ShaderPath"GifFragShaderV.spv"
+// 画线
 #define LineF_spv				ShaderPath"LineShaderF.spv"
 #define LineV_spv				ShaderPath"LineShaderV.spv"
+// 画点
 #define SpotNormal_spv			ShaderPath"SpotNormal.spv"
 #define SpotF_spv				ShaderPath"SpotShaderF.spv"	
 #define SpotV_spv				ShaderPath"SpotShaderV.spv"
+//画圆
+#define CircleNormal_spv		ShaderPath"CircleNormal.spv"
+#define CircleF_spv				ShaderPath"CircleShaderF.spv"	
+#define CircleV_spv				ShaderPath"CircleShaderV.spv"
 #define DamagePromptF_spv		ShaderPath"DamagePromptF.spv"
 #define DamagePromptV_spv		ShaderPath"DamagePromptV.spv"
 #define UVDynamicDiagramF_spv	ShaderPath"UVDynamicDiagramF.spv"
 #define UVDynamicDiagramG_spv	ShaderPath"UVDynamicDiagramG.spv"
 #define UVDynamicDiagramV_spv	ShaderPath"UVDynamicDiagramV.spv"
 #define Background_spv			ShaderPath"Background.spv"
-#define GridBackground_spv			ShaderPath"GridBackground.spv"
+#define GridBackground_spv		ShaderPath"GridBackground.spv"

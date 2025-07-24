@@ -5,7 +5,7 @@ namespace PhysicsBlock
 
     PhysicsParticle::PhysicsParticle(Vec2_ Pos, FLOAT_ Mass) : OldPos(Pos), pos(Pos), mass(Mass), invMass(1.0 / Mass)
     {
-        if (mass == DBL_MAX) {
+        if (mass == FLOAT_MAX) {
             invMass = 0;
         }
     }
@@ -20,6 +20,9 @@ namespace PhysicsBlock
 
     void PhysicsParticle::AddForce(Vec2_ Force)
     {
+        if (invMass == 0) {
+            return;
+        }
         force += Force; // 累计力矩
     }
 

@@ -36,4 +36,10 @@ mkdir Spv
 
 .\..\glslangValidator.exe  -V GridBackground.comp -o Spv/GridBackground.spv
 
+.\..\glslangValidator.exe  -V CircleShader.vert -o Spv/CircleShaderV.spv
+
+.\..\glslangValidator.exe  -V CircleShader.frag -o Spv/CircleShaderF.spv
+
+.\..\glslangValidator.exe  -V CircleNormal.geom -o Spv/CircleNormal.spv
+
 pause

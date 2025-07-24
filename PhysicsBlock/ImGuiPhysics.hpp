@@ -36,6 +36,7 @@ namespace PhysicsBlock
 	// 物理对象基础信息
 	AuxiliaryExternBoolColor(Pos);		   // 位置
 	AuxiliaryExternBoolColor(OldPos);	   // 旧位置
+	AuxiliaryExternBoolColor(Angle);	   // 角度
 	AuxiliaryExternBoolColor(Speed);	   // 速度
 	AuxiliaryExternBoolColor(Force);	   // 受力
 	AuxiliaryExternBoolColor(CentreMass);  // 质心

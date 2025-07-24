@@ -97,16 +97,16 @@ namespace PhysicsBlock
     class PhysicsJunctionSS : public BaseJunction
     {
     private:
-        PhysicsShape *mParticle1; // 形状
+        PhysicsAngle *mParticle1; // 形状
         Vec2_ mArm1;
         Vec2_ mR1;
-        PhysicsShape *mParticle2; // 形状
+        PhysicsAngle *mParticle2; // 形状
         Vec2_ mArm2;
         Vec2_ mR2;
 
 
     public:
-        PhysicsJunctionSS(PhysicsShape *Particle1, Vec2_ arm1, PhysicsShape *Particle2, Vec2_ arm2, CordType type);
+        PhysicsJunctionSS(PhysicsAngle *Particle1, Vec2_ arm1, PhysicsAngle *Particle2, Vec2_ arm2, CordType type);
         ~PhysicsJunctionSS();
 
         // 预处理
@@ -123,12 +123,12 @@ namespace PhysicsBlock
     {
     private:
         Vec2_ mRegularDrop; // 固定点
-        PhysicsShape *mParticle; // 形状
+        PhysicsAngle *mParticle; // 形状
         Vec2_ Arm;
         Vec2_ R;
 
     public:
-        PhysicsJunctionS(PhysicsShape *Particle, Vec2_ arm, Vec2_ RegularDrop, CordType type);
+        PhysicsJunctionS(PhysicsAngle *Particle, Vec2_ arm, Vec2_ RegularDrop, CordType type);
         ~PhysicsJunctionS();
 
         // 预处理

@@ -40,6 +40,20 @@ namespace VulKan {
 			SP[i].Color = { 0, 0, 1.0f, 1.0f };
 		}
 		AuxiliarySpotS->endupdateBufferByMap();
+		// 圆
+		AuxiliaryCircleS = new Buffer(
+			wDevice, sizeof(AuxiliarySpot) * Number,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		);
+		AuxiliaryCircle* CP = (AuxiliaryCircle*)AuxiliaryCircleS->getupdateBufferByMap();
+		for (size_t i = 0; i < Number; ++i)
+		{
+			CP[i].Pos = { i, i, -10000.0 };
+			CP[i].Radius = 0.5;
+			CP[i].Color = { 0, 0, 1.0f, 1.0f };
+		}
+		AuxiliaryCircleS->endupdateBufferByMap();
 	}
 
 	AuxiliaryVision::~AuxiliaryVision()
@@ -54,6 +68,9 @@ namespace VulKan {
 		delete AuxiliarySpotS;
 		delete ContinuousAuxiliarySpot;
 		delete StaticContinuousAuxiliarySpot;
+
+		// 圆
+		delete AuxiliaryCircleS;
 
 		//资源
 		for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
@@ -91,11 +108,12 @@ namespace VulKan {
 		paramsvector.push_back(&vpParam);
 		//各种类型申请多少个
 		mDescriptorPool = new VulKan::DescriptorPool(wDevice);
-		mDescriptorPool->build(paramsvector, frameCount * 2);
+		mDescriptorPool->build(paramsvector, frameCount * 3);
 
 		//将申请的各种类型按照Layout绑定起来
 		mDescriptorSetLine = new VulKan::DescriptorSet(wDevice, paramsvector, wPipelineS->GetPipeline(VulKan::PipelineMods::LineMods)->DescriptorSetLayout, mDescriptorPool, frameCount);
 		mDescriptorSetSpot = new VulKan::DescriptorSet(wDevice, paramsvector, wPipelineS->GetPipeline(VulKan::PipelineMods::SpotMods)->DescriptorSetLayout, mDescriptorPool, frameCount);
+		mDescriptorSetCircle = new VulKan::DescriptorSet(wDevice, paramsvector, wPipelineS->GetPipeline(VulKan::PipelineMods::CircleMods)->DescriptorSetLayout, mDescriptorPool, frameCount);
 	}
 
 	void AuxiliaryVision::initCommandBuffer() {
@@ -116,6 +134,11 @@ namespace VulKan {
 			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::LineMods)->getPipeline());//获得渲染管线
 			mCommandBuffer[i]->bindVertexBuffer({ AuxiliaryLineS->getBuffer() });
 			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::LineMods)->getLayout(), mDescriptorSetLine->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
+			mCommandBuffer[i]->draw(Number);//获取绘画物体的顶点个数
+			//圆
+			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::CircleMods)->getPipeline());//获得渲染管线
+			mCommandBuffer[i]->bindVertexBuffer({ AuxiliaryCircleS->getBuffer() });
+			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::CircleMods)->getLayout(), mDescriptorSetCircle->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
 			mCommandBuffer[i]->draw(Number);//获取绘画物体的顶点个数
 
 			mCommandBuffer[i]->end();
@@ -240,6 +263,25 @@ namespace VulKan {
 			++SpotPointerHOST;
 			SpotVertex.pop_back();
 		}
+		// 圆
+		CirclePointerHOST = (AuxiliaryCircle*)AuxiliaryCircleS->getupdateBufferByMap();
+		if (StaticCircleVertexUpData) {
+			StaticCircleVertexUpData = false;
+			for (auto S : StaticCircleVertex)
+			{
+				*CirclePointerHOST = S;
+				++CirclePointerHOST;
+			}
+			StaticCircleVertexDeviation = StaticCircleVertex.size();
+		}
+		CircleNumber = StaticCircleVertexDeviation;
+		while (CircleVertex.size() != 0)
+		{
+			*CirclePointerHOST = CircleVertex.back();
+			++CirclePointerHOST;
+			CircleVertex.pop_back();
+		}
+		CircleNumber += CircleVertex.size();
 	}
 
 	void AuxiliaryVision::End() {
@@ -266,5 +308,18 @@ namespace VulKan {
 		SpotMax = SpotNumber;
 		AuxiliarySpotS->endupdateBufferByMap();
 		SpotPointerHOST = nullptr;
+
+		//圆多余
+		if (CircleMax > CircleNumber) {
+			for (size_t i = CircleNumber; i <= CircleMax; ++i)
+			{
+				CirclePointerHOST->Pos.z = -10000.0;
+				++CirclePointerHOST;
+			}
+		}
+		CircleMax = CircleNumber;
+		AuxiliaryCircleS->endupdateBufferByMap();
+		CirclePointerHOST = nullptr;
 	}
+	
 }

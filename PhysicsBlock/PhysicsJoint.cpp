@@ -13,7 +13,7 @@ namespace PhysicsBlock
     {
     }
 
-    void PhysicsJoint::Set(PhysicsShape *Body1, PhysicsShape *Body2, const Vec2_ anchor)
+    void PhysicsJoint::Set(PhysicsAngle *Body1, PhysicsAngle *Body2, const Vec2_ anchor)
     {
         body1 = Body1;
         body2 = Body2;

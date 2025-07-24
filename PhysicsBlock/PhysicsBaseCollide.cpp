@@ -8,12 +8,13 @@ namespace PhysicsBlock
 
     unsigned int Collide(Contact *contacts, PhysicsShape *ShapeA, PhysicsShape *ShapeB)
     {
+        AngleMat Mat(ShapeA->angle);
         int ContactSize = 0;
         Vec2_ Drop, DropPos; // 骨骼点
         for (size_t i = 0; i < ShapeA->OutlineSize; ++i)
         {
             Drop = ShapeA->OutlineSet[i];
-            Drop = vec2angle(Drop, ShapeA->angle);
+            Drop = Mat.Rotary(Drop);
             DropPos = ShapeA->pos + Drop;
             CollisionInfoD info = ShapeB->PsBresenhamDetection(ShapeA->OldPos, DropPos);
             if (info.Collision)
@@ -34,10 +35,11 @@ namespace PhysicsBlock
                 ++ContactSize;
             }
         }
+        Mat.SetAngle(ShapeB->angle);
         for (size_t i = 0; i < ShapeB->OutlineSize; ++i)
         {
             Drop = ShapeB->OutlineSet[i];
-            Drop = vec2angle(Drop, ShapeB->angle);
+            Drop = Mat.Rotary(Drop);
             DropPos = ShapeB->pos + Drop;
             CollisionInfoD info = ShapeA->PsBresenhamDetection(ShapeB->OldPos, DropPos);
             if (info.Collision)
@@ -50,10 +52,10 @@ namespace PhysicsBlock
                 {
                     contacts->separation = info.pos.x - DropPos.x;
                 }
-                contacts->separation = -abs(contacts->separation);                                    // 碰撞距离差
-                contacts->position = info.pos;                                                        // 碰撞点的位置
+                contacts->separation = -abs(contacts->separation);                                     // 碰撞距离差
+                contacts->position = info.pos;                                                         // 碰撞点的位置
                 contacts->normal = -vec2angle({-1, 0}, (info.Direction * (M_PI / 2)) + ShapeA->angle); // （反向作用力法向量）地形不会旋转
-                contacts->w_side = ContactSize;                                                       // 边索引 ID
+                contacts->w_side = ContactSize;                                                        // 边索引 ID
                 ++contacts;
                 ++ContactSize;
             }
@@ -92,12 +94,14 @@ namespace PhysicsBlock
 
     unsigned int Collide(Contact *contacts, PhysicsShape *Shape, MapFormwork *Map)
     {
+        AngleMat Mat(Shape->angle);
+
         int ContactSize = 0;
         Vec2_ Drop, DropPos; // 骨骼点
         for (size_t i = 0; i < Shape->OutlineSize; ++i)
         {
             Drop = Shape->OutlineSet[i];
-            Drop = vec2angle(Drop, Shape->angle);
+            Drop = Mat.Rotary(Drop);
             DropPos = Shape->pos + Drop;
             CollisionInfoD info = Map->FMBresenhamDetection(Shape->OldPos, DropPos);
             if (info.Collision)
@@ -192,7 +196,7 @@ namespace PhysicsBlock
 
         for (auto d : Cd)
         {
-            CollisionInfoD info = Map->FMBresenhamDetection(Circle->OldPos, d);
+            CollisionInfoD info = Map->FMBresenhamDetection(Circle->pos, d);
             if (info.Collision)
             {
                 if (info.Direction & 0x1)
@@ -220,12 +224,13 @@ namespace PhysicsBlock
         for (auto d : Outline)
         {
             d -= LMapStatic->centrality;
-            L = Modulus(d - Circle->pos);
-            if (Circle->radius > L)
+            d = d - Circle->pos;
+            L = ModulusLength(d);
+            if ((Circle->radius * Circle->radius) > L)
             {
+                L = sqrt(L);
                 contacts->separation = L - Circle->radius;                            // 碰撞距离
-                angle = EdgeVecToCosAngleFloat(d - Circle->pos);                      // 计算出角度
-                contacts->normal = vec2angle({1, 0}, angle);                          // （反向作用力法向量）地形不会旋转
+                contacts->normal = d / L;                          // （反向作用力法向量）地形不会旋转
                 contacts->position = contacts->normal * Circle->radius + Circle->pos; // 碰撞点的位置
                 contacts->w_side = ContactSize;                                       // 边索引 ID
                 ++contacts;
@@ -238,12 +243,13 @@ namespace PhysicsBlock
     unsigned int Collide(Contact *contacts, PhysicsCircle *Circle, PhysicsParticle *Particle)
     {
         Vec2_ dp = Particle->pos - Circle->pos;
-        FLOAT_ L = Modulus(dp);
-        if (Circle->radius > L)
+        FLOAT_ L = ModulusLength(dp);
+        FLOAT_ R2 = Circle->radius * Circle->radius;
+        if (R2 > L)
         {
+            L = sqrt(L);
             contacts->separation = L - Circle->radius;                            // 碰撞距离
-            FLOAT_ angle = EdgeVecToCosAngleFloat(dp);                            // 计算出角度
-            contacts->normal = vec2angle({1, 0}, angle);                          // （反向作用力法向量）地形不会旋转
+            contacts->normal = dp / L;                          // （反向作用力法向量）地形不会旋转
             contacts->position = contacts->normal * Circle->radius + Circle->pos; // 碰撞点的位置
             contacts->w_side = 0;                                                 // 边索引 ID
             return 1;
@@ -254,12 +260,13 @@ namespace PhysicsBlock
     unsigned int Collide(Contact *contacts, PhysicsCircle *CircleA, PhysicsCircle *CircleB)
     {
         Vec2_ dp = CircleB->pos - CircleA->pos;
-        FLOAT_ L = Modulus(dp);
-        if ((CircleA->radius + CircleB->radius) > L)
+        FLOAT_ L = ModulusLength(dp);
+        FLOAT_ R2 = (CircleA->radius + CircleB->radius) * (CircleA->radius + CircleB->radius);
+        if (R2 > L)
         {
-            contacts->separation = L - CircleB->radius;                             // 碰撞距离
-            FLOAT_ angle = EdgeVecToCosAngleFloat(dp);                              // 计算出角度
-            contacts->normal = vec2angle({1, 0}, angle);                            // （反向作用力法向量）地形不会旋转
+            L = sqrt(L);
+            contacts->separation = L - (CircleA->radius + CircleB->radius);           // 碰撞距离
+            contacts->normal = dp / L;                                              // （反向作用力法向量）地形不会旋转
             contacts->position = contacts->normal * CircleA->radius + CircleA->pos; // 碰撞点的位置
             contacts->w_side = 0;                                                   // 边索引 ID
             return 1;
@@ -306,15 +313,16 @@ namespace PhysicsBlock
         FLOAT_ L;
         FLOAT_ angle;
         Vec2_ dp;
+        FLOAT_ R2 = Circle->radius * Circle->radius;
         for (size_t i = 0; i < Shape->OutlineSize; i++)
         {
             dp = Shape->pos + Mat.Rotary(Shape->OutlineSet[i]) - Circle->pos;
-            L = Modulus(dp);
-            if (Circle->radius > L)
+            L = ModulusLength(dp);
+            if (R2 > L)
             {
+                L = sqrt(L);
                 contacts->separation = L - Circle->radius;                            // 碰撞距离
-                angle = EdgeVecToCosAngleFloat(dp);                                   // 计算出角度
-                contacts->normal = vec2angle({1, 0}, angle);                          // （反向作用力法向量）地形不会旋转
+                contacts->normal = dp / L;                          // （反向作用力法向量）地形不会旋转
                 contacts->position = contacts->normal * Circle->radius + Circle->pos; // 碰撞点的位置
                 contacts->w_side = ContactSize;                                       // 边索引 ID
                 ++contacts;

@@ -30,17 +30,6 @@ namespace PhysicsBlock
         return info;
     }
 
-    void PhysicsShape::AddForce(Vec2_ Pos, Vec2_ Force)
-    {
-        Pos -= pos;                                                    // 质心指向受力点的力矩
-        FLOAT_ Langle = EdgeVecToCosAngleFloat(Pos);                   // 力臂角度
-        FLOAT_ disparity = Langle - EdgeVecToCosAngleFloat(Force);     // 力矩角度
-        FLOAT_ ForceFLOAT_ = Modulus(Force);                           // 力大小
-        FLOAT_ F = ForceFLOAT_ * cos(disparity);                       // 垂直力臂的力大小
-        PhysicsParticle::AddForce({F * cos(Langle), F * sin(Langle)}); // 转为世界力矩 // 位置移动受到力矩
-        AddTorque(Modulus(Pos), ForceFLOAT_ * -sin(disparity));         // 旋转受到扭矩
-    }
-
     void PhysicsShape::AddTorque(FLOAT_ ArmForce, FLOAT_ Force)
     {
         torque += ArmForce * Force; // 累加扭矩
@@ -48,7 +37,7 @@ namespace PhysicsBlock
 
     void PhysicsShape::UpdateInfo()
     {
-        Vec2_ UsedCentreMass = CentreMass;//旧质心
+        Vec2_ UsedCentreMass = CentreMass; // 旧质心
         mass = 0;
         unsigned int Size = 0;    // 实体格子数
         unsigned int i;           // 存储网格索引
@@ -71,10 +60,13 @@ namespace PhysicsBlock
         }
         CentreShape /= Size;
         invMass = 1.0 / mass;
-        if (invMass == 0) {
+        if (invMass == 0)
+        {
             mass = DBL_MAX;
             CentreMass = CentreShape;
-        }else {
+        }
+        else
+        {
             CentreMass /= mass;
         }
         CentreShape += Vec2_{0.5, 0.5}; // 移动到格子的中心
@@ -85,7 +77,7 @@ namespace PhysicsBlock
         OldPos = pos;
 
         MomentInertia = 0; // 清空转动惯量
-        Vec2_ lpos;   // 存储临时位置
+        Vec2_ lpos;        // 存储临时位置
         FLOAT_ Lmass;      // 用于存储切割出的小正方形的质量
         for (FLOAT_ x = 0; x < width; ++x)
         {
@@ -114,46 +106,66 @@ namespace PhysicsBlock
             }
         }
         invMomentInertia = 1.0 / MomentInertia;
-        if (invMomentInertia == 0) {
+        if (invMomentInertia == 0)
+        {
             MomentInertia = DBL_MAX;
         }
     }
 
-    void PhysicsShape::UpdateCollisionR() {
+    void PhysicsShape::UpdateCollisionR()
+    {
         CollisionR = 0;
         FLOAT_ R;
         for (size_t i = 0; i < OutlineSize; i++)
         {
             R = ModulusLength(OutlineSet[i]);
-            if (CollisionR < R) {
+            if (CollisionR < R)
+            {
                 CollisionR = R;
             }
         }
         CollisionR = sqrt(CollisionR);
     }
 
-    void PhysicsShape::UpdateAll() {
-        UpdateInfo();
+    void PhysicsShape::UpdateAll()
+    {
+        if (mass == FLOAT_MAX)
+        {
+            invMass = 0;
+            MomentInertia = FLOAT_MAX;
+            invMomentInertia = 0;
+            CentreMass = {width / 2 + 0.5, height / 2 + 0.5};
+            CentreShape = CentreMass;
+            OldPos = pos;
+        }
+        else
+        {
+            UpdateInfo();
+        }
         UpdateOutline(CentreMass);
         UpdateCollisionR();
     }
 
-    void PhysicsShape::ApproachDrop(Vec2_ drop){
+    void PhysicsShape::ApproachDrop(Vec2_ drop)
+    {
         Vec2_ OutlineDrop = vec2angle({CollisionR, 0}, EdgeVecToCosAngleFloat(drop - pos));
         CollisionInfoD info = BresenhamDetection(CentreMass + OutlineDrop, CentreMass - OutlineDrop);
         pos += drop - (info.pos + pos);
     }
 
-    CollisionInfoD PhysicsShape::RayCollide(Vec2_ Pos, FLOAT_ Angle){
+    CollisionInfoD PhysicsShape::RayCollide(Vec2_ Pos, FLOAT_ Angle)
+    {
         Vec2_ drop = vec2angle({CollisionR, 0}, Angle);
         return PsBresenhamDetection(Pos - drop, Pos + drop);
     }
 
-    CollisionInfoI PhysicsShape::PsBresenhamDetection(glm::ivec2 start, glm::ivec2 end){
+    CollisionInfoI PhysicsShape::PsBresenhamDetection(glm::ivec2 start, glm::ivec2 end)
+    {
         return BresenhamDetection(start, end);
     }
 
-    CollisionInfoD PhysicsShape::PsBresenhamDetection(Vec2_ start, Vec2_ end){
+    CollisionInfoD PhysicsShape::PsBresenhamDetection(Vec2_ start, Vec2_ end)
+    {
         // 偏移中心位置，对其网格坐标系
         start -= pos;
         end -= pos;
@@ -161,7 +173,7 @@ namespace PhysicsBlock
         AngleMat Mat(angle);
         start = Mat.Anticlockwise(start);
         end = Mat.Anticlockwise(end);
-        
+
         // 裁剪线段 让线段都在矩形内
         PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start + CentreMass, end + CentreMass, width, height);
         if (data.Focus)

@@ -9,16 +9,18 @@
 namespace PhysicsBlock
 {
 
-#if 0
+#if 1
 #define FLOAT_ float
 #define Vec2_ glm::vec2
 #define Mat2_ glm::mat2
 #define MyImGuiDataType ImGuiDataType_Float
+#define FLOAT_MAX FLT_MAX
 #else
 #define FLOAT_ double
 #define Vec2_ glm::dvec2
 #define Mat2_ glm::dmat2
 #define MyImGuiDataType ImGuiDataType_Double
+#define FLOAT_MAX DBL_MAX
 #endif
 
     /**

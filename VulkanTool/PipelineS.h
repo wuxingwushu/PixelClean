@@ -11,6 +11,7 @@ namespace VulKan {
 		MainMods = 0,
 		LineMods,
 		SpotMods,
+		CircleMods,
 		GifMods,
 		DamagePrompt,
 		UVDynamicDiagram

@@ -5,7 +5,11 @@ namespace PhysicsBlock
 
     BaseOutline::BaseOutline(const unsigned int Width, const unsigned int Height) : BaseGrid(Width, Height)
     {
-        OutlineSet = new Vec2_[Width * Height * 3];
+        int size = Width * Height * 3;
+        if (size < 4){
+            size = 4;
+        }
+        OutlineSet = new Vec2_[size];
     }
 
     BaseOutline::~BaseOutline()

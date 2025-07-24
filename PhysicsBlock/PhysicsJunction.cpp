@@ -4,7 +4,7 @@
 namespace PhysicsBlock
 {
 
-    PhysicsJunctionSS::PhysicsJunctionSS(PhysicsShape *Particle1, Vec2_ arm1, PhysicsShape *Particle2, Vec2_ arm2, CordType type)
+    PhysicsJunctionSS::PhysicsJunctionSS(PhysicsAngle *Particle1, Vec2_ arm1, PhysicsAngle *Particle2, Vec2_ arm2, CordType type)
         : mParticle1(Particle1), mArm1(arm1), mParticle2(Particle2), mArm2(arm2)
     {
         Length = Modulus(GetA() - GetB());
@@ -49,7 +49,7 @@ namespace PhysicsBlock
         mParticle2->angleSpeed -= mParticle2->invMomentInertia * Cross(mR2, impulse);
     }
 
-    PhysicsJunctionS::PhysicsJunctionS(PhysicsShape *Particle, Vec2_ arm, Vec2_ RegularDrop, CordType type)
+    PhysicsJunctionS::PhysicsJunctionS(PhysicsAngle *Particle, Vec2_ arm, Vec2_ RegularDrop, CordType type)
         : mParticle(Particle), Arm(arm), mRegularDrop(RegularDrop)
     {
         Length = Modulus(GetA() - GetB());

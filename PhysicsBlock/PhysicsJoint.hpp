@@ -15,12 +15,12 @@ namespace PhysicsBlock
         FLOAT_ softness;                       // 柔软度
     public:
         Vec2_ r1, r2;           // 计算杠杆节点位置（用于判断位置偏移多少）
-        PhysicsShape *body1, *body2; // 对应两个物体
+        PhysicsAngle *body1, *body2; // 对应两个物体
     public:
         PhysicsJoint(/* args */);
         ~PhysicsJoint();
 
-        void Set(PhysicsShape *Body1, PhysicsShape *Body2, const Vec2_ anchor);
+        void Set(PhysicsAngle *Body1, PhysicsAngle *Body2, const Vec2_ anchor);
 
         void PreStep(FLOAT_ inv_dt);
 

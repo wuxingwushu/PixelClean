@@ -36,6 +36,16 @@ namespace PhysicsBlock
 	glm::ivec2 ToInt(glm::dvec2 val);
 
 	/**
+	 * @brief 快速平方根
+	 * @warning 因为现代CPU有开平方根的指令，所以反而会慢于sqrt() */
+	float q_sqrt(float S);
+
+	/**
+	 * @brief 快速平方根
+	 * @warning 因为现代CPU有开平方根的指令，所以反而会慢于sqrt() */
+	double q_sqrt(double S);
+
+	/**
 	 * @brief   获取模的长度(没有开方)
 	 * @param   Modulus 輸入 X,Y 的距离差
 	 * @return  返回 x*x + y*y 的結果 */

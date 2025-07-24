@@ -14,6 +14,7 @@ namespace PhysicsBlock
 	// 物理对象基础信息
 	AuxiliaryBoolColor(Pos);		 // 位置
 	AuxiliaryBoolColor(OldPos);		 // 旧位置
+	AuxiliaryBoolColor(Angle);		 // 角度
 	AuxiliaryBoolColor(Speed);		 // 速度
 	AuxiliaryBoolColor(Force);		 // 受力
 	AuxiliaryBoolColor(CentreMass);	 // 质心
@@ -30,6 +31,7 @@ namespace PhysicsBlock
 		inih::INIReader Ini{"PhysicsBlock.ini"};
 		AuxiliaryReadBoolColor(Pos);							// 位置
 		AuxiliaryReadBoolColor(OldPos);							// 旧位置
+		AuxiliaryReadBoolColor(Angle);							// 角度
 		AuxiliaryReadBoolColor(Speed);							// 速度
 		AuxiliaryReadBoolColor(Force);							// 受力
 		AuxiliaryReadBoolColor(CentreMass);						// 质心
@@ -46,6 +48,7 @@ namespace PhysicsBlock
 		inih::INIReader Ini{"PhysicsBlock.ini"};
 		AuxiliaryStorageBoolColor(Pos);							   // 位置
 		AuxiliaryStorageBoolColor(OldPos);						   // 旧位置
+		AuxiliaryStorageBoolColor(Angle);						   // 角度
 		AuxiliaryStorageBoolColor(Speed);						   // 速度
 		AuxiliaryStorageBoolColor(Force);						   // 受力
 		AuxiliaryStorageBoolColor(CentreMass);					   // 质心
@@ -82,9 +85,9 @@ namespace PhysicsBlock
 			Static_Event = Grid->Event;
 		}
 #if TranslatorLocality
-		ImGuiDataType_ T = ImGuiDataType_U8;// 这是正确的参数
+		ImGuiDataType_ T = ImGuiDataType_U8; // 这是正确的参数
 #else
-		ImGuiDataType_ T = ImGuiDataType_U64;// 这只是占位符而已（在另外一台电脑，防止报错，实际不使用）
+		ImGuiDataType_ T = ImGuiDataType_U64; // 这只是占位符而已（在另外一台电脑，防止报错，实际不使用）
 #endif
 
 		unsigned char min = 0, max = 255;
@@ -150,6 +153,7 @@ namespace PhysicsBlock
 	{
 		AuxiliaryColorUI("位置", &Auxiliary_PosBool, Auxiliary_PosColor);
 		AuxiliaryColorUI("旧位置", &Auxiliary_OldPosBool, Auxiliary_OldPosColor);
+		AuxiliaryColorUI("角度", &Auxiliary_AngleBool, Auxiliary_AngleColor);
 		AuxiliaryColorUI("速度", &Auxiliary_SpeedBool, Auxiliary_SpeedColor);
 		AuxiliaryColorUI("受力", &Auxiliary_ForceBool, Auxiliary_ForceColor);
 		AuxiliaryColorUI("质心", &Auxiliary_CentreMassBool, Auxiliary_CentreMassColor);

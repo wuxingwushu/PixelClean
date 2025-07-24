@@ -26,6 +26,22 @@ namespace PhysicsBlock
 		return {ToInt(val.x), ToInt(val.y)};
 	}
 
+	float q_sqrt(float S)
+	{
+		int i = *(int *)&S;
+		i = 0x5f3759df - (i >> 1);
+		float y = *(float *)&i;
+		return y * (1.5f - 0.5f * S * y * y);
+	}
+
+	double q_sqrt(double S)
+	{
+		int i = *(int *)&S;
+		i = 0x5fe6eb50c7b537a9LL - (i >> 1);
+		double y = *(double *)&i;
+		return y * (1.5f - 0.5f * S * y * y);
+	}
+
 	// 获取模的长度(没有开方)
 	FLOAT_ ModulusLength(Vec2_ Modulus)
 	{
@@ -253,7 +269,7 @@ namespace PhysicsBlock
 	{
 		FLOAT_ rA = dA / 2; // 边长的一半
 		FLOAT_ rB = dB / 2;
-		Vec2_ Pos{posB - posA};			 // 两个正方形的  X  Y  的间距
+		Vec2_ Pos{posB - posA};					 // 两个正方形的  X  Y  的间距
 		if (Modulus(Pos) > ((rA + rB) * 1.415f)) // 距離絕對碰不到
 		{
 			return Vec2_(0, 0);
@@ -268,7 +284,7 @@ namespace PhysicsBlock
 		FLOAT_ SquareR = rB * 1.4142135623730951;
 		Vec2_ PYDrop = {SquareR * cosangle, SquareR * sinangle};
 
-		Vec2_ QPYpos{0.0f, 0.0f};							   // 补偿距离
+		Vec2_ QPYpos{0.0f, 0.0f};							  // 补偿距离
 		Vec2_ QPos = vec2angle(Pos, {Acosangle, -Asinangle}); // 以 A 为坐标系，B 正方形的四个点进行判断是否在内
 		QPYpos += SquareToDrop(rA, (QPos - PYDrop), QPos);
 		QPYpos += SquareToDrop(rA, (QPos + QPYpos + Vec2_{PYDrop.y, -PYDrop.x}), QPos);
@@ -283,7 +299,7 @@ namespace PhysicsBlock
 		SquareR = rA * 1.4142135623730951;
 		PYDrop = {SquareR * cosangle, SquareR * sinangle};
 
-		Vec2_ HPYpos{0.0f, 0.0f};										   // 补偿距离
+		Vec2_ HPYpos{0.0f, 0.0f};										  // 补偿距离
 		Vec2_ HPos = vec2angle(-(QPYpos + Pos), {Bcosangle, -Bsinangle}); // 以 B 为坐标系，A 正方形的四个点进行判断是否在内
 		HPYpos -= SquareToDrop(rB, (HPos - PYDrop), HPos);
 		HPYpos -= SquareToDrop(rB, (HPos + HPYpos + Vec2_{PYDrop.y, -PYDrop.x}), HPos);

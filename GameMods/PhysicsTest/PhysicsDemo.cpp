@@ -578,7 +578,7 @@ namespace PhysicsBlock
 			delete (*myPhysicsWorld);
 		}
 		(*myPhysicsWorld) = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
-		int MapSize = 10;
+		int MapSize = 20;
 
 		// 设置摄像机位置
 		mCamera->setCameraPos({0, 0, MapSize * 2});
@@ -622,6 +622,232 @@ namespace PhysicsBlock
 			(*myPhysicsWorld)->AddObject(PhysicsJunctionPP);
 			ParticleS.push_back(PhysicsParticle1);
 		}
+
+		PhysicsBlock::PhysicsCircle *PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({-2, -2}, 1, DBL_MAX);
+		(*myPhysicsWorld)->AddObject(PhysicsCircle1);
+		PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({2, -2}, 1, DBL_MAX);
+		(*myPhysicsWorld)->AddObject(PhysicsCircle1);
+	}
+
+	void PhysicsDemo10(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
+	{
+		if ((*myPhysicsWorld) != nullptr)
+		{
+			delete (*myPhysicsWorld);
+		}
+		(*myPhysicsWorld) = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
+		int MapSize = 10;
+
+		// 设置摄像机位置
+		mCamera->setCameraPos({0, 0, MapSize * 2});
+
+		// 创建地图
+		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
+		{
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
+		}
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(0, i).Entity = true;
+			mMapStatic->at(0, i).Collision = true;
+			mMapStatic->at(MapSize - 1, i).Entity = true;
+			mMapStatic->at(MapSize - 1, i).Collision = true;
+			mMapStatic->at(i, 0).Entity = true;
+			mMapStatic->at(i, 0).Collision = true;
+		}
+		mMapStatic->at(MapSize / 2 - 1, 1).Entity = true;
+		mMapStatic->at(MapSize / 2 - 1, 1).Collision = true;
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
+		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
+
+		PhysicsBlock::PhysicsCircle *PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({-1.5, 0}, 1, 1);
+		(*myPhysicsWorld)->AddObject(PhysicsCircle1);
+	}
+
+	void PhysicsDemo11(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
+	{
+		if ((*myPhysicsWorld) != nullptr)
+		{
+			delete (*myPhysicsWorld);
+		}
+		(*myPhysicsWorld) = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
+		int MapSize = 50;
+
+		// 设置摄像机位置
+		mCamera->setCameraPos({0, 0, MapSize * 2});
+
+		// 创建地图
+		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
+		{
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
+		}
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(0, i).Entity = true;
+			mMapStatic->at(0, i).Collision = true;
+			mMapStatic->at(MapSize - 1, i).Entity = true;
+			mMapStatic->at(MapSize - 1, i).Collision = true;
+			mMapStatic->at(i, 0).Entity = true;
+			mMapStatic->at(i, 0).Collision = true;
+		}
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
+		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
+
+		PhysicsBlock::PhysicsCircle *PhysicsCircle1;
+
+		for (int x = 0; x < MapSize / 2; ++x)
+		{
+			for (int y = 0; y < MapSize * 1.5; ++y)
+			{
+				PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({x - (MapSize / 4), (y * 1.2) - (MapSize / 3)}, 0.5, 1);
+				(*myPhysicsWorld)->AddObject(PhysicsCircle1);
+			}
+		}
+	}
+
+	void PhysicsDemo12(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
+	{
+		if ((*myPhysicsWorld) != nullptr)
+		{
+			delete (*myPhysicsWorld);
+		}
+		(*myPhysicsWorld) = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
+		int MapSize = 50;
+
+		// 设置摄像机位置
+		mCamera->setCameraPos({0, 0, MapSize * 2});
+
+		// 创建地图
+		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
+		{
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
+		}
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(0, i).Entity = true;
+			mMapStatic->at(0, i).Collision = true;
+			mMapStatic->at(MapSize - 1, i).Entity = true;
+			mMapStatic->at(MapSize - 1, i).Collision = true;
+			mMapStatic->at(i, 0).Entity = true;
+			mMapStatic->at(i, 0).Collision = true;
+		}
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
+		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
+
+		PhysicsBlock::PhysicsCircle *PhysicsCircle1;
+		PhysicsBlock::PhysicsJunctionS *PhysicsJunctionS1;
+		for (int x = 0; x < (MapSize / 2 - 6); ++x)
+		{
+			PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({x - (MapSize / 4 - 3), -MapSize / 4}, 0.5, 1);
+			(*myPhysicsWorld)->AddObject(PhysicsCircle1);
+			PhysicsJunctionS1 = new PhysicsBlock::PhysicsJunctionS(PhysicsCircle1, {0, 0}, {x - (MapSize / 4 - 3), 0}, PhysicsBlock::cord);
+			(*myPhysicsWorld)->AddObject(PhysicsJunctionS1);
+		}
+		PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({-(MapSize / 2 - 3), 0}, 0.5, 1);
+		(*myPhysicsWorld)->AddObject(PhysicsCircle1);
+		PhysicsJunctionS1 = new PhysicsBlock::PhysicsJunctionS(PhysicsCircle1, {0, 0}, {-(MapSize / 4 - 2), 0}, PhysicsBlock::cord);
+		(*myPhysicsWorld)->AddObject(PhysicsJunctionS1);
+	}
+
+	void PhysicsDemo13(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
+	{
+		if ((*myPhysicsWorld) != nullptr)
+		{
+			delete (*myPhysicsWorld);
+		}
+		(*myPhysicsWorld) = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
+		int MapSize = 50;
+
+		// 设置摄像机位置
+		mCamera->setCameraPos({0, 0, MapSize * 2});
+
+		// 创建地图
+		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
+		{
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
+		}
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(0, i).Entity = true;
+			mMapStatic->at(0, i).Collision = true;
+			mMapStatic->at(MapSize - 1, i).Entity = true;
+			mMapStatic->at(MapSize - 1, i).Collision = true;
+			mMapStatic->at(i, 0).Entity = true;
+			mMapStatic->at(i, 0).Collision = true;
+		}
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
+		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
+
+		PhysicsBlock::PhysicsShape *PhysicsShape2;
+		PhysicsBlock::PhysicsShape *PhysicsShape3;
+		PhysicsBlock::PhysicsJoint *PhysicsJoint1;
+		for (int x = 0; x < (MapSize / 2 - 6); ++x)
+		{
+			PhysicsShape2 = new PhysicsBlock::PhysicsShape({x - (MapSize / 4 - 3), 0}, {1, 1});
+			for (size_t i = 0; i < (PhysicsShape2->width * PhysicsShape2->height); ++i)
+			{
+				PhysicsShape2->at(i).Collision = true;
+				PhysicsShape2->at(i).Entity = true;
+				PhysicsShape2->at(i).mass = FLOAT_MAX;
+			}
+			PhysicsShape2->mass = FLOAT_MAX;
+			PhysicsShape2->UpdateAll();
+			PhysicsShape2->angle = 0;
+			(*myPhysicsWorld)->AddObject(PhysicsShape2);
+			PhysicsShape3 = new PhysicsBlock::PhysicsShape({x - (MapSize / 4 - 3), -MapSize / 4}, {1, 1});
+			for (size_t i = 0; i < (PhysicsShape3->width * PhysicsShape3->height); ++i)
+			{
+				PhysicsShape3->at(i).Collision = true;
+				PhysicsShape3->at(i).Entity = true;
+				PhysicsShape3->at(i).mass = 1;
+			}
+			PhysicsShape3->UpdateAll();
+			PhysicsShape3->angle = 0;
+			(*myPhysicsWorld)->AddObject(PhysicsShape3);
+			PhysicsJoint1 = new PhysicsBlock::PhysicsJoint;
+			PhysicsJoint1->Set(PhysicsShape2, PhysicsShape3, {PhysicsShape2->pos + Vec2_{0, -1}});
+			(*myPhysicsWorld)->AddObject(PhysicsJoint1);
+		}
+		PhysicsShape2 = new PhysicsBlock::PhysicsShape({-(MapSize / 4 - 2), 0}, {1, 1});
+		for (size_t i = 0; i < (PhysicsShape2->width * PhysicsShape2->height); ++i)
+		{
+			PhysicsShape2->at(i).Collision = true;
+			PhysicsShape2->at(i).Entity = true;
+			PhysicsShape2->at(i).mass = FLOAT_MAX;
+		}
+		PhysicsShape2->mass = FLOAT_MAX;
+		PhysicsShape2->UpdateAll();
+		PhysicsShape2->angle = 0;
+		(*myPhysicsWorld)->AddObject(PhysicsShape2);
+		PhysicsShape3 = new PhysicsBlock::PhysicsShape({-(MapSize / 2 - 4), -1}, {1, 1});
+		for (size_t i = 0; i < (PhysicsShape3->width * PhysicsShape3->height); ++i)
+		{
+			PhysicsShape3->at(i).Collision = true;
+			PhysicsShape3->at(i).Entity = true;
+			PhysicsShape3->at(i).mass = 1;
+		}
+		PhysicsShape3->UpdateAll();
+		PhysicsShape3->angle = 0;
+		(*myPhysicsWorld)->AddObject(PhysicsShape3);
+		PhysicsJoint1 = new PhysicsBlock::PhysicsJoint;
+		PhysicsJoint1->Set(PhysicsShape2, PhysicsShape3, {PhysicsShape2->pos + Vec2_{0, -1}});
+		(*myPhysicsWorld)->AddObject(PhysicsJoint1);
 	}
 
 }

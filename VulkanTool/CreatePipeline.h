@@ -11,6 +11,9 @@ namespace VulKan {
 	//画点
 	Pipeline* SpotPipeline(Pipeline* Pipeline, Device* Device);
 
+	//画圆
+	Pipeline* CirclePipeline(Pipeline* Pipeline, Device* Device);
+
 	//GIF
 	Pipeline* GIFPipeline(Pipeline* Pipeline, Device* Device);
 

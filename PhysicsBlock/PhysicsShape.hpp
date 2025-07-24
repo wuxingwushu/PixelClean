@@ -32,17 +32,6 @@ namespace PhysicsBlock
         CollisionInfoI DropCollision(Vec2_ pos);
 
         /**
-         * @brief 受力（移动，旋转）
-         * @param Pos 受力位置（世界位置）
-         * @param Force 力矩 */
-        void AddForce(Vec2_ Pos, Vec2_ Force);
-
-        /**
-         * @brief 受力（移动）
-         * @param Force 力矩 */
-        void AddForce(Vec2_ Force) { PhysicsParticle::AddForce(Force); };
-
-        /**
          * @brief 受力（旋转）
          * @param ArmForce 力臂
          * @param Force 力大小 */

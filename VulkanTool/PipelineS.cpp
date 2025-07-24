@@ -10,6 +10,7 @@ namespace VulKan {
 		EstablishPipeline(MainPipeline);
 		EstablishPipeline(LinePipeline);
 		EstablishPipeline(SpotPipeline);
+		EstablishPipeline(CirclePipeline);
 		EstablishPipeline(GIFPipeline);
 		EstablishPipeline(DamagePromptPipeline);
 		EstablishPipeline(UVDynamicDiagramPipeline);

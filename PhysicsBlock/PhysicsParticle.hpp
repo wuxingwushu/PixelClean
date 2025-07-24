@@ -60,6 +60,10 @@ namespace PhysicsBlock
          * @return 质量倒数 */
         virtual FLOAT_ PFGetInvMass(){ return invMass; }
         /**
+         * @brief 获取质量
+         * @return 质量 */
+        virtual FLOAT_ PFGetMass() { return mass; }
+        /**
          * @brief 获取转动惯量倒数
          * @return 转动惯量倒数 */
         virtual FLOAT_ PFGetInvI(){ 

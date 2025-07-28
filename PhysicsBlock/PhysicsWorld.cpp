@@ -652,20 +652,10 @@ namespace PhysicsBlock
 #endif
 
 // 预处理
-#if ConcurrentHash_map_
-        // 1. 获取锁定表（独占访问）
-        auto locked_table = CollideGroupS.lock_table();
-        // 2. 使用迭代器遍历
-        for (auto kv = locked_table.begin(); kv != locked_table.end(); ++kv)
-        {
-            kv->second->PreStep();
-        }
-#else
         for (auto kv : CollideGroupS)
         {
             kv.second->PreStep();
         }
-#endif
     }
 
     void PhysicsWorld::SetMapFormwork(MapFormwork *MapFormwork_)
@@ -699,6 +689,11 @@ namespace PhysicsBlock
             if (Modulus(i->pos - pos) < 0.25) // 点击位置距离点位置小于 0.25， 就判断选择 点
                 return i;
         }
+        for (auto i : PhysicsCircleS)
+        {
+            if (Modulus(i->pos - pos) < i->radius)
+                return i;
+        }
         return nullptr;
     }
 
@@ -713,6 +708,11 @@ namespace PhysicsBlock
         for (auto i : PhysicsParticleS)
         {
             Energy += i->mass * ModulusLength(i->speed);
+        }
+        for (auto i : PhysicsCircleS)
+        {
+            Energy += i->mass * ModulusLength(i->speed);
+            Energy += i->MomentInertia * i->angleSpeed * i->angleSpeed;
         }
         return Energy / 2;
     }

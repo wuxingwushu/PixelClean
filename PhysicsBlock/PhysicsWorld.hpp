@@ -6,7 +6,6 @@
 #include "PhysicsArbiter.hpp"  // 物理解析單元
 #include "PhysicsJoint.hpp"    // 物理关节
 #include "PhysicsJunction.hpp" // 物理连接
-#include <map>
 #include <unordered_map>
 
 #define MemoryPoolBool 1
@@ -157,10 +156,10 @@ namespace PhysicsBlock
     class PhysicsWorld
     {
     public:
-        Vec2_ GravityAcceleration;      // 重力加速度
+        Vec2_ GravityAcceleration;           // 重力加速度
         const bool WindBool;                 // 是否开启网格风
-        Vec2_ Wind{0};                  // 风
-        Vec2_ *GridWind = nullptr;      // 网格风
+        Vec2_ Wind{0};                       // 风
+        Vec2_ *GridWind = nullptr;           // 网格风
         glm::uvec2 GridWindSize{0};          // 网格风大小
         MapFormwork *wMapFormwork = nullptr; // 地图对象
 
@@ -170,7 +169,10 @@ namespace PhysicsBlock
         std::vector<BaseJunction *> BaseJunctionS;       // 物理绳子
         std::vector<PhysicsCircle *> PhysicsCircleS;     // 物理圆
 
-        std::map<ArbiterKey, BaseArbiter *> CollideGroupS; // 碰撞队
+        std::unordered_map<ArbiterKey, BaseArbiter *, ArbiterKeyHash> CollideGroupS; // 碰撞队
+        std::vector<BaseArbiter *> CollideGroupVector;
+        std::vector<BaseArbiter *> NewCollideGroup;
+        std::vector<ArbiterKey> DeleteCollideGroup;
 
         void HandleCollideGroup(BaseArbiter *Ba);
 

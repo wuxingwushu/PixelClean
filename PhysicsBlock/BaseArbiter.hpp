@@ -31,8 +31,14 @@ namespace PhysicsBlock
     {
         ArbiterKey(void *Object1, void *Object2)
         {
-            object1 = Object1;
-            object2 = Object2;
+            if (Object1 > Object2) {
+                object1 = Object1;
+                object2 = Object2;
+            }
+            else {
+                object1 = Object2;
+                object2 = Object1;
+            }
         }
         // 碰撞的两个对象
         void *object1;

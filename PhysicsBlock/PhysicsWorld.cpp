@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <map>
 #include <iostream>
+#include "PhysicsBaseArbiter.hpp"
 
 // 计算线程任务片段
 #define ThreadTaskAllot(S, E, Size, Tn, TSize) \
@@ -28,6 +29,21 @@
             S = S * Tn + Y;                    \
         }                                      \
     }
+#if ThreadPoolBool
+#define Map_Delete(key)                                 \
+    if (CollideGroupS.find(key) != CollideGroupS.end()) \
+    {                                                   \
+        mLock.lock();                                   \
+        DeleteCollideGroup.push_back(key);              \
+        mLock.unlock();                                 \
+    }
+#else
+#define Map_Delete(key)                                 \
+    if (CollideGroupS.find(key) != CollideGroupS.end()) \
+    {                                                   \
+        DeleteCollideGroup.push_back(key);              \
+    }
+#endif
 
 namespace PhysicsBlock
 {
@@ -96,7 +112,6 @@ namespace PhysicsBlock
         {
             delete i;
         }
-        // 两个碰撞对象间的信息
         for (auto i : CollideGroupS)
         {
             DeleteArbiter(i.second);
@@ -106,33 +121,38 @@ namespace PhysicsBlock
     inline void PhysicsWorld::HandleCollideGroup(BaseArbiter *Ba)
     {
         Ba->ComputeCollide();
-        if (Ba->numContacts > 0)
+        auto i = CollideGroupS.find(Ba->key);
+        if (i == CollideGroupS.end())
         {
-            if (CollideGroupS.find(Ba->key) == CollideGroupS.end())
+            if (Ba->numContacts > 0)
             {
 #if ThreadPoolBool
                 mLock.lock();
 #endif
-                CollideGroupS.insert({Ba->key, Ba});
+                NewCollideGroup.push_back(Ba);
+#if ThreadPoolBool
+                mLock.unlock();
+#endif
+                return;
+            }
+        }
+        else
+        {
+            if (Ba->numContacts > 0)
+            {
+                i->second->Update(Ba->contacts, Ba->numContacts);
+            }
+            else
+            {
+#if ThreadPoolBool
+                mLock.lock();
+#endif
+                DeleteCollideGroup.push_back(Ba->key);
 #if ThreadPoolBool
                 mLock.unlock();
 #endif
             }
-            else
-            {
-                BaseArbiter* LBa = CollideGroupS[Ba->key];
-                LBa->Update(Ba->contacts, Ba->numContacts);
-                DeleteArbiter(Ba);
-            }
-            return;
         }
-#if ThreadPoolBool
-        mLock.lock();
-#endif
-        CollideGroupS.erase(Ba->key);
-#if ThreadPoolBool
-        mLock.unlock();
-#endif
         DeleteArbiter(Ba);
     }
 
@@ -183,16 +203,7 @@ namespace PhysicsBlock
                     else
                     {
                         ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], o);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                     }
                 }
 
@@ -205,16 +216,7 @@ namespace PhysicsBlock
                     if ((PhysicsShapeS[SizeD]->CollisionR + c->radius) < Modulus(PhysicsShapeS[SizeD]->pos - c->pos))
                     {
                         ArbiterKey key = ArbiterKey(c, PhysicsShapeS[SizeD]);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                         continue;
                     }
                     Arbiter(c, PhysicsShapeS[SizeD]);
@@ -239,16 +241,7 @@ namespace PhysicsBlock
                     if ((PhysicsShapeS[SizeD]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[SizeD]->pos - PhysicsShapeS[j]->pos))
                     {
                         ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                         continue;
                     }
                     Arbiter(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
@@ -279,16 +272,7 @@ namespace PhysicsBlock
                     else
                     {
                         ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], o);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                     }
                 }
 #if JFRW
@@ -310,16 +294,7 @@ namespace PhysicsBlock
                     if ((PhysicsCircleS[SizeD]->radius + PhysicsCircleS[j]->radius) < Modulus(PhysicsCircleS[SizeD]->pos - PhysicsCircleS[j]->pos))
                     {
                         ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                         continue;
                     }
                     Arbiter(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
@@ -359,13 +334,75 @@ namespace PhysicsBlock
         }
 #endif
 
-        // 预处理
         FLOAT_ inv_dt = 1.0 / time;
-        std::vector<BaseArbiter *> BaseArbiterVector;
-        for (auto kv : CollideGroupS)
+
+        for (auto J : DeleteCollideGroup)
         {
-            kv.second->PreStep(inv_dt);
-            BaseArbiterVector.push_back(kv.second);
+            CollideGroupS.erase(J);
+        }
+        for (int i = 0; i < CollideGroupVector.size(); i++)
+        {
+            for (int j = 0; j < DeleteCollideGroup.size(); j++)
+            {
+                if (CollideGroupVector[i]->key == DeleteCollideGroup[j])
+                {
+                    DeleteArbiter(CollideGroupVector[i]);
+                    CollideGroupVector[i] = CollideGroupVector[CollideGroupVector.size() - 1];
+                    CollideGroupVector.pop_back();
+                    --i;
+                    DeleteCollideGroup[j] = DeleteCollideGroup[DeleteCollideGroup.size() - 1];
+                    DeleteCollideGroup.pop_back();
+                    break;
+                }
+            }
+        }
+        DeleteCollideGroup.clear();
+        for (auto J : NewCollideGroup)
+        {
+            CollideGroupS.insert({J->key, J});
+            CollideGroupVector.push_back(J);
+        }
+        NewCollideGroup.clear();
+
+#define DANCI 0 & ThreadPoolBool
+#if DANCI
+        // 预处理
+        const auto PreStepXT_Fun = [this, inv_dt](int T_Num, int Tx)
+        {
+            bool JZ;
+            int SizeD;
+            int SizeY;
+            ThreadTaskAllot(SizeD, SizeY, CollideGroupVector.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                CollideGroupVector[SizeD]->PreStep(inv_dt);
+            }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsJointS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                PhysicsJointS[SizeD]->PreStep(inv_dt);
+            }
+            ThreadTaskAllot(SizeD, SizeY, BaseJunctionS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                BaseJunctionS[SizeD]->PreStep(inv_dt);
+            }
+        };
+        xTn.clear();
+        for (size_t i = 0; i < xThreadNum; ++i)
+        {
+            xTn.push_back(mThreadPool.enqueue(PreStepXT_Fun, i, xThreadNum));
+        }
+        // 等待任务结束
+        for (auto &tf : xTn)
+        {
+            tf.wait();
+        }
+#else
+        // 预处理
+        for (const auto i : CollideGroupVector)
+        {
+            i->PreStep(inv_dt);
         }
         for (auto J : PhysicsJointS)
         {
@@ -375,17 +412,18 @@ namespace PhysicsBlock
         {
             J->PreStep(inv_dt);
         }
+#endif
 
-#if ThreadPoolBool
-        const auto ApplyImpulseXT_Fun = [this, BaseArbiterVector](int T_Num, int Tx)
+#if 1 & ThreadPoolBool
+        const auto ApplyImpulseXT_Fun = [this](int T_Num, int Tx)
         {
             bool JZ;
             int SizeD;
             int SizeY;
-            ThreadTaskAllot(SizeD, SizeY, BaseArbiterVector.size(), T_Num, Tx);
+            ThreadTaskAllot(SizeD, SizeY, CollideGroupVector.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
-                BaseArbiterVector[SizeD]->ApplyImpulse();
+                CollideGroupVector[SizeD]->ApplyImpulse();
             }
             ThreadTaskAllot(SizeD, SizeY, PhysicsJointS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
@@ -415,7 +453,7 @@ namespace PhysicsBlock
         // 迭代结果
         for (size_t i = 0; i < 10; ++i)
         {
-            for (auto kv : BaseArbiterVector)
+            for (auto kv : CollideGroupVector)
             {
                 kv->ApplyImpulse();
             }
@@ -431,7 +469,7 @@ namespace PhysicsBlock
 
 #endif
 
-#if 0
+#if DANCI
         const auto PhysicsPosXT_Fun = [this, time](int T_Num, int Tx)
         {
             bool JZ;
@@ -511,16 +549,7 @@ namespace PhysicsBlock
                     else
                     {
                         ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], o);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                     }
                 }
 
@@ -529,16 +558,7 @@ namespace PhysicsBlock
                     if ((PhysicsShapeS[SizeD]->CollisionR + c->radius) < Modulus(PhysicsShapeS[SizeD]->pos - c->pos))
                     {
                         ArbiterKey key = ArbiterKey(c, PhysicsShapeS[SizeD]);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                         continue;
                     }
                     Arbiter(c, PhysicsShapeS[SizeD]);
@@ -557,16 +577,7 @@ namespace PhysicsBlock
                     if ((PhysicsShapeS[SizeD]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[SizeD]->pos - PhysicsShapeS[j]->pos))
                     {
                         ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                         continue;
                     }
                     Arbiter(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
@@ -589,16 +600,7 @@ namespace PhysicsBlock
                     else
                     {
                         ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], o);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                     }
                 }
 #if JFRW
@@ -614,16 +616,7 @@ namespace PhysicsBlock
                     if ((PhysicsCircleS[SizeD]->radius + PhysicsCircleS[j]->radius) < Modulus(PhysicsCircleS[SizeD]->pos - PhysicsCircleS[j]->pos))
                     {
                         ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
-                        if (CollideGroupS.find(key) != CollideGroupS.end())
-                        {
-#if ThreadPoolBool
-                            mLock.lock();
-#endif
-                            CollideGroupS.erase(key);
-#if ThreadPoolBool
-                            mLock.unlock();
-#endif
-                        }
+                        Map_Delete(key);
                         continue;
                     }
                     Arbiter(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
@@ -658,11 +651,21 @@ namespace PhysicsBlock
         }
 #endif
 
-        // 预处理
+// 预处理
+#if ConcurrentHash_map_
+        // 1. 获取锁定表（独占访问）
+        auto locked_table = CollideGroupS.lock_table();
+        // 2. 使用迭代器遍历
+        for (auto kv = locked_table.begin(); kv != locked_table.end(); ++kv)
+        {
+            kv->second->PreStep();
+        }
+#else
         for (auto kv : CollideGroupS)
         {
             kv.second->PreStep();
         }
+#endif
     }
 
     void PhysicsWorld::SetMapFormwork(MapFormwork *MapFormwork_)
@@ -694,11 +697,6 @@ namespace PhysicsBlock
         for (auto i : PhysicsParticleS)
         {
             if (Modulus(i->pos - pos) < 0.25) // 点击位置距离点位置小于 0.25， 就判断选择 点
-                return i;
-        }
-        for (auto i : PhysicsCircleS)
-        {
-            if (Modulus(i->pos - pos) < i->radius) // 点击位置距离点位置小于 0.25， 就判断选择 点
                 return i;
         }
         return nullptr;

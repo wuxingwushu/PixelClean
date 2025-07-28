@@ -421,21 +421,21 @@ namespace GAME
 		// 渲染物理信息
 		if (PhysicsAssistantInformation)
 		{
-			for (auto &i : mPhysicsWorld->CollideGroupS)
+			for (auto& i : mPhysicsWorld->CollideGroupVector)
 			{
-				for (int j = 0; j < i.second->numContacts; ++j)
+				for (int j = 0; j < i->numContacts; ++j)
 				{
 					// 碰撞点
 					if (PhysicsBlock::Auxiliary_CollisionDropBool)
-						mAuxiliaryVision->Spot({i.second->contacts[j].position, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropColor));
+						mAuxiliaryVision->Spot({i->contacts[j].position, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropColor));
 					// 碰撞点 分离 法向量
 					if (PhysicsBlock::Auxiliary_SeparateNormalVectorBool)
-						mAuxiliaryVision->Line({i.second->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor), {i.second->contacts[j].position + i.second->contacts[j].normal, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor));
+						mAuxiliaryVision->Line({i->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor), {i->contacts[j].position + i->contacts[j].normal, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor));
 					// 指向重心
 					if (PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityBool)
 					{
-						mAuxiliaryVision->Line({i.second->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor), {i.second->contacts[j].position - i.second->contacts[j].r1, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor));
-						mAuxiliaryVision->Line({i.second->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor), {i.second->contacts[j].position - i.second->contacts[j].r2, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor));
+						mAuxiliaryVision->Line({i->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor), {i->contacts[j].position - i->contacts[j].r1, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor));
+						mAuxiliaryVision->Line({i->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor), {i->contacts[j].position - i->contacts[j].r2, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor));
 					}
 				}
 			}

@@ -93,10 +93,10 @@ namespace PhysicsBlock
 
     /**
      * @brief 圆，地形，碰撞解析 */
-    class PhysicsArbiterCC : public PhysicsBaseArbiterAD
+    class PhysicsArbiterCC : public PhysicsBaseArbiterAA
     {
     public:
-        PhysicsArbiterCC(PhysicsCircle *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAD(Object1, Object2){};
+        PhysicsArbiterCC(PhysicsCircle *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
         ~PhysicsArbiterCC(){};
 
         // 计算俩物体的碰撞

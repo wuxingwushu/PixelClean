@@ -134,8 +134,10 @@ namespace PhysicsBlock
             invMass = 0;
             MomentInertia = FLOAT_MAX;
             invMomentInertia = 0;
+            //Vec2_ UsedCentreMass = CentreMass; // 旧质心
             CentreMass = {width / 2 + 0.5, height / 2 + 0.5};
             CentreShape = CentreMass;
+            //pos += vec2angle(CentreMass - UsedCentreMass, angle);
             OldPos = pos;
         }
         else

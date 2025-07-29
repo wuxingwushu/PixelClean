@@ -5,6 +5,7 @@
 #include <map>
 #include <iostream>
 #include "PhysicsBaseArbiter.hpp"
+#include "PhysicsBaseCollide.hpp"
 
 // 计算线程任务片段
 #define ThreadTaskAllot(S, E, Size, Tn, TSize) \
@@ -213,7 +214,7 @@ namespace PhysicsBlock
                     {
                         continue;
                     }
-                    if ((PhysicsShapeS[SizeD]->CollisionR + c->radius) < Modulus(PhysicsShapeS[SizeD]->pos - c->pos))
+                    if (!CollideAABB(PhysicsShapeS[SizeD], c))
                     {
                         ArbiterKey key = ArbiterKey(c, PhysicsShapeS[SizeD]);
                         Map_Delete(key);
@@ -238,7 +239,7 @@ namespace PhysicsBlock
                     {
                         continue;
                     }
-                    if ((PhysicsShapeS[SizeD]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[SizeD]->pos - PhysicsShapeS[j]->pos))
+                    if (!CollideAABB(PhysicsShapeS[SizeD], PhysicsShapeS[j]))
                     {
                         ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
                         Map_Delete(key);
@@ -264,7 +265,7 @@ namespace PhysicsBlock
                     {
                         continue;
                     }
-                    if (PhysicsCircleS[SizeD]->radius > Modulus(PhysicsCircleS[SizeD]->pos - o->pos))
+                    if (CollideAABB(PhysicsCircleS[SizeD], o))
                     {
                         o->OldPosUpDataBool = false; // 关闭旧位置更新
                         Arbiter(PhysicsCircleS[SizeD], o);
@@ -291,7 +292,7 @@ namespace PhysicsBlock
                     {
                         continue;
                     }
-                    if ((PhysicsCircleS[SizeD]->radius + PhysicsCircleS[j]->radius) < Modulus(PhysicsCircleS[SizeD]->pos - PhysicsCircleS[j]->pos))
+                    if (!CollideAABB(PhysicsCircleS[SizeD], PhysicsCircleS[j]))
                     {
                         ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
                         Map_Delete(key);
@@ -336,28 +337,22 @@ namespace PhysicsBlock
 
         FLOAT_ inv_dt = 1.0 / time;
 
-        for (auto J : DeleteCollideGroup)
+        for (auto &D : DeleteCollideGroup)
         {
-            CollideGroupS.erase(J);
-        }
-        for (int i = 0; i < CollideGroupVector.size(); i++)
-        {
-            for (int j = 0; j < DeleteCollideGroup.size(); j++)
+            CollideGroupS.erase(D);
+            for (int i = 0; i < CollideGroupVector.size(); ++i)
             {
-                if (CollideGroupVector[i]->key == DeleteCollideGroup[j])
+                if (CollideGroupVector[i]->key == D)
                 {
                     DeleteArbiter(CollideGroupVector[i]);
                     CollideGroupVector[i] = CollideGroupVector[CollideGroupVector.size() - 1];
                     CollideGroupVector.pop_back();
-                    --i;
-                    DeleteCollideGroup[j] = DeleteCollideGroup[DeleteCollideGroup.size() - 1];
-                    DeleteCollideGroup.pop_back();
                     break;
                 }
             }
         }
         DeleteCollideGroup.clear();
-        for (auto J : NewCollideGroup)
+        for (auto &J : NewCollideGroup)
         {
             CollideGroupS.insert({J->key, J});
             CollideGroupVector.push_back(J);
@@ -555,7 +550,7 @@ namespace PhysicsBlock
 
                 for (auto c : PhysicsCircleS)
                 {
-                    if ((PhysicsShapeS[SizeD]->CollisionR + c->radius) < Modulus(PhysicsShapeS[SizeD]->pos - c->pos))
+                    if (!CollideAABB(PhysicsShapeS[SizeD], c))
                     {
                         ArbiterKey key = ArbiterKey(c, PhysicsShapeS[SizeD]);
                         Map_Delete(key);
@@ -574,7 +569,7 @@ namespace PhysicsBlock
                 // 和其他多边形的碰撞
                 for (size_t j = SizeD + 1; j < PhysicsShapeS.size(); ++j)
                 {
-                    if ((PhysicsShapeS[SizeD]->CollisionR + PhysicsShapeS[j]->CollisionR) < Modulus(PhysicsShapeS[SizeD]->pos - PhysicsShapeS[j]->pos))
+                    if (!CollideAABB(PhysicsShapeS[SizeD], PhysicsShapeS[j]))
                     {
                         ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
                         Map_Delete(key);
@@ -592,7 +587,7 @@ namespace PhysicsBlock
 
                 for (auto o : PhysicsParticleS)
                 {
-                    if (PhysicsCircleS[SizeD]->radius > Modulus(PhysicsCircleS[SizeD]->pos - o->pos))
+                    if (CollideAABB(PhysicsCircleS[SizeD], o))
                     {
                         o->OldPosUpDataBool = false; // 关闭旧位置更新
                         Arbiter(PhysicsCircleS[SizeD], o);
@@ -613,7 +608,7 @@ namespace PhysicsBlock
 #endif
                 for (size_t j = SizeD + 1; j < PhysicsCircleS.size(); ++j)
                 {
-                    if ((PhysicsCircleS[SizeD]->radius + PhysicsCircleS[j]->radius) < Modulus(PhysicsCircleS[SizeD]->pos - PhysicsCircleS[j]->pos))
+                    if (!CollideAABB(PhysicsCircleS[SizeD], PhysicsCircleS[j]))
                     {
                         ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
                         Map_Delete(key);
@@ -651,10 +646,32 @@ namespace PhysicsBlock
         }
 #endif
 
-// 预处理
-        for (auto kv : CollideGroupS)
+        for (auto &D : DeleteCollideGroup)
         {
-            kv.second->PreStep();
+            CollideGroupS.erase(D);
+            for (int i = 0; i < CollideGroupVector.size(); ++i)
+            {
+                if (CollideGroupVector[i]->key == D)
+                {
+                    DeleteArbiter(CollideGroupVector[i]);
+                    CollideGroupVector[i] = CollideGroupVector[CollideGroupVector.size() - 1];
+                    CollideGroupVector.pop_back();
+                    break;
+                }
+            }
+        }
+        DeleteCollideGroup.clear();
+        for (auto &J : NewCollideGroup)
+        {
+            CollideGroupS.insert({J->key, J});
+            CollideGroupVector.push_back(J);
+        }
+        NewCollideGroup.clear();
+
+        // 预处理
+        for (auto kv : CollideGroupVector)
+        {
+            kv->PreStep();
         }
     }
 

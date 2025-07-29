@@ -37,8 +37,11 @@ namespace PhysicsBlock
 
     void inline PhysicsParticle::PhysicsPos(FLOAT_ time, Vec2_ Ga)
     {
+        if (invMass == 0)
+		    return;
+
         if (OldPos == pos) {
-            if((invMass != 0) && (StaticNum < 200))++StaticNum;
+            if(StaticNum < 200)++StaticNum;
         }else{
             StaticNum = 0;
         }

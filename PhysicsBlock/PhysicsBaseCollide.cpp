@@ -6,6 +6,64 @@
 namespace PhysicsBlock
 {
 
+    bool CollideAABB(PhysicsShape *ShapeA, PhysicsShape *ShapeB)
+    {
+        FLOAT_ R = ShapeA->CollisionR + ShapeB->CollisionR;
+        if (abs(ShapeA->pos.x - ShapeB->pos.x) > R) {
+            return false;
+        }
+        if (abs(ShapeA->pos.y - ShapeB->pos.y) > R) {
+            return false;
+        }
+        return true;
+    }
+
+    bool CollideAABB(PhysicsShape* Shape, PhysicsCircle* Circle)
+    {
+        FLOAT_ R = Shape->CollisionR + Circle->radius;
+        if (abs(Shape->pos.x - Circle->pos.x) > R) {
+            return false;
+        }
+        if (abs(Shape->pos.y - Circle->pos.y) > R) {
+            return false;
+        }
+        return true;
+    }
+
+    bool CollideAABB(PhysicsShape *Shape, PhysicsParticle *Particle)
+    {
+        if (abs(Shape->pos.x - Particle->pos.x) > Shape->CollisionR) {
+            return false;
+        }
+        if (abs(Shape->pos.y - Particle->pos.y) > Shape->CollisionR) {
+            return false;
+        }
+        return true;
+    }
+
+    bool CollideAABB(PhysicsCircle* CircleA, PhysicsCircle* CircleB)
+    {
+        FLOAT_ R = CircleA->radius + CircleB->radius;
+        if (abs(CircleA->pos.x - CircleB->pos.x) > R) {
+            return false;
+        }
+        if (abs(CircleA->pos.y - CircleB->pos.y) > R) {
+            return false;
+        }
+        return true;
+    }
+
+    bool CollideAABB(PhysicsCircle* Circle, PhysicsParticle* Particle)
+    {
+        if (abs(Circle->pos.x - Particle->pos.x) > Circle->radius) {
+            return false;
+        }
+        if (abs(Circle->pos.y - Particle->pos.y) > Circle->radius) {
+            return false;
+        }
+        return true;
+    }
+
     unsigned int Collide(Contact *contacts, PhysicsShape *ShapeA, PhysicsShape *ShapeB)
     {
         AngleMat Mat(ShapeA->angle);
@@ -230,7 +288,7 @@ namespace PhysicsBlock
             {
                 L = sqrt(L);
                 contacts->separation = L - Circle->radius;                            // 碰撞距离
-                contacts->normal = d / L;                          // （反向作用力法向量）地形不会旋转
+                contacts->normal = d / L;                                             // （反向作用力法向量）地形不会旋转
                 contacts->position = contacts->normal * Circle->radius + Circle->pos; // 碰撞点的位置
                 contacts->w_side = ContactSize;                                       // 边索引 ID
                 ++contacts;
@@ -249,7 +307,7 @@ namespace PhysicsBlock
         {
             L = sqrt(L);
             contacts->separation = L - Circle->radius;                            // 碰撞距离
-            contacts->normal = dp / L;                          // （反向作用力法向量）地形不会旋转
+            contacts->normal = dp / L;                                            // （反向作用力法向量）地形不会旋转
             contacts->position = contacts->normal * Circle->radius + Circle->pos; // 碰撞点的位置
             contacts->w_side = 0;                                                 // 边索引 ID
             return 1;
@@ -261,11 +319,12 @@ namespace PhysicsBlock
     {
         Vec2_ dp = CircleB->pos - CircleA->pos;
         FLOAT_ L = ModulusLength(dp);
-        FLOAT_ R2 = (CircleA->radius + CircleB->radius) * (CircleA->radius + CircleB->radius);
+        const FLOAT_ R = CircleA->radius + CircleB->radius;
+        const FLOAT_ R2 = R * R;
         if (R2 > L)
         {
             L = sqrt(L);
-            contacts->separation = L - (CircleA->radius + CircleB->radius);           // 碰撞距离
+            contacts->separation = L - R;         // 碰撞距离
             contacts->normal = dp / L;                                              // （反向作用力法向量）地形不会旋转
             contacts->position = contacts->normal * CircleA->radius + CircleA->pos; // 碰撞点的位置
             contacts->w_side = 0;                                                   // 边索引 ID
@@ -322,7 +381,7 @@ namespace PhysicsBlock
             {
                 L = sqrt(L);
                 contacts->separation = L - Circle->radius;                            // 碰撞距离
-                contacts->normal = dp / L;                          // （反向作用力法向量）地形不会旋转
+                contacts->normal = dp / L;                                            // （反向作用力法向量）地形不会旋转
                 contacts->position = contacts->normal * Circle->radius + Circle->pos; // 碰撞点的位置
                 contacts->w_side = ContactSize;                                       // 边索引 ID
                 ++contacts;

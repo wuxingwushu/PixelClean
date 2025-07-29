@@ -7,6 +7,17 @@
 
 namespace PhysicsBlock
 {
+    // 粗糙判断是否在旁边
+    bool CollideAABB(PhysicsShape* ShapeA, PhysicsShape* ShapeB);
+    // 粗糙判断是否在旁边
+    bool CollideAABB(PhysicsShape* Shape, PhysicsParticle* Particle);
+    // 粗糙判断是否在旁边
+    bool CollideAABB(PhysicsShape* Shape, PhysicsCircle* Circle);
+    // 粗糙判断是否在旁边
+    bool CollideAABB(PhysicsCircle* CircleA, PhysicsCircle* CircleB);
+    // 粗糙判断是否在旁边
+    bool CollideAABB(PhysicsCircle* Circle, PhysicsParticle* Particle);
+
     // 网格形状 和 网格形状 的碰撞检测
     unsigned int Collide(Contact* contacts, PhysicsShape* ShapeA, PhysicsShape* ShapeB);
 

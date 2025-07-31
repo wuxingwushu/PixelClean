@@ -43,15 +43,15 @@ namespace PhysicsBlock
 	}
 
 	// 获取模的长度(没有开方)
-	FLOAT_ ModulusLength(Vec2_ Modulus)
+	FLOAT_ ModulusLength(const Vec2_ &Modulus)
 	{
 		return ((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
 	}
 
 	// 获取模的长度
-	FLOAT_ Modulus(Vec2_ Modulus)
+	FLOAT_ Modulus(const Vec2_ &Modulus)
 	{
-		return sqrt((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
+		return SQRT_((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
 	}
 
 	// 角度，计算对应的cos, sin

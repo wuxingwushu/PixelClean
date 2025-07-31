@@ -57,6 +57,7 @@ namespace PhysicsBlock
             }
         }
         info.pos = start;
+        info.Friction = at(start).FrictionFactor;
         return info;
     }
 
@@ -73,6 +74,7 @@ namespace PhysicsBlock
         }
         if (info.Collision)
         {
+            Collisioninfo.Friction = info.Friction;
             // 计算出精准位置
             Collisioninfo.Collision = true;
             Collisioninfo.pos = info.pos;

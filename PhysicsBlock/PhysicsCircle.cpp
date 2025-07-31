@@ -3,8 +3,8 @@
 namespace PhysicsBlock
 {
 
-    PhysicsCircle::PhysicsCircle(Vec2_ Pos, FLOAT_ Radius, FLOAT_ Mass)
-    : PhysicsAngle(Pos, Mass), radius(Radius)
+    PhysicsCircle::PhysicsCircle(Vec2_ Pos, FLOAT_ Radius, FLOAT_ Mass, FLOAT_ Friction)
+    : PhysicsAngle(Pos, Mass, Friction), radius(Radius)
     {
         if (mass == FLOAT_MAX) {
             MomentInertia = FLOAT_MAX;

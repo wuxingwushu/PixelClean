@@ -10,7 +10,7 @@ namespace PhysicsBlock
     public:
         FLOAT_ radius; // 碰撞半径
     public:
-        PhysicsCircle(Vec2_ Pos, FLOAT_ Radius, FLOAT_ Mass);
+        PhysicsCircle(Vec2_ Pos, FLOAT_ Radius, FLOAT_ Mass, FLOAT_ Friction = 0.2);
         ~PhysicsCircle();
 
 

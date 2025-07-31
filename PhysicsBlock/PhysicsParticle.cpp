@@ -3,7 +3,7 @@
 namespace PhysicsBlock
 {
 
-    PhysicsParticle::PhysicsParticle(Vec2_ Pos, FLOAT_ Mass) : OldPos(Pos), pos(Pos), mass(Mass), invMass(1.0 / Mass)
+    PhysicsParticle::PhysicsParticle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction) : OldPos(Pos), pos(Pos), mass(Mass), invMass(1.0 / Mass), friction(Friction)
     {
         if (mass == FLOAT_MAX) {
             invMass = 0;

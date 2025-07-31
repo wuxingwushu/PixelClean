@@ -17,7 +17,7 @@ namespace PhysicsBlock
         FLOAT_ angleSpeed = 0;       // 角速度
         FLOAT_ torque = 0;           // 扭矩
         
-        PhysicsAngle(Vec2_ Pos, FLOAT_ Mass):PhysicsParticle(Pos, Mass){}
+        PhysicsAngle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction = 0.2):PhysicsParticle(Pos, Mass, Friction){}
         PhysicsAngle(Vec2_ Pos):PhysicsParticle(Pos){}
         ~PhysicsAngle(){}
 

@@ -225,8 +225,8 @@ namespace PhysicsBlock
 #if JFRW
             }
 
-            SizeD = PhysicsShapeS.size() - int(PhysicsShapeS.size() * sqrt((T_Num + 1) / Tx));
-            SizeY = PhysicsShapeS.size() - int(PhysicsShapeS.size() * sqrt(T_Num / Tx));
+            SizeD = PhysicsShapeS.size() - int(PhysicsShapeS.size() * SQRT_((T_Num + 1) / Tx));
+            SizeY = PhysicsShapeS.size() - int(PhysicsShapeS.size() * SQRT_(T_Num / Tx));
             for (; SizeD < SizeY; ++SizeD)
             {
                 // 静止了，跳过碰撞遍历
@@ -279,8 +279,8 @@ namespace PhysicsBlock
 #if JFRW
             }
 
-            SizeD = PhysicsCircleS.size() - int(PhysicsCircleS.size() * sqrt((T_Num + 1) / Tx));
-            SizeY = PhysicsCircleS.size() - int(PhysicsCircleS.size() * sqrt(T_Num / Tx));
+            SizeD = PhysicsCircleS.size() - int(PhysicsCircleS.size() * SQRT_((T_Num + 1) / Tx));
+            SizeY = PhysicsCircleS.size() - int(PhysicsCircleS.size() * SQRT_(T_Num / Tx));
             for (; SizeD < SizeY; ++SizeD)
             {
                 // 静止了，跳过碰撞遍历
@@ -561,8 +561,8 @@ namespace PhysicsBlock
 #if JFRW
             }
 
-            SizeD = PhysicsShapeS.size() - int(PhysicsShapeS.size() * sqrt((T_Num + 1) / Tx));
-            SizeY = PhysicsShapeS.size() - int(PhysicsShapeS.size() * sqrt(T_Num / Tx));
+            SizeD = PhysicsShapeS.size() - int(PhysicsShapeS.size() * SQRT_((T_Num + 1) / Tx));
+            SizeY = PhysicsShapeS.size() - int(PhysicsShapeS.size() * SQRT_(T_Num / Tx));
             for (; SizeD < SizeY; ++SizeD)
             {
 #endif
@@ -601,8 +601,8 @@ namespace PhysicsBlock
 #if JFRW
             }
 
-            SizeD = PhysicsCircleS.size() - int(PhysicsCircleS.size() * sqrt((T_Num + 1) / Tx));
-            SizeY = PhysicsCircleS.size() - int(PhysicsCircleS.size() * sqrt(T_Num / Tx));
+            SizeD = PhysicsCircleS.size() - int(PhysicsCircleS.size() * SQRT_((T_Num + 1) / Tx));
+            SizeY = PhysicsCircleS.size() - int(PhysicsCircleS.size() * SQRT_(T_Num / Tx));
             for (; SizeD < SizeY; ++SizeD)
             {
 #endif

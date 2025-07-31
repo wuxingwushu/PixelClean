@@ -22,9 +22,10 @@ namespace PhysicsBlock
         Vec2_ force{0}; // 受力
         FLOAT_ mass = 0;     // 质量
         FLOAT_ invMass = 0;  // 质量倒数
+        FLOAT_ friction = 0.2;  // 摩擦因数
 
     public:
-        PhysicsParticle(Vec2_ Pos, FLOAT_ Mass);
+        PhysicsParticle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction = 0.2);
         PhysicsParticle(Vec2_ Pos);
         ~PhysicsParticle();
 

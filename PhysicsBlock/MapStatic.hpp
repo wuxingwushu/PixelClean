@@ -7,6 +7,12 @@
 namespace PhysicsBlock
 {
 
+    struct MapOutline
+    {
+        Vec2_ pos;
+        FLOAT_ F;
+    };
+
     /**
      * @brief 静态地图 */
     class MapStatic : public BaseGrid, public MapFormwork
@@ -28,7 +34,7 @@ namespace PhysicsBlock
          * @note 必须在地图范围内 */
         void SetCentrality(Vec2_ Centrality);
 
-        std::vector<Vec2_> GetLightweightOutline(int x_, int y_, int w_, int h_);
+        std::vector<MapOutline> GetLightweightOutline(int x_, int y_, int w_, int h_);
 
         /*=========MapFormwork=========*/
 
@@ -36,14 +42,16 @@ namespace PhysicsBlock
          * @brief 获取地图模拟场大小
          * @return 地图大小
          * @note 单位：格子 */
-        virtual glm::uvec2 FMGetMapSize() { return glm::uvec2{ width, height }; }
+        virtual glm::uvec2 FMGetMapSize() { return glm::uvec2{width, height}; }
 
         /**
          * @brief 获取网格是否有障碍物
          * @param start 网格位置
          * @return 是否碰撞（true: 碰撞） */
-        virtual bool FMGetCollide(glm::ivec2 start) {
-            if((start.x >= width) || (start.y >= height)){
+        virtual bool FMGetCollide(glm::ivec2 start)
+        {
+            if ((start.x >= width) || (start.y >= height))
+            {
                 return false;
             }
             return at(start).Collision;
@@ -59,7 +67,8 @@ namespace PhysicsBlock
          * @brief 获取网格(不安全)
          * @param start 网格位置
          * @warning 范围不安全，超出会报错 */
-        virtual GridBlock& FMGetGridBlock(glm::ivec2 start) {
+        virtual GridBlock &FMGetGridBlock(glm::ivec2 start)
+        {
             return at(start);
         }
 

@@ -9,12 +9,14 @@ namespace PhysicsBlock
         if (size < 4){
             size = 4;
         }
+        FrictionSet = new FLOAT_[size];
         OutlineSet = new Vec2_[size];
     }
 
     BaseOutline::~BaseOutline()
     {
         delete OutlineSet;
+        delete FrictionSet;
     }
 
     void BaseOutline::UpdateOutline(Vec2_ CentreMass_)
@@ -61,24 +63,28 @@ namespace PhysicsBlock
         if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1) || !GetCollision(x - 1, y - 1))
         {
             OutlineSet[OutlineSize] = Vec2_{x, y};
+            FrictionSet[OutlineSize] = at(x, y).FrictionFactor;
             ++OutlineSize;
         }
         // 左下角
         if (!GetCollision(x, y + 1))
         {
             OutlineSet[OutlineSize] = Vec2_{x, y + 1};
+            FrictionSet[OutlineSize] = at(x, y).FrictionFactor;
             ++OutlineSize;
         }
         // 右上角
         if (!(GetCollision(x + 1, y - 1) || GetCollision(x + 1, y)))
         {
             OutlineSet[OutlineSize] = Vec2_{x + 1, y};
+            FrictionSet[OutlineSize] = at(x, y).FrictionFactor;
             ++OutlineSize;
         }
         // 右下角
         if (!(GetCollision(x + 1, y) || GetCollision(x + 1, y + 1) || GetCollision(x, y + 1)))
         {
             OutlineSet[OutlineSize] = Vec2_{x + 1, y + 1};
+            FrictionSet[OutlineSize] = at(x, y).FrictionFactor;
             ++OutlineSize;
         }
     }
@@ -91,18 +97,21 @@ namespace PhysicsBlock
             if (GetCollision(x - 1, y) == GetCollision(x, y - 1))
             {
                 OutlineSet[OutlineSize] = Vec2_{x, y};
+                FrictionSet[OutlineSize] = at(x, y).FrictionFactor;
                 ++OutlineSize;
             }
         }
         else if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1))
         {
             OutlineSet[OutlineSize] = Vec2_{x, y};
+            FrictionSet[OutlineSize] = at(x, y).FrictionFactor;
             ++OutlineSize;
         }
         // 左下角
         if (!GetCollision(x, y + 1)) {
             if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1))) {
                 OutlineSet[OutlineSize] = Vec2_{x, y + 1};
+                FrictionSet[OutlineSize] = at(x, y).FrictionFactor;
                 ++OutlineSize;
             }
         }
@@ -110,6 +119,7 @@ namespace PhysicsBlock
         if (!GetCollision(x + 1, y)) {
             if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1))) {
                 OutlineSet[OutlineSize] = Vec2_{x + 1, y};
+                FrictionSet[OutlineSize] = at(x, y).FrictionFactor;
                 ++OutlineSize;
             }
         }
@@ -118,6 +128,7 @@ namespace PhysicsBlock
             if ((GetCollision(x + 1, y) == GetCollision(x, y + 1)) && !GetCollision(x + 1, y))
             {
                 OutlineSet[OutlineSize] = Vec2_{x + 1, y + 1};
+                FrictionSet[OutlineSize] = at(x, y).FrictionFactor;
                 ++OutlineSize;
             }
         }

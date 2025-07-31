@@ -49,13 +49,13 @@ namespace PhysicsBlock
 	 * @brief   获取模的长度(没有开方)
 	 * @param   Modulus 輸入 X,Y 的距离差
 	 * @return  返回 x*x + y*y 的結果 */
-	FLOAT_ ModulusLength(Vec2_ Modulus);
+	FLOAT_ ModulusLength(const Vec2_ &Modulus);
 
 	/**
 	 * @brief   获取模的长度
 	 * @param   Modulus 輸入 X,Y 的距离差
 	 * @return  返回 (x*x + y*y)開方 的結果 */
-	FLOAT_ Modulus(Vec2_ Modulus);
+	FLOAT_ Modulus(const Vec2_ &Modulus);
 
 	// 角度，计算对应的cos, sin
 	Vec2_ AngleFloatToAngleVec(FLOAT_ angle);

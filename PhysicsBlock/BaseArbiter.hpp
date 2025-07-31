@@ -12,6 +12,7 @@ namespace PhysicsBlock
         Vec2_ position;      // 碰撞点位置
         Vec2_ normal;        // 最佳分离轴 的 法向量
         FLOAT_ separation;        // 最小分离距离
+        FLOAT_ friction = 0.2; // 两个物体间的摩擦系数
         unsigned char w_side = 0; // 小矩形那个边的分离（判别是否是一种力用的）
 
         // PreStep
@@ -83,7 +84,6 @@ namespace PhysicsBlock
     public:
         Contact contacts[20];  // 碰撞点集合
         int numContacts;       // 碰撞点数量
-        FLOAT_ friction = 0.2; // 两个物体间的摩擦系数
 
         ArbiterKey key; // 两个对象的 钥匙键
 

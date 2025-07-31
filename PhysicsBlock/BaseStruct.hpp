@@ -15,12 +15,14 @@ namespace PhysicsBlock
 #define Mat2_ glm::mat2
 #define MyImGuiDataType ImGuiDataType_Float
 #define FLOAT_MAX FLT_MAX
+#define SQRT_ sqrtf
 #else
 #define FLOAT_ double
 #define Vec2_ glm::dvec2
 #define Mat2_ glm::dmat2
 #define MyImGuiDataType ImGuiDataType_Double
 #define FLOAT_MAX DBL_MAX
+#define SQRT_ sqrt
 #endif
 
     /**
@@ -38,7 +40,7 @@ namespace PhysicsBlock
     struct GridBlock
     {
 
-        FLOAT_ FrictionFactor; // 摩擦因数
+        FLOAT_ FrictionFactor = 0.2; // 摩擦因数
 
         // 格子在不同状态，有些变量是没必要的（不可能同时存在）
         union
@@ -84,6 +86,7 @@ namespace PhysicsBlock
     {
         bool Collision; // 是否碰撞
         glm::ivec2 pos; // 碰撞位置
+        FLOAT_ Friction; // 摩擦因数
     };
 
     /**
@@ -102,6 +105,7 @@ namespace PhysicsBlock
             };
         };
         Vec2_ pos; // 碰撞位置
+        FLOAT_ Friction; // 摩擦因数
     };
 
     /**

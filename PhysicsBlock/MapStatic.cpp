@@ -42,14 +42,14 @@ namespace PhysicsBlock
     }
 
 
-    std::vector<Vec2_> MapStatic::GetLightweightOutline(int x_, int y_, int w_, int h_)
+    std::vector<MapOutline> MapStatic::GetLightweightOutline(int x_, int y_, int w_, int h_)
     {
         x_ += centrality.x;
         y_ += centrality.y;
         w_ += centrality.x;
         h_ += centrality.y;
 
-        std::vector<Vec2_> Outline;
+        std::vector<MapOutline> Outline;
 
         for (int x = x_; x < w_; ++x)
         {
@@ -63,30 +63,30 @@ namespace PhysicsBlock
                 {
                     if (GetCollision(x - 1, y) == GetCollision(x, y - 1))
                     {
-                        Outline.push_back(Vec2_{x, y});
+                        Outline.push_back({Vec2_{x, y}, at(x, y).FrictionFactor});
                     }
                 }
                 else if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1))
                 {
-                    Outline.push_back(Vec2_{x, y});
+                    Outline.push_back({Vec2_{x, y}, at(x, y).FrictionFactor});
                 }
                 // 左下角
                 if (!GetCollision(x, y + 1)) {
                     if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1))) {
-                        Outline.push_back(Vec2_{x, y+1});
+                        Outline.push_back({Vec2_{x, y+1}, at(x, y).FrictionFactor});
                     }
                 }
                 // 右上角
                 if (!GetCollision(x + 1, y)) {
                     if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1))) {
-                        Outline.push_back(Vec2_{x+1, y});
+                        Outline.push_back({Vec2_{x+1, y}, at(x, y).FrictionFactor});
                     }
                 }
                 // 右下角
                 if (!GetCollision(x + 1, y + 1)) {
                     if ((GetCollision(x + 1, y) == GetCollision(x, y + 1)) && !GetCollision(x + 1, y))
                     {
-                        Outline.push_back(Vec2_{x+1, y+1});
+                        Outline.push_back({Vec2_{x+1, y+1}, at(x, y).FrictionFactor});
                     }
                 }
             }

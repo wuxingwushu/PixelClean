@@ -103,6 +103,10 @@ namespace PhysicsBlock
         {
             delete i;
         }
+        for (auto i : PhysicsCircleS)
+        {
+            delete i;
+        }
         // 物理关节
         for (auto i : PhysicsJointS)
         {

@@ -7,6 +7,7 @@
 #include "PhysicsJoint.hpp"    // 物理关节
 #include "PhysicsJunction.hpp" // 物理连接
 #include <unordered_map>
+#include "GridSearch.hpp"
 
 #define MemoryPoolBool 1
 #if MemoryPoolBool
@@ -162,6 +163,7 @@ namespace PhysicsBlock
         Vec2_ *GridWind = nullptr;           // 网格风
         glm::uvec2 GridWindSize{0};          // 网格风大小
         MapFormwork *wMapFormwork = nullptr; // 地图对象
+        GridSearch mGridSearch;
 
         std::vector<PhysicsShape *> PhysicsShapeS;       // 物理形状网格
         std::vector<PhysicsParticle *> PhysicsParticleS; // 物理点
@@ -201,11 +203,13 @@ namespace PhysicsBlock
 
         void AddObject(PhysicsShape *Object)
         {
+            mGridSearch.Add(Object);
             PhysicsShapeS.push_back(Object);
         }
 
         void AddObject(PhysicsParticle *Object)
         {
+            mGridSearch.Add(Object);
             PhysicsParticleS.push_back(Object);
         }
 
@@ -221,6 +225,7 @@ namespace PhysicsBlock
 
         void AddObject(PhysicsCircle *Object)
         {
+            mGridSearch.Add(Object);
             PhysicsCircleS.push_back(Object);
         }
 

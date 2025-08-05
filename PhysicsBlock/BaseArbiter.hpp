@@ -83,7 +83,7 @@ namespace PhysicsBlock
     {
     public:
         Contact contacts[20];  // 碰撞点集合
-        int numContacts;       // 碰撞点数量
+        int numContacts = 0;       // 碰撞点数量
 
         ArbiterKey key; // 两个对象的 钥匙键
 

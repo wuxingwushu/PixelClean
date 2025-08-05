@@ -103,6 +103,7 @@ namespace PhysicsBlock
         {
             delete i;
         }
+        // 物理圆
         for (auto i : PhysicsCircleS)
         {
             delete i;
@@ -177,7 +178,8 @@ namespace PhysicsBlock
             o->PhysicsSpeed(time, GravityAcceleration);
         }
 
-#define JFRW 0 /** @brief 是否开启均分任务给每个线程 @warning 不知道为什么开启后性能反而下降了，理论上每个线程处理物体间碰撞物体数量差不多 */
+        // 更新网格
+        mGridSearch.UpData();
 
         const auto XT_Fun = [this](int T_Num, int Tx)
         {
@@ -194,62 +196,61 @@ namespace PhysicsBlock
                 if (!JZ)
                     Arbiter(PhysicsShapeS[SizeD], wMapFormwork);
 
-                for (auto o : PhysicsParticleS)
+                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->CollisionR);
+                for (auto i : SearchV)
                 {
-                    if (JZ && (o->StaticNum > 10))
+                    switch (i->PFGetType())
                     {
-                        continue;
-                    }
-                    if (PhysicsShapeS[SizeD]->DropCollision(o->pos).Collision)
-                    {
-                        o->OldPosUpDataBool = false; // 关闭旧位置更新
-                        Arbiter(PhysicsShapeS[SizeD], o);
-                    }
-                    else
-                    {
-                        ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], o);
-                        Map_Delete(key);
-                    }
-                }
+                    case PhysicsObjectEnum::circle:
+                        if (JZ && (((PhysicsCircle *)i)->StaticNum > 10))
+                        {
+                            break;
+                        }
+                        if (!CollideAABB(PhysicsShapeS[SizeD], ((PhysicsCircle *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
+                        break;
+                    case PhysicsObjectEnum::particle:
+                        if (JZ && (((PhysicsParticle *)i)->StaticNum > 10))
+                        {
+                            break;
+                        }
+                        if (PhysicsShapeS[SizeD]->DropCollision(((PhysicsParticle *)i)->pos).Collision)
+                        {
+                            ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
+                            Arbiter(PhysicsShapeS[SizeD], ((PhysicsParticle *)i));
+                        }
+                        else
+                        {
+                            ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], ((PhysicsParticle *)i));
+                            Map_Delete(key);
+                        }
+                        break;
+                    case PhysicsObjectEnum::shape:
+                        if (PhysicsShapeS[SizeD] == ((PhysicsShape *)i))
+                        {
+                            break;
+                        }
+                        if (JZ && (((PhysicsShape *)i)->StaticNum > 10))
+                        {
+                            break;
+                        }
+                        if (!CollideAABB(PhysicsShapeS[SizeD], ((PhysicsShape *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsShapeS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(((PhysicsShape *)i), PhysicsShapeS[SizeD]);
+                        break;
 
-                for (auto c : PhysicsCircleS)
-                {
-                    if (JZ && (c->StaticNum > 10))
-                    {
-                        continue;
+                    default:
+                        break;
                     }
-                    if (!CollideAABB(PhysicsShapeS[SizeD], c))
-                    {
-                        ArbiterKey key = ArbiterKey(c, PhysicsShapeS[SizeD]);
-                        Map_Delete(key);
-                        continue;
-                    }
-                    Arbiter(c, PhysicsShapeS[SizeD]);
-                }
-#if JFRW
-            }
-
-            SizeD = PhysicsShapeS.size() - int(PhysicsShapeS.size() * SQRT_((T_Num + 1) / Tx));
-            SizeY = PhysicsShapeS.size() - int(PhysicsShapeS.size() * SQRT_(T_Num / Tx));
-            for (; SizeD < SizeY; ++SizeD)
-            {
-                // 静止了，跳过碰撞遍历
-                JZ = (PhysicsShapeS[SizeD]->StaticNum > 10);
-#endif
-                // 和其他多边形的碰撞
-                for (size_t j = SizeD + 1; j < PhysicsShapeS.size(); ++j)
-                {
-                    if (JZ && (PhysicsShapeS[j]->StaticNum > 10))
-                    {
-                        continue;
-                    }
-                    if (!CollideAABB(PhysicsShapeS[SizeD], PhysicsShapeS[j]))
-                    {
-                        ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
-                        Map_Delete(key);
-                        continue;
-                    }
-                    Arbiter(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
                 }
             }
 
@@ -263,46 +264,61 @@ namespace PhysicsBlock
                 if (!JZ)
                     Arbiter(PhysicsCircleS[SizeD], wMapFormwork);
 
-                for (auto o : PhysicsParticleS)
+                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsCircleS[SizeD]->pos, PhysicsCircleS[SizeD]->radius);
+                for (auto i : SearchV)
                 {
-                    if (JZ && (o->StaticNum > 10))
+                    switch (i->PFGetType())
                     {
-                        continue;
-                    }
-                    if (CollideAABB(PhysicsCircleS[SizeD], o))
-                    {
-                        o->OldPosUpDataBool = false; // 关闭旧位置更新
-                        Arbiter(PhysicsCircleS[SizeD], o);
-                    }
-                    else
-                    {
-                        ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], o);
-                        Map_Delete(key);
-                    }
-                }
-#if JFRW
-            }
+                    case PhysicsObjectEnum::circle:
+                        if (PhysicsCircleS[SizeD] == ((PhysicsCircle *)i))
+                        {
+                            break;
+                        }
+                        if (JZ && (((PhysicsCircle *)i)->StaticNum > 10))
+                        {
+                            break;
+                        }
+                        if (!CollideAABB(PhysicsCircleS[SizeD], ((PhysicsCircle *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
+                        break;
+                    case PhysicsObjectEnum::particle:
+                        if (JZ && (((PhysicsParticle *)i)->StaticNum > 10))
+                        {
+                            break;
+                        }
+                        if (CollideAABB(PhysicsCircleS[SizeD], ((PhysicsParticle *)i)))
+                        {
+                            ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
+                            Arbiter(PhysicsCircleS[SizeD], ((PhysicsParticle *)i));
+                        }
+                        else
+                        {
+                            ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], ((PhysicsParticle *)i));
+                            Map_Delete(key);
+                        }
+                        break;
+                    case PhysicsObjectEnum::shape:
+                        if (JZ && (((PhysicsShape *)i)->StaticNum > 10))
+                        {
+                            break;
+                        }
+                        if (!CollideAABB(((PhysicsShape *)i), PhysicsCircleS[SizeD]))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsCircleS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(PhysicsCircleS[SizeD], ((PhysicsShape *)i));
+                        break;
 
-            SizeD = PhysicsCircleS.size() - int(PhysicsCircleS.size() * SQRT_((T_Num + 1) / Tx));
-            SizeY = PhysicsCircleS.size() - int(PhysicsCircleS.size() * SQRT_(T_Num / Tx));
-            for (; SizeD < SizeY; ++SizeD)
-            {
-                // 静止了，跳过碰撞遍历
-                JZ = (PhysicsCircleS[SizeD]->StaticNum > 10);
-#endif
-                for (size_t j = SizeD + 1; j < PhysicsCircleS.size(); ++j)
-                {
-                    if (JZ && (PhysicsCircleS[j]->StaticNum > 10))
-                    {
-                        continue;
+                    default:
+                        break;
                     }
-                    if (!CollideAABB(PhysicsCircleS[SizeD], PhysicsCircleS[j]))
-                    {
-                        ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
-                        Map_Delete(key);
-                        continue;
-                    }
-                    Arbiter(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
                 }
             }
         };
@@ -343,6 +359,10 @@ namespace PhysicsBlock
 
         for (auto &D : DeleteCollideGroup)
         {
+            if (CollideGroupS.find(D) == CollideGroupS.end())
+            {
+                continue;
+            }
             CollideGroupS.erase(D);
             for (int i = 0; i < CollideGroupVector.size(); ++i)
             {
@@ -358,8 +378,11 @@ namespace PhysicsBlock
         DeleteCollideGroup.clear();
         for (auto &J : NewCollideGroup)
         {
-            CollideGroupS.insert({J->key, J});
-            CollideGroupVector.push_back(J);
+            if (CollideGroupS.find(J->key) == CollideGroupS.end())
+            {
+                CollideGroupS.insert({J->key, J});
+                CollideGroupVector.push_back(J);
+            }
         }
         NewCollideGroup.clear();
 
@@ -527,6 +550,9 @@ namespace PhysicsBlock
 
     void PhysicsWorld::PhysicsInformationUpdate()
     {
+        // 更新网格
+        mGridSearch.UpData();
+
         // 碰撞检测
         const auto XT_Fun = [this](int T_Num, int Tx)
         {
@@ -535,97 +561,109 @@ namespace PhysicsBlock
             ThreadTaskAllot(SizeD, SizeY, PhysicsShapeS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
-                // 和地形的碰撞
                 Arbiter(PhysicsShapeS[SizeD], wMapFormwork);
 
-                for (auto o : PhysicsParticleS)
+                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->CollisionR);
+                for (auto i : SearchV)
                 {
-                    if (PhysicsShapeS[SizeD]->DropCollision(o->pos).Collision)
+                    switch (i->PFGetType())
                     {
-                        o->OldPosUpDataBool = false; // 关闭旧位置更新
-                        Arbiter(PhysicsShapeS[SizeD], o);
-                    }
-                    else
-                    {
-                        ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], o);
-                        Map_Delete(key);
-                    }
-                }
+                    case PhysicsObjectEnum::circle:
+                        if (!CollideAABB(PhysicsShapeS[SizeD], ((PhysicsCircle *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
+                        break;
+                    case PhysicsObjectEnum::particle:
+                        if (PhysicsShapeS[SizeD]->DropCollision(((PhysicsParticle *)i)->pos).Collision)
+                        {
+                            ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
+                            Arbiter(PhysicsShapeS[SizeD], ((PhysicsParticle *)i));
+                        }
+                        else
+                        {
+                            ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], ((PhysicsParticle *)i));
+                            Map_Delete(key);
+                        }
+                        break;
+                    case PhysicsObjectEnum::shape:
+                        if (PhysicsShapeS[SizeD] == ((PhysicsShape *)i))
+                        {
+                            break;
+                        }
+                        if (!CollideAABB(PhysicsShapeS[SizeD], ((PhysicsShape *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsShapeS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(((PhysicsShape *)i), PhysicsShapeS[SizeD]);
+                        break;
 
-                for (auto c : PhysicsCircleS)
-                {
-                    if (!CollideAABB(PhysicsShapeS[SizeD], c))
-                    {
-                        ArbiterKey key = ArbiterKey(c, PhysicsShapeS[SizeD]);
-                        Map_Delete(key);
-                        continue;
+                    default:
+                        break;
                     }
-                    Arbiter(c, PhysicsShapeS[SizeD]);
-                }
-#if JFRW
-            }
-
-            SizeD = PhysicsShapeS.size() - int(PhysicsShapeS.size() * SQRT_((T_Num + 1) / Tx));
-            SizeY = PhysicsShapeS.size() - int(PhysicsShapeS.size() * SQRT_(T_Num / Tx));
-            for (; SizeD < SizeY; ++SizeD)
-            {
-#endif
-                // 和其他多边形的碰撞
-                for (size_t j = SizeD + 1; j < PhysicsShapeS.size(); ++j)
-                {
-                    if (!CollideAABB(PhysicsShapeS[SizeD], PhysicsShapeS[j]))
-                    {
-                        ArbiterKey key = ArbiterKey(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
-                        Map_Delete(key);
-                        continue;
-                    }
-                    Arbiter(PhysicsShapeS[SizeD], PhysicsShapeS[j]);
                 }
             }
 
             ThreadTaskAllot(SizeD, SizeY, PhysicsCircleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
-                // 和地形的碰撞
                 Arbiter(PhysicsCircleS[SizeD], wMapFormwork);
 
-                for (auto o : PhysicsParticleS)
+                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsCircleS[SizeD]->pos, PhysicsCircleS[SizeD]->radius);
+                for (auto i : SearchV)
                 {
-                    if (CollideAABB(PhysicsCircleS[SizeD], o))
+                    switch (i->PFGetType())
                     {
-                        o->OldPosUpDataBool = false; // 关闭旧位置更新
-                        Arbiter(PhysicsCircleS[SizeD], o);
-                    }
-                    else
-                    {
-                        ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], o);
-                        Map_Delete(key);
-                    }
-                }
-#if JFRW
-            }
+                    case PhysicsObjectEnum::circle:
+                        if (PhysicsCircleS[SizeD] == ((PhysicsCircle *)i))
+                        {
+                            break;
+                        }
+                        if (!CollideAABB(PhysicsCircleS[SizeD], ((PhysicsCircle *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
+                        break;
+                    case PhysicsObjectEnum::particle:
+                        if (CollideAABB(PhysicsCircleS[SizeD], ((PhysicsParticle *)i)))
+                        {
+                            ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
+                            Arbiter(PhysicsCircleS[SizeD], ((PhysicsParticle *)i));
+                        }
+                        else
+                        {
+                            ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], ((PhysicsParticle *)i));
+                            Map_Delete(key);
+                        }
+                        break;
+                    case PhysicsObjectEnum::shape:
+                        if (!CollideAABB(((PhysicsShape *)i), PhysicsCircleS[SizeD]))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsCircleS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(PhysicsCircleS[SizeD], ((PhysicsShape *)i));
+                        break;
 
-            SizeD = PhysicsCircleS.size() - int(PhysicsCircleS.size() * SQRT_((T_Num + 1) / Tx));
-            SizeY = PhysicsCircleS.size() - int(PhysicsCircleS.size() * SQRT_(T_Num / Tx));
-            for (; SizeD < SizeY; ++SizeD)
-            {
-#endif
-                for (size_t j = SizeD + 1; j < PhysicsCircleS.size(); ++j)
-                {
-                    if (!CollideAABB(PhysicsCircleS[SizeD], PhysicsCircleS[j]))
-                    {
-                        ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
-                        Map_Delete(key);
-                        continue;
+                    default:
+                        break;
                     }
-                    Arbiter(PhysicsCircleS[SizeD], PhysicsCircleS[j]);
                 }
             }
         };
 
 #if ThreadPoolBool
         std::vector<std::future<void>> xTn;
-        const int xThreadNum = std::thread::hardware_concurrency() * 2;
+        const int xThreadNum = std::thread::hardware_concurrency();
         for (size_t i = 0; i < xThreadNum; ++i)
         {
             xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum));
@@ -652,6 +690,10 @@ namespace PhysicsBlock
 
         for (auto &D : DeleteCollideGroup)
         {
+            if (CollideGroupS.find(D) == CollideGroupS.end())
+            {
+                continue;
+            }
             CollideGroupS.erase(D);
             for (int i = 0; i < CollideGroupVector.size(); ++i)
             {
@@ -667,8 +709,11 @@ namespace PhysicsBlock
         DeleteCollideGroup.clear();
         for (auto &J : NewCollideGroup)
         {
-            CollideGroupS.insert({J->key, J});
-            CollideGroupVector.push_back(J);
+            if (CollideGroupS.find(J->key) == CollideGroupS.end())
+            {
+                CollideGroupS.insert({J->key, J});
+                CollideGroupVector.push_back(J);
+            }
         }
         NewCollideGroup.clear();
 
@@ -681,12 +726,14 @@ namespace PhysicsBlock
 
     void PhysicsWorld::SetMapFormwork(MapFormwork *MapFormwork_)
     {
+        GridWindSize = MapFormwork_->FMGetMapSize();
+        mGridSearch.SetMapRange(std::max(GridWindSize.x, GridWindSize.y));
+
         wMapFormwork = MapFormwork_;
         if (!WindBool)
         {
             return;
         }
-        GridWindSize = wMapFormwork->FMGetMapSize();
         if (GridWind != nullptr)
         {
             delete GridWind;
@@ -700,20 +747,27 @@ namespace PhysicsBlock
 
     PhysicsFormwork *PhysicsWorld::Get(Vec2_ pos)
     {
-        for (auto i : PhysicsShapeS)
+        std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(pos, 1);
+        for (auto i : SearchV)
         {
-            if ((Modulus(i->pos - pos) < i->PFGetCollisionR()) && (i->DropCollision(pos).Collision))
-                return i;
-        }
-        for (auto i : PhysicsParticleS)
-        {
-            if (Modulus(i->pos - pos) < 0.25) // 点击位置距离点位置小于 0.25， 就判断选择 点
-                return i;
-        }
-        for (auto i : PhysicsCircleS)
-        {
-            if (Modulus(i->pos - pos) < i->radius)
-                return i;
+            switch (i->PFGetType())
+            {
+            case PhysicsObjectEnum::circle:
+                if (Modulus(((PhysicsCircle *)i)->pos - pos) < ((PhysicsCircle *)i)->radius)
+                    return ((PhysicsCircle *)i);
+                break;
+            case PhysicsObjectEnum::particle:
+                if (Modulus(((PhysicsParticle *)i)->pos - pos) < 0.25) // 点击位置距离点位置小于 0.25， 就判断选择 点
+                    return ((PhysicsParticle *)i);
+                break;
+            case PhysicsObjectEnum::shape:
+                if ((Modulus(((PhysicsShape *)i)->pos - pos) < ((PhysicsShape *)i)->PFGetCollisionR()) && (((PhysicsShape *)i)->DropCollision(pos).Collision))
+                    return ((PhysicsShape *)i);
+                break;
+
+            default:
+                break;
+            }
         }
         return nullptr;
     }

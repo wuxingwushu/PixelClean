@@ -11,7 +11,7 @@ namespace PhysicsBlock
     class PhysicsArbiterSS : public PhysicsBaseArbiterAA
     {
     public:
-        PhysicsArbiterSS(PhysicsShape *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
+        PhysicsArbiterSS(PhysicsShape *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1 > Object2 ? Object1 : Object2, Object1 > Object2 ? Object2 : Object1){};
         ~PhysicsArbiterSS(){};
 
         // 计算俩物体的碰撞
@@ -96,7 +96,7 @@ namespace PhysicsBlock
     class PhysicsArbiterCC : public PhysicsBaseArbiterAA
     {
     public:
-        PhysicsArbiterCC(PhysicsCircle *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
+        PhysicsArbiterCC(PhysicsCircle *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAA(Object1 > Object2 ? Object1 : Object2, Object1 > Object2 ? Object2 : Object1){};
         ~PhysicsArbiterCC(){};
 
         // 计算俩物体的碰撞

@@ -52,6 +52,10 @@ namespace GAME
 
 	void PhysicsTest::MouseRoller(int z)
 	{
+		// 在 imgui 窗口上所以不响应
+		if (Global::ClickWindow)
+			return;
+			
 		if (m_position.z <= 10)
 		{
 			m_position.z += (m_position.z / 2) * z;
@@ -59,6 +63,10 @@ namespace GAME
 		else
 		{
 			m_position.z += z * 5;
+		}
+		if (m_position.z <= 0.1)
+		{
+			m_position.z = 0.1;
 		}
 	}
 
@@ -118,7 +126,7 @@ namespace GAME
 		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
 
 		static int item_Demo_idx = IM_ARRAYSIZE(PhysicsBlock::DemoNameS) - 1; // ImGui::Combo Demo序号
-		static int item_current = item_Demo_idx + 1;  // 储存当前Demo序号
+		static int item_current = item_Demo_idx + 1;						  // 储存当前Demo序号
 		ImGui::Combo("Demo", &item_Demo_idx, PhysicsBlock::DemoNameS, IM_ARRAYSIZE(PhysicsBlock::DemoNameS));
 		// Demo序号 是否发生改变
 		if (item_current != item_Demo_idx)
@@ -196,6 +204,52 @@ namespace GAME
 		ImGui::End();
 	}
 
+	void PhysicsTest::EditorMode(glm::vec2 huoqdedian) {
+		static bool zb = false, yb = false;
+		static glm::vec2 z1,z2,y1,y2;
+
+		static int Z_fangzhifanfuvhufa; // 避免反复触发
+		int Z_Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+		if (Z_Leftan == GLFW_PRESS) {
+			if (Z_fangzhifanfuvhufa != Z_Leftan) {
+				zb = true;
+				z1 = huoqdedian;
+				z2 = huoqdedian;
+			}else{
+				z2 = huoqdedian;
+			}
+		}
+		Z_fangzhifanfuvhufa = Z_Leftan;
+		static int fangzhifanfuvhufa; // 避免反复触发
+		int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+		if (Leftan == GLFW_PRESS) {
+			if (fangzhifanfuvhufa != Leftan) {
+				yb = true;
+				y1 = huoqdedian;
+				y2 = huoqdedian;
+			}else{
+				y2 = huoqdedian;
+			}
+		}
+		fangzhifanfuvhufa = Leftan;
+
+
+		if (Z_Leftan == GLFW_PRESS) {
+			if (zb) {
+				zb = false;
+			}else{
+
+			}
+		}
+		if (Leftan == GLFW_PRESS) {
+			if (yb) {
+				yb = false;
+			}else{
+
+			}
+		}
+	}
+
 	void PhysicsTest::GameLoop(unsigned int mCurrentFrame)
 	{
 		int winwidth, winheight;
@@ -214,8 +268,8 @@ namespace GAME
 		if (!Global::ClickWindow)
 		{
 			// 点击左键
-			static int Z_fangzhifanfuvhufa;	   // 避免反复触发
-			static Vec2_ PhysicsShapeArm; //
+			static int Z_fangzhifanfuvhufa; // 避免反复触发
+			static Vec2_ PhysicsShapeArm;	//
 			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
 			if (Leftan == GLFW_PRESS)
 			{
@@ -231,8 +285,9 @@ namespace GAME
 							PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->angle);
 							PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
 						}
-						else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::circle) {
-							PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsCircle*)PhysicsFormworkPtr)->angle);
+						else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::circle)
+						{
+							PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsCircle *)PhysicsFormworkPtr)->angle);
 							PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
 						}
 					}
@@ -255,18 +310,19 @@ namespace GAME
 							if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::shape)
 							{
 								PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->angle);
-								((PhysicsBlock::PhysicsShape*)PhysicsFormworkPtr)->AddForce(lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 10 * PhysicsFormworkPtr->PFGetMass() * (beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())) * PhysicsBlock::Modulus((beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos()))));
+								((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->AddForce(lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 10 * PhysicsFormworkPtr->PFGetMass() * (beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())) * PhysicsBlock::Modulus((beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos()))));
 								mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 0}, {1, 0, 0, 1}, {(beang2), 0}, {0, 1, 0, 1});
 							}
 							else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::particle)
 							{
-								((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->AddForce(10 * PhysicsFormworkPtr->PFGetMass() * (beang2 - ((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos));
-								mAuxiliaryVision->Line({ ((PhysicsBlock::PhysicsParticle*)PhysicsFormworkPtr)->pos, 0 }, { 1, 0, 0, 1 }, { (beang2), 0 }, { 0, 1, 0, 1 });
+								((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->AddForce(10 * PhysicsFormworkPtr->PFGetMass() * (beang2 - ((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->pos));
+								mAuxiliaryVision->Line({((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->pos, 0}, {1, 0, 0, 1}, {(beang2), 0}, {0, 1, 0, 1});
 							}
-							else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::circle) {
-								PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsCircle*)PhysicsFormworkPtr)->angle);
-								((PhysicsBlock::PhysicsCircle*)PhysicsFormworkPtr)->AddForce(lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 10 * PhysicsFormworkPtr->PFGetMass() * (beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())) * PhysicsBlock::Modulus(beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())));
-								mAuxiliaryVision->Line({ lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 0 }, { 1, 0, 0, 1 }, { (beang2), 0 }, { 0, 1, 0, 1 });
+							else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::circle)
+							{
+								PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsCircle *)PhysicsFormworkPtr)->angle);
+								((PhysicsBlock::PhysicsCircle *)PhysicsFormworkPtr)->AddForce(lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 10 * PhysicsFormworkPtr->PFGetMass() * (beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())) * PhysicsBlock::Modulus(beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())));
+								mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 0}, {1, 0, 0, 1}, {(beang2), 0}, {0, 1, 0, 1});
 							}
 						}
 						else
@@ -308,10 +364,6 @@ namespace GAME
 
 		// mAuxiliaryVision->Line({beang, 0}, {1, 0, 0, 1}, {end, 0}, {1, 0, 0, 1});
 
-		PhysicsBlock::PhysicsShape *PhysicsShapePtr;
-		PhysicsBlock::PhysicsParticle *PhysicsParticlePtr;
-		PhysicsBlock::CollisionInfoD info;
-
 		// 渲染物理网格
 		for (auto i : mPhysicsWorld->GetPhysicsShape())
 		{
@@ -340,7 +392,7 @@ namespace GAME
 					mAuxiliaryVision->Spot({i->OldPos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
 				// 辅助显示角度
 				if (PhysicsBlock::Auxiliary_AngleBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor), {i->pos + PhysicsBlock::vec2angle({1,0}, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor));
+					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor), {i->pos + PhysicsBlock::vec2angle({1, 0}, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor));
 				// 辅助显示速度
 				if (PhysicsBlock::Auxiliary_SpeedBool)
 					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
@@ -354,10 +406,12 @@ namespace GAME
 				if (PhysicsBlock::Auxiliary_CentreShapeBool)
 					mAuxiliaryVision->Spot({i->pos - PhysicsBlock::vec2angle(i->CentreMass - i->CentreShape, i->angle), 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CentreShapeColor));
 				// 辅助显示外骨骼点
-				if (PhysicsBlock::Auxiliary_OutlineBool) {
+				if (PhysicsBlock::Auxiliary_OutlineBool)
+				{
 					PhysicsBlock::AngleMat angleMat(i->angle);
-					for	(size_t d = 0; d < i->OutlineSize; ++d) {
-						mAuxiliaryVision->Spot({ i->pos + angleMat.Rotary(i->OutlineSet[d]), 0 }, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OutlineColor));
+					for (size_t d = 0; d < i->OutlineSize; ++d)
+					{
+						mAuxiliaryVision->Spot({i->pos + angleMat.Rotary(i->OutlineSet[d]), 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OutlineColor));
 					}
 				}
 			}
@@ -396,7 +450,7 @@ namespace GAME
 					mAuxiliaryVision->Spot({i->OldPos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
 				// 辅助显示角度
 				if (PhysicsBlock::Auxiliary_AngleBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor), {i->pos + PhysicsBlock::vec2angle({i->radius,0}, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor));
+					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor), {i->pos + PhysicsBlock::vec2angle({i->radius, 0}, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor));
 				// 辅助显示速度
 				if (PhysicsBlock::Auxiliary_SpeedBool)
 					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
@@ -421,7 +475,7 @@ namespace GAME
 		// 渲染物理信息
 		if (PhysicsAssistantInformation)
 		{
-			for (auto& i : mPhysicsWorld->CollideGroupVector)
+			for (auto &i : mPhysicsWorld->CollideGroupVector)
 			{
 				for (int j = 0; j < i->numContacts; ++j)
 				{

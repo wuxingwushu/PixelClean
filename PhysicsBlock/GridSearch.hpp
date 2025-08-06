@@ -13,7 +13,7 @@ namespace PhysicsBlock
     private:
         std::vector<std::vector<PhysicsFormwork *>> Grid; // 网格的 一维展开
         int mStorey = 0;                                  // 四叉网格层数
-        Vec2_ mExcursion{0};                                 // 相对世界坐标系的位置偏移量
+        Vec2_ mExcursion{0};                              // 相对世界坐标系的位置偏移量
 
     public:
         GridSearch() {}
@@ -147,10 +147,16 @@ namespace PhysicsBlock
         // 获取这个范围内所有对象
         std::vector<PhysicsFormwork *> Get(Vec2_ pos, FLOAT_ R)
         {
+            R *= 2; // 范围稍微加大点。
+            return  Get(pos - R, pos + R);
+        }
+
+        // 获取这个范围内所有对象
+        std::vector<PhysicsFormwork *> Get(Vec2_ Spos, Vec2_ Epos)
+        {
             std::vector<PhysicsFormwork *> V;
-            R += 1; // 范围稍微加大点。
-            Vec2_ S = pos + mExcursion - R;
-            Vec2_ E = pos + mExcursion + R;
+            Vec2_ S = Spos + mExcursion;
+            Vec2_ E = Epos + mExcursion;
             glm::ivec2 iS = S;
             glm::ivec2 iE = E;
 

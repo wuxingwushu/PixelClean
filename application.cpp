@@ -430,11 +430,15 @@ namespace GAME {
 			SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
 			PlayerForce = { 0,0 };
 			mWindow->pollEvents();//GLFW轮询事件
-			//更新 ImGui 的 MousePos
+			// 更新 ImGui 的 MousePos
 			ImGuiIO& io = ImGui::GetIO();
 			glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
 			io.MousePos.x = CursorPosX;
 			io.MousePos.y = CursorPosY;
+			// 更新 ImGui 的 鼠标滚轮的值
+			io.MouseWheel = -mWindow->MouseScroll;
+			mWindow->MouseScroll = 0;
+
 			if (InterFace->GetInterFaceBool()) {
 				mWindow->ImGuiKeyBoardEvent();//监听键盘
 				InterFace->InterFace(mCurrentFrame);

@@ -41,6 +41,7 @@ namespace VulKan {
 
 	public:
 		bool mWindowResized{ false };//窗口大小是否发生改变
+		float MouseScroll; // 鼠标滚轮值
 		GameMods* mApp{ nullptr };
 
 	private:

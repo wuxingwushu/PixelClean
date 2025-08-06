@@ -302,19 +302,6 @@ namespace PhysicsBlock
                             Map_Delete(key);
                         }
                         break;
-                    case PhysicsObjectEnum::shape:
-                        if (JZ && (((PhysicsShape *)i)->StaticNum > 10))
-                        {
-                            break;
-                        }
-                        if (!CollideAABB(((PhysicsShape *)i), PhysicsCircleS[SizeD]))
-                        {
-                            ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsCircleS[SizeD]);
-                            Map_Delete(key);
-                            break;
-                        }
-                        Arbiter(PhysicsCircleS[SizeD], ((PhysicsShape *)i));
-                        break;
 
                     default:
                         break;
@@ -383,10 +370,14 @@ namespace PhysicsBlock
                 CollideGroupS.insert({J->key, J});
                 CollideGroupVector.push_back(J);
             }
+            else
+            {
+                DeleteArbiter(J);
+            }
         }
         NewCollideGroup.clear();
 
-#define DANCI 0 & ThreadPoolBool
+#define DANCI 1 & ThreadPoolBool
 #if DANCI
         // 预处理
         const auto PreStepXT_Fun = [this, inv_dt](int T_Num, int Tx)
@@ -644,15 +635,6 @@ namespace PhysicsBlock
                             Map_Delete(key);
                         }
                         break;
-                    case PhysicsObjectEnum::shape:
-                        if (!CollideAABB(((PhysicsShape *)i), PhysicsCircleS[SizeD]))
-                        {
-                            ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsCircleS[SizeD]);
-                            Map_Delete(key);
-                            break;
-                        }
-                        Arbiter(PhysicsCircleS[SizeD], ((PhysicsShape *)i));
-                        break;
 
                     default:
                         break;
@@ -713,6 +695,10 @@ namespace PhysicsBlock
             {
                 CollideGroupS.insert({J->key, J});
                 CollideGroupVector.push_back(J);
+            }
+            else
+            {
+                DeleteArbiter(J);
             }
         }
         NewCollideGroup.clear();

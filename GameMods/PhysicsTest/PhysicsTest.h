@@ -40,6 +40,8 @@ namespace GAME {
 		virtual void GameUI();
 
 	private:
+		void PhysicsTest::EditorMode(glm::vec2 huoqdedian);
+
 		void ShowStaticSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1,0,0,1});
 		void ShowSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1,0,0,1});
 

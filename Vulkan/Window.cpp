@@ -21,6 +21,7 @@ namespace VulKan {
 	static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	{
 		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->MouseRoller(-yoffset);
+		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->MouseScroll = -yoffset;
 		//printf("Mouse wheel scrolled: xoffset = %lf, yoffset = %lf\n", xoffset, yoffset);
 	}
 

@@ -181,6 +181,40 @@ namespace PhysicsBlock
             return V;
         }
 
+        std::vector<Vec2_> GetDividedVision(PhysicsFormwork *atocr) {
+            std::vector<Vec2_> Vision;
+
+            Vec2_ atocr_pos = atocr->PFGetPos();
+            FLOAT_ R = atocr->PFGetCollisionR();
+            atocr_pos += mExcursion;
+            glm::ivec2 pos = (atocr_pos);
+            int _storey = Storey(R);
+            pos >>= _storey;
+
+            // 判断是否在网格边缘，是就放在上层较大的网格内
+            glm::ivec2 Spos = pos << _storey;
+            glm::ivec2 Epos = (pos + 1) << _storey;
+            if ((Spos.x > (atocr_pos.x - R)) || (Epos.x < (atocr_pos.x + R)) || (Spos.y > (atocr_pos.y - R)) || (Epos.y < (atocr_pos.y + R)))
+            {
+                ++_storey;
+                pos >>= 1;
+                Spos = pos << _storey;
+                Epos = (pos + 1) << _storey;
+            }
+            Vision.push_back(Vec2_(Spos) - mExcursion);
+            Vision.push_back(Vec2_(Epos) - mExcursion);
+            for (int i = _storey; i <= mStorey; ++i) {
+                ++_storey;
+                pos >>= 1;
+                Spos = pos << _storey;
+                Epos = (pos + 1) << _storey;
+                Vision.push_back(Vec2_(Spos) - mExcursion);
+                Vision.push_back(Vec2_(Epos) - mExcursion);
+            }
+
+            return Vision;
+        }
+
         // 更新网格
         void UpData()
         {

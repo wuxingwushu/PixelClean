@@ -55,7 +55,7 @@ namespace GAME
 		// 在 imgui 窗口上所以不响应
 		if (Global::ClickWindow)
 			return;
-			
+
 		if (m_position.z <= 10)
 		{
 			m_position.z += (m_position.z / 2) * z;
@@ -115,9 +115,22 @@ namespace GAME
 	void PhysicsTest::GameUI()
 	{
 		ImGui::ShowDemoWindow();
+		ImVec2 window_size;
+		ImGui::Begin(u8"编辑");
+		window_size = ImGui::GetWindowSize();
+		if (((Global::mWidth - window_size.x) < CursorPosX) && (window_size.y > CursorPosY))
+		{
+			Global::ClickWindow = true;
+		}
+		if (ImGui::Button(EditorModeBool ? u8"关闭编辑" : u8"开启编辑"))
+		{
+			EditorModeBool = !EditorModeBool;
+		}
+		ImGui::Combo(u8"物体", &item_object, objectName, IM_ARRAYSIZE(objectName));
+		ImGui::End();
 
-		ImGui::Begin(u8"属性 ");
-		ImVec2 window_size = ImGui::GetWindowSize();
+		ImGui::Begin(u8"属性");
+		window_size = ImGui::GetWindowSize();
 		if (((Global::mWidth - window_size.x) < CursorPosX) && (window_size.y > CursorPosY))
 		{
 			Global::ClickWindow = true;
@@ -148,11 +161,11 @@ namespace GAME
 			}
 		}
 
-		if (ImGui::Button(PhysicsSwitch ? "关闭物理" : "开启物理"))
+		if (ImGui::Button(PhysicsSwitch ? u8"关闭物理" : u8"开启物理"))
 		{
 			PhysicsSwitch = !PhysicsSwitch;
 		}
-		if (ImGui::Button(PhysicsAssistantInformation ? "关闭物理辅助视觉" : "开启物理辅助视觉"))
+		if (ImGui::Button(PhysicsAssistantInformation ? u8"关闭物理辅助视觉" : u8"开启物理辅助视觉"))
 		{
 			PhysicsAssistantInformation = !PhysicsAssistantInformation;
 		}
@@ -162,7 +175,7 @@ namespace GAME
 			PhysicsBlock::PhysicsAuxiliaryColorUI();
 		}
 
-		ImGui::Text("世界总动能：%f", mPhysicsWorld->GetWorldEnergy());
+		ImGui::Text(u8"世界总动能：%f", mPhysicsWorld->GetWorldEnergy());
 
 		if (PhysicsFormworkPtr)
 		{
@@ -204,52 +217,6 @@ namespace GAME
 		ImGui::End();
 	}
 
-	void PhysicsTest::EditorMode(glm::vec2 huoqdedian) {
-		static bool zb = false, yb = false;
-		static glm::vec2 z1,z2,y1,y2;
-
-		static int Z_fangzhifanfuvhufa; // 避免反复触发
-		int Z_Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-		if (Z_Leftan == GLFW_PRESS) {
-			if (Z_fangzhifanfuvhufa != Z_Leftan) {
-				zb = true;
-				z1 = huoqdedian;
-				z2 = huoqdedian;
-			}else{
-				z2 = huoqdedian;
-			}
-		}
-		Z_fangzhifanfuvhufa = Z_Leftan;
-		static int fangzhifanfuvhufa; // 避免反复触发
-		int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
-		if (Leftan == GLFW_PRESS) {
-			if (fangzhifanfuvhufa != Leftan) {
-				yb = true;
-				y1 = huoqdedian;
-				y2 = huoqdedian;
-			}else{
-				y2 = huoqdedian;
-			}
-		}
-		fangzhifanfuvhufa = Leftan;
-
-
-		if (Z_Leftan == GLFW_PRESS) {
-			if (zb) {
-				zb = false;
-			}else{
-
-			}
-		}
-		if (Leftan == GLFW_PRESS) {
-			if (yb) {
-				yb = false;
-			}else{
-
-			}
-		}
-	}
-
 	void PhysicsTest::GameLoop(unsigned int mCurrentFrame)
 	{
 		int winwidth, winheight;
@@ -260,96 +227,10 @@ namespace GAME
 		huoqdedian.x += mCamera->getCameraPos().x;
 		huoqdedian.y += mCamera->getCameraPos().y;
 
-		static Vec2_ beang{0}, beang2{0}, Opos{0}, end{0};
-
 		mAuxiliaryVision->Begin();
 
-		// 不在窗口上才可以操作
-		if (!Global::ClickWindow)
-		{
-			// 点击左键
-			static int Z_fangzhifanfuvhufa; // 避免反复触发
-			static Vec2_ PhysicsShapeArm;	//
-			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-			if (Leftan == GLFW_PRESS)
-			{
-				if (Z_fangzhifanfuvhufa != Leftan)
-				{
-					beang = {huoqdedian.x, huoqdedian.y};
-					PhysicsFormworkPtr = mPhysicsWorld->Get(beang);
-					if (PhysicsFormworkPtr)
-					{
-						Opos = PhysicsFormworkPtr->PFGetPos() - beang;
-						if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::shape)
-						{
-							PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->angle);
-							PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
-						}
-						else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::circle)
-						{
-							PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsCircle *)PhysicsFormworkPtr)->angle);
-							PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
-						}
-					}
-					else
-					{
-						glm::vec3 pmPos = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
-						pmPos *= -mCamera->getCameraPos().z / pmPos.z;
-						Opos = {mCamera->getCameraPos().x, mCamera->getCameraPos().y};
-						Opos += glm::dvec2{pmPos.x, pmPos.y};
-					}
-				}
-				else
-				{
-					if (PhysicsFormworkPtr)
-					{
-						beang2 = {huoqdedian.x, huoqdedian.y};
-						if (PhysicsSwitch)
-						{
-							// 开启物理了，就以受力的方式改变位置
-							if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::shape)
-							{
-								PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->angle);
-								((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr)->AddForce(lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 10 * PhysicsFormworkPtr->PFGetMass() * (beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())) * PhysicsBlock::Modulus((beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos()))));
-								mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 0}, {1, 0, 0, 1}, {(beang2), 0}, {0, 1, 0, 1});
-							}
-							else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::particle)
-							{
-								((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->AddForce(10 * PhysicsFormworkPtr->PFGetMass() * (beang2 - ((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->pos));
-								mAuxiliaryVision->Line({((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->pos, 0}, {1, 0, 0, 1}, {(beang2), 0}, {0, 1, 0, 1});
-							}
-							else if (PhysicsFormworkPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::circle)
-							{
-								PhysicsBlock::AngleMat lAngleMat(((PhysicsBlock::PhysicsCircle *)PhysicsFormworkPtr)->angle);
-								((PhysicsBlock::PhysicsCircle *)PhysicsFormworkPtr)->AddForce(lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 10 * PhysicsFormworkPtr->PFGetMass() * (beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())) * PhysicsBlock::Modulus(beang2 - (lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos())));
-								mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + PhysicsFormworkPtr->PFGetPos(), 0}, {1, 0, 0, 1}, {(beang2), 0}, {0, 1, 0, 1});
-							}
-						}
-						else
-						{
-							// 没有开启物理，就直接修改位置
-							((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr)->pos = Opos + beang2;
-						}
-					}
-					else
-					{
-						glm::vec3 pmPos = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
-						pmPos *= -mCamera->getCameraPos().z / pmPos.z;
-						m_position.x = Opos.x - pmPos.x;
-						m_position.y = Opos.y - pmPos.y;
-					}
-				}
-			}
-			Z_fangzhifanfuvhufa = Leftan;
-			// 点击右键
-			static int fangzhifanfuvhufa; // 避免反复触发
-			Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
-			if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan)
-			{
-				end = {huoqdedian.x, huoqdedian.y};
-			}
-			fangzhifanfuvhufa = Leftan;
-		}
+		// 鼠标事件
+		EditorMode({huoqdedian.x, huoqdedian.y});
 
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		if (PhysicsSwitch)
@@ -362,19 +243,25 @@ namespace GAME
 		}
 		TOOL::mTimer->StartEnd();
 
-		// mAuxiliaryVision->Line({beang, 0}, {1, 0, 0, 1}, {end, 0}, {1, 0, 0, 1});
+		// 查看分配到的网格树位置
+		if ((PhysicsFormworkPtr != nullptr) && PhysicsBlock::Auxiliary_GridDividedBool)
+		{
+			std::vector<Vec2_> vision = mPhysicsWorld->mGridSearch.GetDividedVision(PhysicsFormworkPtr);
+			for (size_t i = 0; i < (vision.size() / 2); ++i)
+			{
+				mAuxiliaryVision->Line({vision[i * 2], 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor), {vision[i * 2 + 1].x, vision[i * 2].y, 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor));
+				mAuxiliaryVision->Line({vision[i * 2], 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor), {vision[i * 2].x, vision[i * 2 + 1].y, 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor));
+				mAuxiliaryVision->Line({vision[i * 2 + 1], 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor), {vision[i * 2 + 1].x, vision[i * 2].y, 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor));
+				mAuxiliaryVision->Line({vision[i * 2 + 1], 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor), {vision[i * 2].x, vision[i * 2 + 1].y, 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor));
+			}
+		}
 
 		// 渲染物理网格
 		for (auto i : mPhysicsWorld->GetPhysicsShape())
 		{
-			/*
-			PhysicsBlock::CollisionInfoD info = i->PsBresenhamDetection(beang, end);
-			if (info.Collision) {
-				mAuxiliaryVision->Spot({ info.pos, 0 }, { 0, 1, 1, 1 });
-			}*/
-			for (size_t x = 0; x < i->width; x++)
+			for (size_t x = 0; x < i->width; ++x)
 			{
-				for (size_t y = 0; y < i->height; y++)
+				for (size_t y = 0; y < i->height; ++y)
 				{
 					if (i->at(x, y).Entity)
 					{
@@ -555,6 +442,362 @@ namespace GAME
 		mAuxiliaryVision->Line({pos, 0}, color, {pos + jiao2, 0}, color);
 		mAuxiliaryVision->Line({pos + jiao3, 0}, color, {pos + jiao1, 0}, color);
 		mAuxiliaryVision->Line({pos + jiao3, 0}, color, {pos + jiao2, 0}, color);
+	}
+
+	void PhysicsTest::EditorMode(glm::vec2 huoqdedian)
+	{
+		// 不在窗口上才可以操作
+		if (Global::ClickWindow)
+			return;
+
+		bool zb = false, yb = false;
+		static glm::vec2 z1, z2, y1, y2;
+
+		static int Z_fangzhifanfuvhufa; // 避免反复触发
+		int Z_Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+		if (Z_Leftan == GLFW_PRESS)
+		{
+			if (Z_fangzhifanfuvhufa != Z_Leftan)
+			{
+				zb = true;
+				z1 = huoqdedian;
+				z2 = huoqdedian;
+			}
+			else
+			{
+				z2 = huoqdedian;
+			}
+		}
+		else if (Z_fangzhifanfuvhufa != Z_Leftan)
+		{
+			zb = true;
+		}
+		Z_fangzhifanfuvhufa = Z_Leftan;
+		static int fangzhifanfuvhufa; // 避免反复触发
+		int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+		if (Leftan == GLFW_PRESS)
+		{
+			if (fangzhifanfuvhufa != Leftan)
+			{
+				yb = true;
+				y1 = huoqdedian;
+				y2 = huoqdedian;
+			}
+			else
+			{
+				y2 = huoqdedian;
+			}
+		}
+		else if (fangzhifanfuvhufa != Leftan)
+		{
+			yb = true;
+		}
+		fangzhifanfuvhufa = Leftan;
+
+		// 事件分类
+		static PhysicsBlock::PhysicsFormwork *Z_MousePhysicsFormworkPtr = nullptr; // 选择的物理对象
+		if ((Z_Leftan == GLFW_PRESS) && zb)
+		{
+			Z_MousePhysicsFormworkPtr = mPhysicsWorld->Get(huoqdedian);
+			PhysicsFormworkPtr = Z_MousePhysicsFormworkPtr;
+		}
+		else if (zb)
+		{
+			Z_MousePhysicsFormworkPtr = nullptr;
+		}
+		static PhysicsBlock::PhysicsFormwork *MousePhysicsFormworkPtr = nullptr; // 选择的物理对象
+		if ((Leftan == GLFW_PRESS) && yb)
+		{
+			MousePhysicsFormworkPtr = mPhysicsWorld->Get(huoqdedian);
+		}
+		else if (yb)
+		{
+			MousePhysicsFormworkPtr = nullptr;
+		}
+
+		// 执行对应事件
+		if (Z_MousePhysicsFormworkPtr != nullptr)
+		{
+			switch (Z_MousePhysicsFormworkPtr->PFGetType())
+			{
+			case PhysicsBlock::PhysicsObjectEnum::circle:
+				CircleLeftEvent((PhysicsBlock::PhysicsCircle *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::particle:
+				ParticleLeftEvent((PhysicsBlock::PhysicsParticle *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::shape:
+				SquareLeftEvent((PhysicsBlock::PhysicsShape *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
+				break;
+
+			default:
+				break;
+			}
+		}
+		else
+		{
+			if (EditorModeBool)
+			{
+				FoundLeftEvent(Z_Leftan == GLFW_PRESS, zb, z1, z2);
+			}
+			else
+			{
+				CameraLeftEvent(Z_Leftan == GLFW_PRESS, zb, z1, z2);
+			}
+		}
+
+		if (MousePhysicsFormworkPtr != nullptr)
+		{
+			switch (MousePhysicsFormworkPtr->PFGetType())
+			{
+			case PhysicsBlock::PhysicsObjectEnum::circle:
+				CircleRightEvent((PhysicsBlock::PhysicsCircle *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::particle:
+				ParticleRightEvent((PhysicsBlock::PhysicsParticle *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::shape:
+				SquareRightEvent((PhysicsBlock::PhysicsShape *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
+				break;
+
+			default:
+				break;
+			}
+		}
+		else
+		{
+			CameraRightEvent(Z_Leftan == GLFW_PRESS, zb, z1, z2);
+		}
+	}
+
+	void PhysicsTest::CameraLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+		static Vec2_ Opos;
+		if (Click)
+		{
+			if (First)
+			{
+				// 初次点击
+				Opos = {m_position.x, m_position.y};
+			}
+			else
+			{
+				glm::vec2 CameraPos = s - e + Opos;
+				m_position.x = CameraPos.x;
+				m_position.y = CameraPos.y;
+			}
+		}
+		else
+		{
+		}
+	}
+
+	void PhysicsTest::CameraRightEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+	}
+
+	void PhysicsTest::SquareLeftEvent(PhysicsBlock::PhysicsShape *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+		static Vec2_ Opos;
+		static Vec2_ PhysicsShapeArm;
+		if (Click)
+		{
+			if (First)
+			{
+				// 初次点击
+				Opos = Ptr->PFGetPos() - s;
+				PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
+				PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
+			}
+			else
+			{
+				if (PhysicsSwitch)
+				{
+					// 开启物理了
+					PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
+					Ptr->AddForce(
+						lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(),
+						10 * Ptr->PFGetMass() * (e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos())) * PhysicsBlock::Modulus((e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos()))));
+					mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(), 0}, {1, 0, 0, 1}, {(e), 0}, {0, 1, 0, 1});
+				}
+				else
+				{
+					// 没有开启物理，就直接修改位置
+					Ptr->pos = Opos + e;
+				}
+			}
+		}
+		else
+		{
+		}
+	}
+
+	void PhysicsTest::SquareRightEvent(PhysicsBlock::PhysicsShape *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+	}
+
+	void PhysicsTest::CircleLeftEvent(PhysicsBlock::PhysicsCircle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+		static Vec2_ Opos;
+		static Vec2_ PhysicsShapeArm;
+		if (Click)
+		{
+			if (First)
+			{
+				// 初次点击
+				Opos = Ptr->PFGetPos() - s;
+				PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
+				PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
+			}
+			else
+			{
+				if (PhysicsSwitch)
+				{
+					// 开启物理了
+					PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
+					Ptr->AddForce(
+						lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(),
+						10 * Ptr->PFGetMass() * (e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos())) * PhysicsBlock::Modulus((e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos()))));
+					mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(), 0}, {1, 0, 0, 1}, {(e), 0}, {0, 1, 0, 1});
+				}
+				else
+				{
+					// 没有开启物理，就直接修改位置
+					Ptr->pos = Opos + e;
+				}
+			}
+		}
+		else
+		{
+		}
+	}
+
+	void PhysicsTest::CircleRightEvent(PhysicsBlock::PhysicsCircle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+	}
+
+	void PhysicsTest::ParticleLeftEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+		static Vec2_ Opos;
+		if (Click)
+		{
+			if (First)
+			{
+				// 初次点击
+				Opos = Ptr->PFGetPos() - s;
+			}
+			else
+			{
+				if (PhysicsSwitch)
+				{
+					// 开启物理了e
+					Ptr->AddForce(10 * Ptr->PFGetMass() * (e - Ptr->pos));
+					mAuxiliaryVision->Line({Ptr->pos, 0}, {1, 0, 0, 1}, {(e), 0}, {0, 1, 0, 1});
+				}
+				else
+				{
+					// 没有开启物理，就直接修改位置
+					Ptr->pos = Opos + e;
+				}
+			}
+		}
+		else
+		{
+		}
+	}
+
+	void PhysicsTest::ParticleRightEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+	}
+
+	void PhysicsTest::FoundLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+		Vec2_ pos;
+		glm::ivec2 size;
+		if (Click)
+		{
+			if (First)
+			{
+			}
+			else
+			{
+
+				// u8"圆", u8"点", u8"网格", u8"线"
+				switch (item_object)
+				{
+				case 0:
+					pos = (s + e) / FLOAT_(2);
+					mAuxiliaryVision->Circle({pos, FLOAT_(0)}, PhysicsBlock::Modulus(s - pos), {0, 0.5, 0, 1});
+					break;
+				case 1:
+					mAuxiliaryVision->Spot({e, FLOAT_(0)}, 0.05f, {0, 0.5, 0, 1});
+					break;
+				case 2:
+					if (s.x > e.x)
+						std::swap(s.x, e.x);
+					if (s.y > e.y)
+						std::swap(s.y, e.y);
+					size = e - s;
+					size += 1;
+					for (int x = 0; x < size.x; ++x)
+					{
+						for (int y = 0; y < size.y; ++y)
+						{
+							ShowSquare(s + glm::vec2{x, y}, 0, {0, 0.5, 0, 1});
+						}
+					}
+					break;
+				case 3:
+					mAuxiliaryVision->Line({s, FLOAT_(0)}, {0, 0.5, 0, 1}, {e, FLOAT_(0)}, {0, 0.5, 0, 1});
+					break;
+
+				default:
+					break;
+				}
+			}
+		}
+		else
+		{
+			if (First)
+			{
+				PhysicsBlock::PhysicsShape *PhysicsShape;
+				switch (item_object)
+				{
+				case 0:
+					pos = (s + e) / FLOAT_(2);
+					mPhysicsWorld->AddObject(new PhysicsBlock::PhysicsCircle(pos, PhysicsBlock::Modulus(s - pos), 3.14 * PhysicsBlock::ModulusLength(s - pos)));
+					break;
+				case 1:
+					mPhysicsWorld->AddObject(new PhysicsBlock::PhysicsParticle(e, 1));
+					break;
+				case 2:
+					if (s.x > e.x)
+						std::swap(s.x, e.x);
+					if (s.y > e.y)
+						std::swap(s.y, e.y);
+					size = e - s;
+					size += 1;
+					PhysicsShape = new PhysicsBlock::PhysicsShape(s, size);
+					for (size_t i = 0; i < (PhysicsShape->width * PhysicsShape->height); ++i)
+					{
+						PhysicsShape->at(i).Collision = true;
+						PhysicsShape->at(i).Entity = true;
+						PhysicsShape->at(i).mass = 1;
+						PhysicsShape->at(i).FrictionFactor = 0.2;
+					}
+					PhysicsShape->UpdateAll();
+					PhysicsShape->angle = 0;
+					mPhysicsWorld->AddObject(PhysicsShape);
+					break;
+				case 3:
+					/* code */
+					break;
+
+				default:
+					break;
+				}
+			}
+		}
 	}
 
 }

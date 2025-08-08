@@ -20,7 +20,10 @@
 #define AuxiliaryReadBoolColor(Name)                                                           \
 	Auxiliary_##Name##Bool = Ini.Get<bool>("Auxiliary", TOSIRING(Name##Bool));                 \
 	std::vector<float> Name##Color = Ini.GetVector<float>("Auxiliary", TOSIRING(Name##Color)); \
-	for (size_t i = 0; i < Name##Color.size(); ++i) { Auxiliary_##Name##Color[i] = Name##Color[i]; }
+	for (size_t i = 0; i < Name##Color.size(); ++i)                                            \
+	{                                                                                          \
+		Auxiliary_##Name##Color[i] = Name##Color[i];                                           \
+	}
 
 // 辅助保存信息
 #define AuxiliaryStorageBoolColor(Name)                                         \
@@ -46,6 +49,7 @@ namespace PhysicsBlock
 	AuxiliaryExternBoolColor(CollisionDrop);				  // 碰撞点
 	AuxiliaryExternBoolColor(SeparateNormalVector);			  // 分离法向量
 	AuxiliaryExternBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
+	AuxiliaryExternBoolColor(GridDivided);					  // 被选中的物体被划分网格到的网格位置
 
 	// 读取物理辅助显示信息
 	void AuxiliaryInfoRead();

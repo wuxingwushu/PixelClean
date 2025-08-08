@@ -24,6 +24,7 @@ namespace PhysicsBlock
 	AuxiliaryBoolColor(CollisionDrop);					// 碰撞点
 	AuxiliaryBoolColor(SeparateNormalVector);			// 分离法向量
 	AuxiliaryBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
+	AuxiliaryBoolColor(GridDivided);					  // 被选中的物体被划分网格到的网格位置
 
 	// 读取物理辅助显示信息
 	void AuxiliaryInfoRead()
@@ -40,6 +41,7 @@ namespace PhysicsBlock
 		AuxiliaryReadBoolColor(CollisionDrop);					// 碰撞点
 		AuxiliaryReadBoolColor(SeparateNormalVector);			// 分离法向量
 		AuxiliaryReadBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
+		AuxiliaryReadBoolColor(GridDivided);					  // 被选中的物体被划分网格到的网格位置
 	}
 
 	// 保存物理辅助显示信息
@@ -57,6 +59,7 @@ namespace PhysicsBlock
 		AuxiliaryStorageBoolColor(CollisionDrop);				   // 碰撞点
 		AuxiliaryStorageBoolColor(SeparateNormalVector);		   // 分离法向量
 		AuxiliaryStorageBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
+		AuxiliaryStorageBoolColor(GridDivided);					  // 被选中的物体被划分网格到的网格位置
 		inih::INIWriter::write_Gai("PhysicsBlock.ini", Ini);	   // 保存
 	}
 
@@ -162,6 +165,7 @@ namespace PhysicsBlock
 		AuxiliaryColorUI("碰撞点", &Auxiliary_CollisionDropBool, Auxiliary_CollisionDropColor);
 		AuxiliaryColorUI("分离法向量", &Auxiliary_SeparateNormalVectorBool, Auxiliary_SeparateNormalVectorColor);
 		AuxiliaryColorUI("碰撞点到两个物体重心的连线", &Auxiliary_CollisionDropToCenterOfGravityBool, Auxiliary_CollisionDropToCenterOfGravityColor);
+		AuxiliaryColorUI("被选中物体被划分网格到的网格位置", &Auxiliary_GridDividedBool, Auxiliary_GridDividedColor);
 	}
 
 	bool PhysicsShapeUI(PhysicsShape *Object)

@@ -44,4 +44,24 @@ namespace PhysicsBlock
         numContacts = Collide(contacts, (PhysicsCircle*)object1, (PhysicsCircle*)object2);
     }
 
+    void PhysicsArbiterLC::ComputeCollide()
+    {
+        numContacts = Collide(contacts, (PhysicsLine*)object1, (PhysicsCircle*)object2);
+    }
+
+    void PhysicsArbiterLP::ComputeCollide()
+    {
+        numContacts = Collide(contacts, (PhysicsLine*)object1, (PhysicsParticle*)object2);
+    }
+
+    void PhysicsArbiterLS::ComputeCollide()
+    {
+        numContacts = Collide(contacts, (PhysicsLine*)object1, (PhysicsShape*)object2);
+    }
+
+    void PhysicsArbiterL::ComputeCollide()
+    {
+        numContacts = Collide(contacts, (PhysicsLine*)object1, (MapFormwork*)object2);
+    }
+
 }

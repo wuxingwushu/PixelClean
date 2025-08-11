@@ -2,6 +2,7 @@
 #include "PhysicsParticle.hpp"
 #include "PhysicsShape.hpp"
 #include "PhysicsCircle.hpp"
+#include "PhysicsLine.hpp"
 #include "MapFormwork.hpp"
 #include "BaseArbiter.hpp"
 
@@ -45,4 +46,17 @@ namespace PhysicsBlock
 
     // 圆形 和 网格形状 的碰撞检测
     unsigned int Collide(Contact* contacts, PhysicsCircle* Circle, PhysicsShape* Shape);
+
+    // 线 和 网格形状 的碰撞检测
+    unsigned int Collide(Contact* contacts, PhysicsLine* Line, PhysicsShape* Shape);
+
+    // 线 和 圆 的碰撞检测
+    unsigned int Collide(Contact* contacts, PhysicsLine* Line, PhysicsCircle* Circle);
+
+    // 线 和 点 的碰撞检测
+    unsigned int Collide(Contact* contacts, PhysicsLine* Line, PhysicsParticle* Particle);
+
+    // 线 和 地形 的碰撞检测
+    unsigned int Collide(Contact* contacts, PhysicsLine* Line, MapFormwork* Map);
+
 }

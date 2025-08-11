@@ -56,6 +56,10 @@ namespace PhysicsBlock
     AuxiliaryArbiter(PhysicsArbiterC, PhysicsCircle, C, MapFormwork, M, 5);
     AuxiliaryArbiter(PhysicsArbiterCS, PhysicsCircle, C, PhysicsShape, S, 6);
     AuxiliaryArbiter(PhysicsArbiterCC, PhysicsCircle, C1, PhysicsCircle, C2, 7);
+    AuxiliaryArbiter(PhysicsArbiterLC, PhysicsLine, L, PhysicsCircle, C, 8);
+    AuxiliaryArbiter(PhysicsArbiterLS, PhysicsLine, L, PhysicsShape, S, 9);
+    AuxiliaryArbiter(PhysicsArbiterLP, PhysicsLine, L, PhysicsParticle, P, 10);
+    AuxiliaryArbiter(PhysicsArbiterL, PhysicsLine, L, MapFormwork, M, 11);
 
     inline void PhysicsWorld::DeleteArbiter(BaseArbiter *BA)
     {
@@ -70,6 +74,10 @@ namespace PhysicsBlock
             AuxiliaryDelete(PhysicsArbiterC, PhysicsCircle, C, MapFormwork, M, 5);
             AuxiliaryDelete(PhysicsArbiterCS, PhysicsCircle, C, PhysicsShape, S, 6);
             AuxiliaryDelete(PhysicsArbiterCC, PhysicsCircle, C1, PhysicsCircle, C2, 7);
+            AuxiliaryDelete(PhysicsArbiterLC, PhysicsLine, L, PhysicsCircle, C, 8);
+            AuxiliaryDelete(PhysicsArbiterLS, PhysicsLine, L, PhysicsShape, S, 9);
+            AuxiliaryDelete(PhysicsArbiterLP, PhysicsLine, L, PhysicsParticle, P, 10);
+            AuxiliaryDelete(PhysicsArbiterL, PhysicsLine, L, MapFormwork, M, 11);
 
         default:
             break;
@@ -115,6 +123,11 @@ namespace PhysicsBlock
         }
         // 物理绳子
         for (auto i : BaseJunctionS)
+        {
+            delete i;
+        }
+        // 物理线
+        for (auto i : PhysicsLineS)
         {
             delete i;
         }
@@ -176,6 +189,10 @@ namespace PhysicsBlock
         for (auto o : PhysicsCircleS)
         {
             o->PhysicsSpeed(time, GravityAcceleration);
+        }
+        for (auto i : PhysicsLineS)
+        {
+            i->PhysicsSpeed(time, GravityAcceleration);
         }
 
         // 更新网格
@@ -301,6 +318,49 @@ namespace PhysicsBlock
                             ArbiterKey key = ArbiterKey(PhysicsCircleS[SizeD], ((PhysicsParticle *)i));
                             Map_Delete(key);
                         }
+                        break;
+
+                    default:
+                        break;
+                    }
+                }
+            }
+
+            ThreadTaskAllot(SizeD, SizeY, PhysicsLineS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                // 静止了，跳过碰撞遍历
+                JZ = (PhysicsLineS[SizeD]->StaticNum > 10);
+
+                // 和地形的碰撞
+                if (!JZ)
+                    Arbiter(PhysicsLineS[SizeD], wMapFormwork);
+
+                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsLineS[SizeD]->pos, PhysicsLineS[SizeD]->radius);
+                for (auto i : SearchV)
+                {
+                    switch (i->PFGetType())
+                    {
+                    case PhysicsObjectEnum::circle:
+                        if (JZ && (((PhysicsCircle *)i)->StaticNum > 10))
+                        {
+                            break;
+                        }
+                        Arbiter(PhysicsLineS[SizeD], ((PhysicsCircle *)i));
+                        break;
+                    case PhysicsObjectEnum::particle:
+                        if (JZ && (((PhysicsParticle *)i)->StaticNum > 10))
+                        {
+                            break;
+                        }
+                        Arbiter(PhysicsLineS[SizeD], ((PhysicsParticle *)i));
+                        break;
+                    case PhysicsObjectEnum::shape:
+                        if (JZ && (((PhysicsShape *)i)->StaticNum > 10))
+                        {
+                            break;
+                        }
+                        Arbiter(PhysicsLineS[SizeD], ((PhysicsShape *)i));
                         break;
 
                     default:
@@ -507,6 +567,11 @@ namespace PhysicsBlock
             {
                 PhysicsCircleS[SizeD]->PhysicsPos(time, GravityAcceleration);
             }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsLineS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                PhysicsLineS[SizeD]->PhysicsPos(time, GravityAcceleration);
+            }
         };
         xTn.clear();
         for (size_t i = 0; i < xThreadNum; ++i)
@@ -535,6 +600,10 @@ namespace PhysicsBlock
         for (auto o : PhysicsCircleS)
         {
             o->PhysicsPos(time, GravityAcceleration);
+        }
+        for (auto i : PhysicsLineS)
+        {
+            i->PhysicsPos(time, GravityAcceleration);
         }
 #endif
     }

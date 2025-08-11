@@ -5,25 +5,22 @@
 namespace PhysicsBlock
 {
 
-    class PhysicsCircle : public PhysicsAngle
+    class PhysicsLine : public PhysicsAngle
     {
     public:
-        FLOAT_ radius; // 碰撞半径
+        FLOAT_ radius; // 半径
     public:
-        PhysicsCircle(Vec2_ Pos, FLOAT_ Radius, FLOAT_ Mass, FLOAT_ Friction = 0.2);
-        ~PhysicsCircle();
-
-
-        /*=========PhysicsFormwork=========*/
+        PhysicsLine(Vec2_ begin_, Vec2_ end_, FLOAT_ mass_, FLOAT_ friction_ = 0.2);
+        ~PhysicsLine(){};
 
         /**
          * @brief 获取对象类型
          * @return 类型 */
-        virtual PhysicsObjectEnum PFGetType() { return PhysicsObjectEnum::circle; }
+        virtual PhysicsObjectEnum PFGetType() { return PhysicsObjectEnum::line; }
         /**
          * @brief 获取碰撞半径
          * @return 半径 */
         virtual FLOAT_ PFGetCollisionR() { return radius; }
     };
-    
+
 }

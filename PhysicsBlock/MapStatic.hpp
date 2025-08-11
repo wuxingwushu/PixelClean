@@ -9,8 +9,9 @@ namespace PhysicsBlock
 
     struct MapOutline
     {
-        Vec2_ pos;
-        FLOAT_ F;
+        Vec2_ pos; // 点位置
+        Vec2_ face; // 朝向
+        FLOAT_ F; // 摩擦力
     };
 
     /**

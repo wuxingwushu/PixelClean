@@ -63,30 +63,30 @@ namespace PhysicsBlock
                 {
                     if (GetCollision(x - 1, y) == GetCollision(x, y - 1))
                     {
-                        Outline.push_back({Vec2_{x, y}, at(x, y).FrictionFactor});
+                        Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
                     }
                 }
                 else if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1))
                 {
-                    Outline.push_back({Vec2_{x, y}, at(x, y).FrictionFactor});
+                    Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
                 }
                 // 左下角
                 if (!GetCollision(x, y + 1)) {
                     if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1))) {
-                        Outline.push_back({Vec2_{x, y+1}, at(x, y).FrictionFactor});
+                        Outline.push_back({Vec2_{x, y+1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
                     }
                 }
                 // 右上角
                 if (!GetCollision(x + 1, y)) {
                     if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1))) {
-                        Outline.push_back({Vec2_{x+1, y}, at(x, y).FrictionFactor});
+                        Outline.push_back({Vec2_{x+1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
                     }
                 }
                 // 右下角
                 if (!GetCollision(x + 1, y + 1)) {
                     if ((GetCollision(x + 1, y) == GetCollision(x, y + 1)) && !GetCollision(x + 1, y))
                     {
-                        Outline.push_back({Vec2_{x+1, y+1}, at(x, y).FrictionFactor});
+                        Outline.push_back({Vec2_{x+1, y+1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
                     }
                 }
             }

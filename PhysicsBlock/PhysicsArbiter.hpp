@@ -2,6 +2,7 @@
 #include "PhysicsBaseArbiter.hpp"
 #include "PhysicsShape.hpp"
 #include "PhysicsCircle.hpp"
+#include "PhysicsLine.hpp"
 
 namespace PhysicsBlock
 {
@@ -68,7 +69,7 @@ namespace PhysicsBlock
     };
 
     /**
-     * @brief 圆，地形，碰撞解析 */
+     * @brief 圆，网格形状，碰撞解析 */
     class PhysicsArbiterCS : public PhysicsBaseArbiterAA
     {
     public:
@@ -80,7 +81,7 @@ namespace PhysicsBlock
     };
 
     /**
-     * @brief 圆，地形，碰撞解析 */
+     * @brief 圆，点，碰撞解析 */
     class PhysicsArbiterCP : public PhysicsBaseArbiterAD
     {
     public:
@@ -92,12 +93,60 @@ namespace PhysicsBlock
     };
 
     /**
-     * @brief 圆，地形，碰撞解析 */
+     * @brief 圆，圆，碰撞解析 */
     class PhysicsArbiterCC : public PhysicsBaseArbiterAA
     {
     public:
         PhysicsArbiterCC(PhysicsCircle *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAA(Object1 > Object2 ? Object1 : Object2, Object1 > Object2 ? Object2 : Object1){};
         ~PhysicsArbiterCC(){};
+
+        // 计算俩物体的碰撞
+        virtual void ComputeCollide();
+    };
+
+    /**
+     * @brief 线，圆，碰撞解析 */
+    class PhysicsArbiterLC : public PhysicsBaseArbiterAA
+    {
+    public:
+        PhysicsArbiterLC(PhysicsLine *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
+        ~PhysicsArbiterLC(){};
+
+        // 计算俩物体的碰撞
+        virtual void ComputeCollide();
+    };
+
+    /**
+     * @brief 线，点，碰撞解析 */
+    class PhysicsArbiterLP : public PhysicsBaseArbiterAD
+    {
+    public:
+        PhysicsArbiterLP(PhysicsLine *Object1, PhysicsParticle *Object2):PhysicsBaseArbiterAD(Object1, Object2){};
+        ~PhysicsArbiterLP(){};
+
+        // 计算俩物体的碰撞
+        virtual void ComputeCollide();
+    };
+
+    /**
+     * @brief 线，网格形状，碰撞解析 */
+    class PhysicsArbiterLS : public PhysicsBaseArbiterAA
+    {
+    public:
+        PhysicsArbiterLS(PhysicsLine *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
+        ~PhysicsArbiterLS(){};
+
+        // 计算俩物体的碰撞
+        virtual void ComputeCollide();
+    };
+
+    /**
+     * @brief 线，圆，碰撞解析 */
+    class PhysicsArbiterL : public PhysicsBaseArbiterA
+    {
+    public:
+        PhysicsArbiterL(PhysicsLine *Object1, MapFormwork *Object2):PhysicsBaseArbiterA(Object1, Object2){};
+        ~PhysicsArbiterL(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();

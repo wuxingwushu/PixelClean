@@ -53,6 +53,9 @@ namespace PhysicsBlock
 	// 动态网格搜索测试
 	void PhysicsDemo15(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
 
+	// 物理线段
+	void PhysicsDemo16(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+
 
 	typedef void (*Funtypedef)(PhysicsWorld** myPhysicsWorld, Camera* mCamera);
 	static Funtypedef DemoFunS[] = { 
@@ -71,7 +74,8 @@ namespace PhysicsBlock
 		PhysicsDemo12, 
 		PhysicsDemo13,
 		PhysicsDemo14,
-		PhysicsDemo15
+		PhysicsDemo15,
+		PhysicsDemo16
 	 };
 	static const char* DemoNameS[] = { 
 		"外骨骼计算", 
@@ -89,7 +93,8 @@ namespace PhysicsBlock
 		"绳子牛顿摆", 
 		"关节牛顿摆",
 		"摩擦力",
-		"动态网格搜索测试"
+		"动态网格搜索测试",
+		"物理线段"
 	 };
 
 }

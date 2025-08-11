@@ -3,11 +3,12 @@
 #include "MapFormwork.hpp"     // 地图样板
 #include "PhysicsShape.hpp"    // 有形状物体
 #include "PhysicsParticle.hpp" // 物理粒子
+#include "PhysicsLine.hpp"     // 物理线
 #include "PhysicsArbiter.hpp"  // 物理解析單元
 #include "PhysicsJoint.hpp"    // 物理关节
 #include "PhysicsJunction.hpp" // 物理连接
+#include "GridSearch.hpp"      // 网格搜索
 #include <unordered_map>
-#include "GridSearch.hpp"
 
 #define MemoryPoolBool 1
 #if MemoryPoolBool
@@ -170,6 +171,7 @@ namespace PhysicsBlock
         std::vector<PhysicsJoint *> PhysicsJointS;       // 物理关节
         std::vector<BaseJunction *> BaseJunctionS;       // 物理绳子
         std::vector<PhysicsCircle *> PhysicsCircleS;     // 物理圆
+        std::vector<PhysicsLine *> PhysicsLineS;         // 物理圆
 
         std::unordered_map<ArbiterKey, BaseArbiter *, ArbiterKeyHash> CollideGroupS; // 碰撞队
         std::vector<BaseArbiter *> CollideGroupVector;
@@ -186,6 +188,10 @@ namespace PhysicsBlock
         AuxiliaryMemoryPool(PhysicsArbiterC, PhysicsCircle, C, MapFormwork, M);
         AuxiliaryMemoryPool(PhysicsArbiterCS, PhysicsCircle, C, PhysicsShape, S);
         AuxiliaryMemoryPool(PhysicsArbiterCC, PhysicsCircle, C1, PhysicsCircle, C2);
+        AuxiliaryMemoryPool(PhysicsArbiterLC, PhysicsLine, L, PhysicsCircle, C);
+        AuxiliaryMemoryPool(PhysicsArbiterLS, PhysicsLine, L, PhysicsShape, S);
+        AuxiliaryMemoryPool(PhysicsArbiterLP, PhysicsLine, L, PhysicsParticle, P);
+        AuxiliaryMemoryPool(PhysicsArbiterL, PhysicsLine, L, MapFormwork, M);
 
         void DeleteArbiter(BaseArbiter *BA);
 
@@ -229,6 +235,11 @@ namespace PhysicsBlock
             PhysicsCircleS.push_back(Object);
         }
 
+        void AddObject(PhysicsLine *Object)
+        {
+            PhysicsLineS.push_back(Object);
+        }
+
         std::vector<PhysicsShape *> &GetPhysicsShape()
         {
             return PhysicsShapeS;
@@ -252,6 +263,11 @@ namespace PhysicsBlock
         std::vector<PhysicsCircle *> &GetPhysicsCircle()
         {
             return PhysicsCircleS;
+        }
+
+        std::vector<PhysicsLine *> &GetPhysicsLine()
+        {
+            return PhysicsLineS;
         }
 
         MapFormwork *GetMapFormwork()

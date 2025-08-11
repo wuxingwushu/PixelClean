@@ -8,6 +8,7 @@ namespace PhysicsBlock
 // 是否采用莫顿编码
 #define Morton_define 1
 
+    // 网格搜索
     class GridSearch
     {
     private:
@@ -181,6 +182,7 @@ namespace PhysicsBlock
             return V;
         }
 
+        // 获取物体所在的细分网格
         std::vector<Vec2_> GetDividedVision(PhysicsFormwork *atocr) {
             std::vector<Vec2_> Vision;
 

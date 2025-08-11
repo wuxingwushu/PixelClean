@@ -192,23 +192,4 @@ namespace PhysicsBlock
         return {false};
     }
 
-    void inline PhysicsShape::PhysicsSpeed(FLOAT_ time, Vec2_ Ga)
-    {
-        if (invMass == 0) {
-            return;
-        }
-        PhysicsParticle::PhysicsSpeed(time, Ga);
-        angleSpeed += time * invMomentInertia * torque;
-        torque = 0;
-    }
-
-    void inline PhysicsShape::PhysicsPos(FLOAT_ time, Vec2_ Ga)
-    {
-        if (invMass == 0) {
-            return;
-        }
-        PhysicsParticle::PhysicsPos(time, Ga);
-        angle += time * angleSpeed;
-    }
-
 }

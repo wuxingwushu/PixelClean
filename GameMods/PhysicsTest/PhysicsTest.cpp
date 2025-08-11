@@ -344,10 +344,32 @@ namespace GAME
 				// 辅助显示受力
 				if (PhysicsBlock::Auxiliary_ForceBool)
 					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
-				// 辅助显示质心
-				if (PhysicsBlock::Auxiliary_CentreMassBool)
-					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CentreMassColor));
 			}
+		}
+		// 渲染线
+		for (auto i : mPhysicsWorld->GetPhysicsLine())
+		{
+			Vec2_ pR = PhysicsBlock::vec2angle({i->radius, 0}, i->angle);
+			mAuxiliaryVision->Line({i->pos + pR, 0}, {0, 1, 0, 1}, {i->pos - pR, 0}, {0, 1, 0, 1});
+			if (PhysicsAssistantInformation)
+			{
+				// 辅助显示位置
+				if (PhysicsBlock::Auxiliary_PosBool)
+					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
+				// 辅助显示旧位置
+				if (PhysicsBlock::Auxiliary_OldPosBool)
+					mAuxiliaryVision->Spot({i->OldPos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
+				// 辅助显示角度
+				if (PhysicsBlock::Auxiliary_AngleBool)
+					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor), {i->pos + PhysicsBlock::vec2angle({i->radius, 0}, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor));
+				// 辅助显示速度
+				if (PhysicsBlock::Auxiliary_SpeedBool)
+					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
+				// 辅助显示受力
+				if (PhysicsBlock::Auxiliary_ForceBool)
+					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
+			}
+			
 		}
 		// 渲染绳子
 		for (auto i : mPhysicsWorld->GetPhysicsJoint())
@@ -499,12 +521,12 @@ namespace GAME
 		if ((Z_Leftan == GLFW_PRESS) && zb)
 		{
 			Z_MousePhysicsFormworkPtr = mPhysicsWorld->Get(huoqdedian);
-			PhysicsFormworkPtr = Z_MousePhysicsFormworkPtr;
 		}
 		else if (zb)
 		{
 			Z_MousePhysicsFormworkPtr = nullptr;
 		}
+		PhysicsFormworkPtr = Z_MousePhysicsFormworkPtr;
 		static PhysicsBlock::PhysicsFormwork *MousePhysicsFormworkPtr = nullptr; // 选择的物理对象
 		if ((Leftan == GLFW_PRESS) && yb)
 		{
@@ -790,7 +812,7 @@ namespace GAME
 					mPhysicsWorld->AddObject(PhysicsShape);
 					break;
 				case 3:
-					/* code */
+					mPhysicsWorld->AddObject(new PhysicsBlock::PhysicsLine(s, e, 1));
 					break;
 
 				default:

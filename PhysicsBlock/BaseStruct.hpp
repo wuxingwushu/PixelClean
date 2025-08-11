@@ -32,7 +32,6 @@ namespace PhysicsBlock
         Entity = 1 << 0,    // 有实体
         Collision = 1 << 1, // 碰撞
         Event = 1 << 2,     // 碰撞事件
-
     };
 
     /**
@@ -84,8 +83,8 @@ namespace PhysicsBlock
      * @note 存储碰撞检测后的结果和信息 */
     struct CollisionInfoI
     {
-        bool Collision; // 是否碰撞
-        glm::ivec2 pos; // 碰撞位置
+        bool Collision;  // 是否碰撞
+        glm::ivec2 pos;  // 碰撞位置
         FLOAT_ Friction; // 摩擦因数
     };
 
@@ -104,7 +103,7 @@ namespace PhysicsBlock
                 // CheckDirection Direction : 2; // 碰撞边 /* 使用这个后赋值enum值后存储的反而是负值 */
             };
         };
-        Vec2_ pos; // 碰撞位置
+        Vec2_ pos;       // 碰撞位置
         FLOAT_ Friction; // 摩擦因数
     };
 
@@ -126,7 +125,7 @@ namespace PhysicsBlock
      * @brief 线段被矩形遮罩的数据 */
     struct SquareFocus
     {
-        bool Focus;       // 是否与矩形相交
+        bool Focus;  // 是否与矩形相交
         Vec2_ start; // 起始位置
         Vec2_ end;   // 结束位置
     };
@@ -139,6 +138,7 @@ namespace PhysicsBlock
         shape,    // 形状
         particle, // 点
         circle,   // 圆
+        line      // 线
     };
 
 }

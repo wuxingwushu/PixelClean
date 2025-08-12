@@ -30,11 +30,6 @@ namespace PhysicsBlock
         return info;
     }
 
-    void PhysicsShape::AddTorque(FLOAT_ ArmForce, FLOAT_ Force)
-    {
-        torque += ArmForce * Force; // 累加扭矩
-    }
-
     void PhysicsShape::UpdateInfo()
     {
         Vec2_ UsedCentreMass = CentreMass; // 旧质心

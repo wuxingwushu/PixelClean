@@ -250,11 +250,21 @@ namespace PhysicsBlock
 	FLOAT_ DropUptoLineShortes(Vec2_ start, Vec2_ end, Vec2_ drop);
 
 	/**
-	 * @brief 点到线段最短距离在线段上的交点
-	 * @param start 线段起点
-	 * @param end 线段终点
+	 * @brief 点到线最短距离的交点
+	 * @param start 线起点
+	 * @param end 线终点
 	 * @param drop 点位置
-	 * @return 点到线段的垂直交点 */
+	 * @return 点到线的垂直交点
+	 * @note 不重合的两个点 */
+	Vec2_ DropLineShortesIntersect(Vec2_ start, Vec2_ end, Vec2_ drop);
+
+	/**
+	 * @brief 点到线段的最短距离的交点（在线段上的）
+	 * @param start 线起点
+	 * @param end 线终点
+	 * @param drop 点位置
+	 * @return 点到线的垂直交点
+	 * @note 不重合的两个点 */
 	Vec2_ DropUptoLineShortesIntersect(Vec2_ start, Vec2_ end, Vec2_ drop);
 
 	FLOAT_ Dot(const Vec2_ &a, const Vec2_ &b);

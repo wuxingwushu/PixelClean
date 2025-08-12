@@ -93,6 +93,12 @@ namespace PhysicsBlock
 
     PhysicsWorld::~PhysicsWorld()
     {
+        // 等待线程结束
+        for (auto& tf : xTn)
+        {
+            tf.wait();
+        }
+
         if (GridWind != nullptr)
         {
             delete GridWind;
@@ -177,23 +183,17 @@ namespace PhysicsBlock
 
     void PhysicsWorld::PhysicsEmulator(FLOAT_ time)
     {
-        // 外力改变
-        for (auto i : PhysicsShapeS)
+#if ThreadPoolBool
+        
+        const int xThreadNum = std::thread::hardware_concurrency();
+
+        // 等待 判断物体间的碰撞 的 任务结束
+        for (auto &tf : xTn)
         {
-            i->PhysicsSpeed(time, GravityAcceleration);
+            tf.wait();
         }
-        for (auto i : PhysicsParticleS)
-        {
-            i->PhysicsSpeed(time, GravityAcceleration);
-        }
-        for (auto o : PhysicsCircleS)
-        {
-            o->PhysicsSpeed(time, GravityAcceleration);
-        }
-        for (auto i : PhysicsLineS)
-        {
-            i->PhysicsSpeed(time, GravityAcceleration);
-        }
+        xTn.clear();
+#endif
 
         // 更新网格
         mGridSearch.UpData();
@@ -346,6 +346,12 @@ namespace PhysicsBlock
                         {
                             break;
                         }
+                        if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsCircle *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsLineS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsCircle *)i));
                         break;
                     case PhysicsObjectEnum::particle:
@@ -360,6 +366,12 @@ namespace PhysicsBlock
                         {
                             break;
                         }
+                        if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsShape *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsLineS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsShape *)i));
                         break;
 
@@ -368,39 +380,19 @@ namespace PhysicsBlock
                     }
                 }
             }
-        };
 
-#if ThreadPoolBool
-        std::vector<std::future<void>> xTn;
-        const int xThreadNum = std::thread::hardware_concurrency();
-        for (size_t i = 0; i < xThreadNum; ++i)
-        {
-            xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum));
-        }
-#else
-        // 碰撞检测
-        XT_Fun(1, 1);
-#endif
-
-        // 处理 点 和 地形的碰撞
-        for (auto o : PhysicsParticleS)
-        {
-            // 静止了，跳过碰撞遍历
-            if (o->StaticNum > 10)
+            ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
             {
-                continue;
+                // 静止了，跳过碰撞遍历
+                if (PhysicsParticleS[SizeD]->StaticNum > 10)
+                {
+                    continue;
+                }
+
+                Arbiter(PhysicsParticleS[SizeD], wMapFormwork);
             }
-
-            Arbiter(o, wMapFormwork);
-        }
-
-#if ThreadPoolBool
-        // 等待任务结束
-        for (auto &tf : xTn)
-        {
-            tf.wait();
-        }
-#endif
+        };
 
         FLOAT_ inv_dt = 1.0 / time;
 
@@ -461,16 +453,16 @@ namespace PhysicsBlock
                 BaseJunctionS[SizeD]->PreStep(inv_dt);
             }
         };
-        xTn.clear();
         for (size_t i = 0; i < xThreadNum; ++i)
         {
             xTn.push_back(mThreadPool.enqueue(PreStepXT_Fun, i, xThreadNum));
         }
-        // 等待任务结束
+        // 等待 预处理 任务结束
         for (auto &tf : xTn)
         {
             tf.wait();
         }
+        xTn.clear();
 #else
         // 预处理
         for (const auto i : CollideGroupVector)
@@ -488,6 +480,7 @@ namespace PhysicsBlock
 #endif
 
 #if 1 & ThreadPoolBool
+        // 迭代结果
         const auto ApplyImpulseXT_Fun = [this](int T_Num, int Tx)
         {
             bool JZ;
@@ -511,16 +504,16 @@ namespace PhysicsBlock
         };
         for (size_t di = 0; di < 10; ++di)
         {
-            xTn.clear();
             for (size_t i = 0; i < xThreadNum; ++i)
             {
                 xTn.push_back(mThreadPool.enqueue(ApplyImpulseXT_Fun, i, xThreadNum));
             }
-            // 等待任务结束
+            // 等待 迭代结果 任务结束
             for (auto &tf : xTn)
             {
                 tf.wait();
             }
+            xTn.clear();
         }
 #else
         // 迭代结果
@@ -543,6 +536,7 @@ namespace PhysicsBlock
 #endif
 
 #if DANCI
+        // 移动
         const auto PhysicsPosXT_Fun = [this, time](int T_Num, int Tx)
         {
             bool JZ;
@@ -573,16 +567,16 @@ namespace PhysicsBlock
                 PhysicsLineS[SizeD]->PhysicsPos(time, GravityAcceleration);
             }
         };
-        xTn.clear();
         for (size_t i = 0; i < xThreadNum; ++i)
         {
             xTn.push_back(mThreadPool.enqueue(PhysicsPosXT_Fun, i, xThreadNum));
         }
-        // 等待任务结束
+        // 等待 移动 任务结束
         for (auto &tf : xTn)
         {
             tf.wait();
         }
+        xTn.clear();
 #else
         // 移动
         for (auto i : PhysicsShapeS)
@@ -606,10 +600,50 @@ namespace PhysicsBlock
             i->PhysicsPos(time, GravityAcceleration);
         }
 #endif
+
+        // 外力改变
+        for (auto i : PhysicsShapeS)
+        {
+            i->PhysicsSpeed(time, GravityAcceleration);
+        }
+        for (auto i : PhysicsParticleS)
+        {
+            i->PhysicsSpeed(time, GravityAcceleration);
+        }
+        for (auto o : PhysicsCircleS)
+        {
+            o->PhysicsSpeed(time, GravityAcceleration);
+        }
+        for (auto i : PhysicsLineS)
+        {
+            i->PhysicsSpeed(time, GravityAcceleration);
+        }
+
+#if ThreadPoolBool
+        // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
+        for (size_t i = 0; i < xThreadNum; ++i)
+        {
+            xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum));
+        }
+#else
+        // 碰撞检测
+        XT_Fun(1, 1);
+#endif
     }
 
     void PhysicsWorld::PhysicsInformationUpdate()
     {
+#if ThreadPoolBool
+        const int xThreadNum = std::thread::hardware_concurrency();
+
+        // 等待 判断物体间的碰撞 任务结束
+        for (auto &tf : xTn)
+        {
+            tf.wait();
+        }
+        xTn.clear();
+#endif
+
         // 更新网格
         mGridSearch.UpData();
 
@@ -710,34 +744,52 @@ namespace PhysicsBlock
                     }
                 }
             }
+
+            ThreadTaskAllot(SizeD, SizeY, PhysicsLineS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                Arbiter(PhysicsLineS[SizeD], wMapFormwork);
+
+                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsLineS[SizeD]->pos, PhysicsLineS[SizeD]->radius);
+                for (auto i : SearchV)
+                {
+                    switch (i->PFGetType())
+                    {
+                    case PhysicsObjectEnum::circle:
+                        if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsCircle *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsLineS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(PhysicsLineS[SizeD], ((PhysicsCircle *)i));
+                        break;
+                    case PhysicsObjectEnum::particle:
+                        Arbiter(PhysicsLineS[SizeD], ((PhysicsParticle *)i));
+                        break;
+                    case PhysicsObjectEnum::shape:
+                        if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsShape *)i)))
+                        {
+                            ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsLineS[SizeD]);
+                            Map_Delete(key);
+                            break;
+                        }
+                        Arbiter(PhysicsLineS[SizeD], ((PhysicsShape *)i));
+                        break;
+
+                    default:
+                        break;
+                    }
+                }
+            }
+
+            ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                // 处理 点 与 地形 的碰撞
+                Arbiter(PhysicsParticleS[SizeD], wMapFormwork);
+            }
         };
-
-#if ThreadPoolBool
-        std::vector<std::future<void>> xTn;
-        const int xThreadNum = std::thread::hardware_concurrency();
-        for (size_t i = 0; i < xThreadNum; ++i)
-        {
-            xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum));
-        }
-#else
-        // 碰撞检测
-        XT_Fun(1, 1);
-#endif
-
-        // 处理 点 和 地形的碰撞
-        for (auto o : PhysicsParticleS)
-        {
-            o->OldPos = o->pos;
-            Arbiter(o, wMapFormwork);
-        }
-
-#if ThreadPoolBool
-        // 等待任务结束
-        for (auto &tf : xTn)
-        {
-            tf.wait();
-        }
-#endif
 
         for (auto &D : DeleteCollideGroup)
         {
@@ -772,11 +824,47 @@ namespace PhysicsBlock
         }
         NewCollideGroup.clear();
 
+#if DANCI
         // 预处理
-        for (auto kv : CollideGroupVector)
+        const auto PreStepXT_Fun = [this](int T_Num, int Tx)
         {
-            kv->PreStep();
+            bool JZ;
+            int SizeD;
+            int SizeY;
+            ThreadTaskAllot(SizeD, SizeY, CollideGroupVector.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                CollideGroupVector[SizeD]->PreStep();
+            }
+        };
+        for (size_t i = 0; i < xThreadNum; ++i)
+        {
+            xTn.push_back(mThreadPool.enqueue(PreStepXT_Fun, i, xThreadNum));
         }
+        // 等待 预处理 任务结束
+        for (auto &tf : xTn)
+        {
+            tf.wait();
+        }
+        xTn.clear();
+#else
+        // 预处理
+        for (const auto i : CollideGroupVector)
+        {
+            i->PreStep();
+        }
+#endif
+
+#if ThreadPoolBool
+        // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
+        for (size_t i = 0; i < xThreadNum; ++i)
+        {
+            xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum));
+        }
+#else
+        // 碰撞检测
+        XT_Fun(1, 1);
+#endif
     }
 
     void PhysicsWorld::SetMapFormwork(MapFormwork *MapFormwork_)
@@ -824,6 +912,14 @@ namespace PhysicsBlock
                 break;
             }
         }
+        Vec2_ Drop;
+        for (auto i : PhysicsLineS)
+        {
+            Drop = DropUptoLineShortesIntersect(i->pos + vec2angle({i->radius, 0}, i->angle), i->pos - vec2angle({i->radius, 0}, i->angle), pos);
+            if (Modulus(Drop - pos) < 0.25)
+                return ((PhysicsLine*)i);
+        }
+
         return nullptr;
     }
 

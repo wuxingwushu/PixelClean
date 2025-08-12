@@ -13,6 +13,7 @@ namespace PhysicsBlock
     {
     private:
         std::vector<std::vector<PhysicsFormwork *>> Grid; // 网格的 一维展开
+        std::vector<PhysicsFormwork *> GridExtrovert;     // 网格外
         int mStorey = 0;                                  // 四叉网格层数
         Vec2_ mExcursion{0};                              // 相对世界坐标系的位置偏移量
 
@@ -128,7 +129,15 @@ namespace PhysicsBlock
         // 添加
         void Add(PhysicsFormwork *atocr)
         {
-            at(atocr->PFGetPos(), atocr->PFGetCollisionR()).push_back(atocr);
+            unsigned int index = atIndex(atocr->PFGetPos(), atocr->PFGetCollisionR());
+            if (index < Grid.size())
+            {
+                at(index).push_back(atocr);
+            }
+            else
+            {
+                GridExtrovert.push_back(atocr);
+            }
         }
 
         // 去除
@@ -141,6 +150,15 @@ namespace PhysicsBlock
                 {
                     Grid[index][i] = Grid[index].back();
                     Grid[index].pop_back();
+                    return;
+                }
+            }
+            for (size_t i = 0; i < GridExtrovert.size(); ++i)
+            {
+                if (GridExtrovert[i] == atocr)
+                {
+                    GridExtrovert[i] = GridExtrovert.back();
+                    GridExtrovert.pop_back();
                 }
             }
         }
@@ -149,7 +167,7 @@ namespace PhysicsBlock
         std::vector<PhysicsFormwork *> Get(Vec2_ pos, FLOAT_ R)
         {
             R *= 2; // 范围稍微加大点。
-            return  Get(pos - R, pos + R);
+            return Get(pos - R, pos + R);
         }
 
         // 获取这个范围内所有对象
@@ -158,8 +176,42 @@ namespace PhysicsBlock
             std::vector<PhysicsFormwork *> V;
             Vec2_ S = Spos + mExcursion;
             Vec2_ E = Epos + mExcursion;
-            glm::ivec2 iS = S;
-            glm::ivec2 iE = E;
+            glm::uvec2 iS = S;
+            glm::uvec2 iE = E;
+
+#if 1
+            unsigned int w = mExcursion.x + mExcursion.x - 1;
+
+            bool Extrovert = false;
+            if (iS.x > w)
+            {
+                Extrovert = true;
+                iS.x = w;
+            }
+            if (iS.y > w)
+            {
+                Extrovert = true;
+                iS.y = w;
+            }
+            if (iE.x > w)
+            {
+                Extrovert = true;
+                iE.x = w;
+            }
+            if (iE.y > w)
+            {
+                Extrovert = true;
+                iE.y = w;
+            }
+
+            if (Extrovert)
+            {
+                for (auto i : GridExtrovert)
+                {
+                    V.push_back(i);
+                }
+            }
+#endif
 
             unsigned int P = Grid.size();
 
@@ -183,7 +235,8 @@ namespace PhysicsBlock
         }
 
         // 获取物体所在的细分网格
-        std::vector<Vec2_> GetDividedVision(PhysicsFormwork *atocr) {
+        std::vector<Vec2_> GetDividedVision(PhysicsFormwork *atocr)
+        {
             std::vector<Vec2_> Vision;
 
             Vec2_ atocr_pos = atocr->PFGetPos();
@@ -205,7 +258,8 @@ namespace PhysicsBlock
             }
             Vision.push_back(Vec2_(Spos) - mExcursion);
             Vision.push_back(Vec2_(Epos) - mExcursion);
-            for (int i = _storey; i <= mStorey; ++i) {
+            for (int i = _storey; i <= mStorey; ++i)
+            {
                 ++_storey;
                 pos >>= 1;
                 Spos = pos << _storey;
@@ -228,10 +282,28 @@ namespace PhysicsBlock
                     unsigned int index = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
                     if (i != index)
                     {
-                        Grid[i][a] = Grid[i].back();
-                        Grid[i].pop_back();
-                        Grid[index].push_back(Formwork);
+                        if (index < Grid.size())
+                        {
+                            Grid[i][a] = Grid[i].back();
+                            Grid[i].pop_back();
+                            Grid[index].push_back(Formwork);
+                        }
+                        else
+                        {
+                            GridExtrovert.push_back(Formwork);
+                        }
                     }
+                }
+            }
+            for (size_t i = 0; i < GridExtrovert.size(); ++i)
+            {
+                PhysicsFormwork *Formwork = GridExtrovert[i];
+                unsigned int index = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
+                if (index < Grid.size())
+                {
+                    GridExtrovert[i] = GridExtrovert.back();
+                    GridExtrovert.pop_back();
+                    Grid[index].push_back(Formwork);
                 }
             }
         }

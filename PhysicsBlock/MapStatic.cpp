@@ -41,7 +41,6 @@ namespace PhysicsBlock
         return {false};
     }
 
-
     std::vector<MapOutline> MapStatic::GetLightweightOutline(int x_, int y_, int w_, int h_)
     {
         x_ += centrality.x;
@@ -55,7 +54,8 @@ namespace PhysicsBlock
         {
             for (int y = y_; y < h_; ++y)
             {
-                if (!GetCollision(x, y)) {
+                if (!GetCollision(x, y))
+                {
                     continue;
                 }
                 // 左上角
@@ -71,26 +71,73 @@ namespace PhysicsBlock
                     Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
                 }
                 // 左下角
-                if (!GetCollision(x, y + 1)) {
-                    if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1))) {
-                        Outline.push_back({Vec2_{x, y+1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
+                if (!GetCollision(x, y + 1))
+                {
+                    if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1)))
+                    {
+                        Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
                     }
                 }
                 // 右上角
-                if (!GetCollision(x + 1, y)) {
-                    if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1))) {
-                        Outline.push_back({Vec2_{x+1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
+                if (!GetCollision(x + 1, y))
+                {
+                    if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1)))
+                    {
+                        Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
                     }
                 }
                 // 右下角
-                if (!GetCollision(x + 1, y + 1)) {
+                if (!GetCollision(x + 1, y + 1))
+                {
                     if ((GetCollision(x + 1, y) == GetCollision(x, y + 1)) && !GetCollision(x + 1, y))
                     {
-                        Outline.push_back({Vec2_{x+1, y+1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
+                        Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
                     }
                 }
             }
-            
+        }
+        return Outline;
+    }
+
+    std::vector<MapOutline> MapStatic::GetOutline(int x_, int y_, int w_, int h_)
+    {
+        x_ += centrality.x;
+        y_ += centrality.y;
+        w_ += centrality.x;
+        h_ += centrality.y;
+
+        std::vector<MapOutline> Outline;
+
+        for (int x = x_; x < w_; ++x)
+        {
+            for (int y = y_; y < h_; ++y)
+            {
+                if (!GetCollision(x, y))
+                {
+                    continue;
+                }
+
+                // 左上角
+                if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1) || !GetCollision(x - 1, y - 1))
+                {
+                    Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
+                }
+                // 左下角
+                if (!GetCollision(x, y + 1))
+                {
+                    Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
+                }
+                // 右上角
+                if (!(GetCollision(x + 1, y - 1) || GetCollision(x + 1, y)))
+                {
+                    Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
+                }
+                // 右下角
+                if (!(GetCollision(x + 1, y) || GetCollision(x + 1, y + 1) || GetCollision(x, y + 1)))
+                {
+                    Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
+                }
+            }
         }
         return Outline;
     }

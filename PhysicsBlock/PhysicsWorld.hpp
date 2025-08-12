@@ -198,6 +198,7 @@ namespace PhysicsBlock
 #if ThreadPoolBool
         std::mutex mLock;
         ThreadPool mThreadPool;
+        std::vector<std::future<void>> xTn;
 #endif
     public:
         /**

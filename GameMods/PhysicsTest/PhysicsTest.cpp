@@ -117,9 +117,10 @@ namespace GAME
 		ImGui::ShowDemoWindow();
 		ImVec2 window_size;
 		ImGui::Begin(u8"编辑");
+		ImVec2 window_pos = ImGui::GetWindowPos();
 		window_size = ImGui::GetWindowSize();
-		if (((Global::mWidth - window_size.x) < CursorPosX) && (window_size.y > CursorPosY))
-		{
+		if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
+			((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
 			Global::ClickWindow = true;
 		}
 		if (ImGui::Button(EditorModeBool ? u8"关闭编辑" : u8"开启编辑"))
@@ -177,7 +178,7 @@ namespace GAME
 
 		ImGui::Text(u8"世界总动能：%f", mPhysicsWorld->GetWorldEnergy());
 
-		if (PhysicsFormworkPtr)
+		if (PhysicsFormworkPtr != nullptr)
 		{
 			switch (PhysicsFormworkPtr->PFGetType())
 			{
@@ -521,20 +522,12 @@ namespace GAME
 		if ((Z_Leftan == GLFW_PRESS) && zb)
 		{
 			Z_MousePhysicsFormworkPtr = mPhysicsWorld->Get(huoqdedian);
+			PhysicsFormworkPtr = Z_MousePhysicsFormworkPtr;
 		}
-		else if (zb)
-		{
-			Z_MousePhysicsFormworkPtr = nullptr;
-		}
-		PhysicsFormworkPtr = Z_MousePhysicsFormworkPtr;
 		static PhysicsBlock::PhysicsFormwork *MousePhysicsFormworkPtr = nullptr; // 选择的物理对象
 		if ((Leftan == GLFW_PRESS) && yb)
 		{
 			MousePhysicsFormworkPtr = mPhysicsWorld->Get(huoqdedian);
-		}
-		else if (yb)
-		{
-			MousePhysicsFormworkPtr = nullptr;
 		}
 
 		// 执行对应事件
@@ -550,6 +543,9 @@ namespace GAME
 				break;
 			case PhysicsBlock::PhysicsObjectEnum::shape:
 				SquareLeftEvent((PhysicsBlock::PhysicsShape *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::line:
+				LineLeftEvent((PhysicsBlock::PhysicsLine *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
 				break;
 
 			default:
@@ -581,6 +577,9 @@ namespace GAME
 			case PhysicsBlock::PhysicsObjectEnum::shape:
 				SquareRightEvent((PhysicsBlock::PhysicsShape *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
 				break;
+			case PhysicsBlock::PhysicsObjectEnum::line:
+				LineRightEvent((PhysicsBlock::PhysicsLine *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
+				break;
 
 			default:
 				break;
@@ -589,6 +588,16 @@ namespace GAME
 		else
 		{
 			CameraRightEvent(Z_Leftan == GLFW_PRESS, zb, z1, z2);
+		}
+
+
+		if ((Z_Leftan != GLFW_PRESS) && zb)
+		{
+			Z_MousePhysicsFormworkPtr = nullptr;
+		}
+		if ((Leftan != GLFW_PRESS) && yb)
+		{
+			MousePhysicsFormworkPtr = nullptr;
 		}
 	}
 
@@ -729,6 +738,46 @@ namespace GAME
 	}
 
 	void PhysicsTest::ParticleRightEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+	}
+
+	void PhysicsTest::LineLeftEvent(PhysicsBlock::PhysicsLine *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	{
+		static Vec2_ Opos;
+		static Vec2_ PhysicsShapeArm;
+		if (Click)
+		{
+			if (First)
+			{
+				// 初次点击
+				Opos = Ptr->PFGetPos() - s;
+				PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
+				PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
+			}
+			else
+			{
+				if (PhysicsSwitch)
+				{
+					// 开启物理了
+					PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
+					Ptr->AddForce(
+						lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(),
+						10 * Ptr->PFGetMass() * (e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos())) * PhysicsBlock::Modulus((e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos()))));
+					mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(), 0}, {1, 0, 0, 1}, {(e), 0}, {0, 1, 0, 1});
+				}
+				else
+				{
+					// 没有开启物理，就直接修改位置
+					Ptr->pos = Opos + e;
+				}
+			}
+		}
+		else
+		{
+		}
+	}
+
+	void PhysicsTest::LineRightEvent(PhysicsBlock::PhysicsLine *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
 	{
 	}
 

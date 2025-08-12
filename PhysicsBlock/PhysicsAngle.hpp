@@ -58,7 +58,7 @@ namespace PhysicsBlock
         {
             if (invMass == 0)
                 return;
-            
+
             PhysicsParticle::PhysicsSpeed(time, Ga);
             angleSpeed += time * invMomentInertia * torque;
             torque = 0;
@@ -68,7 +68,7 @@ namespace PhysicsBlock
         {
             if (invMass == 0)
                 return;
-            
+
             PhysicsParticle::PhysicsPos(time, Ga);
             angle += time * angleSpeed;
         }
@@ -81,7 +81,7 @@ namespace PhysicsBlock
         /**
          * @brief 角速度
          * @return 质量倒数 */
-        virtual FLOAT_ &PFAngleSpeed() { return angleSpeed; };
+        virtual FLOAT_& PFAngleSpeed() { return angleSpeed; };
     };
 
 }

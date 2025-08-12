@@ -37,6 +37,8 @@ namespace PhysicsBlock
 
         std::vector<MapOutline> GetLightweightOutline(int x_, int y_, int w_, int h_);
 
+        std::vector<MapOutline> GetOutline(int x_, int y_, int w_, int h_);
+
         /*=========MapFormwork=========*/
 
         /**

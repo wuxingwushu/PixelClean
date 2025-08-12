@@ -252,6 +252,7 @@ namespace PhysicsBlock
 		ImGui::Text("物理网格：%d", Object->GetPhysicsShape().size());
 		ImGui::Text("物理点：%d", Object->GetPhysicsParticle().size());
 		ImGui::Text("物理圆：%d", Object->GetPhysicsCircle().size());
+		ImGui::Text("物理线：%d", Object->GetPhysicsLine().size());
 		ImGui::Text("关节：%d", Object->GetPhysicsJoint().size());
 		ImGui::Text("绳子：%d", Object->GetBaseJunction().size());
 

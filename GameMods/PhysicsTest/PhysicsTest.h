@@ -54,6 +54,9 @@ namespace GAME
 		// 点
 		void ParticleLeftEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
 		void ParticleRightEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
+		// 线
+		void LineLeftEvent(PhysicsBlock::PhysicsLine *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
+		void LineRightEvent(PhysicsBlock::PhysicsLine *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
 		// 创建
 		void FoundLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e);
 

@@ -74,6 +74,38 @@ namespace PhysicsBlock
         return true;
     }
 
+    // 粗糙判断是否在旁边
+    bool CollideAABB(PhysicsLine *Line, PhysicsShape *Shape)
+    {
+        Vec2_ pR = vec2angle({Line->radius, 0}, Line->angle);
+        if (abs(Shape->pos.x - Line->pos.x) > (Shape->CollisionR + abs(pR.x)))
+        {
+            return false;
+        }
+        if (abs(Shape->pos.y - Line->pos.y) > (Shape->CollisionR + abs(pR.y)))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    // 粗糙判断是否在旁边
+    bool CollideAABB(PhysicsLine *Line, PhysicsCircle *Circle)
+    {
+        Vec2_ pR = vec2angle({Line->radius, 0}, Line->angle);
+        if (abs(Circle->pos.x - Line->pos.x) > (Circle->radius + abs(pR.x)))
+        {
+            return false;
+        }
+        if (abs(Circle->pos.y - Line->pos.y) > (Circle->radius + abs(pR.y)))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     unsigned int Collide(Contact *contacts, PhysicsShape *ShapeA, PhysicsShape *ShapeB)
     {
         AngleMat Mat(ShapeA->angle);
@@ -253,6 +285,7 @@ namespace PhysicsBlock
                 contacts->w_side = 0;                                               // 边索引 ID
                 // 一直馅在碰撞体，无法更新旧位置（旧位置不可以在碰撞体内）
                 Particle->OldPos = info.pos - (contacts->normal * FLOAT_(0.1));
+                Particle->OldPosUpDataBool = false; // 关闭旧位置更新
                 return 1;
             }
         }
@@ -523,6 +556,13 @@ namespace PhysicsBlock
         }
 
         CollisionInfoD info;
+        info = Shape->PsBresenhamDetection(Line->OldPos, Line->pos);
+        if (info.Collision)
+        {
+            contacts->normal = vec2angle({-1, 0}, info.Direction * (M_PI / 2)); // （反向作用力法向量）地形不会旋转
+            Line->OldPos = info.pos - (contacts->normal * FLOAT_(0.1));
+            Line->OldPosUpDataBool = false; // 关闭旧位置更新
+        }
         if (Shape->GetCollision(begin))
         {
             info = Shape->PsBresenhamDetection(Line->OldPos, begin);
@@ -576,27 +616,18 @@ namespace PhysicsBlock
         Vec2_ pR = vec2angle({Line->radius, 0}, Line->angle);
         Vec2_ begin = Line->pos + pR, end = Line->pos - pR;
 
-        Vec2_ AB = {end.x - begin.x, end.y - begin.y};
-        Vec2_ AP = {Circle->pos.x - begin.x, Circle->pos.y - begin.y};
+        contacts->position = DropUptoLineShortesIntersect(begin, end, Circle->pos);
 
-        FLOAT_ dotProduct = Dot(AP, AB);
-        FLOAT_ len = ModulusLength(AB);
-        FLOAT_ t = dotProduct / len;
-
-        if ((t >= 0) && (t <= 1.0))
+        FLOAT_ R = Modulus(contacts->position - Circle->pos);
+        if (Circle->radius > R)
         {
-            contacts->position = begin + (AB * t);
-            FLOAT_ R = Modulus(contacts->position - Circle->pos);
-            if (Circle->radius > R)
-            {
-                contacts->normal = (Circle->pos - contacts->position) / R;
-                contacts->separation = R - Circle->radius;
-                contacts->friction = SQRT_(Line->friction * Circle->friction);
-                contacts->w_side = 0;
-                return 1;
-            }
+            contacts->normal = (Circle->pos - contacts->position) / R;
+            contacts->separation = R - Circle->radius;
+            contacts->friction = SQRT_(Line->friction * Circle->friction);
+            contacts->w_side = 0;
+            return 1;
         }
-
+        
         return 0;
     }
 
@@ -620,6 +651,8 @@ namespace PhysicsBlock
             contacts->separation = -Modulus(contacts->position - Particle->pos); // 碰撞距离差
             contacts->friction = SQRT_(Particle->friction * Line->friction);
             contacts->w_side = 0; // 边索引 ID
+            Particle->OldPos = contacts->position - (contacts->normal * FLOAT_(0.1));
+            Particle->OldPosUpDataBool = false; // 关闭旧位置更新
             return 1;
         }
 
@@ -633,6 +666,9 @@ namespace PhysicsBlock
         Vec2_ pR = vec2angle({Line->radius, 0}, Line->angle);
         Vec2_ begin = Line->pos + pR, end = Line->pos - pR;
 
+        Vec2_ AB = {end.x - begin.x, end.y - begin.y};
+        FLOAT_ len = ModulusLength(AB);
+
         MapStatic *LMapStatic = (MapStatic *)Map;
         int KD = 2;
         std::vector<MapOutline> Outline = LMapStatic->GetLightweightOutline(ToInt(Line->pos.x - Line->radius) - KD, ToInt(Line->pos.y - Line->radius) - KD, ToInt(Line->pos.x + Line->radius) + KD, ToInt(Line->pos.y + Line->radius) + KD);
@@ -644,11 +680,10 @@ namespace PhysicsBlock
             beginDian = d.pos - (d.face * FLOAT_(0.5));
             if (segmentIntersection(begin, end, d.pos, beginDian, contacts->position))
             {
-                Vec2_ AB = {end.x - begin.x, end.y - begin.y};
+                
                 Vec2_ AP = {beginDian.x - begin.x, beginDian.y - begin.y};
 
                 FLOAT_ dotProduct = Dot(AP, AB);
-                FLOAT_ len = ModulusLength(AB);
                 FLOAT_ t = dotProduct / len;
 
                 contacts->normal = beginDian - (begin + (AB * t));
@@ -663,6 +698,13 @@ namespace PhysicsBlock
         }
 
         CollisionInfoD info;
+        info = Map->FMBresenhamDetection(Line->OldPos, Line->pos);
+        if (info.Collision)
+        {
+            contacts->normal = vec2angle({-1, 0}, info.Direction * (M_PI / 2)); // （反向作用力法向量）地形不会旋转
+            Line->OldPos = info.pos - (contacts->normal * FLOAT_(0.1));
+            Line->OldPosUpDataBool = false; // 关闭旧位置更新
+        }
         if (Map->FMGetCollide(begin))
         {
             info = Map->FMBresenhamDetection(Line->OldPos, begin);
@@ -678,7 +720,7 @@ namespace PhysicsBlock
                 }
                 contacts->separation = -abs(contacts->separation); // 碰撞距离差
                 contacts->friction = SQRT_(info.Friction * Line->friction);
-                contacts->position = info.pos;                                      // 碰撞点的位置
+                contacts->position = begin;                                         // 碰撞点的位置
                 contacts->normal = vec2angle({-1, 0}, info.Direction * (M_PI / 2)); // （反向作用力法向量）地形不会旋转
                 contacts->w_side = ContactSize;                                     // 边索引 ID
                 ++contacts;
@@ -700,7 +742,7 @@ namespace PhysicsBlock
                 }
                 contacts->separation = -abs(contacts->separation); // 碰撞距离差
                 contacts->friction = SQRT_(info.Friction * Line->friction);
-                contacts->position = info.pos;                                      // 碰撞点的位置
+                contacts->position = end;                                           // 碰撞点的位置
                 contacts->normal = vec2angle({-1, 0}, info.Direction * (M_PI / 2)); // （反向作用力法向量）地形不会旋转
                 contacts->w_side = ContactSize;                                     // 边索引 ID
                 ++contacts;

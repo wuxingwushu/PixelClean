@@ -32,12 +32,6 @@ namespace PhysicsBlock
         CollisionInfoI DropCollision(Vec2_ pos);
 
         /**
-         * @brief 受力（旋转）
-         * @param ArmForce 力臂
-         * @param Force 力大小 */
-        void AddTorque(FLOAT_ ArmForce, FLOAT_ Force);
-
-        /**
          * @brief 信息更新
          * @note 更新： 总重量， 几何中心， 质心， 转动惯量 */
         void UpdateInfo();
@@ -90,26 +84,6 @@ namespace PhysicsBlock
          * @brief 获取碰撞半径
          * @return 半径 */
         virtual FLOAT_ PFGetCollisionR() { return CollisionR; }
-        /**
-         * @brief 获取位置
-         * @return 位置 */
-        virtual Vec2_ PFGetPos() { return pos; }
-        /**
-         * @brief 获取质量倒数
-         * @return 质量倒数 */
-        virtual FLOAT_ PFGetInvMass(){ return invMass; }
-        /**
-         * @brief 获取转动惯量倒数
-         * @return 转动惯量倒数 */
-        virtual FLOAT_ PFGetInvI(){ return invMomentInertia; }
-        /**
-         * @brief 速度
-         * @return 位置 */
-        virtual Vec2_& PFSpeed() { return speed; };
-        /**
-         * @brief 角速度
-         * @return 质量倒数 */
-        virtual FLOAT_& PFAngleSpeed() { return angleSpeed; };
     };
 
 }

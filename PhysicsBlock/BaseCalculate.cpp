@@ -467,12 +467,25 @@ namespace PhysicsBlock
 	// 点到线段最短距离
 	FLOAT_ DropUptoLineShortes(Vec2_ start, Vec2_ end, Vec2_ drop)
 	{
-		FLOAT_ angle = EdgeVecToCosAngleFloat(end - start);
-		Vec2_ Shortes = LineYToPos(start, end, drop.y);
-		return (drop.x - Shortes.x) * cos(M_PI / 2 - angle);
+		Vec2_ Shortes = DropLineShortesIntersect(start, end, drop);
+		return Modulus(Shortes);
 	}
 
-	// 点到线段最短距离在线段上的交点
+	// 点到线最短距离的交点
+	Vec2_ DropLineShortesIntersect(Vec2_ start, Vec2_ end, Vec2_ drop)
+	{
+		// 计算向量 AB 和 AP
+		Vec2_ AB = end - start;
+		Vec2_ AP = drop - start;
+
+		// 计算投影比例 t = (AP · AB) / |AB|²
+		FLOAT_ dotProduct = Dot(AB, AP);
+		FLOAT_ lenSq = ModulusLength(AB);
+		FLOAT_ t = dotProduct / lenSq;
+
+		return start + AB * t;
+	}
+
 	Vec2_ DropUptoLineShortesIntersect(Vec2_ start, Vec2_ end, Vec2_ drop)
 	{
 		// 计算向量 AB 和 AP
@@ -483,6 +496,12 @@ namespace PhysicsBlock
 		FLOAT_ dotProduct = Dot(AB, AP);
 		FLOAT_ lenSq = ModulusLength(AB);
 		FLOAT_ t = dotProduct / lenSq;
+
+		if (t <= 0.0){
+			return start;
+		}else if (t >= 1.0){
+			return end;
+		}
 
 		return start + AB * t;
 	}

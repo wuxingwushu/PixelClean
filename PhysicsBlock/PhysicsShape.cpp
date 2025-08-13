@@ -109,17 +109,17 @@ namespace PhysicsBlock
 
     void PhysicsShape::UpdateCollisionR()
     {
-        CollisionR = 0;
+        radius = 0;
         FLOAT_ R;
         for (size_t i = 0; i < OutlineSize; i++)
         {
             R = ModulusLength(OutlineSet[i]);
-            if (CollisionR < R)
+            if (radius < R)
             {
-                CollisionR = R;
+                radius = R;
             }
         }
-        CollisionR = SQRT_(CollisionR);
+        radius = SQRT_(radius);
     }
 
     void PhysicsShape::UpdateAll()
@@ -145,14 +145,14 @@ namespace PhysicsBlock
 
     void PhysicsShape::ApproachDrop(Vec2_ drop)
     {
-        Vec2_ OutlineDrop = vec2angle({CollisionR, 0}, EdgeVecToCosAngleFloat(drop - pos));
+        Vec2_ OutlineDrop = vec2angle({radius, 0}, EdgeVecToCosAngleFloat(drop - pos));
         CollisionInfoD info = BresenhamDetection(CentreMass + OutlineDrop, CentreMass - OutlineDrop);
         pos += drop - (info.pos + pos);
     }
 
     CollisionInfoD PhysicsShape::RayCollide(Vec2_ Pos, FLOAT_ Angle)
     {
-        Vec2_ drop = vec2angle({CollisionR, 0}, Angle);
+        Vec2_ drop = vec2angle({radius, 0}, Angle);
         return PsBresenhamDetection(Pos - drop, Pos + drop);
     }
 

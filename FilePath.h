@@ -41,3 +41,4 @@
 #define UVDynamicDiagramV_spv	ShaderPath"UVDynamicDiagramV.spv"
 #define Background_spv			ShaderPath"Background.spv"
 #define GridBackground_spv		ShaderPath"GridBackground.spv"
+#define _2D_GI_spv               ShaderPath"2D_GI.spv"

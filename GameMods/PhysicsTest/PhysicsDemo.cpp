@@ -937,7 +937,7 @@ namespace PhysicsBlock
 			delete (*myPhysicsWorld);
 		}
 		(*myPhysicsWorld) = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
-		int MapSize = 300;
+		int MapSize = 500;
 
 		// 设置摄像机位置
 		mCamera->setCameraPos({0, 0, MapSize * 2});

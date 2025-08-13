@@ -14,7 +14,6 @@ namespace PhysicsBlock
     public:
         Vec2_ CentreMass{0};    // 质心
         Vec2_ CentreShape{0};   // 几何中心
-        FLOAT_ CollisionR = 1;       // 碰撞半径
     public:
         /**
          * @brief 构造函数
@@ -80,10 +79,6 @@ namespace PhysicsBlock
          * @brief 获取对象类型
          * @return 类型 */
         virtual PhysicsObjectEnum PFGetType() { return PhysicsObjectEnum::shape; }
-        /**
-         * @brief 获取碰撞半径
-         * @return 半径 */
-        virtual FLOAT_ PFGetCollisionR() { return CollisionR; }
     };
 
 }

@@ -1,6 +1,8 @@
 #pragma once
 #include "PhysicsParticle.hpp"
 #include "PhysicsShape.hpp"
+#include "PhysicsCircle.hpp"
+#include "PhysicsLine.hpp"
 #include "PhysicsWorld.hpp"
 
 // 辅助声明变量
@@ -61,21 +63,39 @@ namespace PhysicsBlock
 	void PhysicsAuxiliaryColorUI();
 
 	/**
+	 * @brief 将 PhysicsLine 变量UI显示
+	 * @param Object PhysicsLine 指针
+	 * @return 是否修改导致需要更新对象信息 */
+	bool PhysicsUI(PhysicsLine *Object);
+
+	/**
+	 * @brief 将 PhysicsCircle 变量UI显示
+	 * @param Object PhysicsCircle 指针
+	 * @return 是否修改导致需要更新对象信息 */
+	bool PhysicsUI(PhysicsCircle *Object);
+
+	/**
 	 * @brief 将 PhysicsShape 变量UI显示
 	 * @param Object PhysicsShape 指针
 	 * @return 是否修改导致需要更新对象信息 */
-	bool PhysicsShapeUI(PhysicsShape *Object);
+	bool PhysicsUI(PhysicsShape *Object);
+
+	/**
+	 * @brief 将 PhysicsAngle 变量UI显示
+	 * @param Object PhysicsAngle 指针
+	 * @return 是否修改导致需要更新对象信息 */
+	bool PhysicsUI(PhysicsAngle *Object);
 
 	/**
 	 * @brief 将 PhysicsParticle 变量UI显示
 	 * @param Object PhysicsParticle 指针
 	 * @return 是否修改导致需要更新对象信息 */
-	bool PhysicsShapeUI(PhysicsParticle *Object);
+	bool PhysicsUI(PhysicsParticle *Object);
 
 	/**
 	 * @brief 将 PhysicsWorld 变量UI显示
 	 * @param Object PhysicsWorld 指针
 	 * @return 是否修改导致需要更新对象信息 */
-	bool PhysicsShapeUI(PhysicsWorld *Object);
+	bool PhysicsUI(PhysicsWorld *Object);
 
 }

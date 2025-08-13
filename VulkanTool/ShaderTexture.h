@@ -19,6 +19,7 @@ namespace VulKan {
 	{
 	public:
 		ShaderTexture(
+			const char* shaderPtr,
 			Device* device,
 			const CommandPool* commandPool,
 			unsigned int texWidth,

@@ -42,4 +42,6 @@ mkdir Spv
 
 .\..\glslangValidator.exe  -V CircleNormal.geom -o Spv/CircleNormal.spv
 
+.\..\glslangValidator.exe  -V 2D_GI.comp -o Spv/2D_GI.spv
+
 pause

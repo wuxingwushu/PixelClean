@@ -24,7 +24,7 @@ namespace PhysicsBlock
 	AuxiliaryBoolColor(CollisionDrop);					// 碰撞点
 	AuxiliaryBoolColor(SeparateNormalVector);			// 分离法向量
 	AuxiliaryBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
-	AuxiliaryBoolColor(GridDivided);					  // 被选中的物体被划分网格到的网格位置
+	AuxiliaryBoolColor(GridDivided);					// 被选中的物体被划分网格到的网格位置
 
 	// 读取物理辅助显示信息
 	void AuxiliaryInfoRead()
@@ -41,7 +41,7 @@ namespace PhysicsBlock
 		AuxiliaryReadBoolColor(CollisionDrop);					// 碰撞点
 		AuxiliaryReadBoolColor(SeparateNormalVector);			// 分离法向量
 		AuxiliaryReadBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
-		AuxiliaryReadBoolColor(GridDivided);					  // 被选中的物体被划分网格到的网格位置
+		AuxiliaryReadBoolColor(GridDivided);					// 被选中的物体被划分网格到的网格位置
 	}
 
 	// 保存物理辅助显示信息
@@ -59,7 +59,7 @@ namespace PhysicsBlock
 		AuxiliaryStorageBoolColor(CollisionDrop);				   // 碰撞点
 		AuxiliaryStorageBoolColor(SeparateNormalVector);		   // 分离法向量
 		AuxiliaryStorageBoolColor(CollisionDropToCenterOfGravity); // 碰撞点到两个物体重心的连线
-		AuxiliaryStorageBoolColor(GridDivided);					  // 被选中的物体被划分网格到的网格位置
+		AuxiliaryStorageBoolColor(GridDivided);					   // 被选中的物体被划分网格到的网格位置
 		inih::INIWriter::write_Gai("PhysicsBlock.ini", Ini);	   // 保存
 	}
 
@@ -168,17 +168,32 @@ namespace PhysicsBlock
 		AuxiliaryColorUI("被选中物体被划分网格到的网格位置", &Auxiliary_GridDividedBool, Auxiliary_GridDividedColor);
 	}
 
-	bool PhysicsShapeUI(PhysicsShape *Object)
+	bool PhysicsUI(PhysicsParticle *Object)
 	{
-		bool UpData = PhysicsShapeUI((PhysicsParticle *)Object);
+		Dvec2ImGui("位置", &Object->pos);
+		Dvec2ImGui("速度", &Object->speed);
+		Dvec2ImGui("受力", &Object->force);
+		ImGui::DragScalar("质量", MyImGuiDataType, &Object->mass, 0.0005f, NULL, NULL, "%.10f");
+
+		return false;
+	}
+
+	bool PhysicsUI(PhysicsAngle *Object)
+	{
+		bool UpData = PhysicsUI((PhysicsParticle *)Object);
 		ImGui::DragScalar("角度", MyImGuiDataType, &Object->angle, 0.0005f, NULL, NULL, "%.10f");
 		ImGui::DragScalar("角速度", MyImGuiDataType, &Object->angleSpeed, 0.0005f, NULL, NULL, "%.10f");
-		Dvec2ImGui("质心", &Object->CentreMass);
-		ImGui::DragScalar("碰撞半径", MyImGuiDataType, &Object->CollisionR, 0.0005f, NULL, NULL, "%.10f");
 		ImGui::DragScalar("转动惯量", MyImGuiDataType, &Object->MomentInertia, 0.0005f, NULL, NULL, "%.10f");
 		ImGui::DragScalar("扭矩", MyImGuiDataType, &Object->torque, 0.0005f, NULL, NULL, "%.10f");
-		Dvec2ImGui("几何中心", &Object->CentreShape);
+		ImGui::DragScalar("碰撞半径", MyImGuiDataType, &Object->radius, 0.0005f, NULL, NULL, "%.10f");
+		return UpData;
+	}
 
+	bool PhysicsUI(PhysicsShape *Object)
+	{
+		bool UpData = PhysicsUI((PhysicsAngle *)Object);
+		Dvec2ImGui("质心", &Object->CentreMass);
+		Dvec2ImGui("几何中心", &Object->CentreShape);
 		if (ImGui::TreeNode("骨骼点", "骨骼点: %d", Object->OutlineSize))
 		{
 			// 使用 map 统计每个坐标点出现的次数
@@ -232,17 +247,19 @@ namespace PhysicsBlock
 		return UpData;
 	}
 
-	bool PhysicsShapeUI(PhysicsParticle *Object)
+	bool PhysicsUI(PhysicsCircle *Object)
 	{
-		Dvec2ImGui("位置", &Object->pos);
-		Dvec2ImGui("速度", &Object->speed);
-		Dvec2ImGui("受力", &Object->force);
-		ImGui::DragScalar("质量", MyImGuiDataType, &Object->mass, 0.0005f, NULL, NULL, "%.10f");
-
-		return false;
+		bool UpData = PhysicsUI((PhysicsAngle *)Object);
+		return UpData;
 	}
 
-	bool PhysicsShapeUI(PhysicsWorld *Object)
+	bool PhysicsUI(PhysicsLine *Object)
+	{
+		bool UpData = PhysicsUI((PhysicsAngle *)Object);
+		return UpData;
+	}
+
+	bool PhysicsUI(PhysicsWorld *Object)
 	{
 		Dvec2ImGui("重力加速度", &Object->GravityAcceleration);
 		if (Object->WindBool)

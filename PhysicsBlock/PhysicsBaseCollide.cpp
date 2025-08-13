@@ -8,7 +8,7 @@ namespace PhysicsBlock
 
     bool CollideAABB(PhysicsShape *ShapeA, PhysicsShape *ShapeB)
     {
-        FLOAT_ R = ShapeA->CollisionR + ShapeB->CollisionR;
+        FLOAT_ R = ShapeA->radius + ShapeB->radius;
         if (abs(ShapeA->pos.x - ShapeB->pos.x) > R)
         {
             return false;
@@ -22,7 +22,7 @@ namespace PhysicsBlock
 
     bool CollideAABB(PhysicsShape *Shape, PhysicsCircle *Circle)
     {
-        FLOAT_ R = Shape->CollisionR + Circle->radius;
+        FLOAT_ R = Shape->radius + Circle->radius;
         if (abs(Shape->pos.x - Circle->pos.x) > R)
         {
             return false;
@@ -36,11 +36,11 @@ namespace PhysicsBlock
 
     bool CollideAABB(PhysicsShape *Shape, PhysicsParticle *Particle)
     {
-        if (abs(Shape->pos.x - Particle->pos.x) > Shape->CollisionR)
+        if (abs(Shape->pos.x - Particle->pos.x) > Shape->radius)
         {
             return false;
         }
-        if (abs(Shape->pos.y - Particle->pos.y) > Shape->CollisionR)
+        if (abs(Shape->pos.y - Particle->pos.y) > Shape->radius)
         {
             return false;
         }
@@ -78,11 +78,11 @@ namespace PhysicsBlock
     bool CollideAABB(PhysicsLine *Line, PhysicsShape *Shape)
     {
         Vec2_ pR = vec2angle({Line->radius, 0}, Line->angle);
-        if (abs(Shape->pos.x - Line->pos.x) > (Shape->CollisionR + abs(pR.x)))
+        if (abs(Shape->pos.x - Line->pos.x) > (Shape->radius + abs(pR.x)))
         {
             return false;
         }
-        if (abs(Shape->pos.y - Line->pos.y) > (Shape->CollisionR + abs(pR.y)))
+        if (abs(Shape->pos.y - Line->pos.y) > (Shape->radius + abs(pR.y)))
         {
             return false;
         }
@@ -230,7 +230,7 @@ namespace PhysicsBlock
         // 计算附近地形的碰撞点
         MapStatic *LMapStatic = (MapStatic *)Map;
         int KD = 1;
-        std::vector<MapOutline> Outline = LMapStatic->GetLightweightOutline(ToInt(Shape->pos.x - Shape->CollisionR) - KD, ToInt(Shape->pos.y - Shape->CollisionR) - KD, ToInt(Shape->pos.x + Shape->CollisionR) + KD, ToInt(Shape->pos.y + Shape->CollisionR) + KD);
+        std::vector<MapOutline> Outline = LMapStatic->GetLightweightOutline(ToInt(Shape->pos.x - Shape->radius) - KD, ToInt(Shape->pos.y - Shape->radius) - KD, ToInt(Shape->pos.x + Shape->radius) + KD, ToInt(Shape->pos.y + Shape->radius) + KD);
         for (size_t i = 0; i < Outline.size(); ++i)
         {
             Drop = Outline[i].pos - LMapStatic->centrality;

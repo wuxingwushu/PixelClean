@@ -8,8 +8,6 @@ namespace PhysicsBlock
     class PhysicsCircle : public PhysicsAngle
     {
     public:
-        FLOAT_ radius; // 碰撞半径
-    public:
         PhysicsCircle(Vec2_ Pos, FLOAT_ Radius, FLOAT_ Mass, FLOAT_ Friction = 0.2);
         ~PhysicsCircle();
 
@@ -20,10 +18,7 @@ namespace PhysicsBlock
          * @brief 获取对象类型
          * @return 类型 */
         virtual PhysicsObjectEnum PFGetType() { return PhysicsObjectEnum::circle; }
-        /**
-         * @brief 获取碰撞半径
-         * @return 半径 */
-        virtual FLOAT_ PFGetCollisionR() { return radius; }
+        
     };
     
 }

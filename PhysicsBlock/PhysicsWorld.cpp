@@ -1,6 +1,7 @@
 #include "PhysicsWorld.hpp"
 #include "BaseCalculate.hpp"
 #include "MapStatic.hpp"
+#include "MapDynamic.hpp"
 #include <algorithm>
 #include <map>
 #include <iostream>
@@ -105,7 +106,12 @@ namespace PhysicsBlock
         }
         if (wMapFormwork != nullptr)
         {
-            delete (MapStatic *)wMapFormwork; // 暂时
+            if (wMapFormwork->FMGetType() == _MapStatic) {
+                delete (MapStatic *)wMapFormwork;
+            }
+            if (wMapFormwork->FMGetType() == _MapDynamic) {
+                delete (MapDynamic *)wMapFormwork;
+            }
         }
         // 物理形状
         for (auto i : PhysicsShapeS)
@@ -213,7 +219,7 @@ namespace PhysicsBlock
                 if (!JZ)
                     Arbiter(PhysicsShapeS[SizeD], wMapFormwork);
 
-                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->CollisionR);
+                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->radius);
                 for (auto i : SearchV)
                 {
                     switch (i->PFGetType())
@@ -657,7 +663,7 @@ namespace PhysicsBlock
             {
                 Arbiter(PhysicsShapeS[SizeD], wMapFormwork);
 
-                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->CollisionR);
+                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->radius);
                 for (auto i : SearchV)
                 {
                     switch (i->PFGetType())

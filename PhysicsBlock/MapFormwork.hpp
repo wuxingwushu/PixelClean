@@ -13,6 +13,11 @@ namespace PhysicsBlock
         ~MapFormwork() {};
 
         /**
+         * @brief 获取对象类型
+         * @return PhysicsObjectEnum 类型 */
+        virtual PhysicsObjectEnum FMGetType() { return PhysicsObjectEnum::Null; }
+
+        /**
          * @brief 获取距离场
          * @return 最小碰撞半径 */
         virtual unsigned char FMGetDistanceField() { return 0; }

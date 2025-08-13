@@ -6,6 +6,7 @@ namespace VulKan {
 
 
 	ShaderTexture::ShaderTexture(
+		const char* shaderPtr,
 		Device* device, 
 		const CommandPool* commandPool, 
 		unsigned int texWidth, 
@@ -36,7 +37,7 @@ namespace VulKan {
 		std::vector<CalculateStruct> CalculateStructInfo{};
 		CalculateStructInfo.push_back({ &mParameter->getBufferInfo() });
 		CalculateStructInfo.push_back({ &mBackground->getBufferInfo() });
-		mCalculate = new Calculate(device, &CalculateStructInfo, GridBackground_spv);
+		mCalculate = new Calculate(device, &CalculateStructInfo, shaderPtr);
 	}
 
 	ShaderTexture::~ShaderTexture()

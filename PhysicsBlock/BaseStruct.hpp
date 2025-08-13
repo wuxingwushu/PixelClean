@@ -134,11 +134,13 @@ namespace PhysicsBlock
      * @brief 物理对象类型 */
     enum PhysicsObjectEnum
     {
-        Null,     // 无对象
-        shape,    // 形状
-        particle, // 点
-        circle,   // 圆
-        line      // 线
+        Null,       // 无对象
+        shape,      // 形状
+        particle,   // 点
+        circle,     // 圆
+        line,       // 线
+        _MapStatic,  // 静态地图
+        _MapDynamic, // 动态地图
     };
 
 }

@@ -1,0 +1,259 @@
+#version 450
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) buffer Parameter//画布
+{
+   float Time;
+   uint Width;
+   uint Height;
+};
+
+layout(std430, binding = 1) buffer buf//画布
+{
+   uint outColor[];
+};
+
+uint IntVec4(vec4 color){
+    if(color.x > 1.0f){
+        color.x = 1.0f;
+    }
+    if(color.y > 1.0f){
+        color.y = 1.0f;
+    }
+    if(color.z > 1.0f){
+        color.z = 1.0f;
+    }
+    if(color.x < 0.0f){
+        color.x = 0.0f;
+    }
+    if(color.y < 0.0f){
+        color.y = 0.0f;
+    }
+    if(color.z < 0.0f){
+        color.z = 0.0f;
+    }
+
+    uint ColorU = uint(color.x * 255) * 256;
+    ColorU += uint(color.y * 255);
+    ColorU += uint(color.z * 255) * 256 * 256;
+    ColorU += uint(color.w * 255) * 256 * 256 * 256;
+    return ColorU;
+}
+
+
+#define samples 8 // 定义光线追踪采样次数（8次）
+#define pi 3.1415926535
+
+// Scene definition is kinda inspired by .obj file formatting but idk if I'll keep it
+
+vec3 materials[] = vec3[](
+    vec3(1.000,1.000,1.000), // 白色材质
+    vec3(1.000,0.067,0.157), // 红色材质
+    vec3(0.027,0.945,0.259), // 绿色材质
+    vec3(0.118,0.253,0.992)  // 蓝色材质
+);
+
+vec2 points[] = vec2[](
+    vec2(.1,-.25), 
+    vec2(.3,-.25), 
+    vec2(.1,-.05),
+    vec2(.3,-.05), 
+    vec2(-.9,-.4), 
+    vec2(.8,-.4),  
+    vec2(-.9,-1.), 
+    vec2(.8,1.),   
+    vec2(-.4,-.3), 
+    vec2(-.2,-.3), 
+    vec2(-.4,-.1), 
+    vec2(-.2,-.1),
+    vec2(-.05,-.05),
+    vec2(-.05,-.15),
+    vec2(0,-.1),
+    vec2(-.1,-.1)
+);
+
+int segmentCount = 15;
+ivec3 segments[] = ivec3[](
+    ivec3(0,1,1),   // ivec3(a,b,c)
+    ivec3(0,2,1),   // a = endpoint a index
+    ivec3(1,3,1),   // b = endpoint b index
+    ivec3(2,3,1),   // c = material index
+    ivec3(4,5,0),
+    ivec3(4,6,0),
+    ivec3(5,7,0),
+    ivec3(8,9,3),
+    ivec3(8,10,3),
+    ivec3(9,11,3),
+    ivec3(10,11,3),
+    ivec3(12,14,2),
+    ivec3(14,13,2),
+    ivec3(13,15,2),
+    ivec3(15,12,2)
+);
+
+// https://www.shadertoy.com/view/4djSRW
+// 生成2D随机向量，用于采样扰动。
+vec2 hash21(float p) {
+	vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
+	p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.xx+p3.yz)*p3.zy);
+}
+
+// 基于像素坐标的确定性噪声，保证采样一致性。
+// Interleaved gradient noise
+// https://blog.demofox.org/2022/01/01/interleaved-gradient-noise-a-different-kind-of-low-discrepancy-sequence/
+float IGN(ivec2 p) {
+    return mod(52.9829189f * mod(.06711056f*float(p.x) + .00583715f*float(p.y), 1.), 1.);
+}
+
+// 光线相交检测 计算光线与线段的交点，返回光线前进距离t1
+// Ray intersection with line segment
+float segmentIntersect(vec2 ro, vec2 rd, vec2 a, vec2 b) {
+    vec2 v1 = ro - a;
+    vec2 v2 = b - a;
+    vec2 v3 = vec2(-rd.y, rd.x); // 光线垂直向量
+    float d = dot(v2, v3);
+    float t1 = cross(vec3(v2,0), vec3(v1,0)).z / d; // 光线参数
+    float t2 = dot(v1, v3) / d; // 线段参数
+    if (t1 >= 0.0 && (t2 >= 0.0 && t2 <= 1.0)) return t1;
+    return 1000.; // 无交点
+}
+
+
+// 场景相交检测
+// 遍历所有线段，返回最近交点的材质颜色和距离。
+//ray intersection with scene
+//sceneIntersect.w is the distance, sceneIntersect.xyz is the color
+vec4 sceneIntersect(vec2 ro, vec2 rd) {
+    float v0 = 1000.;
+    vec3 col = vec3(0,0,0);
+
+    for(int i=0; i<segmentCount; i++) {
+
+        vec2 a = points[segments[i].x];
+        vec2 b = points[segments[i].y];
+        
+        float v1 = segmentIntersect(ro, rd, a, b);
+
+        // 记录最近交点及材质
+        if(v1<v0) {
+            col = materials[segments[i].z];
+            v0 = v1;
+        }
+    }
+    return vec4(col,v0); // 颜色+距离
+}
+
+//line segment SDF
+// 距离场函数（SDF） 计算点到线段的最短距离
+float line(vec2 p, vec2 a,vec2 b) { 
+    p -= a, b -= a;
+    float h = clamp(dot(p, b) / dot(b, b), 0., 1.); // 投影比例
+    return length(p - b * h); // 点到线段最短距离
+}
+
+//scene SDF
+//sceneDist.w is the distance, sceneDist.xyz is the color
+// 返回场景中最近线段的材质和距离
+vec4 sceneDist(vec2 p) {
+    float v0 = 1000.;
+    vec3 col = vec3(0,0,0);
+
+    for(int i=0; i<segmentCount; i++) {
+
+        vec2 a = points[segments[i].x];
+        vec2 b = points[segments[i].y];
+        
+        float v1 = line(p, a, b);
+        if(v1<v0) {
+            col = materials[segments[i].z];
+            v0 = v1;
+        }
+    }
+    return vec4(col,v0); // 颜色+距离
+}
+
+// 法线计算
+// 通过中心差分法计算距离场法线（用于光照）
+vec2 sceneNormal(vec2 p) {
+    vec2 epsilon = vec2(.001, -.001);
+    return normalize(vec2(sceneDist(p+epsilon.xx).w) - vec2(sceneDist(p-epsilon.xy).w,sceneDist(p-epsilon.yx).w));
+}
+
+// ACES Tonemapping
+// 色调映射
+// 将HDR颜色压缩到LDR范围，增强对比度。
+vec3 ACESFilm(vec3 x) {
+    float a = 2.51f;
+    float b = 0.03f;
+    float c = 2.43f;
+    float d = 0.59f;
+    float e = 0.14f;
+    return clamp((x*(a*x + b)) / (x*(c*x + d) + e), 0.0f, 1.0f);
+}
+
+#define lightFalloff 2.
+void main() {
+    const uint id_x = gl_GlobalInvocationID.x / Height;
+    const uint id_y = gl_GlobalInvocationID.x % Height;
+    vec2 fragCoord = vec2(id_x, id_y);
+    vec2 iResolution = vec2(Width, Height);
+
+    vec3 col;
+    vec2 p = (2.*fragCoord-iResolution.xy-.5)/iResolution.x; // 归一化坐标 [-1,1]
+    float rand = IGN(ivec2(fragCoord.xy)); // 基于像素的噪声
+    
+    vec3 spot = vec3(0,0,0);// 直接光照
+    vec3 gi = vec3(0,0,0);// 间接光照
+    
+    vec2 lightPos = vec2(sin(Time*.5)*.75,cos(Time*.25)*.25+.25); // 动态光源位置
+
+    vec2 lightDir = normalize(vec2(sin(Time*1.5),-1)); // 光源方向
+    float lightRad = .005; // 聚光灯半径
+    
+    // 直接光照
+    if (sceneIntersect(p, normalize(lightPos-p)).w > distance(p,lightPos)) {
+        spot = vec3(max((.5*float(dot(normalize(p-lightPos),lightDir))-.5)/lightRad+1.,0. ));
+    }
+    
+    // 间接光照
+    vec2 hit;
+    for (int i=0; i<samples; i++) {
+        vec2 ro = lightPos;
+        float rot = .08*pi*((float(i)+rand)/float(samples)-.5) + atan(lightDir.y,lightDir.x);
+        vec2 rd = vec2(cos(rot),sin(rot)); // 采样方向
+        vec2 lightDirSampled = rd;
+        
+        float d = sceneIntersect(ro, rd).w; // 光线与场景交点
+        hit = ro + rd*d; // 命中点
+        vec2 nor = sceneNormal(hit - rd*.01); // 命中点法线
+        
+        ro = p;
+        rd = normalize(hit-p);
+        
+        // 二次光线检测
+        // Circle arc for bounce light falloff just beause I thought it looked better than inverse square law :p
+        float hitDist = min(distance(p,hit)/lightFalloff,1.);
+        
+        vec4 lightRay = sceneIntersect(ro, rd);
+        d = lightRay.w;
+        
+        if (d + .01 > distance(p,hit)) {
+            // 累加间接光照
+            gi += 1./float(samples) * lightRay.rgb * clamp(dot(-rd,nor),0.,1.) * ( 1.-sqrt(2.*hitDist-hitDist*hitDist) )
+            * (sceneDist(p).w > .0025 ? 1. : dot(sceneNormal(p),lightDirSampled)*.5+.5 );
+        }
+    }
+    
+    vec4 scene = sceneDist(p); // 当前像素的材质和距离
+    col = spot*.5 + gi*1.; // 混合光照
+    col *= scene.w > .0025 ? vec3(.25) : 3.*scene.rgb; // 线段内部/外部颜色区分
+    
+    // Tonemapping
+    
+    col = ACESFilm(col); // 色调映射
+    col = pow(col,vec3(1./2.2)); // Gamma校正
+    
+    outColor[id_x + (Height - id_y) * Width] = IntVec4(vec4(col,1)); // 输出
+}

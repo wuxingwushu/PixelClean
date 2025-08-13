@@ -29,7 +29,7 @@ namespace GAME {
 		StructureImGuiInterFace();
 		VulKan::CommandPool* commandPool = new VulKan::CommandPool(mDevice);
 		VulKan::Sampler* sampler = new VulKan::Sampler(device);
-		mShaderTexture = new VulKan::ShaderTexture(mDevice, commandPool, 1920, 1080, 4, sampler);
+		mShaderTexture = new VulKan::ShaderTexture(_2D_GI_spv, mDevice, commandPool, 1920, 1080, 4, sampler);
 
 		mImGuiTexture->AddTexture("Shader", mShaderTexture->getTexture());
 	}

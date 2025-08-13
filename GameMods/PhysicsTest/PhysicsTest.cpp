@@ -178,17 +178,25 @@ namespace GAME
 
 		ImGui::Text(u8"世界总动能：%f", mPhysicsWorld->GetWorldEnergy());
 
-		if (PhysicsFormworkPtr != nullptr)
+		if (PhysicsFormworkPtr)
 		{
 			switch (PhysicsFormworkPtr->PFGetType())
 			{
 			case PhysicsBlock::PhysicsObjectEnum::shape:
 				ImGui::Text(u8"Shape");
-				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr);
+				PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr);
 				break;
 			case PhysicsBlock::PhysicsObjectEnum::particle:
 				ImGui::Text(u8"Particle");
-				PhysicsBlock::PhysicsShapeUI((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr);
+				PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr);
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::circle:
+				ImGui::Text(u8"Circle");
+				PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsCircle *)PhysicsFormworkPtr);
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::line:
+				ImGui::Text(u8"Line");
+				PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsLine *)PhysicsFormworkPtr);
 				break;
 			default:
 				ImGui::Text(u8"nullptr");
@@ -198,7 +206,7 @@ namespace GAME
 		else
 		{
 			ImGui::Text(u8"World");
-			if (PhysicsBlock::PhysicsShapeUI(mPhysicsWorld))
+			if (PhysicsBlock::PhysicsUI(mPhysicsWorld))
 			{
 				// 地图发生变动
 				mAuxiliaryVision->ClearStaticLine(); // 清空上一个地图的静态网格
@@ -245,7 +253,7 @@ namespace GAME
 		TOOL::mTimer->StartEnd();
 
 		// 查看分配到的网格树位置
-		if ((PhysicsFormworkPtr != nullptr) && PhysicsBlock::Auxiliary_GridDividedBool)
+		if (PhysicsAssistantInformation && PhysicsBlock::Auxiliary_GridDividedBool && (PhysicsFormworkPtr != nullptr))
 		{
 			std::vector<Vec2_> vision = mPhysicsWorld->mGridSearch.GetDividedVision(PhysicsFormworkPtr);
 			for (size_t i = 0; i < (vision.size() / 2); ++i)
@@ -603,17 +611,19 @@ namespace GAME
 
 	void PhysicsTest::CameraLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e)
 	{
-		static Vec2_ Opos;
+		static Vec2_ Opos, OCamera;
 		if (Click)
 		{
 			if (First)
 			{
 				// 初次点击
 				Opos = {m_position.x, m_position.y};
+				OCamera.x = s.x - m_position.x;
+				OCamera.y = s.y - m_position.y;
 			}
 			else
 			{
-				glm::vec2 CameraPos = s - e + Opos;
+				glm::vec2 CameraPos = OCamera - Vec2_{e.x - m_position.x, e.y - m_position.y} + Opos;
 				m_position.x = CameraPos.x;
 				m_position.y = CameraPos.y;
 			}

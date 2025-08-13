@@ -42,6 +42,11 @@ namespace PhysicsBlock
         /*=========MapFormwork=========*/
 
         /**
+         * @brief 获取对象类型
+         * @return PhysicsObjectEnum 类型 */
+        virtual PhysicsObjectEnum FMGetType() { return PhysicsObjectEnum::_MapStatic; }
+
+        /**
          * @brief 获取地图模拟场大小
          * @return 地图大小
          * @note 单位：格子 */

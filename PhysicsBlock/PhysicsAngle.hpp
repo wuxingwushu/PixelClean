@@ -16,7 +16,9 @@ namespace PhysicsBlock
         FLOAT_ angle = 0;            // 角度
         FLOAT_ angleSpeed = 0;       // 角速度
         FLOAT_ torque = 0;           // 扭矩
+        FLOAT_ radius;               // 碰撞半径
 
+        PhysicsAngle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction, FLOAT_ Radius) : PhysicsParticle(Pos, Mass, Friction), radius(Radius) {}
         PhysicsAngle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction = 0.2) : PhysicsParticle(Pos, Mass, Friction) {}
         PhysicsAngle(Vec2_ Pos) : PhysicsParticle(Pos) {}
         ~PhysicsAngle() {}
@@ -81,7 +83,11 @@ namespace PhysicsBlock
         /**
          * @brief 角速度
          * @return 质量倒数 */
-        virtual FLOAT_& PFAngleSpeed() { return angleSpeed; };
+        virtual FLOAT_ &PFAngleSpeed() { return angleSpeed; };
+        /**
+         * @brief 获取碰撞半径
+         * @return 半径 */
+        virtual FLOAT_ PFGetCollisionR() { return radius; }
     };
 
 }

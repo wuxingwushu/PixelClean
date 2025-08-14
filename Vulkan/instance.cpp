@@ -49,14 +49,15 @@ namespace VulKan {
 	Instance::Instance(bool enableValidationLayer) {
 		mEnableValidationLayer = enableValidationLayer;//存储当前是否开启验证层
 
-		if (mEnableValidationLayer && !checkValidationLayerSupport()) {//判断测试功能开启成功没
-			mEnableValidationLayer = false;
-			TOOL::VulKanError->error("Error: validation layer is not supported");
-			throw std::runtime_error("Error: validation layer is not supported");
+		if (mEnableValidationLayer) {//判断测试功能开启成功没
+			if (!checkValidationLayerSupport()) {
+				mEnableValidationLayer = false;
+				TOOL::VulKanError->error("Error: validation layer is not supported");
+			}
 		}
 
 		//打印所有扩展名字
-		//printAvailableExtensions();
+		printAvailableExtensions();
 
 		VkApplicationInfo appInfo = {};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;//sType 成员变量来显式指定结构体类型
@@ -89,7 +90,9 @@ namespace VulKan {
 			throw std::runtime_error("Error:failed to create instance");
 		}
 
-		setupDebugger();
+		if (mEnableValidationLayer) {
+			setupDebugger();
+		}
 	}
 
 	Instance::~Instance() {
@@ -156,8 +159,6 @@ namespace VulKan {
 	}
 
 	void Instance::setupDebugger() {
-		if (!mEnableValidationLayer) { return; }
-
 		VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |	//监听那些类型

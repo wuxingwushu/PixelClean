@@ -109,7 +109,7 @@ namespace PhysicsBlock
             if (wMapFormwork->FMGetType() == _MapStatic) {
                 delete (MapStatic *)wMapFormwork;
             }
-            if (wMapFormwork->FMGetType() == _MapDynamic) {
+            else if (wMapFormwork->FMGetType() == _MapDynamic) {
                 delete (MapDynamic *)wMapFormwork;
             }
         }
@@ -435,8 +435,10 @@ namespace PhysicsBlock
         }
         NewCollideGroup.clear();
 
-#define DANCI 1 & ThreadPoolBool
-#if DANCI
+#define Definite 0 // 是否需要确定性(暂时没法保证确定性，没有对解算的前后顺序进行排序)
+
+// 这里的预处理，存在冲量影响（速度，角速度），所以使用多线程没法收敛静止物体，且增加不确定性。
+#if (Definite != 1) & ThreadPoolBool & 0
         // 预处理
         const auto PreStepXT_Fun = [this, inv_dt](int T_Num, int Tx)
         {
@@ -485,7 +487,8 @@ namespace PhysicsBlock
         }
 #endif
 
-#if 1 & ThreadPoolBool
+// 这里使用多线程虽然会增加不确定性，但是现在我暂时不需求确定性。所以舍弃也无所谓
+#if (Definite != 1) & ThreadPoolBool
         // 迭代结果
         const auto ApplyImpulseXT_Fun = [this](int T_Num, int Tx)
         {
@@ -541,7 +544,8 @@ namespace PhysicsBlock
 
 #endif
 
-#if DANCI
+// 这个多线程不影响结果
+#if 1 & ThreadPoolBool
         // 移动
         const auto PhysicsPosXT_Fun = [this, time](int T_Num, int Tx)
         {
@@ -552,25 +556,25 @@ namespace PhysicsBlock
             for (; SizeD < SizeY; ++SizeD)
             {
                 PhysicsShapeS[SizeD]->PhysicsPos(time, GravityAcceleration);
+                PhysicsShapeS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
             ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
-                if (wMapFormwork->FMGetCollide(PhysicsParticleS[SizeD]->pos))
-                {
-                    PhysicsParticleS[SizeD]->OldPosUpDataBool = false; // 关闭旧位置更新
-                }
                 PhysicsParticleS[SizeD]->PhysicsPos(time, GravityAcceleration);
+                PhysicsParticleS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
             ThreadTaskAllot(SizeD, SizeY, PhysicsCircleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 PhysicsCircleS[SizeD]->PhysicsPos(time, GravityAcceleration);
+                PhysicsCircleS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
             ThreadTaskAllot(SizeD, SizeY, PhysicsLineS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 PhysicsLineS[SizeD]->PhysicsPos(time, GravityAcceleration);
+                PhysicsLineS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
         };
         for (size_t i = 0; i < xThreadNum; ++i)
@@ -584,46 +588,29 @@ namespace PhysicsBlock
         }
         xTn.clear();
 #else
-        // 移动
+        // 移动 & 外力改变
         for (auto i : PhysicsShapeS)
         {
             i->PhysicsPos(time, GravityAcceleration);
+            i->PhysicsSpeed(time, GravityAcceleration);
         }
         for (auto i : PhysicsParticleS)
         {
-            if (wMapFormwork->FMGetCollide(i->pos))
-            {
-                i->OldPosUpDataBool = false; // 关闭旧位置更新
-            }
             i->PhysicsPos(time, GravityAcceleration);
+            i->PhysicsSpeed(time, GravityAcceleration);
         }
-        for (auto o : PhysicsCircleS)
+        for (auto i : PhysicsCircleS)
         {
-            o->PhysicsPos(time, GravityAcceleration);
+            i->PhysicsPos(time, GravityAcceleration);
+            i->PhysicsSpeed(time, GravityAcceleration);
         }
         for (auto i : PhysicsLineS)
         {
             i->PhysicsPos(time, GravityAcceleration);
+            i->PhysicsSpeed(time, GravityAcceleration);
         }
 #endif
 
-        // 外力改变
-        for (auto i : PhysicsShapeS)
-        {
-            i->PhysicsSpeed(time, GravityAcceleration);
-        }
-        for (auto i : PhysicsParticleS)
-        {
-            i->PhysicsSpeed(time, GravityAcceleration);
-        }
-        for (auto o : PhysicsCircleS)
-        {
-            o->PhysicsSpeed(time, GravityAcceleration);
-        }
-        for (auto i : PhysicsLineS)
-        {
-            i->PhysicsSpeed(time, GravityAcceleration);
-        }
 
 #if ThreadPoolBool
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
@@ -830,7 +817,7 @@ namespace PhysicsBlock
         }
         NewCollideGroup.clear();
 
-#if DANCI
+#if 1
         // 预处理
         const auto PreStepXT_Fun = [this](int T_Num, int Tx)
         {

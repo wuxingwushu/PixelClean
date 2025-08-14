@@ -271,6 +271,11 @@ namespace PhysicsBlock
             return Vision;
         }
 
+        // 获取所有范围外的物体
+        std::vector<PhysicsFormwork *>& GetGridExtrovert() {
+            return GridExtrovert;
+        }
+
         // 更新网格
         void UpData()
         {
@@ -282,10 +287,10 @@ namespace PhysicsBlock
                     unsigned int index = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
                     if (i != index)
                     {
+                        Grid[i][a] = Grid[i].back();
+                        Grid[i].pop_back();
                         if (index < Grid.size())
                         {
-                            Grid[i][a] = Grid[i].back();
-                            Grid[i].pop_back();
                             Grid[index].push_back(Formwork);
                         }
                         else

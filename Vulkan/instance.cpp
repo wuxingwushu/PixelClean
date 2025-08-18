@@ -10,11 +10,14 @@ namespace VulKan {
 		const VkDebugUtilsMessengerCallbackDataEXT* pMessageData,//消息本体
 		void* pUserData) {
 
-		//if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+		if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 			std::cout << "ValidationLayer: " << pMessageData->pMessage << std::endl;
-			//log_debug(pMessageData->pMessage);
-			TOOL::VulKanError->error(pMessageData->pMessage);
-		//}
+			if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+				TOOL::VulKanError->warn(pMessageData->pMessage);
+			}else if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+				TOOL::VulKanError->error(pMessageData->pMessage);
+			}
+		}
 		
 		return VK_FALSE;
 	}

@@ -244,7 +244,16 @@ namespace GAME
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		if (PhysicsSwitch)
 		{
-			mPhysicsWorld->PhysicsEmulator(1 ? 0.01 : TOOL::FPStime);
+			#define PhysicsTick (1.0 / 100.0)
+			static float AddUpTime = 0;
+			AddUpTime += TOOL::FPStime;
+			if (AddUpTime > PhysicsTick) {
+				AddUpTime -= PhysicsTick;
+				mPhysicsWorld->PhysicsEmulator(PhysicsTick);
+				if (AddUpTime > 1.0) {
+					AddUpTime = 0.1;
+				}
+			}
 		}
 		else
 		{
@@ -543,17 +552,13 @@ namespace GAME
 		{
 			switch (Z_MousePhysicsFormworkPtr->PFGetType())
 			{
+			case PhysicsBlock::PhysicsObjectEnum::line:
 			case PhysicsBlock::PhysicsObjectEnum::circle:
-				CircleLeftEvent((PhysicsBlock::PhysicsCircle *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
-				break;
-			case PhysicsBlock::PhysicsObjectEnum::particle:
-				ParticleLeftEvent((PhysicsBlock::PhysicsParticle *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
-				break;
 			case PhysicsBlock::PhysicsObjectEnum::shape:
 				SquareLeftEvent((PhysicsBlock::PhysicsShape *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
 				break;
-			case PhysicsBlock::PhysicsObjectEnum::line:
-				LineLeftEvent((PhysicsBlock::PhysicsLine *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
+			case PhysicsBlock::PhysicsObjectEnum::particle:
+				ParticleLeftEvent((PhysicsBlock::PhysicsParticle *)Z_MousePhysicsFormworkPtr, Z_Leftan == GLFW_PRESS, zb, z1, z2);
 				break;
 
 			default:
@@ -576,17 +581,13 @@ namespace GAME
 		{
 			switch (MousePhysicsFormworkPtr->PFGetType())
 			{
+			case PhysicsBlock::PhysicsObjectEnum::line:
 			case PhysicsBlock::PhysicsObjectEnum::circle:
-				CircleRightEvent((PhysicsBlock::PhysicsCircle *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
-				break;
-			case PhysicsBlock::PhysicsObjectEnum::particle:
-				ParticleRightEvent((PhysicsBlock::PhysicsParticle *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
-				break;
 			case PhysicsBlock::PhysicsObjectEnum::shape:
 				SquareRightEvent((PhysicsBlock::PhysicsShape *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
 				break;
-			case PhysicsBlock::PhysicsObjectEnum::line:
-				LineRightEvent((PhysicsBlock::PhysicsLine *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
+			case PhysicsBlock::PhysicsObjectEnum::particle:
+				ParticleRightEvent((PhysicsBlock::PhysicsParticle *)MousePhysicsFormworkPtr, Leftan == GLFW_PRESS, yb, y1, y2);
 				break;
 
 			default:
@@ -637,7 +638,7 @@ namespace GAME
 	{
 	}
 
-	void PhysicsTest::SquareLeftEvent(PhysicsBlock::PhysicsShape *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	void PhysicsTest::SquareLeftEvent(PhysicsBlock::PhysicsAngle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
 	{
 		static Vec2_ Opos;
 		static Vec2_ PhysicsShapeArm;
@@ -658,7 +659,7 @@ namespace GAME
 					PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
 					Ptr->AddForce(
 						lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(),
-						10 * Ptr->PFGetMass() * (e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos())) * PhysicsBlock::Modulus((e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos()))));
+						10 * Ptr->PFGetMass() * (e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos())));
 					mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(), 0}, {1, 0, 0, 1}, {(e), 0}, {0, 1, 0, 1});
 				}
 				else
@@ -673,47 +674,7 @@ namespace GAME
 		}
 	}
 
-	void PhysicsTest::SquareRightEvent(PhysicsBlock::PhysicsShape *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
-	{
-	}
-
-	void PhysicsTest::CircleLeftEvent(PhysicsBlock::PhysicsCircle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
-	{
-		static Vec2_ Opos;
-		static Vec2_ PhysicsShapeArm;
-		if (Click)
-		{
-			if (First)
-			{
-				// 初次点击
-				Opos = Ptr->PFGetPos() - s;
-				PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
-				PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
-			}
-			else
-			{
-				if (PhysicsSwitch)
-				{
-					// 开启物理了
-					PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
-					Ptr->AddForce(
-						lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(),
-						10 * Ptr->PFGetMass() * (e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos())) * PhysicsBlock::Modulus((e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos()))));
-					mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(), 0}, {1, 0, 0, 1}, {(e), 0}, {0, 1, 0, 1});
-				}
-				else
-				{
-					// 没有开启物理，就直接修改位置
-					Ptr->pos = Opos + e;
-				}
-			}
-		}
-		else
-		{
-		}
-	}
-
-	void PhysicsTest::CircleRightEvent(PhysicsBlock::PhysicsCircle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
+	void PhysicsTest::SquareRightEvent(PhysicsBlock::PhysicsAngle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
 	{
 	}
 
@@ -748,46 +709,6 @@ namespace GAME
 	}
 
 	void PhysicsTest::ParticleRightEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
-	{
-	}
-
-	void PhysicsTest::LineLeftEvent(PhysicsBlock::PhysicsLine *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
-	{
-		static Vec2_ Opos;
-		static Vec2_ PhysicsShapeArm;
-		if (Click)
-		{
-			if (First)
-			{
-				// 初次点击
-				Opos = Ptr->PFGetPos() - s;
-				PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
-				PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
-			}
-			else
-			{
-				if (PhysicsSwitch)
-				{
-					// 开启物理了
-					PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
-					Ptr->AddForce(
-						lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(),
-						10 * Ptr->PFGetMass() * (e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos())) * PhysicsBlock::Modulus((e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos()))));
-					mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(), 0}, {1, 0, 0, 1}, {(e), 0}, {0, 1, 0, 1});
-				}
-				else
-				{
-					// 没有开启物理，就直接修改位置
-					Ptr->pos = Opos + e;
-				}
-			}
-		}
-		else
-		{
-		}
-	}
-
-	void PhysicsTest::LineRightEvent(PhysicsBlock::PhysicsLine *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
 	{
 	}
 

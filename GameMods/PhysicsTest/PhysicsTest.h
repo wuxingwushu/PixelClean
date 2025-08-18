@@ -46,17 +46,11 @@ namespace GAME
 		void CameraLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e);
 		void CameraRightEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e);
 		// 网格形状
-		void SquareLeftEvent(PhysicsBlock::PhysicsShape *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
-		void SquareRightEvent(PhysicsBlock::PhysicsShape *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
-		// 圆
-		void CircleLeftEvent(PhysicsBlock::PhysicsCircle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
-		void CircleRightEvent(PhysicsBlock::PhysicsCircle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
+		void SquareLeftEvent(PhysicsBlock::PhysicsAngle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
+		void SquareRightEvent(PhysicsBlock::PhysicsAngle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
 		// 点
 		void ParticleLeftEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
 		void ParticleRightEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
-		// 线
-		void LineLeftEvent(PhysicsBlock::PhysicsLine *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
-		void LineRightEvent(PhysicsBlock::PhysicsLine *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e);
 		// 创建
 		void FoundLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e);
 

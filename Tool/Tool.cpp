@@ -62,7 +62,7 @@ namespace TOOL {
 			VulKanconsole_sink->set_level(spdlog::level::warn);//设置警报等级
 			VulKanconsole_sink->set_pattern("[VulKanError] [%^%l%$] %v");//打印显示
 
-			auto VulKanfile_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("Logs/VulKanError.txt", true);//日志文件路径，是否覆写
+			auto VulKanfile_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("Logs/VulKanError.txt", false);//日志文件路径，是否覆写
 			VulKanfile_sink->set_level(spdlog::level::trace);//设置警报等级
 
 			VulKanError = new spdlog::logger("VulKanError", { VulKanconsole_sink, VulKanfile_sink }); // 日志保存
@@ -72,9 +72,11 @@ namespace TOOL {
 
 	void DeleteSpdLog() {
 		if (Error != nullptr) {
+			Error = nullptr;
 			delete Error;
 		}
 		if (VulKanError != nullptr) {
+			VulKanError = nullptr;
 			delete VulKanError;
 		}
 	}

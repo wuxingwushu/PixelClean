@@ -160,7 +160,7 @@ namespace VulKan {
 
 		//内存分配器的信息
 		VmaAllocatorCreateInfo allocatorInfo = {};
-		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
 		allocatorInfo.physicalDevice = mPhysicalDevice;
 		allocatorInfo.device = mDevice;
 		allocatorInfo.instance = mInstance->getInstance();

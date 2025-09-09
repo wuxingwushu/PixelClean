@@ -95,7 +95,7 @@ namespace PhysicsBlock
     PhysicsWorld::~PhysicsWorld()
     {
         // 等待线程结束
-        for (auto& tf : xTn)
+        for (auto &tf : xTn)
         {
             tf.wait();
         }
@@ -106,10 +106,12 @@ namespace PhysicsBlock
         }
         if (wMapFormwork != nullptr)
         {
-            if (wMapFormwork->FMGetType() == _MapStatic) {
+            if (wMapFormwork->FMGetType() == _MapStatic)
+            {
                 delete (MapStatic *)wMapFormwork;
             }
-            else if (wMapFormwork->FMGetType() == _MapDynamic) {
+            else if (wMapFormwork->FMGetType() == _MapDynamic)
+            {
                 delete (MapDynamic *)wMapFormwork;
             }
         }
@@ -190,7 +192,7 @@ namespace PhysicsBlock
     void PhysicsWorld::PhysicsEmulator(FLOAT_ time)
     {
 #if ThreadPoolBool
-        
+
         const int xThreadNum = std::thread::hardware_concurrency();
 
         // 等待 判断物体间的碰撞 的 任务结束
@@ -611,7 +613,6 @@ namespace PhysicsBlock
         }
 #endif
 
-
 #if ThreadPoolBool
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
         for (size_t i = 0; i < xThreadNum; ++i)
@@ -910,7 +911,7 @@ namespace PhysicsBlock
         {
             Drop = DropUptoLineShortesIntersect(i->pos + vec2angle({i->radius, 0}, i->angle), i->pos - vec2angle({i->radius, 0}, i->angle), pos);
             if (Modulus(Drop - pos) < 0.25)
-                return ((PhysicsLine*)i);
+                return ((PhysicsLine *)i);
         }
 
         return nullptr;
@@ -935,4 +936,176 @@ namespace PhysicsBlock
         }
         return Energy / 2;
     }
+#if PhysicsBlock_Serialization
+    PhysicsWorld::PhysicsWorld(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : WindBool(data["WindBool"])
+    {
+        JsonContrarySerialization(data);
+    }
+
+    void PhysicsWorld::JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+    {
+        data["WindBool"] = WindBool;
+        SerializationVec2(data, Wind);
+        SerializationVec2(data, GravityAcceleration);
+        SerializationVec2(data, GridWindSize);
+        unsigned int dataIndex = 0;
+        if (WindBool)
+        {
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["GridWind"];
+            dataArray = dataArray.array();
+            for (size_t i = 0; i < (GridWindSize.x * GridWindSize.y); ++i)
+            {
+                SerializationVec2(dataArray[i], GridWind[i]);
+            }
+        }
+        if (wMapFormwork) {
+            switch (wMapFormwork->FMGetType())
+            {
+            case PhysicsObjectEnum::_MapStatic:
+                data["wMapFormwork"]["Type"] = PhysicsObjectEnum::_MapStatic;
+                ((MapStatic*)wMapFormwork)->JsonSerialization(data["wMapFormwork"]);
+                break;
+            
+            default:
+                break;
+            }
+        }
+        if (PhysicsShapeS.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["PhysicsShapeS"];
+            dataArray = dataArray.array();
+            for (auto j : PhysicsShapeS)
+            {
+                j->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
+        if (PhysicsParticleS.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["PhysicsParticleS"];
+            dataArray = dataArray.array();
+            for (auto j : PhysicsParticleS)
+            {
+                j->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
+        if (PhysicsJointS.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["PhysicsJointS"];
+            dataArray = dataArray.array();
+            for (auto j : PhysicsJointS)
+            {
+                j->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
+        if (BaseJunctionS.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["BaseJunctionS"];
+            dataArray = dataArray.array();
+            for (auto j : BaseJunctionS)
+            {
+                j->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
+        if (PhysicsCircleS.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["PhysicsCircleS"];
+            dataArray = dataArray.array();
+            for (auto j : PhysicsCircleS)
+            {
+                j->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
+        if (PhysicsLineS.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["PhysicsLineS"];
+            dataArray = dataArray.array();
+            for (auto j : PhysicsLineS)
+            {
+                j->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
+    }
+
+    void PhysicsWorld::JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
+    {
+        // WindBool = data["WindBool"];
+        ContrarySerializationVec2(data, Wind);
+        ContrarySerializationVec2(data, GravityAcceleration);
+        ContrarySerializationVec2(data, GridWindSize);
+        if (WindBool)
+        {
+            GridWind = new Vec2_[data["GridWind"].size()];
+            for (size_t i = 0; i < (GridWindSize.x * GridWindSize.y); ++i)
+            {
+                ContrarySerializationVec2(data["GridWind"][i], GridWind[i]);
+            }
+        }
+        if (data.find("wMapFormwork") != data.end()) {
+            switch (PhysicsObjectEnum(data["wMapFormwork"]["Type"]))
+            {
+            case PhysicsObjectEnum::_MapStatic:
+                wMapFormwork = new MapStatic(data["wMapFormwork"]);
+                break;
+            
+            default:
+                break;
+            }
+        }
+        mGridSearch.SetMapRange(std::max(GridWindSize.x, GridWindSize.y));
+        if (data.find("PhysicsShapeS") != data.end())
+        {
+            for (size_t i = 0; i < data["PhysicsShapeS"].size(); ++i)
+            {
+                AddObject(new PhysicsShape(data["PhysicsShapeS"][i]));
+            }
+        }
+        if (data.find("PhysicsParticleS") != data.end())
+        {
+            for (size_t i = 0; i < data["PhysicsParticleS"].size(); ++i)
+            {
+                AddObject(new PhysicsParticle(data["PhysicsParticleS"][i]));
+            }
+        }
+        if (data.find("PhysicsJointS") != data.end())
+        {
+            for (size_t i = 0; i < data["PhysicsJointS"].size(); ++i)
+            {
+                AddObject(new PhysicsJoint(data["PhysicsJointS"][i]));
+            }
+        }
+        if (data.find("BaseJunctionS") != data.end())
+        {
+            for (size_t i = 0; i < data["BaseJunctionS"].size(); ++i)
+            {
+                // AddObject(new BaseJunction(data["BaseJunctionS"][i]));
+            }
+        }
+        if (data.find("PhysicsCircleS") != data.end())
+        {
+            for (size_t i = 0; i < data["PhysicsCircleS"].size(); ++i)
+            {
+                AddObject(new PhysicsCircle(data["PhysicsCircleS"][i]));
+            }
+        }
+        if (data.find("PhysicsLineS") != data.end())
+        {
+            for (size_t i = 0; i < data["PhysicsLineS"].size(); ++i)
+            {
+                AddObject(new PhysicsLine(data["PhysicsLineS"][i]));
+            }
+        }
+    }
+#endif
 }

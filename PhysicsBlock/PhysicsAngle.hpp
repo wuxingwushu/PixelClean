@@ -18,6 +18,42 @@ namespace PhysicsBlock
         FLOAT_ torque = 0;           // 扭矩
         FLOAT_ radius;               // 碰撞半径
 
+#if PhysicsBlock_Serialization
+        PhysicsAngle(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : PhysicsParticle(data)
+        {
+            MomentInertia = data["MomentInertia"];
+            if (MomentInertia == FLOAT_MAX) {
+                invMomentInertia = 0;
+            }else{
+                invMomentInertia = FLOAT_(1) / MomentInertia;
+            }
+            angle = data["angle"];
+            angleSpeed = data["angleSpeed"];
+            torque = data["torque"];
+            radius = data["radius"];
+        }
+
+        virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            PhysicsParticle::JsonSerialization(data);
+            data["MomentInertia"] = MomentInertia;
+            data["angle"] = angle;
+            data["angleSpeed"] = angleSpeed;
+            data["torque"] = torque;
+            data["radius"] = radius;
+        }
+        virtual void JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            PhysicsParticle::JsonContrarySerialization(data);
+            MomentInertia = data["MomentInertia"];
+            invMomentInertia = 1.0 / MomentInertia;
+            angle = data["angle"];
+            angleSpeed = data["angleSpeed"];
+            torque = data["torque"];
+            radius = data["radius"];
+        }
+#endif
+
         PhysicsAngle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction, FLOAT_ Radius) : PhysicsParticle(Pos, Mass, Friction), radius(Radius) {}
         PhysicsAngle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction = 0.2) : PhysicsParticle(Pos, Mass, Friction) {}
         PhysicsAngle(Vec2_ Pos) : PhysicsParticle(Pos) {}

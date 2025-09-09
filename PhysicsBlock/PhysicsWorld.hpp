@@ -155,8 +155,13 @@ namespace PhysicsBlock
     /**
      * @brief 物理世界
      * @note 重力加速度， 网格风 */
-    class PhysicsWorld
+    class PhysicsWorld SerializationInherit_
     {
+#if PhysicsBlock_Serialization
+    public:
+        SerializationVirtualFunction;
+        PhysicsWorld(const nlohmann::json_abi_v3_12_0::basic_json<> &data);
+#endif
     public:
         Vec2_ GravityAcceleration;           // 重力加速度
         const bool WindBool;                 // 是否开启网格风
@@ -164,7 +169,7 @@ namespace PhysicsBlock
         Vec2_ *GridWind = nullptr;           // 网格风
         glm::uvec2 GridWindSize{0};          // 网格风大小
         MapFormwork *wMapFormwork = nullptr; // 地图对象
-        GridSearch mGridSearch;
+        GridSearch mGridSearch;              // 网格搜索
 
         std::vector<PhysicsShape *> PhysicsShapeS;       // 物理形状网格
         std::vector<PhysicsParticle *> PhysicsParticleS; // 物理点

@@ -11,9 +11,19 @@ namespace PhysicsBlock
      * @brief 物理形状 */
     class PhysicsShape : public PhysicsAngle, public BaseOutline
     {
+#if PhysicsBlock_Serialization
     public:
-        Vec2_ CentreMass{0};    // 质心
-        Vec2_ CentreShape{0};   // 几何中心
+        SerializationVirtualFunction;
+        PhysicsShape(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : PhysicsAngle(data), BaseOutline(data)
+        {
+            UpdateAll();
+            ContrarySerializationVec2(data, pos);
+            OldPos = pos;
+        };
+#endif
+    public:
+        Vec2_ CentreMass{0};  // 质心
+        Vec2_ CentreShape{0}; // 几何中心
     public:
         /**
          * @brief 构造函数

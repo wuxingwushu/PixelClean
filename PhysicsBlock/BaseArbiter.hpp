@@ -1,6 +1,7 @@
 #pragma once
 #include "BaseStruct.hpp"
 #include <functional>
+#include "BaseSerialization.hpp"
 
 namespace PhysicsBlock
 {
@@ -79,8 +80,44 @@ namespace PhysicsBlock
 
     /**
      * @brief 基础物理裁决 */
-    class BaseArbiter
+    class BaseArbiter SerializationInherit_
     {
+    #if PhysicsBlock_Serialization
+    public:
+        virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            data["numContacts"] = numContacts;
+            data = data["contacts"];
+            data = data.array();
+            for (size_t i = 0; i < numContacts; ++i)
+            {
+                SerializationVec2(data[i], contacts[i].position);
+                SerializationVec2(data[i], contacts[i].normal);
+                data[i]["separation"] = contacts[i].separation;
+                data[i]["friction"] = contacts[i].friction;
+                data[i]["w_side"] = contacts[i].w_side;
+                data[i]["Pn"] = contacts[i].Pn;
+                data[i]["Pt"] = contacts[i].Pt;
+            }
+        }
+
+        virtual void JsonContrarySerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            numContacts = data["numContacts"];
+            data = data["contacts"];
+            for (size_t i = 0; i < numContacts; ++i)
+            {
+                ContrarySerializationVec2(data[i], contacts[i].position);
+                ContrarySerializationVec2(data[i], contacts[i].normal);
+                data[i]["separation"] = contacts[i].separation;
+                data[i]["friction"] = contacts[i].friction;
+                data[i]["w_side"] = contacts[i].w_side;
+                data[i]["Pn"] = contacts[i].Pn;
+                data[i]["Pt"] = contacts[i].Pt;
+            }
+        }
+#endif
+
     public:
         Contact contacts[20];  // 碰撞点集合
         int numContacts = 0;       // 碰撞点数量

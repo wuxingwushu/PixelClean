@@ -1,5 +1,6 @@
 #pragma once
 #include "BaseStruct.hpp"
+#include "BaseSerialization.hpp"
 
 namespace PhysicsBlock
 {
@@ -7,8 +8,20 @@ namespace PhysicsBlock
     /**
      * @brief 基础网格
      * @note 网格 */
-    class BaseGrid
+    class BaseGrid SerializationInherit_
     {
+#if PhysicsBlock_Serialization
+    public:
+        SerializationVirtualFunction;
+        BaseGrid(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : width(data["width"]), height(data["height"])
+        {
+            NewBool = data["NewBool"];
+            if (NewBool) {
+                Grid = new GridBlock[width * height];
+            }
+            JsonContrarySerialization(data);
+        }
+#endif
     public:
         const unsigned int width;  // 宽度
         const unsigned int height; // 高度

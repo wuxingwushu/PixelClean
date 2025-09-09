@@ -89,4 +89,34 @@ namespace PhysicsBlock
         P += impulse;
     }
 
+#if PhysicsBlock_Serialization
+    void PhysicsJoint::JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+    {
+        SerializationVec2(data, localAnchor1);
+        SerializationVec2(data, localAnchor2);
+        SerializationVec2(data, P);
+        SerializationVec2(data, bias);
+        data["biasFactor"] = biasFactor;
+        data["softness"] = softness;
+        data["M1"] = M[0][0];
+        data["M2"] = M[1][0];
+        data["M3"] = M[0][1];
+        data["M4"] = M[1][1];
+    }
+
+    void PhysicsJoint::JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
+    {
+        ContrarySerializationVec2(data, localAnchor1);
+        ContrarySerializationVec2(data, localAnchor2);
+        ContrarySerializationVec2(data, P);
+        ContrarySerializationVec2(data, bias);
+        biasFactor = data["biasFactor"];
+        softness = data["softness"];
+        M[0][0] = data["M1"];
+        M[1][0] = data["M2"];
+        M[0][1] = data["M3"];
+        M[1][1] = data["M4"];
+    }
+#endif
+
 }

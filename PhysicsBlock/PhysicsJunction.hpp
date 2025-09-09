@@ -16,8 +16,8 @@ namespace PhysicsBlock
      * @brief 绳结 */
     struct CordKnot
     {
-        PhysicsFormwork *ptr;   // 对象指针（空指针为固定位置）
-        Vec2_ relativePos; // 相对位置\固定位置
+        PhysicsFormwork *ptr; // 对象指针（空指针为固定位置）
+        Vec2_ relativePos;    // 相对位置\固定位置
     };
 
     /**
@@ -30,28 +30,44 @@ namespace PhysicsBlock
         rubber, // 橡皮筋
     };
 
-    class BaseJunction
+    class BaseJunction SerializationInherit_
     {
+#if PhysicsBlock_Serialization
     public:
-        FLOAT_ Length;     // 绳子长度
-        FLOAT_ bias{0};    // 距离差
-        Vec2_ Normal; // 力的方向
-        Vec2_ P;      //
+        virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            data["Length"] = Length;
+        }
+        virtual void JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            Length = data["Length"];
+        }
+#endif
+    public:
+        FLOAT_ Length;  // 绳子长度
+        FLOAT_ bias{0}; // 距离差
+        Vec2_ Normal;   // 力的方向
+        Vec2_ P;        //
 
         CordType Type; // 绳子类型
 
-        void biasType(){
+        void biasType()
+        {
             switch (Type)
             {
             case cord:
-                if (bias > 0) {
+                if (bias > 0)
+                {
                     bias = 0;
                 }
                 break;
             case rubber:
-                if (bias > 0) {
+                if (bias > 0)
+                {
                     bias = 0;
-                }else {
+                }
+                else
+                {
                     bias /= 100;
                 }
                 break;
@@ -59,13 +75,14 @@ namespace PhysicsBlock
             case spring:
                 bias /= 50;
                 break;
-            
+
             default:
                 break;
             }
         }
 
-        FLOAT_ ElasticityType(){
+        FLOAT_ ElasticityType()
+        {
             switch (Type)
             {
             case cord:
@@ -77,7 +94,7 @@ namespace PhysicsBlock
             case spring:
                 return 0.005;
                 break;
-            
+
             default:
                 break;
             }
@@ -96,6 +113,21 @@ namespace PhysicsBlock
 
     class PhysicsJunctionSS : public BaseJunction
     {
+#if PhysicsBlock_Serialization
+    public:
+        virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            BaseJunction::JsonSerialization(data);
+            SerializationVec2(data, mArm1);
+            SerializationVec2(data, mArm2);
+        }
+        virtual void JsonContrarySerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            BaseJunction::JsonContrarySerialization(data);
+            ContrarySerializationVec2(data, mArm1);
+            ContrarySerializationVec2(data, mArm2);
+        }
+#endif
     private:
         PhysicsAngle *mParticle1; // 形状
         Vec2_ mArm1;
@@ -103,7 +135,6 @@ namespace PhysicsBlock
         PhysicsAngle *mParticle2; // 形状
         Vec2_ mArm2;
         Vec2_ mR2;
-
 
     public:
         PhysicsJunctionSS(PhysicsAngle *Particle1, Vec2_ arm1, PhysicsAngle *Particle2, Vec2_ arm2, CordType type);
@@ -121,8 +152,21 @@ namespace PhysicsBlock
 
     class PhysicsJunctionS : public BaseJunction
     {
+#if PhysicsBlock_Serialization
+    public:
+        virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            BaseJunction::JsonSerialization(data);
+            SerializationVec2(data, Arm);
+        }
+        virtual void JsonContrarySerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            BaseJunction::JsonContrarySerialization(data);
+            ContrarySerializationVec2(data, Arm);
+        }
+#endif
     private:
-        Vec2_ mRegularDrop; // 固定点
+        Vec2_ mRegularDrop;      // 固定点
         PhysicsAngle *mParticle; // 形状
         Vec2_ Arm;
         Vec2_ R;
@@ -143,8 +187,21 @@ namespace PhysicsBlock
 
     class PhysicsJunctionP : public BaseJunction
     {
+#if PhysicsBlock_Serialization
+    public:
+        virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            BaseJunction::JsonSerialization(data);
+            SerializationVec2(data, mRegularDrop);
+        }
+        virtual void JsonContrarySerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            BaseJunction::JsonContrarySerialization(data);
+            ContrarySerializationVec2(data, mRegularDrop);
+        }
+#endif
     private:
-        Vec2_ mRegularDrop;    // 固定点
+        Vec2_ mRegularDrop;         // 固定点
         PhysicsParticle *mParticle; // 粒子
     public:
         PhysicsJunctionP(PhysicsParticle *Particle, Vec2_ RegularDrop, CordType type);

@@ -1,5 +1,6 @@
 #pragma once
 #include "PhysicsFormwork.hpp"
+#include "BaseSerialization.hpp"
 
 namespace PhysicsBlock
 {
@@ -7,22 +8,27 @@ namespace PhysicsBlock
     /**
      * @brief 物理粒子
      * @note 位置，速度，受力，质量，质量倒数，静止次数，上一次刻的位置 */
-    class PhysicsParticle : public PhysicsFormwork
+    class PhysicsParticle : public PhysicsFormwork SerializationInherit
     {
+#if PhysicsBlock_Serialization
+    public:
+        SerializationVirtualFunction;
+        PhysicsParticle(const nlohmann::json_abi_v3_12_0::basic_json<> &data);
+#endif
     public:
         unsigned char StaticNum = 0; // 静止次数
 
-        Vec2_ OldPos{0}; // 上一时刻的位置（ 旧位置不可以在碰撞体内 ）
+        Vec2_ OldPos{0};              // 上一时刻的位置（ 旧位置不可以在碰撞体内 ）
         bool OldPosUpDataBool = true; // 是否可以更新位置
         /**
          * @brief 位置
-         * @warning 在形状当中是指质心的位置 */
+         * @warning 在形状当中是代表质心在世界坐标的位置 */
         Vec2_ pos{0};
-        Vec2_ speed{0}; // 速度
-        Vec2_ force{0}; // 受力
-        FLOAT_ mass = 0;     // 质量
-        FLOAT_ invMass = 0;  // 质量倒数
-        FLOAT_ friction = 0.2;  // 摩擦因数
+        Vec2_ speed{0};        // 速度
+        Vec2_ force{0};        // 受力
+        FLOAT_ mass = 0;       // 质量
+        FLOAT_ invMass = 0;    // 质量倒数
+        FLOAT_ friction = 0.2; // 摩擦因数
 
     public:
         PhysicsParticle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction = 0.2);
@@ -59,7 +65,7 @@ namespace PhysicsBlock
         /**
          * @brief 获取质量倒数
          * @return 质量倒数 */
-        virtual FLOAT_ PFGetInvMass(){ return invMass; }
+        virtual FLOAT_ PFGetInvMass() { return invMass; }
         /**
          * @brief 获取质量
          * @return 质量 */
@@ -67,18 +73,20 @@ namespace PhysicsBlock
         /**
          * @brief 获取转动惯量倒数
          * @return 转动惯量倒数 */
-        virtual FLOAT_ PFGetInvI(){ 
+        virtual FLOAT_ PFGetInvI()
+        {
             assert(0 && "[Error]: 粒子不存在转动惯量!");
             return 0;
         }
         /**
          * @brief 速度
          * @return 位置 */
-        virtual Vec2_& PFSpeed() { return speed; };
+        virtual Vec2_ &PFSpeed() { return speed; };
         /**
          * @brief 角速度
          * @return 质量倒数 */
-        virtual FLOAT_& PFAngleSpeed() {
+        virtual FLOAT_ &PFAngleSpeed()
+        {
             assert(0 && "[Error]: 粒子不存在角速度!");
             return invMass;
         };

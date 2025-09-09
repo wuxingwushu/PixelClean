@@ -9,6 +9,8 @@
 
 #include "../../ImGui/imgui_demo.cpp"
 #include "PhysicsDemo.h"
+#include <fstream>
+#include <sstream>
 
 namespace GAME
 {
@@ -160,6 +162,29 @@ namespace GAME
 					}
 				}
 			}
+		}
+
+		if (ImGui::Button("保存"))
+		{
+			auto jsondata = nlohmann::json::parse(R"({})");
+			mPhysicsWorld->JsonSerialization(jsondata);
+			std::ofstream outFile("./JSON.json", std::ios::out | std::ios::trunc); // 文件覆盖模式
+			outFile << jsondata.dump();
+			outFile.close();
+		}
+		if (ImGui::Button("读取"))
+		{
+			PhysicsFormworkPtr = nullptr;
+			if (mPhysicsWorld != nullptr)
+			{
+				delete mPhysicsWorld;
+			}
+			std::ofstream outFile("./JSON.json", std::ios::in);
+			std::stringstream buff{};
+			buff << outFile.rdbuf();
+			outFile.close();
+			auto jsondata = nlohmann::json::parse(buff);
+			mPhysicsWorld = new PhysicsBlock::PhysicsWorld(jsondata);
 		}
 
 		if (ImGui::Button(PhysicsSwitch ? u8"关闭物理" : u8"开启物理"))
@@ -714,6 +739,9 @@ namespace GAME
 
 	void PhysicsTest::FoundLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e)
 	{
+		if (PhysicsBlock::Modulus(s + e) < 0.2) {
+			return;
+		}
 		Vec2_ pos;
 		glm::ivec2 size;
 		if (Click)

@@ -129,10 +129,10 @@ namespace PhysicsBlock
             invMass = 0;
             MomentInertia = FLOAT_MAX;
             invMomentInertia = 0;
-            //Vec2_ UsedCentreMass = CentreMass; // 旧质心
+            // Vec2_ UsedCentreMass = CentreMass; // 旧质心
             CentreMass = {width / 2 + 0.5, height / 2 + 0.5};
             CentreShape = CentreMass;
-            //pos += vec2angle(CentreMass - UsedCentreMass, angle);
+            // pos += vec2angle(CentreMass - UsedCentreMass, angle);
             OldPos = pos;
         }
         else
@@ -186,5 +186,22 @@ namespace PhysicsBlock
         }
         return {false};
     }
+
+#if PhysicsBlock_Serialization
+    void PhysicsShape::JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+    {
+        PhysicsAngle::JsonSerialization(data);
+        BaseGrid::JsonSerialization(data);
+    }
+
+    void PhysicsShape::JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
+    {
+        PhysicsAngle::JsonContrarySerialization(data);
+        BaseGrid::JsonContrarySerialization(data);
+        UpdateAll();
+        ContrarySerializationVec2(data, pos);
+        OldPos = pos;
+    }
+#endif
 
 }

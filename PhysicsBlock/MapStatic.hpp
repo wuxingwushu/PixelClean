@@ -9,15 +9,29 @@ namespace PhysicsBlock
 
     struct MapOutline
     {
-        Vec2_ pos; // 点位置
+        Vec2_ pos;  // 点位置
         Vec2_ face; // 朝向
-        FLOAT_ F; // 摩擦力
+        FLOAT_ F;   // 摩擦力
     };
 
     /**
      * @brief 静态地图 */
     class MapStatic : public BaseGrid, public MapFormwork
     {
+#if PhysicsBlock_Serialization
+    public:
+        virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            BaseGrid::JsonSerialization(data);
+            SerializationVec2(data, centrality);
+        }
+        virtual void JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        {
+            BaseGrid::JsonContrarySerialization(data);
+            ContrarySerializationVec2(data, centrality);
+        }
+        MapStatic(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : BaseGrid(data) { ContrarySerializationVec2(data, centrality); };
+#endif
     public:
         Vec2_ centrality{0, 0}; // 中心位置
     public:

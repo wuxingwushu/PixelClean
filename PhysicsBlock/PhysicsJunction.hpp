@@ -133,11 +133,15 @@ namespace PhysicsBlock
             SerializationVec2(data, mArm1);
             SerializationVec2(data, mArm2);
         }
-        virtual void JsonContrarySerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        virtual void JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
             BaseJunction::JsonContrarySerialization(data);
             ContrarySerializationVec2(data, mArm1);
             ContrarySerializationVec2(data, mArm2);
+        }
+
+        PhysicsJunctionSS(const nlohmann::json_abi_v3_12_0::basic_json<> &data){
+            JsonContrarySerialization(data);
         }
 #endif
     public:
@@ -174,11 +178,15 @@ namespace PhysicsBlock
             SerializationVec2(data, Arm);
             SerializationVec2(data, mRegularDrop);
         }
-        virtual void JsonContrarySerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        virtual void JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
             BaseJunction::JsonContrarySerialization(data);
             ContrarySerializationVec2(data, Arm);
             ContrarySerializationVec2(data, mRegularDrop);
+        }
+
+        PhysicsJunctionS(const nlohmann::json_abi_v3_12_0::basic_json<> &data){
+            JsonContrarySerialization(data);
         }
 #endif
     public:
@@ -212,10 +220,14 @@ namespace PhysicsBlock
             BaseJunction::JsonSerialization(data);
             SerializationVec2(data, mRegularDrop);
         }
-        virtual void JsonContrarySerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        virtual void JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
             BaseJunction::JsonContrarySerialization(data);
             ContrarySerializationVec2(data, mRegularDrop);
+        }
+
+        PhysicsJunctionP(const nlohmann::json_abi_v3_12_0::basic_json<> &data){
+            JsonContrarySerialization(data);
         }
 #endif
     public:
@@ -239,6 +251,12 @@ namespace PhysicsBlock
 
     class PhysicsJunctionPP : public BaseJunction
     {
+#if PhysicsBlock_Serialization
+    public:
+        PhysicsJunctionPP(const nlohmann::json_abi_v3_12_0::basic_json<> &data){
+            JsonContrarySerialization(data);
+        }
+#endif
     public:
         PhysicsParticle *mParticle1; // 粒子1
         PhysicsParticle *mParticle2; // 粒子2

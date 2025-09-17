@@ -163,6 +163,7 @@ namespace PhysicsBlock
         PhysicsWorld(const nlohmann::json_abi_v3_12_0::basic_json<> &data);
 
         unsigned int GetPtrIndex(PhysicsFormwork* ptr);
+        void* GetIndexPtr(PhysicsObjectEnum Enum, unsigned int index);
 #endif
     public:
         Vec2_ GravityAcceleration;           // 重力加速度

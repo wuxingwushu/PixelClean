@@ -10,10 +10,10 @@ namespace PhysicsBlock
         Contact() : Pn(0.0), Pt(0.0) /*, Pnb(0.0)*/ {}
 
         // Collide
-        Vec2_ position;      // 碰撞点位置
-        Vec2_ normal;        // 最佳分离轴 的 法向量
+        Vec2_ position;           // 碰撞点位置
+        Vec2_ normal;             // 最佳分离轴 的 法向量
         FLOAT_ separation;        // 最小分离距离
-        FLOAT_ friction = 0.2; // 两个物体间的摩擦系数
+        FLOAT_ friction = 0.2;    // 两个物体间的摩擦系数
         unsigned char w_side = 0; // 小矩形那个边的分离（判别是否是一种力用的）
 
         // PreStep
@@ -22,8 +22,8 @@ namespace PhysicsBlock
         FLOAT_ bias;        // 物体位置修正值大小？
 
         // ApplyImpulse
-        Vec2_ r1; // A物体质心 指向 碰撞点 的向量
-        Vec2_ r2; // B物体质心 指向 碰撞点 的向量
+        Vec2_ r1;      // A物体质心 指向 碰撞点 的向量
+        Vec2_ r2;      // B物体质心 指向 碰撞点 的向量
         FLOAT_ Pn = 0; // 位移影响量大小
         FLOAT_ Pt = 0; // 旋转影响量大小
         // FLOAT_ Pnb; // accumulated normal impulse for position bias
@@ -33,11 +33,13 @@ namespace PhysicsBlock
     {
         ArbiterKey(void *Object1, void *Object2)
         {
-            if (Object1 > Object2) {
+            if (Object1 > Object2)
+            {
                 object1 = Object1;
                 object2 = Object2;
             }
-            else {
+            else
+            {
                 object1 = Object2;
                 object2 = Object1;
             }
@@ -68,12 +70,13 @@ namespace PhysicsBlock
     {
         inline std::size_t operator()(const ArbiterKey &key) const
         {
-            auto hash_combine = [](std::size_t a, std::size_t b) {
+            auto hash_combine = [](std::size_t a, std::size_t b)
+            {
                 return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
             };
 
-            std::size_t h1 = std::hash<void*>{}(key.object1);
-            std::size_t h2 = std::hash<void*>{}(key.object2);
+            std::size_t h1 = std::hash<void *>{}(key.object1);
+            std::size_t h2 = std::hash<void *>{}(key.object2);
             return hash_combine(h1, h2);
         }
     };
@@ -82,45 +85,47 @@ namespace PhysicsBlock
      * @brief 基础物理裁决 */
     class BaseArbiter SerializationInherit_
     {
-    #if PhysicsBlock_Serialization
+#if PhysicsBlock_Serialization
     public:
         virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
             data["numContacts"] = numContacts;
-            data = data["contacts"];
-            data = data.array();
+            auto& dataContacts = data["contacts"];
+            dataContacts = dataContacts.array();
             for (size_t i = 0; i < numContacts; ++i)
             {
-                SerializationVec2(data[i], contacts[i].position);
-                SerializationVec2(data[i], contacts[i].normal);
-                data[i]["separation"] = contacts[i].separation;
-                data[i]["friction"] = contacts[i].friction;
-                data[i]["w_side"] = contacts[i].w_side;
-                data[i]["Pn"] = contacts[i].Pn;
-                data[i]["Pt"] = contacts[i].Pt;
+                SerializationVec2(dataContacts[i], contacts[i].position);
+                SerializationVec2(dataContacts[i], contacts[i].normal);
+                dataContacts[i]["separation"] = contacts[i].separation;
+                dataContacts[i]["friction"] = contacts[i].friction;
+                dataContacts[i]["w_side"] = contacts[i].w_side;
+                dataContacts[i]["Pn"] = contacts[i].Pn;
+                dataContacts[i]["Pt"] = contacts[i].Pt;
             }
         }
 
-        virtual void JsonContrarySerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+        virtual void JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
             numContacts = data["numContacts"];
-            data = data["contacts"];
+            auto dataContacts = data["contacts"];
             for (size_t i = 0; i < numContacts; ++i)
             {
-                ContrarySerializationVec2(data[i], contacts[i].position);
-                ContrarySerializationVec2(data[i], contacts[i].normal);
-                data[i]["separation"] = contacts[i].separation;
-                data[i]["friction"] = contacts[i].friction;
-                data[i]["w_side"] = contacts[i].w_side;
-                data[i]["Pn"] = contacts[i].Pn;
-                data[i]["Pt"] = contacts[i].Pt;
+                ContrarySerializationVec2(dataContacts[i], contacts[i].position);
+                ContrarySerializationVec2(dataContacts[i], contacts[i].normal);
+                contacts[i].separation = dataContacts[i]["separation"];
+                contacts[i].friction = dataContacts[i]["friction"];
+                contacts[i].w_side = dataContacts[i]["w_side"];
+                contacts[i].Pn = dataContacts[i]["Pn"];
+                contacts[i].Pt = dataContacts[i]["Pt"];
             }
         }
+
+        virtual unsigned int GetArbiterType() { return 0; }
 #endif
 
     public:
-        Contact contacts[20];  // 碰撞点集合
-        int numContacts = 0;       // 碰撞点数量
+        Contact contacts[20]; // 碰撞点集合
+        int numContacts = 0;  // 碰撞点数量
 
         ArbiterKey key; // 两个对象的 钥匙键
 

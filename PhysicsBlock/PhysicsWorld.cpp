@@ -958,14 +958,15 @@ namespace PhysicsBlock
                 SerializationVec2(dataArray[i], GridWind[i]);
             }
         }
-        if (wMapFormwork) {
+        if (wMapFormwork)
+        {
             switch (wMapFormwork->FMGetType())
             {
             case PhysicsObjectEnum::_MapStatic:
                 data["wMapFormwork"]["Type"] = PhysicsObjectEnum::_MapStatic;
-                ((MapStatic*)wMapFormwork)->JsonSerialization(data["wMapFormwork"]);
+                ((MapStatic *)wMapFormwork)->JsonSerialization(data["wMapFormwork"]);
                 break;
-            
+
             default:
                 break;
             }
@@ -992,44 +993,6 @@ namespace PhysicsBlock
                 ++dataIndex;
             }
         }
-        if (PhysicsJointS.size() != 0)
-        {
-            dataIndex = 0;
-            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["PhysicsJointS"];
-            dataArray = dataArray.array();
-            for (auto j : PhysicsJointS)
-            {
-                j->JsonSerialization(dataArray[dataIndex]);
-                ++dataIndex;
-            }
-        }
-        if (BaseJunctionS.size() != 0)
-        {
-            dataIndex = 0;
-            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["BaseJunctionS"];
-            dataArray = dataArray.array();
-            for (auto j : BaseJunctionS)
-            {
-                dataArray[dataIndex]["ObjectType"] = j->ObjectType();
-                switch (j->ObjectType())
-                {
-                case CordObjectType::JunctionAA :
-                    
-                    break;
-                case CordObjectType::JunctionA :
-                    break;
-                case CordObjectType::JunctionP :
-                    break;
-                case CordObjectType::JunctionPP :
-                    break;
-                
-                default:
-                    break;
-                }
-                j->JsonSerialization(dataArray[dataIndex]);
-                ++dataIndex;
-            }
-        }
         if (PhysicsCircleS.size() != 0)
         {
             dataIndex = 0;
@@ -1052,6 +1015,78 @@ namespace PhysicsBlock
                 ++dataIndex;
             }
         }
+        if (PhysicsJointS.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["PhysicsJointS"];
+            dataArray = dataArray.array();
+            for (auto j : PhysicsJointS)
+            {
+                dataArray[dataIndex]["body1"] = GetPtrIndex(j->body1);
+                dataArray[dataIndex]["body1Type"] = j->body1->PFGetType();
+                dataArray[dataIndex]["body2"] = GetPtrIndex(j->body2);
+                dataArray[dataIndex]["body2Type"] = j->body2->PFGetType();
+                j->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
+        if (BaseJunctionS.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["BaseJunctionS"];
+            dataArray = dataArray.array();
+            for (auto j : BaseJunctionS)
+            {
+                dataArray[dataIndex]["ObjectType"] = j->ObjectType();
+                switch (j->ObjectType())
+                {
+                case CordObjectType::JunctionAA:
+                    dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsJunctionSS *)j)->mParticle1);
+                    dataArray[dataIndex]["body1Type"] = ((PhysicsJunctionSS *)j)->mParticle1->PFGetType();
+                    dataArray[dataIndex]["body2"] = GetPtrIndex(((PhysicsJunctionSS *)j)->mParticle2);
+                    dataArray[dataIndex]["body2Type"] = ((PhysicsJunctionSS *)j)->mParticle2->PFGetType();
+                    break;
+                case CordObjectType::JunctionA:
+                    dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsJunctionS *)j)->mParticle);
+                    dataArray[dataIndex]["body1Type"] = ((PhysicsJunctionS *)j)->mParticle->PFGetType();
+                    break;
+                case CordObjectType::JunctionP:
+                    dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsJunctionP *)j)->mParticle);
+                    dataArray[dataIndex]["body1Type"] = ((PhysicsJunctionP *)j)->mParticle->PFGetType();
+                    break;
+                case CordObjectType::JunctionPP:
+                    dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsJunctionPP *)j)->mParticle1);
+                    dataArray[dataIndex]["body1Type"] = ((PhysicsJunctionPP *)j)->mParticle1->PFGetType();
+                    dataArray[dataIndex]["body2"] = GetPtrIndex(((PhysicsJunctionPP *)j)->mParticle2);
+                    dataArray[dataIndex]["body2Type"] = ((PhysicsJunctionPP *)j)->mParticle2->PFGetType();
+                    break;
+
+                default:
+                    break;
+                }
+                j->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
+        if (CollideGroupVector.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["CollideGroupVector"];
+            dataArray = dataArray.array();
+            for (auto j : CollideGroupVector)
+            {
+                dataArray[dataIndex]["type"] = j->GetArbiterType();
+                dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsFormwork *)j->key.object1));
+                dataArray[dataIndex]["body1Type"] = ((PhysicsFormwork *)j->key.object1)->PFGetType();
+                if (j->GetArbiterType() > PhysicsArbiterType::ArbiterL)
+                {
+                    dataArray[dataIndex]["body2"] = GetPtrIndex(((PhysicsFormwork *)j->key.object2));
+                    dataArray[dataIndex]["body2Type"] = ((PhysicsFormwork *)j->key.object2)->PFGetType();
+                }
+                j->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
     }
 
     void PhysicsWorld::JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
@@ -1068,13 +1103,14 @@ namespace PhysicsBlock
                 ContrarySerializationVec2(data["GridWind"][i], GridWind[i]);
             }
         }
-        if (data.find("wMapFormwork") != data.end()) {
+        if (data.find("wMapFormwork") != data.end())
+        {
             switch (PhysicsObjectEnum(data["wMapFormwork"]["Type"]))
             {
             case PhysicsObjectEnum::_MapStatic:
                 wMapFormwork = new MapStatic(data["wMapFormwork"]);
                 break;
-            
+
             default:
                 break;
             }
@@ -1094,20 +1130,6 @@ namespace PhysicsBlock
                 AddObject(new PhysicsParticle(data["PhysicsParticleS"][i]));
             }
         }
-        if (data.find("PhysicsJointS") != data.end())
-        {
-            for (size_t i = 0; i < data["PhysicsJointS"].size(); ++i)
-            {
-                AddObject(new PhysicsJoint(data["PhysicsJointS"][i]));
-            }
-        }
-        if (data.find("BaseJunctionS") != data.end())
-        {
-            for (size_t i = 0; i < data["BaseJunctionS"].size(); ++i)
-            {
-                // AddObject(new BaseJunction(data["BaseJunctionS"][i]));
-            }
-        }
         if (data.find("PhysicsCircleS") != data.end())
         {
             for (size_t i = 0; i < data["PhysicsCircleS"].size(); ++i)
@@ -1122,10 +1144,185 @@ namespace PhysicsBlock
                 AddObject(new PhysicsLine(data["PhysicsLineS"][i]));
             }
         }
+        if (data.find("PhysicsJointS") != data.end())
+        {
+            for (size_t i = 0; i < data["PhysicsJointS"].size(); ++i)
+            {
+                PhysicsJoint *joint = new PhysicsJoint(data["PhysicsJointS"][i]);
+                AddObject(joint);
+                joint->body1 = (PhysicsAngle *)GetIndexPtr(data["PhysicsJointS"][i]["body1Type"], data["PhysicsJointS"][i]["body1"]);
+                joint->body2 = (PhysicsAngle *)GetIndexPtr(data["PhysicsJointS"][i]["body2Type"], data["PhysicsJointS"][i]["body2"]);
+            }
+        }
+        if (data.find("BaseJunctionS") != data.end())
+        {
+            PhysicsJunctionSS *JunctionSS;
+            PhysicsJunctionS *JunctionS;
+            PhysicsJunctionP *JunctionP;
+            PhysicsJunctionPP *JunctionPP;
+            for (size_t i = 0; i < data["BaseJunctionS"].size(); ++i)
+            {
+                switch ((CordObjectType)data["BaseJunctionS"][i]["ObjectType"])
+                {
+                case CordObjectType::JunctionAA:
+                    JunctionSS = new PhysicsJunctionSS(data["BaseJunctionS"][i]);
+                    AddObject(JunctionSS);
+                    JunctionSS->mParticle1 = (PhysicsAngle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
+                    JunctionSS->mParticle2 = (PhysicsAngle *)GetIndexPtr(data["BaseJunctionS"][i]["body2Type"], data["BaseJunctionS"][i]["body2"]);
+                    break;
+                case CordObjectType::JunctionA:
+                    JunctionS = new PhysicsJunctionS(data["BaseJunctionS"][i]);
+                    AddObject(JunctionS);
+                    JunctionS->mParticle = (PhysicsAngle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
+                    break;
+                case CordObjectType::JunctionP:
+                    JunctionP = new PhysicsJunctionP(data["BaseJunctionS"][i]);
+                    AddObject(JunctionP);
+                    JunctionP->mParticle = (PhysicsParticle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
+                    break;
+                case CordObjectType::JunctionPP:
+                    JunctionPP = new PhysicsJunctionPP(data["BaseJunctionS"][i]);
+                    AddObject(JunctionPP);
+                    JunctionPP->mParticle1 = (PhysicsParticle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
+                    JunctionPP->mParticle2 = (PhysicsParticle *)GetIndexPtr(data["BaseJunctionS"][i]["body2Type"], data["BaseJunctionS"][i]["body2"]);
+                    break;
+
+                default:
+                    break;
+                }
+            }
+        }
+        if (data.find("CollideGroupVector") != data.end())
+        {
+#define CollideGroupVectorContrarySerialization(Arbiter_, Type1, Type2)                                        \
+    Type1##1 = (Type1 *)GetIndexPtr(data["CollideGroupVector"][i]["body1Type"], data["CollideGroupVector"][i]["body1"]); \
+    Type2##2 = (Type2 *)GetIndexPtr(data["CollideGroupVector"][i]["body2Type"], data["CollideGroupVector"][i]["body2"]); \
+    Arbiter_##Ptr = Pool##Arbiter_.newElement(Type1##1, Type2##2);                                             \
+    Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]); \
+    NewCollideGroup.push_back(Arbiter_##Ptr);
+
+#define CollideGroupVectorContrarySerializationMapFormwork(Arbiter_, Type)                                   \
+    Type##1 = (Type *)GetIndexPtr(data["CollideGroupVector"][i]["body1Type"], data["CollideGroupVector"][i]["body1"]); \
+    Arbiter_##Ptr = Pool##Arbiter_.newElement(Type##1, wMapFormwork);                                        \
+    Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]); \
+    NewCollideGroup.push_back(Arbiter_##Ptr);
+
+            PhysicsShape *PhysicsShape1, *PhysicsShape2;
+            PhysicsParticle *PhysicsParticle1, *PhysicsParticle2;
+            PhysicsCircle *PhysicsCircle1, *PhysicsCircle2;
+            PhysicsLine *PhysicsLine1, *PhysicsLine2;
+            PhysicsArbiterSS *PhysicsArbiterSSPtr;
+            PhysicsArbiterSP *PhysicsArbiterSPPtr;
+            PhysicsArbiterS *PhysicsArbiterSPtr;
+            PhysicsArbiterP *PhysicsArbiterPPtr;
+            PhysicsArbiterCS *PhysicsArbiterCSPtr;
+            PhysicsArbiterCP *PhysicsArbiterCPPtr;
+            PhysicsArbiterC *PhysicsArbiterCPtr;
+            PhysicsArbiterCC *PhysicsArbiterCCPtr;
+            PhysicsArbiterLC *PhysicsArbiterLCPtr;
+            PhysicsArbiterLS *PhysicsArbiterLSPtr;
+            PhysicsArbiterLP *PhysicsArbiterLPPtr;
+            PhysicsArbiterL *PhysicsArbiterLPtr;
+            for (size_t i = 0; i < data["CollideGroupVector"].size(); ++i)
+            {
+                switch (((PhysicsArbiterType)data["CollideGroupVector"][i]["type"]))
+                {
+                case PhysicsArbiterType::ArbiterSS:
+                    CollideGroupVectorContrarySerialization(PhysicsArbiterSS, PhysicsShape, PhysicsShape);
+                    break;
+                case PhysicsArbiterType::ArbiterSP:
+                    CollideGroupVectorContrarySerialization(PhysicsArbiterSP, PhysicsShape, PhysicsParticle);
+                    break;
+                case PhysicsArbiterType::ArbiterS:
+                    CollideGroupVectorContrarySerializationMapFormwork(PhysicsArbiterS, PhysicsShape);
+                    break;
+                case PhysicsArbiterType::ArbiterP:
+                    CollideGroupVectorContrarySerializationMapFormwork(PhysicsArbiterP, PhysicsParticle);
+                    break;
+                case PhysicsArbiterType::ArbiterC:
+                    CollideGroupVectorContrarySerializationMapFormwork(PhysicsArbiterC, PhysicsCircle);
+                    break;
+                case PhysicsArbiterType::ArbiterCS:
+                    CollideGroupVectorContrarySerialization(PhysicsArbiterCS, PhysicsCircle, PhysicsShape);
+                    break;
+                case PhysicsArbiterType::ArbiterCP:
+                    CollideGroupVectorContrarySerialization(PhysicsArbiterCP, PhysicsCircle, PhysicsParticle);
+                    break;
+                case PhysicsArbiterType::ArbiterCC:
+                    CollideGroupVectorContrarySerialization(PhysicsArbiterCC, PhysicsCircle, PhysicsCircle);
+                    break;
+                case PhysicsArbiterType::ArbiterLC:
+                    CollideGroupVectorContrarySerialization(PhysicsArbiterLC, PhysicsLine, PhysicsCircle);
+                    break;
+                case PhysicsArbiterType::ArbiterLS:
+                    CollideGroupVectorContrarySerialization(PhysicsArbiterLS, PhysicsLine, PhysicsShape);
+                    break;
+                case PhysicsArbiterType::ArbiterLP:
+                    CollideGroupVectorContrarySerialization(PhysicsArbiterLP, PhysicsLine, PhysicsParticle);
+                    break;
+                case PhysicsArbiterType::ArbiterL:
+                    CollideGroupVectorContrarySerializationMapFormwork(PhysicsArbiterL, PhysicsLine);
+                    break;
+
+                default:
+                    break;
+                }
+            }
+        }
     }
-#endif
-    unsigned int PhysicsWorld::GetPtrIndex(PhysicsFormwork* ptr)
+
+    unsigned int PhysicsWorld::GetPtrIndex(PhysicsFormwork *ptr)
     {
+#define PhysicsVectorIndex(Vector, Ptr)        \
+    for (size_t i = 0; i < Vector.size(); ++i) \
+    {                                          \
+        if (Vector[i] == Ptr)                  \
+        {                                      \
+            return i;                          \
+        }                                      \
+    }
+
+        switch (ptr->PFGetType())
+        {
+        case PhysicsObjectEnum::shape:
+            PhysicsVectorIndex(PhysicsShapeS, ptr);
+            break;
+        case PhysicsObjectEnum::particle:
+            PhysicsVectorIndex(PhysicsParticleS, ptr);
+            break;
+        case PhysicsObjectEnum::circle:
+            PhysicsVectorIndex(PhysicsCircleS, ptr);
+            break;
+        case PhysicsObjectEnum::line:
+            PhysicsVectorIndex(PhysicsLineS, ptr);
+            break;
+
+        default:
+            break;
+        }
         return 0;
     }
+    void *PhysicsWorld::GetIndexPtr(PhysicsObjectEnum Enum, unsigned int index)
+    {
+        switch (Enum)
+        {
+        case PhysicsObjectEnum::shape:
+            return PhysicsShapeS[index];
+            break;
+        case PhysicsObjectEnum::particle:
+            return PhysicsParticleS[index];
+            break;
+        case PhysicsObjectEnum::circle:
+            return PhysicsCircleS[index];
+            break;
+        case PhysicsObjectEnum::line:
+            return PhysicsLineS[index];
+            break;
+
+        default:
+            break;
+        }
+        return 0;
+    }
+#endif
 }

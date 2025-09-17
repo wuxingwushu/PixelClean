@@ -57,7 +57,7 @@ namespace PhysicsBlock
         invMass = 1.0 / mass;
         if (invMass == 0)
         {
-            mass = DBL_MAX;
+            mass = FLOAT_MAX;
             CentreMass = CentreShape;
         }
         else
@@ -103,7 +103,7 @@ namespace PhysicsBlock
         invMomentInertia = 1.0 / MomentInertia;
         if (invMomentInertia == 0)
         {
-            MomentInertia = DBL_MAX;
+            MomentInertia = FLOAT_MAX;
         }
     }
 

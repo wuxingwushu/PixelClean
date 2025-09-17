@@ -6,6 +6,21 @@
 
 namespace PhysicsBlock
 {
+
+    enum PhysicsArbiterType {
+        ArbiterS,
+        ArbiterP,
+        ArbiterC,
+        ArbiterL,
+        ArbiterSS,
+        ArbiterSP,
+        ArbiterCS,
+        ArbiterCP,
+        ArbiterCC,
+        ArbiterLS,
+        ArbiterLC,
+        ArbiterLP,
+    };
    
     /**
      * @brief 动态形状，动态形状，碰撞解析 */
@@ -17,6 +32,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterSS; }
     };
 
     /**
@@ -29,6 +46,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterSP; }
     };
 
     /**
@@ -41,6 +60,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterS; }
     };
 
     /**
@@ -53,6 +74,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterP; }
     };
 
 
@@ -66,6 +89,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterC; }
     };
 
     /**
@@ -78,6 +103,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterCS; }
     };
 
     /**
@@ -90,6 +117,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterCP; }
     };
 
     /**
@@ -102,6 +131,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterCC; }
     };
 
     /**
@@ -114,6 +145,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterLC; }
     };
 
     /**
@@ -126,6 +159,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterLP; }
     };
 
     /**
@@ -138,6 +173,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterLS; }
     };
 
     /**
@@ -150,6 +187,8 @@ namespace PhysicsBlock
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
+
+        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterL; }
     };
     
 }

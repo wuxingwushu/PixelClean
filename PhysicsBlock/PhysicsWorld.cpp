@@ -1010,6 +1010,22 @@ namespace PhysicsBlock
             dataArray = dataArray.array();
             for (auto j : BaseJunctionS)
             {
+                dataArray[dataIndex]["ObjectType"] = j->ObjectType();
+                switch (j->ObjectType())
+                {
+                case CordObjectType::JunctionAA :
+                    
+                    break;
+                case CordObjectType::JunctionA :
+                    break;
+                case CordObjectType::JunctionP :
+                    break;
+                case CordObjectType::JunctionPP :
+                    break;
+                
+                default:
+                    break;
+                }
                 j->JsonSerialization(dataArray[dataIndex]);
                 ++dataIndex;
             }
@@ -1108,4 +1124,8 @@ namespace PhysicsBlock
         }
     }
 #endif
+    unsigned int PhysicsWorld::GetPtrIndex(PhysicsFormwork* ptr)
+    {
+        return 0;
+    }
 }

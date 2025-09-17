@@ -30,6 +30,14 @@ namespace PhysicsBlock
         rubber, // 橡皮筋
     };
 
+    enum CordObjectType
+    {
+        JunctionAA, //
+        JunctionA,  //
+        JunctionP,  //
+        JunctionPP, //
+    };
+
     class BaseJunction SerializationInherit_
     {
 #if PhysicsBlock_Serialization
@@ -37,10 +45,12 @@ namespace PhysicsBlock
         virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
             data["Length"] = Length;
+            data["Type"] = Type;
         }
         virtual void JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
             Length = data["Length"];
+            Type = data["Type"];
         }
 #endif
     public:
@@ -109,6 +119,8 @@ namespace PhysicsBlock
         virtual Vec2_ GetA() = 0;
         // 获取绳子的B端
         virtual Vec2_ GetB() = 0;
+        // 两个对象连接处理类型
+        virtual CordObjectType ObjectType() = 0;
     };
 
     class PhysicsJunctionSS : public BaseJunction
@@ -128,7 +140,7 @@ namespace PhysicsBlock
             ContrarySerializationVec2(data, mArm2);
         }
 #endif
-    private:
+    public:
         PhysicsAngle *mParticle1; // 形状
         Vec2_ mArm1;
         Vec2_ mR1;
@@ -148,6 +160,8 @@ namespace PhysicsBlock
         virtual Vec2_ GetA() { return mParticle1->pos + vec2angle(mArm1, mParticle1->angle); };
 
         virtual Vec2_ GetB() { return mParticle2->pos + vec2angle(mArm2, mParticle2->angle); };
+
+        virtual CordObjectType ObjectType() { return JunctionAA; };
     };
 
     class PhysicsJunctionS : public BaseJunction
@@ -158,14 +172,16 @@ namespace PhysicsBlock
         {
             BaseJunction::JsonSerialization(data);
             SerializationVec2(data, Arm);
+            SerializationVec2(data, mRegularDrop);
         }
         virtual void JsonContrarySerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
             BaseJunction::JsonContrarySerialization(data);
             ContrarySerializationVec2(data, Arm);
+            ContrarySerializationVec2(data, mRegularDrop);
         }
 #endif
-    private:
+    public:
         Vec2_ mRegularDrop;      // 固定点
         PhysicsAngle *mParticle; // 形状
         Vec2_ Arm;
@@ -183,6 +199,8 @@ namespace PhysicsBlock
         virtual Vec2_ GetA() { return mParticle->pos + vec2angle(Arm, mParticle->angle); };
 
         virtual Vec2_ GetB() { return mRegularDrop; };
+
+        virtual CordObjectType ObjectType() { return JunctionA; };
     };
 
     class PhysicsJunctionP : public BaseJunction
@@ -200,7 +218,7 @@ namespace PhysicsBlock
             ContrarySerializationVec2(data, mRegularDrop);
         }
 #endif
-    private:
+    public:
         Vec2_ mRegularDrop;         // 固定点
         PhysicsParticle *mParticle; // 粒子
     public:
@@ -215,11 +233,13 @@ namespace PhysicsBlock
         virtual Vec2_ GetA() { return mParticle->pos; };
 
         virtual Vec2_ GetB() { return mRegularDrop; };
+
+        virtual CordObjectType ObjectType() { return JunctionP; };
     };
 
     class PhysicsJunctionPP : public BaseJunction
     {
-    private:
+    public:
         PhysicsParticle *mParticle1; // 粒子1
         PhysicsParticle *mParticle2; // 粒子2
     public:
@@ -234,6 +254,8 @@ namespace PhysicsBlock
         virtual Vec2_ GetA() { return mParticle1->pos; };
 
         virtual Vec2_ GetB() { return mParticle2->pos; };
+
+        virtual CordObjectType ObjectType() { return JunctionPP; };
     };
 
 }

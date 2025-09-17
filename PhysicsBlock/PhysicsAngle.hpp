@@ -46,7 +46,11 @@ namespace PhysicsBlock
         {
             PhysicsParticle::JsonContrarySerialization(data);
             MomentInertia = data["MomentInertia"];
-            invMomentInertia = 1.0 / MomentInertia;
+            if (MomentInertia == FLOAT_MAX) {
+                invMomentInertia = 0;
+            }else{
+                invMomentInertia = FLOAT_(1) / MomentInertia;
+            }
             angle = data["angle"];
             angleSpeed = data["angleSpeed"];
             torque = data["torque"];

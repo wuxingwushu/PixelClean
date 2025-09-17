@@ -10,7 +10,7 @@ namespace PhysicsBlock
     {
     public:
         Vec2_ *OutlineSet;        // 轮廓点集合
-        FLOAT_ *FrictionSet;      // 轮廓点集合
+        FLOAT_ *FrictionSet;      // 轮廓点对应摩擦力集合
         unsigned int OutlineSize; // 轮廓点数量
 
         /**

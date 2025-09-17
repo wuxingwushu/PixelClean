@@ -116,7 +116,7 @@ namespace GAME
 
 	void PhysicsTest::GameUI()
 	{
-		ImGui::ShowDemoWindow();
+		//ImGui::ShowDemoWindow();
 		ImVec2 window_size;
 		ImGui::Begin(u8"编辑");
 		ImVec2 window_pos = ImGui::GetWindowPos();
@@ -739,7 +739,7 @@ namespace GAME
 
 	void PhysicsTest::FoundLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e)
 	{
-		if (PhysicsBlock::Modulus(s + e) < 0.2) {
+		if ((s == e) && (item_object != 1)) {
 			return;
 		}
 		Vec2_ pos;

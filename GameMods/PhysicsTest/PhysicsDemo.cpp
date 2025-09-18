@@ -319,7 +319,7 @@ namespace PhysicsBlock
 		{
 			PhysicsShape2->at(i).Collision = true;
 			PhysicsShape2->at(i).Entity = true;
-			PhysicsShape2->at(i).mass = DBL_MAX;
+			PhysicsShape2->at(i).mass = FLOAT_MAX;
 		}
 		PhysicsShape2->UpdateAll();
 		PhysicsShape2->angle = 0;
@@ -380,7 +380,7 @@ namespace PhysicsBlock
 		{
 			PhysicsShape2->at(i).Collision = true;
 			PhysicsShape2->at(i).Entity = true;
-			PhysicsShape2->at(i).mass = DBL_MAX;
+			PhysicsShape2->at(i).mass = FLOAT_MAX;
 		}
 		PhysicsShape2->UpdateAll();
 		PhysicsShape2->angle = 0;
@@ -623,9 +623,9 @@ namespace PhysicsBlock
 			ParticleS.push_back(PhysicsParticle1);
 		}
 
-		PhysicsBlock::PhysicsCircle *PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({-2, -2}, 1, DBL_MAX);
+		PhysicsBlock::PhysicsCircle *PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({-2, -2}, 1, FLOAT_MAX);
 		(*myPhysicsWorld)->AddObject(PhysicsCircle1);
-		PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({2, -2}, 1, DBL_MAX);
+		PhysicsCircle1 = new PhysicsBlock::PhysicsCircle({2, -2}, 1, FLOAT_MAX);
 		(*myPhysicsWorld)->AddObject(PhysicsCircle1);
 	}
 

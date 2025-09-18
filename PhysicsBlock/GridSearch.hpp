@@ -7,6 +7,8 @@ namespace PhysicsBlock
 
 // 是否采用莫顿编码
 #define Morton_define 1
+// 每层的偏移量预计算储存
+#define CurerExcursionVector 1
 
     // 网格搜索
     class GridSearch
@@ -16,10 +18,12 @@ namespace PhysicsBlock
         std::vector<PhysicsFormwork *> GridExtrovert;     // 网格外
         int mStorey = 0;                                  // 四叉网格层数
         Vec2_ mExcursion{0};                              // 相对世界坐标系的位置偏移量
-
+#if CurerExcursionVector
+        unsigned int *ExcursionVector = nullptr;
+#endif
     public:
         GridSearch() {}
-        ~GridSearch() {}
+        ~GridSearch() {if(ExcursionVector != nullptr) { delete ExcursionVector; } }
 
     private:
 #if Morton_define
@@ -95,11 +99,18 @@ namespace PhysicsBlock
                 ++_storey;
                 pos >>= 1;
             }
-
+#if CurerExcursionVector
+#if Morton_define
+            return ExcursionVector[_storey] + Morton2D(pos.x, pos.y);
+#else
+            return ExcursionVector[_storey] + (pos.x * (1 << (mStorey + 1 - _storey))) + pos.y;
+#endif
+#else
 #if Morton_define
             return Excursion(_storey) + Morton2D(pos.x, pos.y);
 #else
             return Excursion(_storey) + (pos.x * (1 << (mStorey + 1 - _storey))) + pos.y;
+#endif
 #endif
         }
 
@@ -113,6 +124,13 @@ namespace PhysicsBlock
         // 设置大小
         void SetMapRange(unsigned int Size)
         {
+#if CurerExcursionVector
+            if (ExcursionVector != nullptr)
+            {
+                delete ExcursionVector;
+                ExcursionVector = nullptr;
+            }
+#endif
             Size *= 4;
             mExcursion = {Size / 2, Size / 2};
             unsigned int GridSize = 1;
@@ -122,6 +140,13 @@ namespace PhysicsBlock
                 ++mStorey;
                 ++GridSize;
             }
+#if CurerExcursionVector
+            ExcursionVector = new unsigned int[mStorey];
+            for (size_t i = 0; i < mStorey; i++)
+            {
+                ExcursionVector[i] = Excursion(i);
+            }
+#endif
             Grid.clear();
             Grid.resize(GridSize);
         }
@@ -272,7 +297,8 @@ namespace PhysicsBlock
         }
 
         // 获取所有范围外的物体
-        std::vector<PhysicsFormwork *>& GetGridExtrovert() {
+        std::vector<PhysicsFormwork *> &GetGridExtrovert()
+        {
             return GridExtrovert;
         }
 

@@ -18,7 +18,7 @@ namespace PhysicsBlock
         {
             UpdateAll();
             ContrarySerializationVec2(data, pos);
-            OldPos = pos;
+            ContrarySerializationVec2(data, OldPos);
         };
 #endif
     public:

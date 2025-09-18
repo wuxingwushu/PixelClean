@@ -67,6 +67,7 @@ namespace PhysicsBlock
     void PhysicsParticle::JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
     {
         SerializationVec2(data, pos);
+        SerializationVec2(data, OldPos);
         SerializationVec2(data, speed);
         SerializationVec2(data, force);
         data["mass"] = mass;
@@ -76,6 +77,7 @@ namespace PhysicsBlock
     void PhysicsParticle::JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
     {
         ContrarySerializationVec2(data, pos);
+        ContrarySerializationVec2(data, OldPos);
         ContrarySerializationVec2(data, speed);
         ContrarySerializationVec2(data, force);
         mass = data["mass"];

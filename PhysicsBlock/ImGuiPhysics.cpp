@@ -197,7 +197,7 @@ namespace PhysicsBlock
 		if (ImGui::TreeNode("骨骼点", "骨骼点: %d", Object->OutlineSize))
 		{
 			// 使用 map 统计每个坐标点出现的次数
-			std::map<std::pair<int, int>, int> pointCount;
+			std::map<std::pair<FLOAT_, FLOAT_>, int> pointCount;
 
 			// 第一次遍历：统计每个点出现的次数
 			for (size_t i = 0; i < Object->OutlineSize; ++i)

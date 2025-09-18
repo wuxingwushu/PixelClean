@@ -89,7 +89,6 @@ namespace PhysicsBlock
     public:
         virtual void JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
-            data["numContacts"] = numContacts;
             auto& dataContacts = data["contacts"];
             dataContacts = dataContacts.array();
             for (size_t i = 0; i < numContacts; ++i)
@@ -106,7 +105,7 @@ namespace PhysicsBlock
 
         virtual void JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
         {
-            numContacts = data["numContacts"];
+            numContacts = data["contacts"].size();
             auto dataContacts = data["contacts"];
             for (size_t i = 0; i < numContacts; ++i)
             {

@@ -1076,12 +1076,26 @@ namespace PhysicsBlock
             for (auto j : CollideGroupVector)
             {
                 dataArray[dataIndex]["type"] = j->GetArbiterType();
-                dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsFormwork *)j->key.object1));
-                dataArray[dataIndex]["body1Type"] = ((PhysicsFormwork *)j->key.object1)->PFGetType();
                 if (j->GetArbiterType() > PhysicsArbiterType::ArbiterL)
                 {
+
+                    dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsFormwork *)j->key.object1));
+                    dataArray[dataIndex]["body1Type"] = ((PhysicsFormwork *)j->key.object1)->PFGetType();
                     dataArray[dataIndex]["body2"] = GetPtrIndex(((PhysicsFormwork *)j->key.object2));
                     dataArray[dataIndex]["body2Type"] = ((PhysicsFormwork *)j->key.object2)->PFGetType();
+                }
+                else
+                {
+                    if (j->key.object1 == wMapFormwork)
+                    {
+                        dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsFormwork *)j->key.object2));
+                        dataArray[dataIndex]["body1Type"] = ((PhysicsFormwork *)j->key.object2)->PFGetType();
+                    }
+                    else
+                    {
+                        dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsFormwork *)j->key.object1));
+                        dataArray[dataIndex]["body1Type"] = ((PhysicsFormwork *)j->key.object1)->PFGetType();
+                    }
                 }
                 j->JsonSerialization(dataArray[dataIndex]);
                 ++dataIndex;
@@ -1149,9 +1163,9 @@ namespace PhysicsBlock
             for (size_t i = 0; i < data["PhysicsJointS"].size(); ++i)
             {
                 PhysicsJoint *joint = new PhysicsJoint(data["PhysicsJointS"][i]);
-                AddObject(joint);
                 joint->body1 = (PhysicsAngle *)GetIndexPtr(data["PhysicsJointS"][i]["body1Type"], data["PhysicsJointS"][i]["body1"]);
                 joint->body2 = (PhysicsAngle *)GetIndexPtr(data["PhysicsJointS"][i]["body2Type"], data["PhysicsJointS"][i]["body2"]);
+                AddObject(joint);
             }
         }
         if (data.find("BaseJunctionS") != data.end())
@@ -1166,25 +1180,25 @@ namespace PhysicsBlock
                 {
                 case CordObjectType::JunctionAA:
                     JunctionSS = new PhysicsJunctionSS(data["BaseJunctionS"][i]);
-                    AddObject(JunctionSS);
                     JunctionSS->mParticle1 = (PhysicsAngle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
                     JunctionSS->mParticle2 = (PhysicsAngle *)GetIndexPtr(data["BaseJunctionS"][i]["body2Type"], data["BaseJunctionS"][i]["body2"]);
+                    AddObject(JunctionSS);
                     break;
                 case CordObjectType::JunctionA:
                     JunctionS = new PhysicsJunctionS(data["BaseJunctionS"][i]);
-                    AddObject(JunctionS);
                     JunctionS->mParticle = (PhysicsAngle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
+                    AddObject(JunctionS);
                     break;
                 case CordObjectType::JunctionP:
                     JunctionP = new PhysicsJunctionP(data["BaseJunctionS"][i]);
-                    AddObject(JunctionP);
                     JunctionP->mParticle = (PhysicsParticle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
+                    AddObject(JunctionP);
                     break;
                 case CordObjectType::JunctionPP:
                     JunctionPP = new PhysicsJunctionPP(data["BaseJunctionS"][i]);
-                    AddObject(JunctionPP);
                     JunctionPP->mParticle1 = (PhysicsParticle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
                     JunctionPP->mParticle2 = (PhysicsParticle *)GetIndexPtr(data["BaseJunctionS"][i]["body2Type"], data["BaseJunctionS"][i]["body2"]);
+                    AddObject(JunctionPP);
                     break;
 
                 default:
@@ -1194,17 +1208,17 @@ namespace PhysicsBlock
         }
         if (data.find("CollideGroupVector") != data.end())
         {
-#define CollideGroupVectorContrarySerialization(Arbiter_, Type1, Type2)                                        \
+#define CollideGroupVectorContrarySerialization(Arbiter_, Type1, Type2)                                                  \
     Type1##1 = (Type1 *)GetIndexPtr(data["CollideGroupVector"][i]["body1Type"], data["CollideGroupVector"][i]["body1"]); \
     Type2##2 = (Type2 *)GetIndexPtr(data["CollideGroupVector"][i]["body2Type"], data["CollideGroupVector"][i]["body2"]); \
-    Arbiter_##Ptr = Pool##Arbiter_.newElement(Type1##1, Type2##2);                                             \
-    Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]); \
+    Arbiter_##Ptr = Pool##Arbiter_.newElement(Type1##1, Type2##2);                                                       \
+    Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]);                                             \
     NewCollideGroup.push_back(Arbiter_##Ptr);
 
-#define CollideGroupVectorContrarySerializationMapFormwork(Arbiter_, Type)                                   \
+#define CollideGroupVectorContrarySerializationMapFormwork(Arbiter_, Type)                                             \
     Type##1 = (Type *)GetIndexPtr(data["CollideGroupVector"][i]["body1Type"], data["CollideGroupVector"][i]["body1"]); \
-    Arbiter_##Ptr = Pool##Arbiter_.newElement(Type##1, wMapFormwork);                                        \
-    Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]); \
+    Arbiter_##Ptr = Pool##Arbiter_.newElement(Type##1, wMapFormwork);                                                  \
+    Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]);                                           \
     NewCollideGroup.push_back(Arbiter_##Ptr);
 
             PhysicsShape *PhysicsShape1, *PhysicsShape2;

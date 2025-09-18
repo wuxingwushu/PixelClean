@@ -145,8 +145,10 @@ namespace GAME
 		static int item_current = item_Demo_idx + 1;						  // 储存当前Demo序号
 		ImGui::Combo("Demo", &item_Demo_idx, PhysicsBlock::DemoNameS, IM_ARRAYSIZE(PhysicsBlock::DemoNameS));
 		// Demo序号 是否发生改变
-		if (item_current != item_Demo_idx)
+		static bool ResetBool = false;
+		if ((item_current != item_Demo_idx) || ResetBool)
 		{
+			ResetBool = false;
 			item_current = item_Demo_idx;
 			PhysicsBlock::DemoFunS[item_Demo_idx](&mPhysicsWorld, mCamera);
 			mMapStatic = (PhysicsBlock::MapStatic *)mPhysicsWorld->GetMapFormwork();
@@ -163,7 +165,9 @@ namespace GAME
 				}
 			}
 		}
-
+		if (ImGui::Button("重置")) {
+			ResetBool = true;
+		}
 		if (ImGui::Button("保存"))
 		{
 			auto jsondata = nlohmann::json::parse(R"({})");

@@ -24,7 +24,7 @@ namespace PhysicsBlock
             MomentInertia = data["MomentInertia"];
             if (MomentInertia == FLOAT_MAX) {
                 invMomentInertia = 0;
-            }else{
+            } else {
                 invMomentInertia = FLOAT_(1) / MomentInertia;
             }
             angle = data["angle"];
@@ -102,6 +102,9 @@ namespace PhysicsBlock
                 return;
 
             PhysicsParticle::PhysicsSpeed(time, Ga);
+#if Define_MinSpoilageBool
+            angleSpeed *= Define_MinSpoilage;
+#endif
             angleSpeed += time * invMomentInertia * torque;
             torque = 0;
         }

@@ -32,7 +32,9 @@ namespace PhysicsBlock
     {
         if (invMass == 0)
             return;
-
+#if Define_MinSpoilageBool
+        speed *= Define_MinSpoilage;
+#endif
         speed += time * (Ga + invMass * force);
         force = {0, 0};
     }

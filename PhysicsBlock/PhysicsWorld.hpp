@@ -162,8 +162,8 @@ namespace PhysicsBlock
         SerializationVirtualFunction;
         PhysicsWorld(const nlohmann::json_abi_v3_12_0::basic_json<> &data);
 
-        unsigned int GetPtrIndex(PhysicsFormwork* ptr);
-        void* GetIndexPtr(PhysicsObjectEnum Enum, unsigned int index);
+        unsigned int GetPtrIndex(PhysicsFormwork *ptr);
+        void *GetIndexPtr(PhysicsObjectEnum Enum, unsigned int index);
 #endif
     public:
         Vec2_ GravityAcceleration;           // 重力加速度
@@ -181,10 +181,13 @@ namespace PhysicsBlock
         std::vector<PhysicsCircle *> PhysicsCircleS;     // 物理圆
         std::vector<PhysicsLine *> PhysicsLineS;         // 物理圆
 
-        std::unordered_map<ArbiterKey, BaseArbiter *, ArbiterKeyHash> CollideGroupS; // 碰撞队
-        std::vector<BaseArbiter *> CollideGroupVector;
-        std::vector<BaseArbiter *> NewCollideGroup;
-        std::vector<ArbiterKey> DeleteCollideGroup;
+        std::unordered_map<ArbiterKey, BaseArbiter *, ArbiterKeyHash> CollideGroupS; // 碰撞对-键值容器
+        std::vector<BaseArbiter *> CollideGroupVector;                               // 碰撞对数组
+        std::vector<BaseArbiter *> NewCollideGroup;                                  // 新添加的碰撞对
+        std::vector<ArbiterKey> DeleteCollideGroup;                                  // 删除的碰撞对
+
+        unsigned int ObjectSize = 0;                             // 动态物理对象总数量
+        unsigned int ApplyImpulseSize = PhysicsApplyImpulseSize; // 迭代次数
 
         void HandleCollideGroup(BaseArbiter *Ba);
 
@@ -216,36 +219,58 @@ namespace PhysicsBlock
         PhysicsWorld(Vec2_ GravityAcceleration, const bool Wind);
         ~PhysicsWorld();
 
+        // 计算最小迭代次数
+        void ApplyImpulseAdd()
+        {
+            ++ObjectSize;
+            // 不可以小于最小迭代次数
+            if (ObjectSize < (PhysicsApplyImpulseSize * PhysicsApplyImpulseSize * 5))
+            {
+                ApplyImpulseSize = PhysicsApplyImpulseSize;
+            }
+            else
+            {
+                // 这个算法是通过实验得来的。可以得到一个相对较小的迭代次数
+                ApplyImpulseSize = sqrt(ObjectSize / 5);
+            }
+        }
+
         void AddObject(PhysicsShape *Object)
         {
+            ApplyImpulseAdd();
             mGridSearch.Add(Object);
             PhysicsShapeS.push_back(Object);
         }
 
         void AddObject(PhysicsParticle *Object)
         {
+            ApplyImpulseAdd();
             mGridSearch.Add(Object);
             PhysicsParticleS.push_back(Object);
         }
 
         void AddObject(PhysicsJoint *Object)
         {
+            ApplyImpulseAdd();
             PhysicsJointS.push_back(Object);
         }
 
         void AddObject(BaseJunction *Object)
         {
+            ApplyImpulseAdd();
             BaseJunctionS.push_back(Object);
         }
 
         void AddObject(PhysicsCircle *Object)
         {
+            ApplyImpulseAdd();
             mGridSearch.Add(Object);
             PhysicsCircleS.push_back(Object);
         }
 
         void AddObject(PhysicsLine *Object)
         {
+            ApplyImpulseAdd();
             PhysicsLineS.push_back(Object);
         }
 

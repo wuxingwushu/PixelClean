@@ -1,4 +1,5 @@
 #pragma once
+#include "BaseDefine.h"
 #include "PhysicsFormwork.hpp"
 #include "BaseSerialization.hpp"
 
@@ -80,7 +81,7 @@ namespace PhysicsBlock
         }
         /**
          * @brief 速度
-         * @return 位置 */
+         * @return 速度 */
         virtual Vec2_ &PFSpeed() { return speed; };
         /**
          * @brief 角速度

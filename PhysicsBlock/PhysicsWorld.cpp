@@ -94,11 +94,13 @@ namespace PhysicsBlock
 
     PhysicsWorld::~PhysicsWorld()
     {
+#if ThreadPoolBool
         // 等待线程结束
         for (auto &tf : xTn)
         {
             tf.wait();
         }
+#endif
 
         if (GridWind != nullptr)
         {
@@ -192,7 +194,6 @@ namespace PhysicsBlock
     void PhysicsWorld::PhysicsEmulator(FLOAT_ time)
     {
 #if ThreadPoolBool
-
         const int xThreadNum = std::thread::hardware_concurrency();
 
         // 等待 判断物体间的碰撞 的 任务结束
@@ -202,9 +203,6 @@ namespace PhysicsBlock
         }
         xTn.clear();
 #endif
-
-        // 更新网格
-        mGridSearch.UpData();
 
         const auto XT_Fun = [this](int T_Num, int Tx)
         {
@@ -218,19 +216,25 @@ namespace PhysicsBlock
                 JZ = (PhysicsShapeS[SizeD]->StaticNum > 10);
 
                 // 和地形的碰撞
-                if (!JZ)
+                if (!JZ && (PhysicsShapeS[SizeD]->mass != FLOAT_MAX))
                     Arbiter(PhysicsShapeS[SizeD], wMapFormwork);
 
                 std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->radius);
                 for (auto i : SearchV)
                 {
+
+                    if ((PhysicsShapeS[SizeD]->mass == FLOAT_MAX) && (i->PFGetMass() == FLOAT_MAX))
+                    {
+                        continue;
+                    }
+                    if (JZ && (((PhysicsParticle *)i)->StaticNum > 10))
+                    {
+                        continue;
+                    }
+
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
-                        if (JZ && (((PhysicsCircle *)i)->StaticNum > 10))
-                        {
-                            break;
-                        }
                         if (!CollideAABB(PhysicsShapeS[SizeD], ((PhysicsCircle *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
@@ -240,10 +244,6 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
-                        if (JZ && (((PhysicsParticle *)i)->StaticNum > 10))
-                        {
-                            break;
-                        }
                         if (PhysicsShapeS[SizeD]->DropCollision(((PhysicsParticle *)i)->pos).Collision)
                         {
                             ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
@@ -257,10 +257,6 @@ namespace PhysicsBlock
                         break;
                     case PhysicsObjectEnum::shape:
                         if (PhysicsShapeS[SizeD] == ((PhysicsShape *)i))
-                        {
-                            break;
-                        }
-                        if (JZ && (((PhysicsShape *)i)->StaticNum > 10))
                         {
                             break;
                         }
@@ -286,20 +282,26 @@ namespace PhysicsBlock
                 JZ = (PhysicsCircleS[SizeD]->StaticNum > 10);
 
                 // 和地形的碰撞
-                if (!JZ)
+                if (!JZ && (PhysicsCircleS[SizeD]->mass != FLOAT_MAX))
                     Arbiter(PhysicsCircleS[SizeD], wMapFormwork);
 
                 std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsCircleS[SizeD]->pos, PhysicsCircleS[SizeD]->radius);
                 for (auto i : SearchV)
                 {
+
+                    if ((PhysicsCircleS[SizeD]->mass == FLOAT_MAX) && (i->PFGetMass() == FLOAT_MAX))
+                    {
+                        continue;
+                    }
+                    if (JZ && (((PhysicsParticle *)i)->StaticNum > 10))
+                    {
+                        continue;
+                    }
+
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
                         if (PhysicsCircleS[SizeD] == ((PhysicsCircle *)i))
-                        {
-                            break;
-                        }
-                        if (JZ && (((PhysicsCircle *)i)->StaticNum > 10))
                         {
                             break;
                         }
@@ -312,10 +314,6 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
-                        if (JZ && (((PhysicsParticle *)i)->StaticNum > 10))
-                        {
-                            break;
-                        }
                         if (CollideAABB(PhysicsCircleS[SizeD], ((PhysicsParticle *)i)))
                         {
                             ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
@@ -341,19 +339,24 @@ namespace PhysicsBlock
                 JZ = (PhysicsLineS[SizeD]->StaticNum > 10);
 
                 // 和地形的碰撞
-                if (!JZ)
+                if (!JZ && (PhysicsLineS[SizeD]->mass != FLOAT_MAX))
                     Arbiter(PhysicsLineS[SizeD], wMapFormwork);
 
                 std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsLineS[SizeD]->pos, PhysicsLineS[SizeD]->radius);
                 for (auto i : SearchV)
                 {
+                    if ((PhysicsLineS[SizeD]->mass == FLOAT_MAX) && (i->PFGetMass() == FLOAT_MAX))
+                    {
+                        continue;
+                    }
+                    if (JZ && (((PhysicsParticle *)i)->StaticNum > 10))
+                    {
+                        continue;
+                    }
+
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
-                        if (JZ && (((PhysicsCircle *)i)->StaticNum > 10))
-                        {
-                            break;
-                        }
                         if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsCircle *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsLineS[SizeD]);
@@ -363,17 +366,9 @@ namespace PhysicsBlock
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsCircle *)i));
                         break;
                     case PhysicsObjectEnum::particle:
-                        if (JZ && (((PhysicsParticle *)i)->StaticNum > 10))
-                        {
-                            break;
-                        }
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsParticle *)i));
                         break;
                     case PhysicsObjectEnum::shape:
-                        if (JZ && (((PhysicsShape *)i)->StaticNum > 10))
-                        {
-                            break;
-                        }
                         if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsShape *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsLineS[SizeD]);
@@ -513,7 +508,7 @@ namespace PhysicsBlock
                 BaseJunctionS[SizeD]->ApplyImpulse();
             }
         };
-        for (size_t di = 0; di < 10; ++di)
+        for (size_t di = 0; di < ApplyImpulseSize; ++di)
         {
             for (size_t i = 0; i < xThreadNum; ++i)
             {
@@ -528,7 +523,7 @@ namespace PhysicsBlock
         }
 #else
         // 迭代结果
-        for (size_t i = 0; i < 10; ++i)
+        for (size_t i = 0; i < ApplyImpulseSize; ++i)
         {
             for (auto kv : CollideGroupVector)
             {
@@ -547,7 +542,7 @@ namespace PhysicsBlock
 #endif
 
 // 这个多线程不影响结果
-#if 1 & ThreadPoolBool
+#if ThreadPoolBool
         // 移动
         const auto PhysicsPosXT_Fun = [this, time](int T_Num, int Tx)
         {
@@ -613,6 +608,9 @@ namespace PhysicsBlock
         }
 #endif
 
+        // 更新网格
+        mGridSearch.UpData();
+
 #if ThreadPoolBool
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
         for (size_t i = 0; i < xThreadNum; ++i)
@@ -638,10 +636,7 @@ namespace PhysicsBlock
         xTn.clear();
 #endif
 
-        // 更新网格
-        mGridSearch.UpData();
-
-        // 碰撞检测
+                // 碰撞检测
         const auto XT_Fun = [this](int T_Num, int Tx)
         {
             int SizeD;
@@ -654,6 +649,12 @@ namespace PhysicsBlock
                 std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->radius);
                 for (auto i : SearchV)
                 {
+
+                    if ((PhysicsShapeS[SizeD]->mass == FLOAT_MAX) && (i->PFGetMass() == FLOAT_MAX))
+                    {
+                        continue;
+                    }
+
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
@@ -705,6 +706,11 @@ namespace PhysicsBlock
                 std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsCircleS[SizeD]->pos, PhysicsCircleS[SizeD]->radius);
                 for (auto i : SearchV)
                 {
+                    if ((PhysicsCircleS[SizeD]->mass == FLOAT_MAX) && (i->PFGetMass() == FLOAT_MAX))
+                    {
+                        continue;
+                    }
+
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
@@ -747,6 +753,11 @@ namespace PhysicsBlock
                 std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsLineS[SizeD]->pos, PhysicsLineS[SizeD]->radius);
                 for (auto i : SearchV)
                 {
+                    if ((PhysicsLineS[SizeD]->mass == FLOAT_MAX) && (i->PFGetMass() == FLOAT_MAX))
+                    {
+                        continue;
+                    }
+
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
@@ -818,7 +829,7 @@ namespace PhysicsBlock
         }
         NewCollideGroup.clear();
 
-#if 1
+#if ThreadPoolBool
         // 预处理
         const auto PreStepXT_Fun = [this](int T_Num, int Tx)
         {
@@ -848,6 +859,9 @@ namespace PhysicsBlock
             i->PreStep();
         }
 #endif
+
+        // 更新网格
+        mGridSearch.UpData();
 
 #if ThreadPoolBool
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）

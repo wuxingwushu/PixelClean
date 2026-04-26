@@ -8,3 +8,4 @@ Environment/SpdLog
 Environment/libevent
 *.sf2
 build
+nul

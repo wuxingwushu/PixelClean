@@ -19,12 +19,12 @@ layout(binding = 1) uniform ObjectUniform {
 	uint Frame;
 }objectUBO;
 
-layout(std430, binding = 2) buffer BasisChart//基础原图
+layout(std430, binding = 2) readonly buffer BasisChart//基础原图 （readonly只读不写）
 {
    vec4 Color[];
 };
 
-layout(std430, binding = 3) buffer UVIndex//UV索引
+layout(std430, binding = 3) readonly buffer UVIndex//UV索引 （readonly只读不写）
 {
    int Index[];
 };

@@ -6,6 +6,12 @@ find_package(OpenMP REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# MSVC编译器选项：允许匿名结构体/联合体（Microsoft扩展）+ 设置源文件编码为UTF-8
+if(MSVC)
+    add_compile_options(/wd4201)  # 禁用警告：非标准扩展使用了无名结构体/联合体
+    add_compile_options(/utf-8)   # 设置源文件和执行字符集为UTF-8
+endif()
+
 aux_source_directory(. DIRSRCS)
 
 

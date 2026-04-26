@@ -4,6 +4,20 @@ project(PixelClean)
 # 查找并加载OpenMP模块
 find_package(OpenMP REQUIRED)
 
+# 查找 Vulkan SDK（自动搜索标准安装路径）
+if(NOT DEFINED ENV{VULKAN_SDK})
+    # Windows 常见安装路径
+    if(WIN32)
+        if(EXISTS "C:/VulkanSDK")
+            file(GLOB VULKAN_VERSIONS "C:/VulkanSDK/*")
+            list(SORT VULKAN_VERSIONS COMPARE NATURAL ORDER DESCENDING)
+            list(GET VULKAN_VERSIONS 0 LATEST_VULKAN)
+            set(ENV{VULKAN_SDK} "${LATEST_VULKAN}")
+            message(STATUS "Auto-detected Vulkan SDK: $ENV{VULKAN_SDK}")
+        endif()
+    endif()
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 
 # MSVC编译器选项：允许匿名结构体/联合体（Microsoft扩展）+ 设置源文件编码为UTF-8

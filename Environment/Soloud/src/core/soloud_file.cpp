@@ -29,6 +29,9 @@ distribution.
 #include <string.h>
 #include "soloud.h"
 #include "soloud_file.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace SoLoud
 {
@@ -105,7 +108,22 @@ mFileHandle(fp)
 	{
 		if (!aFilename)
 			return INVALID_PARAMETER;
+#ifdef _WIN32
+		int wlen = MultiByteToWideChar(CP_UTF8, 0, aFilename, -1, NULL, 0);
+		if (wlen > 0)
+		{
+			wchar_t* wpath = new wchar_t[wlen];
+			MultiByteToWideChar(CP_UTF8, 0, aFilename, -1, wpath, wlen);
+			mFileHandle = _wfopen(wpath, L"rb");
+			delete[] wpath;
+		}
+		else
+		{
+			mFileHandle = fopen(aFilename, "rb");
+		}
+#else
 		mFileHandle = fopen(aFilename, "rb");
+#endif
 		if (!mFileHandle)
 			return FILE_NOT_FOUND;
 		return SO_NO_ERROR;

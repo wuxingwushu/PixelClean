@@ -147,7 +147,7 @@ namespace TOOL {
 	void FilePath(const char* path, std::vector<std::string>* strS, const char* Suffix, const char* Name, int* Index) {
 		std::string ModelFileName;
 		for (const auto& entry : std::filesystem::directory_iterator(path)) {
-			ModelFileName = entry.path().filename().string();//获取文件名字
+			ModelFileName = entry.path().filename().u8string();//获取文件名字
 			for (size_t i = 0; i < ModelFileName.size(); ++i)
 			{
 				if ((ModelFileName[i] == '.') && (StrTolower(ModelFileName.substr(i + 1, ModelFileName.size() - i - 1)) == StrTolower(Suffix))) {

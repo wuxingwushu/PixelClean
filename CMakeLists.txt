@@ -15,12 +15,6 @@ endif()
 aux_source_directory(. DIRSRCS)
 
 
-# add_custom_command(
-#     OUTPUT ./GeneralCalculationGPU/WarfareMist.spv
-#     COMMAND ./GeneralCalculationGPU/compile.bat
-#     DEPENDS ./glslangValidator.exe
-# )
-
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	message("Debug 模式")
 else()
@@ -41,25 +35,32 @@ endif()
 # 设置 include 的引用头文件路径
 include_directories(
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/GLFW/include
-	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/VulKan/Include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment  # zlib 源代码父目录，支持 #include "zlib/zlib.h"
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/Soloud/include
 )
 
+# Vulkan SDK configuration
+if(DEFINED ENV{VULKAN_SDK})
+	include_directories(SYSTEM $ENV{VULKAN_SDK}/Include)
+	if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
+		link_directories(SYSTEM $ENV{VULKAN_SDK}/Lib)
+	else()
+		link_directories(SYSTEM $ENV{VULKAN_SDK}/Lib)
+	endif()
+endif()
+
 # 设置 lib 的文件路径（区分 Debug / Release）
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	link_directories(
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/GLFW/lib
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/VulKan/Lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/debug/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/lib/Debug
 	)
 else()
 	link_directories(
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/GLFW/lib
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/VulKan/Lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/lib/Release
 	)

@@ -1,11 +1,9 @@
 .vs
 out
-!Environment/Soloud
-!Environment/zlib
-Environment/GLFW
-Environment/VulKan
-Environment/SpdLog
-Environment/libevent
-*.sf2
 build
+*.sf2
 nul
+# Ignore all Environment subdirectories except whitelisted ones
+Environment/*
+!Environment/Soloud/
+!Environment/zlib/

@@ -1,5 +1,10 @@
 .vs
 out
-Environment
+!Environment/Soloud
+!Environment/zlib
+Environment/GLFW
+Environment/VulKan
+Environment/SpdLog
+Environment/libevent
 *.sf2
 build

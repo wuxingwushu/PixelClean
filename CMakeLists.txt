@@ -43,7 +43,7 @@ include_directories(
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/GLFW/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/VulKan/Include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/include
-	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/zlib/include
+	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment  # zlib 源代码父目录，支持 #include "zlib/zlib.h"
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/Soloud/include
 )
@@ -54,7 +54,6 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/GLFW/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/VulKan/Lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/debug/lib
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/zlib/lib/Debug
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/lib/Debug
 	)
 else()
@@ -62,7 +61,6 @@ else()
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/GLFW/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/VulKan/Lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/lib
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/zlib/lib/Release
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/lib/Release
 	)
 endif()
@@ -71,12 +69,11 @@ endif()
 
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/debug/bin ${CMAKE_CURRENT_BINARY_DIR})
-	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Environment/zlib/bin/Debug ${CMAKE_CURRENT_BINARY_DIR})
 else()
 	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/bin ${CMAKE_CURRENT_BINARY_DIR})
-	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Environment/zlib/bin/Release ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/PhysicsBlock.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Info.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs.json ${PROJECT_SOURCE_DIR}/.vs)# 设置的DLL文件路径
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./SoundEffect/Resources ${CMAKE_CURRENT_BINARY_DIR}/Resources)# 拷贝音效
@@ -107,6 +104,7 @@ add_custom_target(compile_shaders ALL
     VERBATIM
 )
 
+add_subdirectory(Environment/zlib)
 add_subdirectory(Environment/Soloud)
 add_subdirectory(Vulkan)
 add_subdirectory(VulkanTool)
@@ -178,7 +176,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		event_extra.lib
 
 		# zlib 数据压缩
-		zlibd.lib
+		zlib
 
 		# SpdLog 日志库
 		spdlogd.lib
@@ -228,7 +226,7 @@ else()
 		event_extra.lib
 
 		# zlib 数据压缩
-		zlib.lib
+		zlib
 
 		# SpdLog 日志库
 		spdlog.lib

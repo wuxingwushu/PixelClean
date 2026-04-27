@@ -590,7 +590,7 @@ namespace GAME {
 		//构建提交信息
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		
+
 
 		//同步信息，渲染对于显示图像的依赖，显示完毕后，才能输出颜色
 		VkSemaphore waitSemaphores[] = { mImageAvailableSemaphores[mCurrentFrame]->getSemaphore() };//获取储存信号量类

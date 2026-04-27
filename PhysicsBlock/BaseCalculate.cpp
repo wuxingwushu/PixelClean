@@ -8,12 +8,12 @@ namespace PhysicsBlock
 
 	int ToInt(double val)
 	{
-		return val >= 0 ? ((int)val) : (((int)val) - 1);
+		return val >= 0 ? static_cast<int>(val) : (static_cast<int>(val) - 1);
 	}
 
 	int ToInt(float val)
 	{
-		return val >= 0 ? ((int)val) : (((int)val) - 1);
+		return val >= 0 ? static_cast<int>(val) : (static_cast<int>(val) - 1);
 	}
 
 	glm::ivec2 ToInt(glm::vec2 val)
@@ -28,17 +28,17 @@ namespace PhysicsBlock
 
 	float q_sqrt(float S)
 	{
-		int i = *(int *)&S;
+		int i = *reinterpret_cast<int*>(&S);
 		i = 0x5f3759df - (i >> 1);
-		float y = *(float *)&i;
+		float y = *reinterpret_cast<float*>(&i);
 		return y * (1.5f - 0.5f * S * y * y);
 	}
 
 	double q_sqrt(double S)
 	{
-		int i = *(int *)&S;
+		long long i = *reinterpret_cast<long long*>(&S);
 		i = 0x5fe6eb50c7b537a9LL - (i >> 1);
-		double y = *(double *)&i;
+		double y = *reinterpret_cast<double*>(&i);
 		return y * (1.5f - 0.5f * S * y * y);
 	}
 
@@ -427,8 +427,8 @@ namespace PhysicsBlock
 	{
 		FLOAT_ ObjectAngle = EdgeVecToCosAngleFloat(angle);			// 获得力臂角度
 		FLOAT_ Angle = ObjectAngle - EdgeVecToCosAngleFloat(force); // 相差角度
-		FLOAT_ Long = Modulus(force);								// 力大小
-		return {Long * cos(Angle), Long * sin(Angle)};
+		FLOAT_ Long = Modulus(force);									// 力大小
+		return {static_cast<FLOAT_>(Long * cos(Angle)), static_cast<FLOAT_>(Long * sin(Angle))};
 	}
 
 	// 计算两个向量的夹角

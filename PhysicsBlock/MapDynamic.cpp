@@ -78,7 +78,7 @@ namespace PhysicsBlock
                     continue;
                 }
                 int i = Power(e);
-                i = (int)1 << i;
+                i = static_cast<int>(1) << i;
                 unsigned int PY = GetNum;
                 for (size_t posx = 0; posx < i; ++posx)
                 {

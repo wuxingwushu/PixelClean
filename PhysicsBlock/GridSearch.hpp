@@ -56,14 +56,18 @@ namespace PhysicsBlock
         // 计算在四叉网格的哪一个细分层
         inline int Storey(FLOAT_ R)
         {
+            // 搜索四叉网格范围大小
             unsigned int r = R * 2 + 0.99;
-            //++r;
-            unsigned int m = 1;
-            while (r >>= 1)
-            {
-                ++m;
-            }
-            return m;
+            // 处理0的情况
+            if (r == 0) return 1;
+            // 找到最高有效位的位数
+            unsigned long index;
+            #if defined(_MSC_VER)
+                _BitScanReverse(&index, r);
+            #else
+                index = 31 - __builtin_clz(r);
+            #endif
+            return index + 1;
         }
 
         // 世界位置处理为网格坐标位置

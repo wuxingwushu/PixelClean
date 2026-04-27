@@ -41,7 +41,7 @@ namespace GAME {
 
 		mUVBuffer = VulKan::Buffer::createVertexBuffer(device, 8 * sizeof(float), mUVs);
 
-		mIndexBuffer = VulKan::Buffer::createIndexBuffer(device, 6 * sizeof(float), mIndexDatas);
+		mIndexBuffer = VulKan::Buffer::createIndexBuffer(device, 6 * sizeof(unsigned int), mIndexDatas);
 
 		mIndexDatasSize = 6;
 	}

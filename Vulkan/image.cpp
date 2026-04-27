@@ -148,7 +148,7 @@ namespace VulKan {
 	Image::~Image() {
 		if (fillstageBuffer != VK_NULL_HANDLE) {
 			delete fillstageBuffer;
-			fillstageBuffer != VK_NULL_HANDLE;
+			fillstageBuffer = VK_NULL_HANDLE;
 		}
 
 		if (mImageView != VK_NULL_HANDLE) {
@@ -218,7 +218,7 @@ namespace VulKan {
 	}
 
 	bool Image::hasStencilComponent(VkFormat format) {
-		return mFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || mFormat == VK_FORMAT_D24_UNORM_S8_UINT;
+		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
 
 	void Image::setImageLayout(
@@ -372,7 +372,7 @@ namespace VulKan {
 
 		if (fillstageBuffer != VK_NULL_HANDLE) {
 			delete fillstageBuffer;
-			fillstageBuffer != VK_NULL_HANDLE;
+			fillstageBuffer = VK_NULL_HANDLE;
 		}
 
 		fillstageBuffer = Buffer::createStageBuffer(mDevice, mImage, mLayout, mWidth, mHeight,size, pData);
@@ -384,7 +384,7 @@ namespace VulKan {
 
 		if (fillstageBuffer != VK_NULL_HANDLE) {
 			delete fillstageBuffer;
-			fillstageBuffer != VK_NULL_HANDLE;
+			fillstageBuffer = VK_NULL_HANDLE;
 		}
 
 		fillstageBuffer = Buffer::createStageBuffer(mDevice, mImage, mLayout, mWidth, mHeight, size, pData, true);

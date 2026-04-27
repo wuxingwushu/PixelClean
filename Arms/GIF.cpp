@@ -52,6 +52,32 @@ namespace GAME {
 
 	GIF::~GIF()
 	{
+		delete mPositionBuffer;
+		delete mUVBuffer;
+		delete mIndexBuffer;
+
+		delete mtexture;
+
+		for (size_t i = 0; i < mUniformParams.size(); ++i) {
+			if (i == 1) {
+				for (size_t j = 0; j < mUniformParams[i]->mBuffers.size(); ++j) {
+					delete mUniformParams[i]->mBuffers[j];
+				}
+			}
+			delete mUniformParams[i];
+		}
+
+		delete mDescriptorSet;
+		delete mDescriptorPool;
+
+		if (mCommandBuffer != nullptr) {
+			for (size_t i = 0; i < mSwapChain->getImageCount(); ++i) {
+				delete mCommandBuffer[i];
+				delete mCommandPool[i];
+			}
+			delete[] mCommandBuffer;
+			delete[] mCommandPool;
+		}
 	}
 
 	void GIF::initUniformManager(const char* path, std::vector<VulKan::Buffer*> VPMstdBuffer, VulKan::Sampler* sampler) {
@@ -306,11 +332,11 @@ namespace GAME {
 			throw std::runtime_error("Error: failed to create descriptor set layout");
 		}
 
-		std::vector<VkDescriptorSetLayout> mDescriptorSetLayout;
-		mDescriptorSetLayout.push_back(mPipeline->DescriptorSetLayout);
+		mDescriptorSetLayouts.clear();
+		mDescriptorSetLayouts.push_back(mPipeline->DescriptorSetLayout);
 
-		mPipeline->mLayoutState.setLayoutCount = mDescriptorSetLayout.size();
-		mPipeline->mLayoutState.pSetLayouts = mDescriptorSetLayout.data();
+		mPipeline->mLayoutState.setLayoutCount = mDescriptorSetLayouts.size();
+		mPipeline->mLayoutState.pSetLayouts = mDescriptorSetLayouts.data();
 		//mPipeline->mLayoutState.pSetLayouts = &mPipeline->DescriptorSetLayout;
 		mPipeline->mLayoutState.pushConstantRangeCount = 0;
 		mPipeline->mLayoutState.pPushConstantRanges = nullptr;

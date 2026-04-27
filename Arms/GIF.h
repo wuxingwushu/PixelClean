@@ -20,6 +20,7 @@ namespace GAME {
 		VulKan::Device* mDevice = nullptr;
 		VulKan::Pipeline* mPipeline = nullptr;
 		VulKan::RenderPass* mRenderPass = nullptr;
+		std::vector<VkDescriptorSetLayout> mDescriptorSetLayouts{};
 	};
 
 	class GIF

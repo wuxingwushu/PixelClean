@@ -70,7 +70,7 @@ namespace VulKan {
 	}
 
 	void DescriptorSet::UpDataImagePicture(unsigned int Index, VkDescriptorImageInfo* ImageInfo) {
-		for (auto DescriptorSetWrites : descriptorSetWrites) {
+		for (auto& DescriptorSetWrites : descriptorSetWrites) {
 			if (DescriptorSetWrites[Index].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
 				DescriptorSetWrites[Index].pImageInfo = ImageInfo;
 			}
@@ -79,7 +79,7 @@ namespace VulKan {
 	}
 
 	void DescriptorSet::UpDataBufferPicture(unsigned int Index, VkDescriptorBufferInfo* BufferInfo) {
-		for (auto DescriptorSetWrites : descriptorSetWrites) {
+		for (auto& DescriptorSetWrites : descriptorSetWrites) {
 			if (DescriptorSetWrites[Index].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
 				DescriptorSetWrites[Index].pBufferInfo = BufferInfo;
 			}

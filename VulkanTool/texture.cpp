@@ -31,6 +31,10 @@ namespace VulKan {
 		InitTexture(pixels, texWidth, texHeight);
 
 		stbi_image_free(pixels);
+
+		mImageInfo.imageLayout = mImage->getLayout();
+		mImageInfo.imageView = mImage->getImageView();
+		mImageInfo.sampler = sampler->getSampler();
 	}
 
 	Texture::Texture(Device* device, const CommandPool* commandPool, Sampler* sampler, void* imageData, int Width, int Height)

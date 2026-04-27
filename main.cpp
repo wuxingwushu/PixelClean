@@ -1,7 +1,15 @@
 #include "application.h"
 #include "Vulkan/Window.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 int main(int argc, char** argv) {
+#ifdef _WIN32
+    // 设置 Windows 控制台输出编码为 UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+#endif
 	Global::Read();
 	TOOL::InitThreadPool();
 	TOOL::InitPerlinNoise();

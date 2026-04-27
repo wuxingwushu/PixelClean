@@ -52,11 +52,11 @@ namespace PhysicsBlock
         virtual FLOAT_ PFGetInvI(){ return 0; }
         /**
          * @brief 速度
-         * @return 位置 */
+         * @return 速度 */
         virtual Vec2_& PFSpeed() = 0;
         /**
          * @brief 角速度
-         * @return 质量倒数 */
+         * @return 角速度 */
         virtual FLOAT_& PFAngleSpeed() = 0;
     };
 

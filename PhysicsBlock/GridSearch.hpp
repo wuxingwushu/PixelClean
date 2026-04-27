@@ -45,13 +45,12 @@ namespace PhysicsBlock
         // 四叉网格的第几层，需要从偏移多少个开始算
         inline unsigned int Excursion(int storey)
         {
-            int Ppos = 0;
-            for (int i = 0; i <= (mStorey - storey); ++i)
-            {
-                Ppos <<= 2;
-                ++Ppos;
-            }
-            return Ppos;
+            int k = mStorey - storey;
+            if (k < 0) return 0;
+            unsigned int n = k + 1;
+            unsigned int result = (1U << (2 * n)) - 1;
+            result /= 3;
+            return result;
         };
 
         // 计算在四叉网格的哪一个细分层

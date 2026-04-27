@@ -5,14 +5,21 @@
 namespace PhysicsBlock
 {
 
+    /** @brief 默认构造函数 */
     PhysicsJoint::PhysicsJoint(/* args */)
     {
     }
 
+    /** @brief 析构函数 */
     PhysicsJoint::~PhysicsJoint()
     {
     }
 
+    /** @brief 设置关节连接
+     *  @param Body1 第一个物体
+     *  @param Body2 第二个物体
+     *  @param anchor 锚点位置（世界坐标）
+     *  @details 计算并存储两个物体在局部坐标系下的锚点位置 */
     void PhysicsJoint::Set(PhysicsAngle *Body1, PhysicsAngle *Body2, const Vec2_ anchor)
     {
         body1 = Body1;
@@ -31,6 +38,9 @@ namespace PhysicsBlock
 	    biasFactor = 0.2;
     }
 
+    /** @brief 预处理阶段
+     *  @param inv_dt 时间步长的倒数
+     *  @details 计算世界坐标系下的锚点位置、位置偏差、冲量矩阵，并应用上一次的冲量 */
     void PhysicsJoint::PreStep(FLOAT_ inv_dt)
     {
         AngleMat AngleMat1(body1->angle);
@@ -76,6 +86,8 @@ namespace PhysicsBlock
 		body2->angleSpeed += body2->invMomentInertia * Cross(r2, P);
     }
 
+    /** @brief 应用冲量阶段
+     *  @details 计算速度差，根据冲量矩阵计算冲量并应用到两个物体 */
     void PhysicsJoint::ApplyImpulse()
     {
         Vec2_ dv = body2->speed + Cross(body2->angleSpeed, r2) - body1->speed - Cross(body1->angleSpeed, r1);
@@ -90,6 +102,7 @@ namespace PhysicsBlock
     }
 
 #if PhysicsBlock_Serialization
+    /** @brief JSON序列化 */
     void PhysicsJoint::JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
     {
         SerializationVec2(data, localAnchor1);
@@ -104,6 +117,7 @@ namespace PhysicsBlock
         data["M4"] = M[1][1];
     }
 
+    /** @brief JSON反序列化 */
     void PhysicsJoint::JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
     {
         ContrarySerializationVec2(data, localAnchor1);

@@ -88,7 +88,7 @@ namespace PhysicsBlock
      * 3. 根据扭矩更新角速度
      * 4. 重置扭矩为零
      */
-    void inline PhysicsAngle::PhysicsSpeed(FLOAT_ time, Vec2_ Ga)
+    void PhysicsAngle::PhysicsSpeed(FLOAT_ time, Vec2_ Ga)
     {
         if (invMass == 0)
             return;
@@ -108,7 +108,7 @@ namespace PhysicsBlock
      * @details 1. 调用 PhysicsParticle::PhysicsPos 更新位置
      * 2. 根据角速度更新角度
      */
-    void inline PhysicsAngle::PhysicsPos(FLOAT_ time, Vec2_ Ga)
+    void PhysicsAngle::PhysicsPos(FLOAT_ time, Vec2_ Ga)
     {
         if (invMass == 0)
             return;

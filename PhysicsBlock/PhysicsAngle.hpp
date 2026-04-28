@@ -133,14 +133,14 @@ namespace PhysicsBlock
          * @param time 时间差（秒）
          * @param Ga 重力加速度向量
          */
-        void inline PhysicsSpeed(FLOAT_ time, Vec2_ Ga);
+        void PhysicsSpeed(FLOAT_ time, Vec2_ Ga);
 
         /**
          * @brief 根据速度和时间更新位置和角度
          * @param time 时间差（秒）
          * @param Ga 重力加速度向量
          */
-        void inline PhysicsPos(FLOAT_ time, Vec2_ Ga);
+        void PhysicsPos(FLOAT_ time, Vec2_ Ga);
 
         /*=========PhysicsFormwork=========*/
         /**

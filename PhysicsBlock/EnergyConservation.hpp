@@ -5,6 +5,9 @@
 
 namespace PhysicsBlock 
 {
+    // 动能守恒定律优化
+    // 0：原始版本
+    // 1：优化版本
     #define EnergyConservationOptimum 1
 
     /**

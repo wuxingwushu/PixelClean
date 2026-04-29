@@ -20,16 +20,13 @@ namespace VulKan {
 
 		~SubPass();
 
-		//添加颜色附件参考
 		void addColorAttachmentReference(const VkAttachmentReference& ref);
-		//添加输入附件参考
 		void addInputAttachmentReference(const VkAttachmentReference& ref);
-		//添加深度网格附件参考
 		void setDepthStencilAttachmentReference(const VkAttachmentReference& ref);
-		//添加解决附件参考
 		void setResolveAttachmentReference(const VkAttachmentReference& ref);
-		//构建子描述
 		void buildSubPassDescription();
+
+		void rebuildSubPassDescriptionPointers();
 
 		[[nodiscard]] inline VkSubpassDescription getSubPassDescription() const noexcept { return mSubPassDescription; }
 

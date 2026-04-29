@@ -90,8 +90,8 @@ namespace VulKan {
 
 
 	private://这些数据是临时的，用来上传数据用的
-		CommandPool* BuffercommandPool{ VK_NULL_HANDLE };
-		CommandBuffer* BuffercommandBuffer{ VK_NULL_HANDLE };
-		Buffer* BufferstageBuffer{ VK_NULL_HANDLE };
+		CommandPool* BuffercommandPool{ nullptr };
+		CommandBuffer* BuffercommandBuffer{ nullptr };
+		Buffer* BufferstageBuffer{ nullptr };
 	};
 }

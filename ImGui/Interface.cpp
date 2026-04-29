@@ -776,7 +776,7 @@ namespace GAME {
 				ImGui::TableNextColumn();
 				if (TOOL::mTimer->mTimerTimeS[i].HeapBool) {
 					ImGui::PlotLines("",
-						TOOL::mTimer->mTimerTimeS[i].TimeHeap,
+						TOOL::mTimer->mTimerTimeS[i].TimeHeap.data(),
 						TOOL::mTimer->mHeapNumber,
 						TOOL::mTimer->mTimeHeapIndexS,
 						nullptr,

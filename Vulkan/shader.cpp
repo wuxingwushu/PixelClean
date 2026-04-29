@@ -27,10 +27,14 @@ namespace VulKan {
 
 		std::vector<char> codeBuffer = readBinary(fileName);
 
+		if (codeBuffer.size() % 4 != 0) {
+			throw std::runtime_error("Error: shader code size is not a multiple of 4 - file may be corrupted");
+		}
+
 		VkShaderModuleCreateInfo shaderCreateInfo{};
 		shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		shaderCreateInfo.codeSize = codeBuffer.size();
-		shaderCreateInfo.pCode = reinterpret_cast<const uint32_t*>(codeBuffer.data());//数据强制转换为uint32_t
+		shaderCreateInfo.pCode = reinterpret_cast<const uint32_t*>(codeBuffer.data());
 
 		if (vkCreateShaderModule(mDevice->getDevice(), &shaderCreateInfo, nullptr, &mShaderModule) != VK_SUCCESS) {
 			throw std::runtime_error("Error: failed to create shader");

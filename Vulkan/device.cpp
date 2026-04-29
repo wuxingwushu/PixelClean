@@ -53,7 +53,6 @@ namespace VulKan {
 
 		//纹理压缩 浮点数运算特性 多视口渲染
 		VkPhysicalDeviceFeatures deviceFeatures;
-		deviceFeatures.fillModeNonSolid = VK_TRUE; // 启用非实心填充模式
 		vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
 		if (deviceProp.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {//是否是独显，
@@ -174,8 +173,9 @@ namespace VulKan {
 #endif
 
 
-		//创建内存分配器
-		vmaCreateAllocator(&allocatorInfo, &mAllocator);
+		if (vmaCreateAllocator(&allocatorInfo, &mAllocator) != VK_SUCCESS) {
+			throw std::runtime_error("Error: failed to create VMA allocator");
+		}
 
 
 		vkGetDeviceQueue(mDevice, mGraphicQueueFamily.value(), 0, &mGraphicQueue);

@@ -1,4 +1,5 @@
 #include "descriptorSet.h"
+#include <mutex>
 
 namespace VulKan {
 
@@ -23,11 +24,10 @@ namespace VulKan {
 		
 		mDescriptorSets.resize(frameCount);
 		if (wMutex != nullptr) {
-			wMutex->lock();
+			std::lock_guard<std::mutex> lock(*wMutex);
 			if (vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data()) != VK_SUCCESS) {
 				throw std::runtime_error("Error: failed to allocate descriptor sets");
 			}
-			wMutex->unlock();
 		}
 		else {
 			if (vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data()) != VK_SUCCESS) {

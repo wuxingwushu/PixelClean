@@ -43,6 +43,13 @@ namespace VulKan {
 		mSubPassDescription.pDepthStencilAttachment = mDepthStencilAttachmentReference.layout == VK_IMAGE_LAYOUT_UNDEFINED? nullptr : &mDepthStencilAttachmentReference;
 	}
 
+	void SubPass::rebuildSubPassDescriptionPointers() {
+		mSubPassDescription.pColorAttachments = mColorAttachmentReferences.data();
+		mSubPassDescription.pInputAttachments = mInputAttachmentReferences.data();
+		mSubPassDescription.pResolveAttachments = &mResolvedAttachmentReference;
+		mSubPassDescription.pDepthStencilAttachment = mDepthStencilAttachmentReference.layout == VK_IMAGE_LAYOUT_UNDEFINED ? nullptr : &mDepthStencilAttachmentReference;
+	}
+
 	
 	RenderPass::RenderPass(Device* &device) {
 		mDevice = device;
@@ -69,9 +76,12 @@ namespace VulKan {
 			throw std::runtime_error("Error: not enough elements to build renderPass");
 		}
 
-		//unwrap
+		for (auto& subpass : mSubPasses) {
+			subpass.rebuildSubPassDescriptionPointers();
+		}
+
 		std::vector<VkSubpassDescription> subPasses{};
-		for (int i = 0; i < mSubPasses.size(); ++i) {
+		for (size_t i = 0; i < mSubPasses.size(); ++i) {
 			subPasses.push_back(mSubPasses[i].getSubPassDescription());
 		}
 

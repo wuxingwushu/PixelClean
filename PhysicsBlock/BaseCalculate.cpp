@@ -302,6 +302,52 @@ namespace PhysicsBlock
 		if (data.end == data.start) data.Focus = false;
 		return data;
 	}
+	/*
+	Liang-Barsky 算法实现
+	SquareFocus LineSquareFocus(Vec2_ start, Vec2_ end, const FLOAT_ width, const FLOAT_ height)
+	{
+		SquareFocus data{false, start, end};
+
+		FLOAT_ x0 = start.x, y0 = start.y;
+		FLOAT_ x1 = end.x, y1 = end.y;
+		FLOAT_ left = 0, right = width, bottom = 0, top = height;
+
+		FLOAT_ dx = x1 - x0;
+		FLOAT_ dy = y1 - y0;
+
+		FLOAT_ p[4] = {-dx, dx, -dy, dy};
+		FLOAT_ q[4] = {x0 - left, right - x0, y0 - bottom, top - y0};
+
+		FLOAT_ u1 = 0.0, u2 = 1.0;
+
+		for (int i = 0; i < 4; i++)
+		{
+			if (p[i] == 0)
+			{
+				if (q[i] < 0) return data;
+			}
+			else
+			{
+				FLOAT_ t = q[i] / p[i];
+				if (p[i] < 0)
+				{
+					if (t > u1) u1 = t;
+				}
+				else
+				{
+					if (t < u2) u2 = t;
+				}
+			}
+		}
+
+		if (u1 > u2) return data;
+
+		data.Focus = true;
+		data.start = {x0 + u1 * dx, y0 + u1 * dy};
+		data.end = {x0 + u2 * dx, y0 + u2 * dy};
+		return data;
+	}
+	*/
 
 	/**
 	 * @brief   正方形和正方形的碰撞检测

@@ -115,7 +115,7 @@ namespace VulKan {
 		
 	
 	private://这些数据是临时的，用来上传数据用的
-		CommandBuffer* LayoutcommandBuffer{ VK_NULL_HANDLE };
-		Buffer* fillstageBuffer{ VK_NULL_HANDLE };
+		CommandBuffer* LayoutcommandBuffer{ nullptr };
+		Buffer* fillstageBuffer{ nullptr };
 	};
 }

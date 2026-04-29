@@ -135,7 +135,7 @@ namespace VulKan {
 		regionMutiSample.baseArrayLayer = 0;
 		regionMutiSample.layerCount = 1;
 
-		for (int i = 0; i < mImageCount; ++i) {
+		for (uint32_t i = 0; i < mImageCount; ++i) {
 			mMutiSampleImages[i] = Image::createRenderTargetImage(
 				mDevice,
 				mSwapChainExtent.width,
@@ -156,10 +156,7 @@ namespace VulKan {
 	void SwapChain::createFrameBuffers(const RenderPass* renderPass) {
 		//创建FrameBuffer
 		mSwapChainFrameBuffers.resize(mImageCount);
-		for (int i = 0; i < mImageCount; ++i) {
-			//FrameBuffer 里面为一帧的数据，比如有n个ColorAttachment 1个DepthStencilAttachment，
-			//这些东西的集合为一个FrameBuffer，送入管线，就会形成一个GPU的集合，由上方的Attachments构成
-			//注意数组当中的顺序！！必须与RenderPass匹配
+		for (uint32_t i = 0; i < mImageCount; ++i) {
 			std::array<VkImageView, 3> attachments = { 
 				mSwapChainImageViews[i], 
 				mMutiSampleImages[i]->getImageView(),
@@ -182,7 +179,7 @@ namespace VulKan {
 	}
 
 	SwapChain::~SwapChain() {
-		for (int i = 0; i < mImageCount; ++i) {
+		for (uint32_t i = 0; i < mImageCount; ++i) {
 			delete mMutiSampleImages[i];
 			delete mDepthImages[i];
 		}

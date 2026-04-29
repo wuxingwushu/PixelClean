@@ -5,12 +5,12 @@
 namespace VulKan {
 	//validation layer 回调函数
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallBack(
-		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,//消息等级
-		VkDebugUtilsMessageTypeFlagsEXT messageType,//消息类型
-		const VkDebugUtilsMessengerCallbackDataEXT* pMessageData,//消息本体
+		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+		VkDebugUtilsMessageTypeFlagsEXT messageType,
+		const VkDebugUtilsMessengerCallbackDataEXT* pMessageData,
 		void* pUserData) {
 
-		if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+		if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 			std::cout << "ValidationLayer: " << pMessageData->pMessage << std::endl;
 			if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 				TOOL::VulKanError->warn(pMessageData->pMessage);

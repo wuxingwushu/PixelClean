@@ -146,9 +146,9 @@ namespace VulKan {
 	}
 
 	Image::~Image() {
-		if (fillstageBuffer != VK_NULL_HANDLE) {
+		if (fillstageBuffer != nullptr) {
 			delete fillstageBuffer;
-			fillstageBuffer = VK_NULL_HANDLE;
+			fillstageBuffer = nullptr;
 		}
 
 		if (mImageView != VK_NULL_HANDLE) {
@@ -291,9 +291,9 @@ namespace VulKan {
 			LayoutcommandBuffer->end();
 			LayoutcommandBuffer->submitSync(mDevice->getGraphicQueue());//执行这个指令
 
-			if (LayoutcommandBuffer != VK_NULL_HANDLE) {
+			if (LayoutcommandBuffer != nullptr) {
 				delete LayoutcommandBuffer;
-				LayoutcommandBuffer = VK_NULL_HANDLE;
+				LayoutcommandBuffer = nullptr;
 			}
 		}
 		else {
@@ -370,9 +370,9 @@ namespace VulKan {
 		assert(pData);
 		assert(size);
 
-		if (fillstageBuffer != VK_NULL_HANDLE) {
+		if (fillstageBuffer != nullptr) {
 			delete fillstageBuffer;
-			fillstageBuffer = VK_NULL_HANDLE;
+			fillstageBuffer = nullptr;
 		}
 
 		fillstageBuffer = Buffer::createStageBuffer(mDevice, mImage, mLayout, mWidth, mHeight,size, pData);
@@ -382,9 +382,9 @@ namespace VulKan {
 		assert(pData);
 		assert(size);
 
-		if (fillstageBuffer != VK_NULL_HANDLE) {
+		if (fillstageBuffer != nullptr) {
 			delete fillstageBuffer;
-			fillstageBuffer = VK_NULL_HANDLE;
+			fillstageBuffer = nullptr;
 		}
 
 		fillstageBuffer = Buffer::createStageBuffer(mDevice, mImage, mLayout, mWidth, mHeight, size, pData, true);
@@ -397,10 +397,11 @@ namespace VulKan {
 	void Image::updateBufferByMap(void* data, size_t size) {
 		void* memPtr = nullptr;
 
-		//vkMapMemory(mDevice->getDevice(), mBufferMemory, 0, size, 0, &memPtr);
-		vmaMapMemory(mDevice->getAllocator(), mAllocation, &memPtr);
+		VkResult result = vmaMapMemory(mDevice->getAllocator(), mAllocation, &memPtr);
+		if (result != VK_SUCCESS || memPtr == nullptr) {
+			throw std::runtime_error("Error: failed to map image memory - GPU_ONLY memory is not host visible");
+		}
 		memcpy(memPtr, data, size);
-		//vkUnmapMemory(mDevice->getDevice(), mBufferMemory);
 		vmaUnmapMemory(mDevice->getAllocator(), mAllocation);
 	}
 }

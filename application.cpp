@@ -150,6 +150,7 @@ namespace GAME {
 
 		mImGuuiCommandPool = new VulKan::CommandPool(mDevice);
 		mImGuuiCommandBuffers = new VulKan::CommandBuffer(mDevice, mImGuuiCommandPool);
+		mImGuuiFence = new VulKan::Fence(mDevice);
 
 		InterFace = new ImGuiInterFace(mDevice, mWindow, init_info, mRenderPass, mImGuuiCommandBuffers,
 			new ImGuiTexture(mDevice, mSwapChain, mCommandPool,mSampler, 1),
@@ -338,6 +339,7 @@ namespace GAME {
 			return;
 		}
 		else if(!Global::MonitorCompatibleMode){
+			mImGuuiFence->block();
 			renderBeginInfo.renderPass = mImGuuiRenderPass->getRenderPass();//获得画布信息
 			mImGuuiCommandBuffers->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 			mImGuuiCommandBuffers->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -619,7 +621,8 @@ namespace GAME {
 		}
 		if ((!InterFace->GetInterFaceBool() && Global::Monitor) && !Global::MonitorCompatibleMode)
 		{
-			mImGuuiCommandBuffers->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);//这个功能部分电脑，不支持 分两次 vkQueueSubmit 导致 只看得见 监视器
+			mImGuuiFence->resetFence();
+			mImGuuiCommandBuffers->submitSync(mDevice->getGraphicQueue(), mImGuuiFence->getFence());
 		}
 		TOOL::mTimer->StartEnd();
 
@@ -672,6 +675,7 @@ namespace GAME {
 
 		delete mImGuuiCommandBuffers;
 		delete mImGuuiCommandPool;
+		delete mImGuuiFence;
 		delete mImGuuiRenderPass;
 		delete InterFace;
 

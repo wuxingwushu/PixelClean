@@ -9,20 +9,29 @@ namespace VulKan {
 
 	//获取窗口大小是否改变
 	static void windowResized(GLFWwindow* window, int width, int height) {
-		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mWindowResized = true;
+		auto* win = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+		if (win) {
+			win->mWindowResized = true;
+		}
 	}
 
 	//用来绑定Camera鼠标事件
 	static void cursorPosCallBack(GLFWwindow* window, double xpos, double ypos) {
-		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->MouseMove(xpos, ypos);
+		auto* win = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+		if (win && win->mApp) {
+			win->mApp->MouseMove(xpos, ypos);
+		}
 	}
 
-	//绑定鼠标滚轮事件
 	static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	{
-		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->mApp->MouseRoller(-yoffset);
-		reinterpret_cast<Window*>(glfwGetWindowUserPointer(window))->MouseScroll = -yoffset;
-		//printf("Mouse wheel scrolled: xoffset = %lf, yoffset = %lf\n", xoffset, yoffset);
+		auto* win = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+		if (win) {
+			win->MouseScroll = -yoffset;
+			if (win->mApp) {
+				win->mApp->MouseRoller(-yoffset);
+			}
+		}
 	}
 
 

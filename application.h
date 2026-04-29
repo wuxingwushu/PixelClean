@@ -71,6 +71,7 @@ namespace GAME {
 		VulKan::CommandPool* mImGuuiCommandPool{ nullptr };
 		VulKan::CommandBuffer* mImGuuiCommandBuffers{ nullptr };
 		VulKan::RenderPass* mImGuuiRenderPass{ nullptr };
+		VulKan::Fence* mImGuuiFence{ nullptr };
 
 
 

@@ -253,6 +253,8 @@ namespace GAME
 		}
 
 		ImGui::End();
+
+		RenderRightClickMenu();
 	}
 
 	void PhysicsTest::GameLoop(unsigned int mCurrentFrame)
@@ -705,6 +707,11 @@ namespace GAME
 
 	void PhysicsTest::SquareRightEvent(PhysicsBlock::PhysicsAngle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
 	{
+		if (Click && First)
+		{
+			RightClickObjectPtr = Ptr;
+			ShowRightClickMenu = true;
+		}
 	}
 
 	void PhysicsTest::ParticleLeftEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
@@ -739,6 +746,11 @@ namespace GAME
 
 	void PhysicsTest::ParticleRightEvent(PhysicsBlock::PhysicsParticle *Ptr, bool Click, bool First, glm::vec2 s, glm::vec2 e)
 	{
+		if (Click && First)
+		{
+			RightClickObjectPtr = Ptr;
+			ShowRightClickMenu = true;
+		}
 	}
 
 	void PhysicsTest::FoundLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e)
@@ -832,6 +844,102 @@ namespace GAME
 				}
 			}
 		}
+	}
+
+	void PhysicsTest::RenderRightClickMenu()
+	{
+		if (ShowRightClickMenu && RightClickObjectPtr != nullptr)
+		{
+			ImGui::OpenPopup("##RightClickMenu");
+			ShowRightClickMenu = false;
+		}
+
+		if (RightClickObjectPtr == nullptr)
+			return;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+		if (ImGui::BeginPopup("##RightClickMenu"))
+		{
+			const char *typeName = u8"未知";
+			switch (RightClickObjectPtr->PFGetType())
+			{
+			case PhysicsBlock::PhysicsObjectEnum::shape:
+				typeName = u8"网格形状";
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::particle:
+				typeName = u8"粒子";
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::circle:
+				typeName = u8"圆形";
+				break;
+			case PhysicsBlock::PhysicsObjectEnum::line:
+				typeName = u8"线段";
+				break;
+			default:
+				break;
+			}
+			ImGui::Text(u8"类型: %s", typeName);
+			ImGui::Separator();
+
+			if (ImGui::MenuItem(u8"删除物体"))
+			{
+				if (PhysicsFormworkPtr == RightClickObjectPtr)
+					PhysicsFormworkPtr = nullptr;
+				mPhysicsWorld->RemoveObject(RightClickObjectPtr);
+				RightClickObjectPtr = nullptr;
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (RightClickObjectPtr != nullptr && RightClickObjectPtr->PFGetType() != PhysicsBlock::PhysicsObjectEnum::particle)
+			{
+				PhysicsBlock::PhysicsAngle *anglePtr = (PhysicsBlock::PhysicsAngle *)RightClickObjectPtr;
+				if (ImGui::MenuItem(u8"设为静态"))
+				{
+					anglePtr->mass = FLOAT_MAX;
+					anglePtr->invMass = 0;
+					anglePtr->MomentInertia = FLOAT_MAX;
+					anglePtr->invMomentInertia = 0;
+					anglePtr->speed = {0, 0};
+					anglePtr->angleSpeed = 0;
+					ImGui::CloseCurrentPopup();
+				}
+
+				if (ImGui::MenuItem(u8"设为动态"))
+				{
+					anglePtr->mass = 1;
+					anglePtr->invMass = 1;
+					anglePtr->MomentInertia = 1;
+					anglePtr->invMomentInertia = 1;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+
+			if (RightClickObjectPtr != nullptr)
+			{
+				if (ImGui::MenuItem(u8"重置速度"))
+				{
+					RightClickObjectPtr->PFSpeed() = {0, 0};
+					if (RightClickObjectPtr->PFGetType() != PhysicsBlock::PhysicsObjectEnum::particle)
+					{
+						((PhysicsBlock::PhysicsAngle *)RightClickObjectPtr)->angleSpeed = 0;
+					}
+					ImGui::CloseCurrentPopup();
+				}
+
+				if (ImGui::MenuItem(u8"选中此物体"))
+				{
+					PhysicsFormworkPtr = RightClickObjectPtr;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+
+			ImGui::EndPopup();
+		}
+		else
+		{
+			RightClickObjectPtr = nullptr;
+		}
+		ImGui::PopStyleVar();
 	}
 
 }

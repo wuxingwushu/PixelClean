@@ -72,6 +72,11 @@ namespace GAME
 		bool EditorModeBool = false; // 编辑模式开关
 		int item_object = 0; // 类型
 		const char *objectName[4] = {u8"圆", u8"点", u8"网格", u8"线"};
+
+	private:// 右键菜单
+		PhysicsBlock::PhysicsFormwork *RightClickObjectPtr = nullptr;
+		bool ShowRightClickMenu = false;
+		void RenderRightClickMenu();
 	};
 
 }

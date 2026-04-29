@@ -52,13 +52,9 @@ namespace PhysicsBlock
         {
             return;
         }
-        Pos -= pos;                                                    // 质心指向受力点的力矩
-        FLOAT_ Langle = EdgeVecToCosAngleFloat(Pos);                   // 力臂角度
-        FLOAT_ disparity = Langle - EdgeVecToCosAngleFloat(Force);     // 力矩角度
-        FLOAT_ ForceFLOAT_ = Modulus(Force);                           // 力大小
-        FLOAT_ F = ForceFLOAT_ * cos(disparity);                       // 垂直力臂的力大小
-        PhysicsParticle::AddForce({F * cos(Langle), F * sin(Langle)}); // 转为世界力矩 // 位置移动受到力矩
-        AddTorque(Modulus(Pos), ForceFLOAT_ * -sin(disparity));        // 旋转受到扭矩
+        Vec2_ Arm = Pos - pos;
+        PhysicsParticle::AddForce(Force);
+        torque += Arm.x * Force.y - Arm.y * Force.x;
     }
 
     /**

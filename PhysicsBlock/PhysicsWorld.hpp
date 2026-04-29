@@ -274,6 +274,8 @@ namespace PhysicsBlock
             PhysicsLineS.push_back(Object);
         }
 
+        void RemoveObject(PhysicsFormwork *Object);
+
         std::vector<PhysicsShape *> &GetPhysicsShape()
         {
             return PhysicsShapeS;

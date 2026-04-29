@@ -899,6 +899,257 @@ namespace PhysicsBlock
         }
     }
 
+    void PhysicsWorld::RemoveObject(PhysicsFormwork *Object)
+    {
+        switch (Object->PFGetType())
+        {
+        case PhysicsObjectEnum::shape:
+        {
+            PhysicsShape *shape = (PhysicsShape *)Object;
+            mGridSearch.Remove(shape);
+            for (size_t i = 0; i < PhysicsShapeS.size(); ++i)
+            {
+                if (PhysicsShapeS[i] == shape)
+                {
+                    PhysicsShapeS[i] = PhysicsShapeS.back();
+                    PhysicsShapeS.pop_back();
+                    break;
+                }
+            }
+            for (int i = (int)PhysicsJointS.size() - 1; i >= 0; --i)
+            {
+                if (PhysicsJointS[i]->body1 == shape || PhysicsJointS[i]->body2 == shape)
+                {
+                    delete PhysicsJointS[i];
+                    PhysicsJointS[i] = PhysicsJointS.back();
+                    PhysicsJointS.pop_back();
+                }
+            }
+            for (int i = (int)BaseJunctionS.size() - 1; i >= 0; --i)
+            {
+                bool remove = false;
+                switch (BaseJunctionS[i]->ObjectType())
+                {
+                case CordObjectType::JunctionAA:
+                    remove = (((PhysicsJunctionSS *)BaseJunctionS[i])->mParticle1 == shape ||
+                              ((PhysicsJunctionSS *)BaseJunctionS[i])->mParticle2 == shape);
+                    break;
+                case CordObjectType::JunctionA:
+                    remove = (((PhysicsJunctionS *)BaseJunctionS[i])->mParticle == shape);
+                    break;
+                default:
+                    break;
+                }
+                if (remove)
+                {
+                    delete BaseJunctionS[i];
+                    BaseJunctionS[i] = BaseJunctionS.back();
+                    BaseJunctionS.pop_back();
+                }
+            }
+            for (auto it = CollideGroupS.begin(); it != CollideGroupS.end(); )
+            {
+                if (it->first.object1 == shape || it->first.object2 == shape)
+                {
+                    for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
+                    {
+                        if (CollideGroupVector[i]->key == it->first)
+                        {
+                            DeleteArbiter(CollideGroupVector[i]);
+                            CollideGroupVector[i] = CollideGroupVector.back();
+                            CollideGroupVector.pop_back();
+                            break;
+                        }
+                    }
+                    it = CollideGroupS.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+            delete shape;
+            break;
+        }
+        case PhysicsObjectEnum::particle:
+        {
+            PhysicsParticle *particle = (PhysicsParticle *)Object;
+            mGridSearch.Remove(particle);
+            for (size_t i = 0; i < PhysicsParticleS.size(); ++i)
+            {
+                if (PhysicsParticleS[i] == particle)
+                {
+                    PhysicsParticleS[i] = PhysicsParticleS.back();
+                    PhysicsParticleS.pop_back();
+                    break;
+                }
+            }
+            for (int i = (int)BaseJunctionS.size() - 1; i >= 0; --i)
+            {
+                bool remove = false;
+                switch (BaseJunctionS[i]->ObjectType())
+                {
+                case CordObjectType::JunctionP:
+                    remove = (((PhysicsJunctionP *)BaseJunctionS[i])->mParticle == particle);
+                    break;
+                case CordObjectType::JunctionPP:
+                    remove = (((PhysicsJunctionPP *)BaseJunctionS[i])->mParticle1 == particle ||
+                              ((PhysicsJunctionPP *)BaseJunctionS[i])->mParticle2 == particle);
+                    break;
+                default:
+                    break;
+                }
+                if (remove)
+                {
+                    delete BaseJunctionS[i];
+                    BaseJunctionS[i] = BaseJunctionS.back();
+                    BaseJunctionS.pop_back();
+                }
+            }
+            for (auto it = CollideGroupS.begin(); it != CollideGroupS.end(); )
+            {
+                if (it->first.object1 == particle || it->first.object2 == particle)
+                {
+                    for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
+                    {
+                        if (CollideGroupVector[i]->key == it->first)
+                        {
+                            DeleteArbiter(CollideGroupVector[i]);
+                            CollideGroupVector[i] = CollideGroupVector.back();
+                            CollideGroupVector.pop_back();
+                            break;
+                        }
+                    }
+                    it = CollideGroupS.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+            delete particle;
+            break;
+        }
+        case PhysicsObjectEnum::circle:
+        {
+            PhysicsCircle *circle = (PhysicsCircle *)Object;
+            mGridSearch.Remove(circle);
+            for (size_t i = 0; i < PhysicsCircleS.size(); ++i)
+            {
+                if (PhysicsCircleS[i] == circle)
+                {
+                    PhysicsCircleS[i] = PhysicsCircleS.back();
+                    PhysicsCircleS.pop_back();
+                    break;
+                }
+            }
+            for (int i = (int)PhysicsJointS.size() - 1; i >= 0; --i)
+            {
+                if (PhysicsJointS[i]->body1 == circle || PhysicsJointS[i]->body2 == circle)
+                {
+                    delete PhysicsJointS[i];
+                    PhysicsJointS[i] = PhysicsJointS.back();
+                    PhysicsJointS.pop_back();
+                }
+            }
+            for (int i = (int)BaseJunctionS.size() - 1; i >= 0; --i)
+            {
+                bool remove = false;
+                switch (BaseJunctionS[i]->ObjectType())
+                {
+                case CordObjectType::JunctionAA:
+                    remove = (((PhysicsJunctionSS *)BaseJunctionS[i])->mParticle1 == circle ||
+                              ((PhysicsJunctionSS *)BaseJunctionS[i])->mParticle2 == circle);
+                    break;
+                case CordObjectType::JunctionA:
+                    remove = (((PhysicsJunctionS *)BaseJunctionS[i])->mParticle == circle);
+                    break;
+                default:
+                    break;
+                }
+                if (remove)
+                {
+                    delete BaseJunctionS[i];
+                    BaseJunctionS[i] = BaseJunctionS.back();
+                    BaseJunctionS.pop_back();
+                }
+            }
+            for (auto it = CollideGroupS.begin(); it != CollideGroupS.end(); )
+            {
+                if (it->first.object1 == circle || it->first.object2 == circle)
+                {
+                    for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
+                    {
+                        if (CollideGroupVector[i]->key == it->first)
+                        {
+                            DeleteArbiter(CollideGroupVector[i]);
+                            CollideGroupVector[i] = CollideGroupVector.back();
+                            CollideGroupVector.pop_back();
+                            break;
+                        }
+                    }
+                    it = CollideGroupS.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+            delete circle;
+            break;
+        }
+        case PhysicsObjectEnum::line:
+        {
+            PhysicsLine *line = (PhysicsLine *)Object;
+            for (size_t i = 0; i < PhysicsLineS.size(); ++i)
+            {
+                if (PhysicsLineS[i] == line)
+                {
+                    PhysicsLineS[i] = PhysicsLineS.back();
+                    PhysicsLineS.pop_back();
+                    break;
+                }
+            }
+            for (int i = (int)PhysicsJointS.size() - 1; i >= 0; --i)
+            {
+                if (PhysicsJointS[i]->body1 == line || PhysicsJointS[i]->body2 == line)
+                {
+                    delete PhysicsJointS[i];
+                    PhysicsJointS[i] = PhysicsJointS.back();
+                    PhysicsJointS.pop_back();
+                }
+            }
+            for (auto it = CollideGroupS.begin(); it != CollideGroupS.end(); )
+            {
+                if (it->first.object1 == line || it->first.object2 == line)
+                {
+                    for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
+                    {
+                        if (CollideGroupVector[i]->key == it->first)
+                        {
+                            DeleteArbiter(CollideGroupVector[i]);
+                            CollideGroupVector[i] = CollideGroupVector.back();
+                            CollideGroupVector.pop_back();
+                            break;
+                        }
+                    }
+                    it = CollideGroupS.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+            delete line;
+            break;
+        }
+        default:
+            break;
+        }
+        if (ObjectSize > 0)
+            --ObjectSize;
+    }
+
     PhysicsFormwork *PhysicsWorld::Get(Vec2_ pos)
     {
         std::vector<PhysicsBlock::PhysicsFormwork*> SearchV;

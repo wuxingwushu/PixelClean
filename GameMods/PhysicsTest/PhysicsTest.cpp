@@ -255,6 +255,8 @@ namespace GAME
 		ImGui::End();
 
 		RenderRightClickMenu();
+		RenderGridEditUI();
+		RenderGridCellMenu();
 	}
 
 	void PhysicsTest::GameLoop(unsigned int mCurrentFrame)
@@ -455,6 +457,47 @@ namespace GAME
 
 		mAuxiliaryVision->End();
 
+		if (GridEditShape != nullptr)
+		{
+			mAuxiliaryVision->Begin();
+			glm::vec2 Angle = PhysicsBlock::AngleFloatToAngleVec(GridEditShape->angle);
+			glm::vec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, Angle);
+			glm::vec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, Angle);
+			glm::vec2 jiao3 = jiao2 + jiao1;
+			for (auto &kv : GridEditData)
+			{
+				int gx = kv.first.first;
+				int gy = kv.first.second;
+				Vec2_ cellPos = PhysicsBlock::vec2angle(Vec2_{gx, gy} - GridEditShape->CentreMass, GridEditShape->angle) + GridEditShape->pos;
+				if (kv.second.Entity)
+				{
+					ShowSquare(cellPos, GridEditShape->angle, {0, 1, 0, 0.8f});
+				}
+				else
+				{
+					glm::vec4 lineColor = {1, 0.3f, 0.3f, 0.3f};
+					mAuxiliaryVision->Line({cellPos.x, cellPos.y, 0.0}, lineColor, {cellPos.x + jiao1.x, cellPos.y + jiao1.y, 0.0}, lineColor);
+					mAuxiliaryVision->Line({cellPos.x, cellPos.y, 0.0}, lineColor, {cellPos.x + jiao2.x, cellPos.y + jiao2.y, 0.0}, lineColor);
+					mAuxiliaryVision->Line({cellPos.x + jiao3.x, cellPos.y + jiao3.y, 0.0}, lineColor, {cellPos.x + jiao1.x, cellPos.y + jiao1.y, 0.0}, lineColor);
+					mAuxiliaryVision->Line({cellPos.x + jiao3.x, cellPos.y + jiao3.y, 0.0}, lineColor, {cellPos.x + jiao2.x, cellPos.y + jiao2.y, 0.0}, lineColor);
+				}
+			}
+			int winwidth, winheight;
+			glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
+			glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
+			huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
+			huoqdedian.x += mCamera->getCameraPos().x;
+			huoqdedian.y += mCamera->getCameraPos().y;
+			glm::ivec2 hoverCell = WorldToGridCell(GridEditShape, {huoqdedian.x, huoqdedian.y});
+			Vec2_ hoverPos = PhysicsBlock::vec2angle(Vec2_{hoverCell.x, hoverCell.y} - GridEditShape->CentreMass, GridEditShape->angle) + GridEditShape->pos;
+			glm::vec4 hoverColor = {1, 1, 0, 0.8f};
+			mAuxiliaryVision->Line({hoverPos.x, hoverPos.y, 0.0}, hoverColor, {hoverPos.x + jiao1.x, hoverPos.y + jiao1.y, 0.0}, hoverColor);
+			mAuxiliaryVision->Line({hoverPos.x, hoverPos.y, 0.0}, hoverColor, {hoverPos.x + jiao2.x, hoverPos.y + jiao2.y, 0.0}, hoverColor);
+			mAuxiliaryVision->Line({hoverPos.x + jiao3.x, hoverPos.y + jiao3.y, 0.0}, hoverColor, {hoverPos.x + jiao1.x, hoverPos.y + jiao1.y, 0.0}, hoverColor);
+			mAuxiliaryVision->Line({hoverPos.x + jiao3.x, hoverPos.y + jiao3.y, 0.0}, hoverColor, {hoverPos.x + jiao2.x, hoverPos.y + jiao2.y, 0.0}, hoverColor);
+			mAuxiliaryVision->End();
+		}
+
 		// 更新Camera变换矩阵
 		mCamera->update();
 		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
@@ -517,7 +560,71 @@ namespace GAME
 
 	void PhysicsTest::EditorMode(glm::vec2 huoqdedian)
 	{
-		// 不在窗口上才可以操作
+		if (GridEditShape != nullptr)
+		{
+			if (Global::ClickWindow)
+				return;
+
+			bool zb = false, yb = false;
+			static glm::vec2 z1, z2, y1, y2;
+
+			static int Z_fangzhifanfuvhufa;
+			int Z_Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+			if (Z_Leftan == GLFW_PRESS)
+			{
+				if (Z_fangzhifanfuvhufa != Z_Leftan)
+				{
+					zb = true;
+					z1 = huoqdedian;
+					z2 = huoqdedian;
+				}
+				else
+				{
+					z2 = huoqdedian;
+					GridEditPaint(huoqdedian);
+				}
+			}
+			else if (Z_fangzhifanfuvhufa != Z_Leftan)
+			{
+				zb = true;
+			}
+			Z_fangzhifanfuvhufa = Z_Leftan;
+
+			if (zb && Z_Leftan == GLFW_PRESS)
+			{
+				GridEditPaint(huoqdedian);
+			}
+
+			static int fangzhifanfuvhufa;
+			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+			if (Leftan == GLFW_PRESS)
+			{
+				if (fangzhifanfuvhufa != Leftan)
+				{
+					yb = true;
+					y1 = huoqdedian;
+					y2 = huoqdedian;
+				}
+				else
+				{
+					y2 = huoqdedian;
+				}
+			}
+			else if (fangzhifanfuvhufa != Leftan)
+			{
+				yb = true;
+			}
+			fangzhifanfuvhufa = Leftan;
+
+			if (yb && Leftan == GLFW_PRESS)
+			{
+				glm::ivec2 cell = WorldToGridCell(GridEditShape, huoqdedian);
+				GridEditCellRightClick = cell;
+				ShowGridCellMenu = true;
+			}
+			return;
+		}
+
 		if (Global::ClickWindow)
 			return;
 
@@ -677,25 +784,50 @@ namespace GAME
 		{
 			if (First)
 			{
-				// 初次点击
-				Opos = Ptr->PFGetPos() - s;
-				PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
-				PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
+				if (Ptr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::line)
+				{
+					Vec2_ dir = PhysicsBlock::vec2angle({1, 0}, Ptr->angle);
+					Vec2_ v = s - Ptr->pos;
+					FLOAT_ t = v.x * dir.x + v.y * dir.y;
+					if (t > Ptr->radius) t = Ptr->radius;
+					if (t < -Ptr->radius) t = -Ptr->radius;
+					Vec2_ grabPoint = Ptr->pos + t * dir;
+					Opos = Ptr->pos - grabPoint;
+					PhysicsShapeArm = {t, 0};
+				}
+				else
+				{
+					Opos = Ptr->PFGetPos() - s;
+					PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
+					PhysicsShapeArm = -lAngleMat.Anticlockwise(Opos);
+				}
 			}
 			else
 			{
 				if (PhysicsSwitch)
 				{
-					// 开启物理了
 					PhysicsBlock::AngleMat lAngleMat(Ptr->angle);
-					Ptr->AddForce(
-						lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(),
-						10 * Ptr->PFGetMass() * (e - (lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos())));
-					mAuxiliaryVision->Line({lAngleMat.Rotary(PhysicsShapeArm) + Ptr->PFGetPos(), 0}, {1, 0, 0, 1}, {(e), 0}, {0, 1, 0, 1});
+					Vec2_ armWorld = lAngleMat.Rotary(PhysicsShapeArm);
+					Vec2_ grabPos = armWorld + Ptr->PFGetPos();
+					Vec2_ displacement = e - grabPos;
+
+					FLOAT_ k = 300.0;
+					FLOAT_ c = 2.0 * sqrt(k * Ptr->PFGetMass());
+
+					Vec2_ grabVelocity = Ptr->speed + Ptr->angleSpeed * Vec2_{-armWorld.y, armWorld.x};
+					Vec2_ springForce = k * displacement - c * grabVelocity;
+
+					// 设置拖拽力上限
+					FLOAT_ maxForce = Ptr->PFGetMass() * 500.0;
+					FLOAT_ forceMag = PhysicsBlock::Modulus(springForce);
+					if (forceMag > maxForce && forceMag > 0)
+						springForce *= maxForce / forceMag;
+
+					Ptr->AddForce(grabPos, springForce);
+					mAuxiliaryVision->Line({grabPos, 0}, {1, 0, 0, 1}, {e, 0}, {0, 1, 0, 1});
 				}
 				else
 				{
-					// 没有开启物理，就直接修改位置
 					Ptr->pos = Opos + e;
 				}
 			}
@@ -721,20 +853,28 @@ namespace GAME
 		{
 			if (First)
 			{
-				// 初次点击
 				Opos = Ptr->PFGetPos() - s;
 			}
 			else
 			{
 				if (PhysicsSwitch)
 				{
-					// 开启物理了e
-					Ptr->AddForce(10 * Ptr->PFGetMass() * (e - Ptr->pos));
-					mAuxiliaryVision->Line({Ptr->pos, 0}, {1, 0, 0, 1}, {(e), 0}, {0, 1, 0, 1});
+					Vec2_ displacement = e - Ptr->pos;
+					FLOAT_ k = 300.0;
+					FLOAT_ c = 2.0 * sqrt(k * Ptr->PFGetMass());
+					Vec2_ springForce = k * displacement - c * Ptr->speed;
+
+					// 设置拖拽力上限
+					FLOAT_ maxForce = Ptr->PFGetMass() * 500.0;
+					FLOAT_ forceMag = PhysicsBlock::Modulus(springForce);
+					if (forceMag > maxForce && forceMag > 0)
+						springForce *= maxForce / forceMag;
+
+					Ptr->AddForce(springForce);
+					mAuxiliaryVision->Line({Ptr->pos, 0}, {1, 0, 0, 1}, {e, 0}, {0, 1, 0, 1});
 				}
 				else
 				{
-					// 没有开启物理，就直接修改位置
 					Ptr->pos = Opos + e;
 				}
 			}
@@ -933,11 +1073,315 @@ namespace GAME
 				}
 			}
 
+			if (RightClickObjectPtr != nullptr && RightClickObjectPtr->PFGetType() == PhysicsBlock::PhysicsObjectEnum::shape)
+			{
+				ImGui::Separator();
+				if (ImGui::MenuItem(u8"编辑网格"))
+				{
+					EnterGridEdit((PhysicsBlock::PhysicsShape *)RightClickObjectPtr);
+					RightClickObjectPtr = nullptr;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+
 			ImGui::EndPopup();
 		}
 		else
 		{
 			RightClickObjectPtr = nullptr;
+		}
+		ImGui::PopStyleVar();
+	}
+
+	glm::ivec2 PhysicsTest::WorldToGridCell(PhysicsBlock::PhysicsShape *shape, glm::vec2 worldPos)
+	{
+		PhysicsBlock::AngleMat lAngleMat(shape->angle);
+		Vec2_ localPos = lAngleMat.Anticlockwise(worldPos - shape->pos) + shape->CentreMass;
+		return {(int)floor(localPos.x), (int)floor(localPos.y)};
+	}
+
+	void PhysicsTest::EnterGridEdit(PhysicsBlock::PhysicsShape *shape)
+	{
+		GridEditShape = shape;
+		GridEditSavedPhysicsSwitch = PhysicsSwitch;
+		PhysicsSwitch = false;
+		GridEditData.clear();
+		GridEditOrigin = {0, 0};
+		for (unsigned int x = 0; x < shape->width; ++x)
+		{
+			for (unsigned int y = 0; y < shape->height; ++y)
+			{
+				GridEditData[{x, y}] = shape->at(x, y);
+			}
+		}
+	}
+
+	void PhysicsTest::ExitGridEdit()
+	{
+		if (GridEditShape == nullptr)
+			return;
+
+		bool hasEntity = false;
+		for (auto &kv : GridEditData)
+		{
+			if (kv.second.Entity)
+			{
+				hasEntity = true;
+				break;
+			}
+		}
+
+		if (!hasEntity)
+		{
+			if (PhysicsFormworkPtr == GridEditShape)
+				PhysicsFormworkPtr = nullptr;
+			mPhysicsWorld->RemoveObject(GridEditShape);
+			GridEditShape = nullptr;
+			GridEditData.clear();
+			PhysicsSwitch = GridEditSavedPhysicsSwitch;
+			return;
+		}
+
+		int minX = INT_MAX, minY = INT_MAX, maxX = INT_MIN, maxY = INT_MIN;
+		for (auto &kv : GridEditData)
+		{
+			if (kv.second.Entity)
+			{
+				if (kv.first.first < minX) minX = kv.first.first;
+				if (kv.first.second < minY) minY = kv.first.second;
+				if (kv.first.first > maxX) maxX = kv.first.first;
+				if (kv.first.second > maxY) maxY = kv.first.second;
+			}
+		}
+
+		int newW = maxX - minX + 1;
+		int newH = maxY - minY + 1;
+
+		Vec2_ oldPos = GridEditShape->pos;
+		FLOAT_ oldAngle = GridEditShape->angle;
+		Vec2_ oldCentreMass = GridEditShape->CentreMass;
+		Vec2_ offsetLocal = Vec2_{(FLOAT_)minX, (FLOAT_)minY} - oldCentreMass;
+		Vec2_ worldOffset = PhysicsBlock::vec2angle(offsetLocal, oldAngle);
+
+		PhysicsBlock::PhysicsShape *newShape = new PhysicsBlock::PhysicsShape(oldPos + worldOffset, {newW, newH});
+		for (int x = 0; x < newW; ++x)
+		{
+			for (int y = 0; y < newH; ++y)
+			{
+				auto it = GridEditData.find({x + minX, y + minY});
+				if (it != GridEditData.end())
+				{
+					newShape->at(x, y) = it->second;
+				}
+			}
+		}
+		newShape->angle = oldAngle;
+		newShape->UpdateAll();
+
+		if (PhysicsFormworkPtr == GridEditShape)
+			PhysicsFormworkPtr = newShape;
+		mPhysicsWorld->RemoveObject(GridEditShape);
+		mPhysicsWorld->AddObject(newShape);
+
+		GridEditShape = nullptr;
+		GridEditData.clear();
+		PhysicsSwitch = GridEditSavedPhysicsSwitch;
+	}
+
+	void PhysicsTest::GridEditPaint(glm::vec2 worldPos)
+	{
+		if (GridEditShape == nullptr)
+			return;
+		glm::ivec2 cell = WorldToGridCell(GridEditShape, worldPos);
+
+		if (GridEditBrushType == GridEditBrush::Draw)
+		{
+			PhysicsBlock::GridBlock block;
+			block.Entity = GridEditEntity;
+			block.Collision = GridEditCollision;
+			block.mass = GridEditMass;
+			block.FrictionFactor = GridEditFriction;
+			GridEditData[{cell.x, cell.y}] = block;
+		}
+		else
+		{
+			GridEditData.erase({cell.x, cell.y});
+		}
+	}
+
+	void PhysicsTest::RenderGridEditUI()
+	{
+		if (GridEditShape == nullptr)
+			return;
+
+		ImGui::Begin(u8"网格编辑");
+
+		int minX = INT_MAX, minY = INT_MAX, maxX = INT_MIN, maxY = INT_MIN;
+		int entityCount = 0;
+		for (auto &kv : GridEditData)
+		{
+			if (kv.first.first < minX) minX = kv.first.first;
+			if (kv.first.second < minY) minY = kv.first.second;
+			if (kv.first.first > maxX) maxX = kv.first.first;
+			if (kv.first.second > maxY) maxY = kv.first.second;
+			if (kv.second.Entity) ++entityCount;
+		}
+		if (GridEditData.empty())
+		{
+			minX = minY = maxX = maxY = 0;
+		}
+		ImGui::Text(u8"网格范围: (%d,%d) ~ (%d,%d)", minX, minY, maxX, maxY);
+		ImGui::Text(u8"实体格子: %d / %d", entityCount, (int)GridEditData.size());
+
+		const char *brushNames[] = {u8"绘制", u8"擦除"};
+		int brushIdx = static_cast<int>(GridEditBrushType);
+		if (ImGui::Combo(u8"画笔", &brushIdx, brushNames, IM_ARRAYSIZE(brushNames)))
+		{
+			GridEditBrushType = static_cast<GridEditBrush>(brushIdx);
+		}
+
+		if (GridEditBrushType == GridEditBrush::Draw)
+		{
+			ImGui::Checkbox(u8"实体", &GridEditCollision);
+			ImGui::Checkbox(u8"碰撞", &GridEditEntity);
+			ImGui::DragFloat(u8"质量", &GridEditMass, 0.1f, 0.0f, 100.0f);
+			ImGui::DragFloat(u8"摩擦系数", &GridEditFriction, 0.01f, 0.0f, 1.0f);
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::Button(u8"填充全部"))
+		{
+			for (auto &kv : GridEditData)
+			{
+				kv.second.Entity = true;
+				kv.second.Collision = true;
+				kv.second.mass = GridEditMass;
+				kv.second.FrictionFactor = GridEditFriction;
+			}
+		}
+
+		if (ImGui::Button(u8"清空全部"))
+		{
+			for (auto &kv : GridEditData)
+			{
+				kv.second.Entity = false;
+				kv.second.Collision = false;
+			}
+		}
+
+		if (ImGui::Button(u8"反转网格"))
+		{
+			for (auto &kv : GridEditData)
+			{
+				kv.second.Entity = !kv.second.Entity;
+				kv.second.Collision = !kv.second.Collision;
+			}
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::Button(u8"镜像水平"))
+		{
+			std::map<std::pair<int,int>, PhysicsBlock::GridBlock> newData;
+			for (auto &kv : GridEditData)
+			{
+				int mirrorX = minX + maxX - kv.first.first;
+				newData[{mirrorX, kv.first.second}] = kv.second;
+			}
+			GridEditData = std::move(newData);
+		}
+
+		if (ImGui::Button(u8"镜像垂直"))
+		{
+			std::map<std::pair<int,int>, PhysicsBlock::GridBlock> newData;
+			for (auto &kv : GridEditData)
+			{
+				int mirrorY = minY + maxY - kv.first.second;
+				newData[{kv.first.first, mirrorY}] = kv.second;
+			}
+			GridEditData = std::move(newData);
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::Button(u8"退出编辑"))
+		{
+			ExitGridEdit();
+		}
+
+		ImGui::End();
+	}
+
+	void PhysicsTest::RenderGridCellMenu()
+	{
+		if (GridEditShape == nullptr)
+			return;
+
+		if (ShowGridCellMenu)
+		{
+			ImGui::OpenPopup("##GridCellMenu");
+			ShowGridCellMenu = false;
+		}
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+		if (ImGui::BeginPopup("##GridCellMenu"))
+		{
+			int cx = GridEditCellRightClick.x;
+			int cy = GridEditCellRightClick.y;
+			auto it = GridEditData.find({cx, cy});
+			if (it != GridEditData.end())
+			{
+				PhysicsBlock::GridBlock &block = it->second;
+				ImGui::Text(u8"格子 (%d, %d)", cx, cy);
+				ImGui::Separator();
+
+				bool entity = block.Entity;
+				bool collision = block.Collision;
+				if (ImGui::Checkbox(u8"实体", &entity))
+				{
+					block.Entity = entity;
+				}
+				if (ImGui::Checkbox(u8"碰撞", &collision))
+				{
+					block.Collision = collision;
+				}
+				ImGui::DragFloat(u8"质量", &block.mass, 0.1f, 0.0f, 100.0f);
+				ImGui::DragFloat(u8"摩擦系数", &block.FrictionFactor, 0.01f, 0.0f, 1.0f);
+
+				if (ImGui::Button(u8"应用质量到全部"))
+				{
+					for (auto &kv : GridEditData)
+					{
+						if (kv.second.Entity)
+							kv.second.mass = block.mass;
+					}
+				}
+
+				if (ImGui::Button(u8"应用摩擦到全部"))
+				{
+					for (auto &kv : GridEditData)
+					{
+						if (kv.second.Entity)
+							kv.second.FrictionFactor = block.FrictionFactor;
+					}
+				}
+			}
+			else
+			{
+				ImGui::Text(u8"空格子 (%d, %d)", cx, cy);
+				if (ImGui::MenuItem(u8"在此绘制"))
+				{
+					PhysicsBlock::GridBlock block;
+					block.Entity = GridEditEntity;
+					block.Collision = GridEditCollision;
+					block.mass = GridEditMass;
+					block.FrictionFactor = GridEditFriction;
+					GridEditData[{cx, cy}] = block;
+				}
+			}
+
+			ImGui::EndPopup();
 		}
 		ImGui::PopStyleVar();
 	}

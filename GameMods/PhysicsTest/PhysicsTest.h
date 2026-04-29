@@ -4,6 +4,7 @@
 #include "../../Character/UVDynamicDiagram.h"
 #include "../../PhysicsBlock/PhysicsWorld.hpp"
 #include "../../PhysicsBlock/MapStatic.hpp"
+#include <map>
 
 namespace GAME
 {
@@ -77,6 +78,25 @@ namespace GAME
 		PhysicsBlock::PhysicsFormwork *RightClickObjectPtr = nullptr;
 		bool ShowRightClickMenu = false;
 		void RenderRightClickMenu();
+
+	private:// 网格编辑模式
+		PhysicsBlock::PhysicsShape *GridEditShape = nullptr;
+		bool GridEditSavedPhysicsSwitch = true;
+		std::map<std::pair<int,int>, PhysicsBlock::GridBlock> GridEditData;
+		glm::ivec2 GridEditOrigin = {0, 0};
+		enum class GridEditBrush { Draw, Erase } GridEditBrushType = GridEditBrush::Draw;
+		bool GridEditCollision = true;
+		bool GridEditEntity = true;
+		FLOAT_ GridEditMass = 1.0f;
+		FLOAT_ GridEditFriction = 0.2f;
+		glm::ivec2 GridEditCellRightClick = {-1, -1};
+		bool ShowGridCellMenu = false;
+		void RenderGridEditUI();
+		void RenderGridCellMenu();
+		void GridEditPaint(glm::vec2 worldPos);
+		glm::ivec2 WorldToGridCell(PhysicsBlock::PhysicsShape *shape, glm::vec2 worldPos);
+		void EnterGridEdit(PhysicsBlock::PhysicsShape *shape);
+		void ExitGridEdit();
 	};
 
 }

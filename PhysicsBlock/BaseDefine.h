@@ -12,6 +12,8 @@
 
 #define PhysicsApplyImpulseSize 10 // 最低物理迭代次数
 
+#define PhysicsSleepThreshold 10 // 物体休眠阈值（StaticNum超过此值视为静止）
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif

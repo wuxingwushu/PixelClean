@@ -209,6 +209,8 @@ namespace PhysicsBlock
             bool JZ;
             int SizeD;
             int SizeY;
+            std::vector<PhysicsBlock::PhysicsFormwork*> SearchV;
+
             ThreadTaskAllot(SizeD, SizeY, PhysicsShapeS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
@@ -219,7 +221,7 @@ namespace PhysicsBlock
                 if (!JZ && (PhysicsShapeS[SizeD]->mass != FLOAT_MAX))
                     Arbiter(PhysicsShapeS[SizeD], wMapFormwork);
 
-                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->radius);
+                mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->radius, SearchV);
                 for (auto i : SearchV)
                 {
 
@@ -285,7 +287,7 @@ namespace PhysicsBlock
                 if (!JZ && (PhysicsCircleS[SizeD]->mass != FLOAT_MAX))
                     Arbiter(PhysicsCircleS[SizeD], wMapFormwork);
 
-                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsCircleS[SizeD]->pos, PhysicsCircleS[SizeD]->radius);
+                mGridSearch.Get(PhysicsCircleS[SizeD]->pos, PhysicsCircleS[SizeD]->radius, SearchV);
                 for (auto i : SearchV)
                 {
 
@@ -342,7 +344,7 @@ namespace PhysicsBlock
                 if (!JZ && (PhysicsLineS[SizeD]->mass != FLOAT_MAX))
                     Arbiter(PhysicsLineS[SizeD], wMapFormwork);
 
-                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsLineS[SizeD]->pos, PhysicsLineS[SizeD]->radius);
+                mGridSearch.Get(PhysicsLineS[SizeD]->pos, PhysicsLineS[SizeD]->radius, SearchV);
                 for (auto i : SearchV)
                 {
                     if ((PhysicsLineS[SizeD]->mass == FLOAT_MAX) && (i->PFGetMass() == FLOAT_MAX))
@@ -641,12 +643,13 @@ namespace PhysicsBlock
         {
             int SizeD;
             int SizeY;
+            std::vector<PhysicsBlock::PhysicsFormwork*> SearchV;
             ThreadTaskAllot(SizeD, SizeY, PhysicsShapeS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 Arbiter(PhysicsShapeS[SizeD], wMapFormwork);
 
-                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->radius);
+                mGridSearch.Get(PhysicsShapeS[SizeD]->pos, PhysicsShapeS[SizeD]->radius, SearchV);
                 for (auto i : SearchV)
                 {
 
@@ -703,7 +706,7 @@ namespace PhysicsBlock
             {
                 Arbiter(PhysicsCircleS[SizeD], wMapFormwork);
 
-                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsCircleS[SizeD]->pos, PhysicsCircleS[SizeD]->radius);
+                mGridSearch.Get(PhysicsCircleS[SizeD]->pos, PhysicsCircleS[SizeD]->radius, SearchV);
                 for (auto i : SearchV)
                 {
                     if ((PhysicsCircleS[SizeD]->mass == FLOAT_MAX) && (i->PFGetMass() == FLOAT_MAX))
@@ -750,7 +753,7 @@ namespace PhysicsBlock
             {
                 Arbiter(PhysicsLineS[SizeD], wMapFormwork);
 
-                std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(PhysicsLineS[SizeD]->pos, PhysicsLineS[SizeD]->radius);
+                mGridSearch.Get(PhysicsLineS[SizeD]->pos, PhysicsLineS[SizeD]->radius, SearchV);
                 for (auto i : SearchV)
                 {
                     if ((PhysicsLineS[SizeD]->mass == FLOAT_MAX) && (i->PFGetMass() == FLOAT_MAX))
@@ -898,7 +901,8 @@ namespace PhysicsBlock
 
     PhysicsFormwork *PhysicsWorld::Get(Vec2_ pos)
     {
-        std::vector<PhysicsBlock::PhysicsFormwork *> SearchV = mGridSearch.Get(pos, 1);
+        std::vector<PhysicsBlock::PhysicsFormwork*> SearchV;
+        mGridSearch.Get(pos, 1, SearchV);
         for (auto i : SearchV)
         {
             switch (i->PFGetType())

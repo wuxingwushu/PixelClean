@@ -22,9 +22,9 @@
 // 支持鼠标绘制场景（发光/非发光物体），实时计算多次反弹的间接光照
 //
 // 操作说明：
-//   鼠标左键拖动 - 绘制物体
-//   空格键       - 切换发光/非发光画笔
-//   C键          - 清除画布
+//   鼠标左键拖动 - 绘制发光物体
+//   鼠标右键拖动 - 绘制墙壁（遮挡光线）
+//   C键          - 清空画布（全部变为空地）
 //   R键          - 重置为默认场景
 //
 // 算法原理：
@@ -108,13 +108,12 @@ private:
 
     // ---- 状态 ----
     int mFrameCount = 0;
-    bool mEmissiveMode = false;       // false=发光画笔, true=非发光画笔
-    bool mCascadeToggle = false;      // 乒乓缓冲区切换标志
+    bool mCascadeToggle = false;
     double mMouseX = 0, mMouseY = 0;
     double mMousePrevX = 0, mMousePrevY = 0;
     bool mMouseLeftDown = false;
+    bool mMouseRightDown = false;
     float mTime = 0.0f;
-    bool mNeedReset = false;
 
     // ---- 辅助函数 ----
     int calculateTotalCascadeEntries() const;

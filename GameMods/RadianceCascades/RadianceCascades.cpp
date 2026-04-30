@@ -461,12 +461,12 @@ void RadianceCascades::dispatchCompute() {
     p.sdfWidth = sdfWidth;
     p.sdfHeight = sdfHeight;
     p.mouseX = static_cast<float>(mMouseX);
-    p.mouseY = static_cast<float>(mMouseY);
+    p.mouseY = static_cast<float>(sdfHeight - mMouseY);
     p.mousePrevX = static_cast<float>(mMousePrevX);
-    p.mousePrevY = static_cast<float>(mMousePrevY);
-    p.mouseLeftDown = mMouseLeftDown ? 1 : 0;
+    p.mousePrevY = static_cast<float>(sdfHeight - mMousePrevY);
+    p.mouseLeftDown = (mMouseLeftDown || mMouseRightDown) ? 1 : 0;
     p.frameCount = mFrameCount;
-    p.emissiveMode = mEmissiveMode ? 1 : 0;
+    p.emissiveMode = (mMouseRightDown && !mMouseLeftDown) ? 1 : 0;
     p.brushRadius = BRUSH_RADIUS;
     p.c_sResX = C_SRES_X;
     p.c_sResY = C_SRES_Y;
@@ -642,7 +642,7 @@ void RadianceCascades::cleanup() {
 // 鼠标移动回调（由Window类调用）
 // ============================================================================
 void RadianceCascades::MouseMove(double xpos, double ypos) {
-    if (mMouseLeftDown) {
+    if (mMouseLeftDown || mMouseRightDown) {
         mMousePrevX = mMouseX;
         mMousePrevY = mMouseY;
     } else {
@@ -669,29 +669,37 @@ void RadianceCascades::KeyDown(GameKeyEnum moveDirection) {
 void RadianceCascades::GameLoop(unsigned int mCurrentFrame) {
     mTime += 1.0f / 60.0f;
 
-    // ---- 通过GLFW直接检测输入 ----
     GLFWwindow* window = mWindow->getWindow();
     if (window) {
-        // 鼠标左键状态
         bool leftDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-        if (leftDown && !mMouseLeftDown) {
+        bool rightDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+        bool anyDown = leftDown || rightDown;
+        bool wasAnyDown = mMouseLeftDown || mMouseRightDown;
+
+        if (anyDown && !wasAnyDown) {
+            mMousePrevX = mMouseX;
+            mMousePrevY = mMouseY;
+        } else if (anyDown) {
             mMousePrevX = mMouseX;
             mMousePrevY = mMouseY;
         }
-        mMouseLeftDown = leftDown;
 
-        // 键盘检测（使用按键切换，避免每帧触发）
-        static bool spaceWasPressed = false;
-        bool spaceIsPressed = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-        if (spaceIsPressed && !spaceWasPressed) {
-            mEmissiveMode = !mEmissiveMode;
-        }
-        spaceWasPressed = spaceIsPressed;
+        mMouseLeftDown = leftDown;
+        mMouseRightDown = rightDown;
 
         static bool cWasPressed = false;
         bool cIsPressed = glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS;
         if (cIsPressed && !cWasPressed) {
-            mNeedReset = true;
+            float maxF = std::numeric_limits<float>::max();
+            void* data = mSDFBuffer->getupdateBufferByMap();
+            struct SDFEntry { float dist; float r, g, b; };
+            SDFEntry* entries = static_cast<SDFEntry*>(data);
+            int sdfWidth = mSwapChain->getExtent().width;
+            int sdfHeight = mSwapChain->getExtent().height;
+            for (int i = 0; i < sdfWidth * sdfHeight; ++i) {
+                entries[i] = { maxF, 0.0f, 0.0f, 0.0f };
+            }
+            mSDFBuffer->endupdateBufferByMap();
         }
         cWasPressed = cIsPressed;
 
@@ -699,28 +707,10 @@ void RadianceCascades::GameLoop(unsigned int mCurrentFrame) {
         bool rIsPressed = glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS;
         if (rIsPressed && !rWasPressed) {
             mFrameCount = 0;
-            mNeedReset = true;
         }
         rWasPressed = rIsPressed;
     }
 
-    // ---- 清除画布 ----
-    if (mNeedReset) {
-        float maxF = std::numeric_limits<float>::max();
-        void* data = mSDFBuffer->getupdateBufferByMap();
-        struct SDFEntry { float dist; float r, g, b; };
-        SDFEntry* entries = static_cast<SDFEntry*>(data);
-        int sdfWidth = mSwapChain->getExtent().width;
-        int sdfHeight = mSwapChain->getExtent().height;
-        for (int i = 0; i < sdfWidth * sdfHeight; ++i) {
-            entries[i] = { maxF, 0.0f, 0.0f, 0.0f };
-        }
-        mSDFBuffer->endupdateBufferByMap();
-        if (mFrameCount > 0) mFrameCount = 0;
-        mNeedReset = false;
-    }
-
-    // ---- 调度计算着色器 ----
     dispatchCompute();
 
     mFrameCount++;
@@ -733,39 +723,32 @@ void RadianceCascades::GameUI() {
     int width = mSwapChain->getExtent().width;
     int height = mSwapChain->getExtent().height;
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(float(width), float(height)), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Radiance Cascades 2D GI", nullptr,
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(float(width), float(height)));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    ImGui::Begin("##RCMain", nullptr,
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoScrollWithMouse);
 
-    ImVec2 windowSize = ImGui::GetContentRegionAvail();
-    float aspect = float(width) / float(height);
-    float windowAspect = windowSize.x / windowSize.y;
-    ImVec2 imageSize;
-    if (windowAspect > aspect) {
-        imageSize.y = windowSize.y;
-        imageSize.x = windowSize.y * aspect;
-    } else {
-        imageSize.x = windowSize.x;
-        imageSize.y = windowSize.x / aspect;
-    }
-
-    ImGui::SetCursorPos(ImVec2(
-        (ImGui::GetWindowWidth() - imageSize.x) * 0.5f,
-        (ImGui::GetWindowHeight() - imageSize.y) * 0.5f
-    ));
+    ImVec2 imageSize = ImGui::GetContentRegionAvail();
     ImGui::Image((ImTextureID)mImGuiDescriptorSet, imageSize,
         ImVec2(0, 0), ImVec2(1, 1));
 
     ImGui::End();
+    ImGui::PopStyleVar();
 
-    ImGui::Begin("RC Controls");
-    ImGui::Text("Mouse Drag: Draw");
-    ImGui::Text("Space: Toggle Emissive (%s)", mEmissiveMode ? "Wall" : "Light");
+    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.5f);
+    ImGui::Begin("##RCControls", nullptr,
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoInputs);
+    ImGui::Text("Left Click: Draw Emissive");
+    ImGui::Text("Right Click: Draw Wall");
     ImGui::Text("C: Clear Canvas");
     ImGui::Text("R: Reset Scene");
     ImGui::Text("Frame: %d", mFrameCount);
-    ImGui::Text("Cascade Entries: %d", calculateTotalCascadeEntries());
     ImGui::End();
 }
 
@@ -773,6 +756,7 @@ void RadianceCascades::GameCommandBuffers(unsigned int Format_i) {}
 void RadianceCascades::GameRecordCommandBuffers() {}
 void RadianceCascades::GameStopInterfaceLoop(unsigned int mCurrentFrame) {
     mMouseLeftDown = false;
+    mMouseRightDown = false;
 }
 void RadianceCascades::GameTCPLoop() {}
 

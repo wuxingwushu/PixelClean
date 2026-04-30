@@ -95,25 +95,37 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURC
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ImGui/Minecraft_AE.ttf ${CMAKE_CURRENT_BINARY_DIR})# 字体
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource ${CMAKE_CURRENT_BINARY_DIR}/Resource)# 数字资源
 
+# 查找 Vulkan SDK 下的 glslangValidator
+find_program(GLSLANG_VALIDATOR
+    NAMES glslangValidator glslangValidator.exe
+    HINTS $ENV{VULKAN_SDK}/Bin $ENV{VULKAN_SDK}/Bin32
+    DOC "Path to glslangValidator executable from Vulkan SDK"
+)
+
+if(NOT GLSLANG_VALIDATOR)
+    message(FATAL_ERROR "glslangValidator not found! Please install Vulkan SDK or set VULKAN_SDK environment variable.")
+endif()
+message(STATUS "Found glslangValidator: ${GLSLANG_VALIDATOR}")
+
 # 编译 GLSL shaders 为 SPIR-V
 set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
 
 # 在 CMake 配置阶段编译 shaders（每次重新配置时都会执行）
 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUTPUT_DIR})
 execute_process(
-    COMMAND cmd /c "${CMAKE_CURRENT_SOURCE_DIR}/shaders/compile_to_dir.bat" "${SHADER_OUTPUT_DIR}"
+    COMMAND cmd /c "${CMAKE_CURRENT_SOURCE_DIR}/shaders/compile.bat" "${SHADER_OUTPUT_DIR}" "${GLSLANG_VALIDATOR}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     RESULT_VARIABLE SHADER_COMPILE_RESULT
 )
 
 if(NOT SHADER_COMPILE_RESULT EQUAL 0)
-    message(WARNING "Shader compilation failed. Please check shaders/compile_to_dir.bat")
+    message(WARNING "Shader compilation failed. Please check shaders/compile.bat")
 endif()
 
 # 同时创建自定义目标，确保构建时也会检查 shader
 add_custom_target(compile_shaders ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUTPUT_DIR}
-    COMMAND cmd /c "${CMAKE_CURRENT_SOURCE_DIR}/shaders/compile_to_dir.bat" "${SHADER_OUTPUT_DIR}"
+    COMMAND cmd /c "${CMAKE_CURRENT_SOURCE_DIR}/shaders/compile.bat" "${SHADER_OUTPUT_DIR}" "${GLSLANG_VALIDATOR}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Checking and compiling GLSL shaders to SPIR-V..."
     VERBATIM

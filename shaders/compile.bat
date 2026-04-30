@@ -1,53 +1,54 @@
-mkdir Spv
+@echo off
+REM Compile shaders to specified output directory
+REM Usage: compile_to_dir.bat <output_directory> <glslangValidator_path>
 
-.\..\glslangValidator.exe  -V lessionShader.vert -o Spv/vs.spv
+set OUTPUT_DIR=%~1
+set GLSLANG=%~2
+set SCRIPT_DIR=%~dp0
 
-.\..\glslangValidator.exe  -V lessionShader.frag -o Spv/fs.spv
+if "%OUTPUT_DIR%"=="" (
+    echo Error: Output directory not specified
+    echo Usage: compile_to_dir.bat ^<output_directory^> ^<glslangValidator_path^>
+    exit /b 1
+)
 
-.\..\glslangValidator.exe  -V GifFragShader.vert -o Spv/GifFragShaderV.spv
+if "%GLSLANG%"=="" (
+    echo Error: glslangValidator path not specified
+    echo Usage: compile_to_dir.bat ^<output_directory^> ^<glslangValidator_path^>
+    exit /b 1
+)
 
-.\..\glslangValidator.exe  -V GifFragShader.frag -o Spv/GifFragShaderF.spv
+if not exist "%GLSLANG%" (
+    echo Error: glslangValidator not found at: %GLSLANG%
+    exit /b 1
+)
 
-.\..\glslangValidator.exe  -V WarfareMist.comp -o Spv/WarfareMist.spv
+mkdir "%OUTPUT_DIR%" 2>nul
 
-.\..\glslangValidator.exe  -V DungeonWarfareMist.comp -o Spv/DungeonWarfareMist.spv
+"%GLSLANG%" -V "%SCRIPT_DIR%lessionShader.vert" -o "%OUTPUT_DIR%/vs.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%lessionShader.frag" -o "%OUTPUT_DIR%/fs.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%GifFragShader.vert" -o "%OUTPUT_DIR%/GifFragShaderV.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%GifFragShader.frag" -o "%OUTPUT_DIR%/GifFragShaderF.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%WarfareMist.comp" -o "%OUTPUT_DIR%/WarfareMist.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%DungeonWarfareMist.comp" -o "%OUTPUT_DIR%/DungeonWarfareMist.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%LineShader.vert" -o "%OUTPUT_DIR%/LineShaderV.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%LineShader.frag" -o "%OUTPUT_DIR%/LineShaderF.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%SpotShader.vert" -o "%OUTPUT_DIR%/SpotShaderV.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%SpotShader.frag" -o "%OUTPUT_DIR%/SpotShaderF.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%SpotNormal.geom" -o "%OUTPUT_DIR%/SpotNormal.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%DamagePrompt.vert" -o "%OUTPUT_DIR%/DamagePromptV.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%DamagePrompt.frag" -o "%OUTPUT_DIR%/DamagePromptF.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagram.vert" -o "%OUTPUT_DIR%/UVDynamicDiagramV.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagram.frag" -o "%OUTPUT_DIR%/UVDynamicDiagramF.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagram.geom" -o "%OUTPUT_DIR%/UVDynamicDiagramG.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%Background.comp" -o "%OUTPUT_DIR%/Background.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%GridBackground.comp" -o "%OUTPUT_DIR%/GridBackground.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%CircleShader.vert" -o "%OUTPUT_DIR%/CircleShaderV.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%CircleShader.frag" -o "%OUTPUT_DIR%/CircleShaderF.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%CircleNormal.geom" -o "%OUTPUT_DIR%/CircleNormal.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%2D_GI.comp" -o "%OUTPUT_DIR%/2D_GI.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%RC_SDF.comp" -o "%OUTPUT_DIR%/RC_SDF.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%RC_Cascade.comp" -o "%OUTPUT_DIR%/RC_Cascade.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%RC_Display.comp" -o "%OUTPUT_DIR%/RC_Display.spv"
 
-.\..\glslangValidator.exe  -V LineShader.vert -o Spv/LineShaderV.spv
-
-.\..\glslangValidator.exe  -V LineShader.frag -o Spv/LineShaderF.spv
-
-.\..\glslangValidator.exe  -V SpotShader.vert -o Spv/SpotShaderV.spv
-
-.\..\glslangValidator.exe  -V SpotShader.frag -o Spv/SpotShaderF.spv
-
-.\..\glslangValidator.exe  -V SpotNormal.geom -o Spv/SpotNormal.spv
-
-.\..\glslangValidator.exe  -V DamagePrompt.vert -o Spv/DamagePromptV.spv
-
-.\..\glslangValidator.exe  -V DamagePrompt.frag -o Spv/DamagePromptF.spv
-
-.\..\glslangValidator.exe  -V UVDynamicDiagram.vert -o Spv/UVDynamicDiagramV.spv
-
-.\..\glslangValidator.exe  -V UVDynamicDiagram.frag -o Spv/UVDynamicDiagramF.spv
-
-.\..\glslangValidator.exe  -V UVDynamicDiagram.geom -o Spv/UVDynamicDiagramG.spv
-
-.\..\glslangValidator.exe  -V Background.comp -o Spv/Background.spv
-
-.\..\glslangValidator.exe  -V GridBackground.comp -o Spv/GridBackground.spv
-
-.\..\glslangValidator.exe  -V CircleShader.vert -o Spv/CircleShaderV.spv
-
-.\..\glslangValidator.exe  -V CircleShader.frag -o Spv/CircleShaderF.spv
-
-.\..\glslangValidator.exe  -V CircleNormal.geom -o Spv/CircleNormal.spv
-
-.\..\glslangValidator.exe  -V 2D_GI.comp -o Spv/2D_GI.spv
-
-.\..\glslangValidator.exe  -V RC_SDF.comp -o Spv/RC_SDF.spv
-
-.\..\glslangValidator.exe  -V RC_Cascade.comp -o Spv/RC_Cascade.spv
-
-.\..\glslangValidator.exe  -V RC_Display.comp -o Spv/RC_Display.spv
-
-pause
+echo Shader compilation completed. Output directory: %OUTPUT_DIR%

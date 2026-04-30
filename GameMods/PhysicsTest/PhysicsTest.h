@@ -41,7 +41,7 @@ namespace GAME
 
 		virtual void GameUI();
 
-	private:// 鼠标点击事件
+	private: // 鼠标点击事件
 		void EditorMode(glm::vec2 huoqdedian);
 		// 摄像机
 		void CameraLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e);
@@ -69,34 +69,38 @@ namespace GAME
 		// 物理信息辅助视觉
 		bool PhysicsAssistantInformation = false; // 是否显示物理辅助信息
 
-	private:// 编辑
+	private:						 // 编辑
 		bool EditorModeBool = false; // 编辑模式开关
-		int item_object = 0; // 类型
+		int item_object = 0;		 // 类型
 		const char *objectName[4] = {u8"圆", u8"点", u8"网格", u8"线"};
 
-	private:// 右键菜单
-		PhysicsBlock::PhysicsFormwork *RightClickObjectPtr = nullptr;
-		bool ShowRightClickMenu = false;
-		void RenderRightClickMenu();
+	private:														  // 右键菜单
+		PhysicsBlock::PhysicsFormwork *RightClickObjectPtr = nullptr; // 右键点击对象指针
+		bool ShowRightClickMenu = false;							  // 是否显示右键菜单
+		void RenderRightClickMenu();								  // 右键菜单
 
-	private:// 网格编辑模式
-		PhysicsBlock::PhysicsShape *GridEditShape = nullptr;
-		bool GridEditSavedPhysicsSwitch = true;
-		std::map<std::pair<int,int>, PhysicsBlock::GridBlock> GridEditData;
-		glm::ivec2 GridEditOrigin = {0, 0};
-		enum class GridEditBrush { Draw, Erase } GridEditBrushType = GridEditBrush::Draw;
-		bool GridEditCollision = true;
-		bool GridEditEntity = true;
-		FLOAT_ GridEditMass = 1.0f;
-		FLOAT_ GridEditFriction = 0.2f;
-		glm::ivec2 GridEditCellRightClick = {-1, -1};
-		bool ShowGridCellMenu = false;
-		void RenderGridEditUI();
-		void RenderGridCellMenu();
-		void GridEditPaint(glm::vec2 worldPos);
-		glm::ivec2 WorldToGridCell(PhysicsBlock::PhysicsShape *shape, glm::vec2 worldPos);
-		void EnterGridEdit(PhysicsBlock::PhysicsShape *shape);
-		void ExitGridEdit();
+	private:																 // 网格编辑模式
+		PhysicsBlock::PhysicsShape *GridEditShape = nullptr;				 // 网格编辑形状对象
+		bool GridEditSavedPhysicsSwitch = true;								 // 是否保存物理世界
+		std::map<std::pair<int, int>, PhysicsBlock::GridBlock> GridEditData; // 网格编辑数据
+		glm::ivec2 GridEditOrigin = {0, 0};									 // 网格编辑原点
+		enum class GridEditBrush
+		{
+			Draw,
+			Erase
+		} GridEditBrushType = GridEditBrush::Draw;										   // 网格编辑画笔类型
+		bool GridEditCollision = true;													   // 是否开启碰撞检测
+		bool GridEditEntity = true;														   // 是否开启实体检测
+		FLOAT_ GridEditMass = 1.0f;														   // 网格编辑质量
+		FLOAT_ GridEditFriction = 0.2f;													   // 网格编辑摩擦力
+		glm::ivec2 GridEditCellRightClick = {-1, -1};									   // 网格编辑单元格右键点击位置
+		bool ShowGridCellMenu = false;													   // 是否显示网格单元格菜单
+		void RenderGridEditUI();														   // 网格编辑界面
+		void RenderGridCellMenu();														   // 网格单元格菜单
+		void GridEditPaint(glm::vec2 worldPos);											   // 网格编辑绘制
+		glm::ivec2 WorldToGridCell(PhysicsBlock::PhysicsShape *shape, glm::vec2 worldPos); // 世界坐标转换为网格单元格坐标
+		void EnterGridEdit(PhysicsBlock::PhysicsShape *shape);							   // 进入网格编辑模式
+		void ExitGridEdit();															   // 退出网格编辑模式
 	};
 
 }

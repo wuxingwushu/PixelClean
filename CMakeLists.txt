@@ -138,6 +138,8 @@ add_subdirectory(GameMods/MazeMods)
 add_subdirectory(GameMods/TankTrouble)
 add_subdirectory(GameMods/UnlimitednessMapMods)
 add_subdirectory(GameMods/PhysicsTest)
+add_subdirectory(GameMods/SoloudTest)
+add_subdirectory(GameMods/RadianceCascades)
 add_subdirectory(Tool)#文件夹里面要有代码文件，不可以是空的，会报错
 
 
@@ -175,6 +177,8 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		TankTroubleLib
 		UnlimitednessMapModsLib
 		PhysicsBlockLib
+		SoloudTestLib
+		RadianceCascadesLib
 
 		# Soloud 音频库
 		soloud
@@ -225,6 +229,8 @@ else()
 		TankTroubleLib
 		UnlimitednessMapModsLib
 		PhysicsBlockLib
+		SoloudTestLib
+		RadianceCascadesLib
 
 		# Soloud 音频库
 		soloud

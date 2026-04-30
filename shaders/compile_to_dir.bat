@@ -35,5 +35,8 @@ mkdir "%OUTPUT_DIR%" 2>nul
 "%SCRIPT_DIR%..\glslangValidator.exe" -V "%SCRIPT_DIR%CircleShader.frag" -o "%OUTPUT_DIR%/CircleShaderF.spv"
 "%SCRIPT_DIR%..\glslangValidator.exe" -V "%SCRIPT_DIR%CircleNormal.geom" -o "%OUTPUT_DIR%/CircleNormal.spv"
 "%SCRIPT_DIR%..\glslangValidator.exe" -V "%SCRIPT_DIR%2D_GI.comp" -o "%OUTPUT_DIR%/2D_GI.spv"
+"%SCRIPT_DIR%..\glslangValidator.exe" -V "%SCRIPT_DIR%RC_SDF.comp" -o "%OUTPUT_DIR%/RC_SDF.spv"
+"%SCRIPT_DIR%..\glslangValidator.exe" -V "%SCRIPT_DIR%RC_Cascade.comp" -o "%OUTPUT_DIR%/RC_Cascade.spv"
+"%SCRIPT_DIR%..\glslangValidator.exe" -V "%SCRIPT_DIR%RC_Display.comp" -o "%OUTPUT_DIR%/RC_Display.spv"
 
 echo Shader compilation completed. Output directory: %OUTPUT_DIR%

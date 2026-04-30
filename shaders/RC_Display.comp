@@ -1,0 +1,127 @@
+#version 450
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// ============================================================================
+// RC_Display.comp — 最终显示着色器
+//
+// 功能：
+//   1. 从cascade 0双线性插值获取辐射度（低分辨率→高分辨率上采样）
+//   2. 叠加SDF边缘的全分辨率自发光（修复低分辨率伪影）
+//   3. 色调映射（HDR→LDR）和Gamma校正
+//   4. 输出为打包的RGBA8格式（用于GPU→纹理拷贝）
+// ============================================================================
+
+layout(std430, binding = 0) buffer Params {
+    float time;
+    float timeDelta;
+    int sdfWidth;
+    int sdfHeight;
+    float mouseX;
+    float mouseY;
+    float mousePrevX;
+    float mousePrevY;
+    int mouseLeftDown;
+    int frameCount;
+    int emissiveMode;
+    float brushRadius;
+    int c_sResX;
+    int c_sResY;
+    int c_dRes;
+    int nCascades;
+    float c_intervalLength;
+    float c_smoothDistScale;
+    int totalCascadeEntries;
+    int pad0;
+} params;
+
+// SDF缓冲区（只读，用于边缘叠加）
+layout(std430, binding = 1) readonly buffer SDFBuffer {
+    vec4 sdf[];
+};
+
+// 当前帧级联缓冲区（只读，读取cascade 0）
+layout(std430, binding = 2) readonly buffer CascadeData {
+    vec4 cascade[];
+};
+
+// 输出缓冲区（打包RGBA8格式）
+layout(std430, binding = 3) buffer OutputBuffer {
+    uint outColor[];
+};
+
+const float PI = 3.14159265359;
+
+// ============================================================================
+// 色调映射：Reinhard变体，将HDR辐射度映射到[0,1]
+// 公式：1 - 1/(1+x)^2.5，比标准Reinhard更柔和的高光压缩
+// ============================================================================
+vec3 tonemap(vec3 x) {
+    return vec3(1.0) - vec3(1.0) / pow(vec3(1.0) + x, vec3(2.5));
+}
+
+// ============================================================================
+// 从cascade 0获取指定位置的辐射度（双线性插值）
+// cascade 0的空间分辨率低于输出分辨率，需要上采样
+// ============================================================================
+vec4 cascade0Fetch(ivec2 p) {
+    p = clamp(p, ivec2(0), ivec2(params.c_sResX - 1, params.c_sResY - 1));
+    // cascade 0每个像素只有1个方向（方向索引=0）
+    int idx = p.x + p.y * params.c_sResX;
+    return cascade[idx];
+}
+
+// ============================================================================
+// 打包RGBA浮点颜色为uint32（R8G8B8A8格式）
+// Vulkan copyBufferToImage需要此格式匹配VK_FORMAT_R8G8B8A8_UNORM
+// ============================================================================
+uint packRGBA(vec4 color) {
+    color = clamp(color, 0.0, 1.0);
+    uint r = uint(color.r * 255.0 + 0.5);
+    uint g = uint(color.g * 255.0 + 0.5);
+    uint b = uint(color.b * 255.0 + 0.5);
+    uint a = uint(color.a * 255.0 + 0.5);
+    return r | (g << 8) | (b << 16) | (a << 24);
+}
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    int totalPixels = params.sdfWidth * params.sdfHeight;
+    if (idx >= uint(totalPixels)) return;
+
+    int x = int(idx) % params.sdfWidth;
+    int y = int(idx) / params.sdfWidth;
+    vec2 fragCoord = vec2(float(x), float(y));
+
+    // ---- 1. 双线性插值cascade 0 ----
+    // 将输出像素坐标映射到cascade 0的连续坐标
+    vec2 p = (fragCoord + 0.5) / vec2(float(params.sdfWidth), float(params.sdfHeight))
+           * vec2(float(params.c_sResX), float(params.c_sResY));
+    ivec2 q = ivec2(round(p)) - 1;
+    vec2 w = p - vec2(q) - 0.5;
+
+    // 4个最近邻采样 + 双线性混合
+    vec4 S0 = cascade0Fetch(q + ivec2(1, 1));
+    vec4 S1 = cascade0Fetch(q + ivec2(0, 1));
+    vec4 S2 = cascade0Fetch(q + ivec2(1, 0));
+    vec4 S3 = cascade0Fetch(q + ivec2(0, 0));
+    vec4 interpolated = mix(mix(S0, S1, w.x), mix(S2, S3, w.x), w.y);
+
+    // cascade 0存储的是方向平均辐射度，乘以2π得到总辐射通量
+    vec3 fluence = interpolated.rgb * 2.0 * PI;
+
+    // ---- 2. SDF边缘叠加 ----
+    // 在SDF表面附近（距离<3像素），混合全分辨率自发光
+    // 这修复了cascade低分辨率导致的发光边缘伪影
+    vec4 data = sdf[idx];
+    float edgeBlend = clamp(3.0 - data.x, 0.0, 1.0);
+    fluence = mix(fluence, data.yzw * 2.0 * PI, edgeBlend);
+
+    // ---- 3. 色调映射 + Gamma校正 ----
+    vec3 mapped = tonemap(fluence);
+    mapped = pow(mapped, vec3(1.0 / 2.2)); // Gamma校正
+
+    // ---- 4. 输出打包RGBA8 ----
+    // Y轴翻转：Vulkan纹理坐标Y轴从上到下，与屏幕坐标一致
+    int outIdx = x + (params.sdfHeight - 1 - y) * params.sdfWidth;
+    outColor[outIdx] = packRGBA(vec4(mapped, 1.0));
+}

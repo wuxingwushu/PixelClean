@@ -117,13 +117,12 @@ namespace GAME
 	void PhysicsTest::GameUI()
 	{
 		//ImGui::ShowDemoWindow();
-		ImVec2 window_size;
 		ImGui::Begin(u8"编辑");
 		ImVec2 window_pos = ImGui::GetWindowPos();
-		window_size = ImGui::GetWindowSize();
+		ImVec2 window_size = ImGui::GetWindowSize();
 		if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
 			((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
-			Global::ClickWindow = true;
+			Global::ClickWindow = true; // 鼠标在窗口上
 		}
 		if (ImGui::Button(EditorModeBool ? u8"关闭编辑" : u8"开启编辑"))
 		{
@@ -133,10 +132,11 @@ namespace GAME
 		ImGui::End();
 
 		ImGui::Begin(u8"属性");
+		window_pos = ImGui::GetWindowPos();
 		window_size = ImGui::GetWindowSize();
-		if (((Global::mWidth - window_size.x) < CursorPosX) && (window_size.y > CursorPosY))
-		{
-			Global::ClickWindow = true;
+		if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
+			((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
+			Global::ClickWindow = true; // 鼠标在窗口上
 		}
 		// 设置位置，让窗口靠右
 		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
@@ -560,11 +560,12 @@ namespace GAME
 
 	void PhysicsTest::EditorMode(glm::vec2 huoqdedian)
 	{
+		// 鼠标在窗口上，不处理按键事件
+		if (Global::ClickWindow)
+			return;
+
 		if (GridEditShape != nullptr)
 		{
-			if (Global::ClickWindow)
-				return;
-
 			bool zb = false, yb = false;
 			static glm::vec2 z1, z2, y1, y2;
 
@@ -624,9 +625,6 @@ namespace GAME
 			}
 			return;
 		}
-
-		if (Global::ClickWindow)
-			return;
 
 		bool zb = false, yb = false;
 		static glm::vec2 z1, z2, y1, y2;
@@ -1000,6 +998,13 @@ namespace GAME
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
 		if (ImGui::BeginPopup("##RightClickMenu"))
 		{
+			ImVec2 window_size = ImGui::GetWindowSize();// 获取窗口大小
+			ImVec2 window_pos = ImGui::GetWindowPos();// 获取窗口位置
+			if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
+				((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
+				Global::ClickWindow = true; // 鼠标在窗口上
+			}
+
 			const char *typeName = u8"未知";
 			switch (RightClickObjectPtr->PFGetType())
 			{
@@ -1211,10 +1216,17 @@ namespace GAME
 
 	void PhysicsTest::RenderGridEditUI()
 	{
+		// 被编辑对象不为空时才显示菜单
 		if (GridEditShape == nullptr)
 			return;
 
 		ImGui::Begin(u8"网格编辑");
+		ImVec2 window_pos = ImGui::GetWindowPos();
+		ImVec2 window_size = ImGui::GetWindowSize();
+		if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
+			((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
+			Global::ClickWindow = true; // 鼠标在窗口上
+		}
 
 		int minX = INT_MAX, minY = INT_MAX, maxX = INT_MIN, maxY = INT_MIN;
 		int entityCount = 0;
@@ -1315,6 +1327,7 @@ namespace GAME
 
 	void PhysicsTest::RenderGridCellMenu()
 	{
+		// 被编辑对象不为空时才显示菜单
 		if (GridEditShape == nullptr)
 			return;
 
@@ -1327,6 +1340,14 @@ namespace GAME
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
 		if (ImGui::BeginPopup("##GridCellMenu"))
 		{
+
+			ImVec2 window_size = ImGui::GetWindowSize();// 获取窗口大小
+			ImVec2 window_pos = ImGui::GetWindowPos();// 获取窗口位置
+			if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
+				((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
+				Global::ClickWindow = true; // 鼠标在窗口上
+			}
+
 			int cx = GridEditCellRightClick.x;
 			int cy = GridEditCellRightClick.y;
 			auto it = GridEditData.find({cx, cy});

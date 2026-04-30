@@ -56,6 +56,14 @@ namespace GAME::SoundEffect {
 
 		void SetVolume(float Volume);
 
+		SoLoud::Soloud* GetSoloud() {
+			return &mSoloud;
+		}
+
+		void StopAll() {
+			mSoloud.stopAll();
+		}
+
 	private:
 		static SoundEffect* mSoundEffect;
 		SoundEffect();

@@ -44,4 +44,10 @@ mkdir Spv
 
 .\..\glslangValidator.exe  -V 2D_GI.comp -o Spv/2D_GI.spv
 
+.\..\glslangValidator.exe  -V RC_SDF.comp -o Spv/RC_SDF.spv
+
+.\..\glslangValidator.exe  -V RC_Cascade.comp -o Spv/RC_Cascade.spv
+
+.\..\glslangValidator.exe  -V RC_Display.comp -o Spv/RC_Display.spv
+
 pause

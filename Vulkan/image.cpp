@@ -261,7 +261,7 @@ namespace VulKan {
 			//如果目标是，将图片转换成为一个适合被作为纹理的格式，那么被阻塞的操作一定是，读取
 			//如果作为texture，那么来源只能有两种，一种是通过map从cpu拷贝而来，一种是通过stagingbuffer拷贝而来
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:{
-			if (imageMemoryBarrier.srcAccessMask == 0) {
+			if (imageMemoryBarrier.srcAccessMask == 0 && imageMemoryBarrier.oldLayout != VK_IMAGE_LAYOUT_UNDEFINED) {
 				imageMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
 			}
 
@@ -340,7 +340,7 @@ namespace VulKan {
 			//如果目标是，将图片转换成为一个适合被作为纹理的格式，那么被阻塞的操作一定是，读取
 			//如果作为texture，那么来源只能有两种，一种是通过map从cpu拷贝而来，一种是通过stagingbuffer拷贝而来
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: {
-			if (imageMemoryBarrier.srcAccessMask == 0) {
+			if (imageMemoryBarrier.srcAccessMask == 0 && imageMemoryBarrier.oldLayout != VK_IMAGE_LAYOUT_UNDEFINED) {
 				imageMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
 			}
 

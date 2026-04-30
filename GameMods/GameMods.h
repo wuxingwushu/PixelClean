@@ -5,6 +5,8 @@ enum GameModsEnum
 	Maze_,
 	TankTrouble_,
 	PhysicsTest_,
+	SoloudTest_,
+	RadianceCascades_,
 	Infinite_//作为截至符号
 };
 
@@ -12,6 +14,8 @@ static const char* GameModsEnumName[]{
 	u8"迷宫",
 	u8"坦克动荡",
 	u8"物理",
+	u8"SoLoud音效",
+	u8"辐射级联GI",
 	u8"无限"
 };
 

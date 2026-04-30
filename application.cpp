@@ -56,6 +56,12 @@ namespace GAME {
 		case PhysicsTest_:
 			GamePtr = new PhysicsTest(*this);
 			break;
+		case SoloudTest_:
+			GamePtr = new SoloudTest(*this);
+			break;
+		case RadianceCascades_:
+			GamePtr = new RadianceCascades(*this);
+			break;
 		default:
 			break;
 		}
@@ -77,6 +83,12 @@ namespace GAME {
 			break;
 		case PhysicsTest_:
 			delete (PhysicsTest*)mGameMods;
+			break;
+		case SoloudTest_:
+			delete (SoloudTest*)mGameMods;
+			break;
+		case RadianceCascades_:
+			delete (RadianceCascades*)mGameMods;
 			break;
 		default:
 			break;
@@ -364,8 +376,9 @@ namespace GAME {
 			ThreadCommandBufferS.push_back(InterFace->GetCommandBuffer(i, InheritanceInfo));
 		}
 		
-		//把全部二级指令绑定到主指令缓存
-		vkCmdExecuteCommands(mCommandBuffers[i]->getCommandBuffer(), ThreadCommandBufferS.size(), ThreadCommandBufferS.data());
+		if (!ThreadCommandBufferS.empty()) {
+			vkCmdExecuteCommands(mCommandBuffers[i]->getCommandBuffer(), ThreadCommandBufferS.size(), ThreadCommandBufferS.data());
+		}
 
 		mCommandBuffers[i]->endRenderPass();//结束RenderPass
 

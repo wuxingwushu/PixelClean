@@ -9,6 +9,8 @@
 #include "GameMods/MazeMods/MazeMods.h"
 #include "GameMods/TankTrouble/TankTrouble.h"
 #include "GameMods/PhysicsTest/PhysicsTest.h"
+#include "GameMods/SoloudTest/SoloudTest.h"
+#include "GameMods/RadianceCascades/RadianceCascades.h"
 
 
 namespace GAME {

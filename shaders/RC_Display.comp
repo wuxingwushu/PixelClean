@@ -121,7 +121,6 @@ void main() {
     mapped = pow(mapped, vec3(1.0 / 2.2)); // Gamma校正
 
     // ---- 4. 输出打包RGBA8 ----
-    // Y轴翻转：Vulkan纹理坐标Y轴从上到下，与屏幕坐标一致
-    int outIdx = x + (params.sdfHeight - 1 - y) * params.sdfWidth;
+    int outIdx = x + y * params.sdfWidth;
     outColor[outIdx] = packRGBA(vec4(mapped, 1.0));
 }

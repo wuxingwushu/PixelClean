@@ -116,8 +116,8 @@ void main() {
 
     // ---- 鼠标绘制 ----
     if (params.mouseLeftDown > 0 && params.frameCount > 0) {
-        vec2 mousePos = vec2(params.mouseX, params.sdfHeight - params.mouseY);
-        vec2 mousePrev = vec2(params.mousePrevX, params.sdfHeight - params.mousePrevY);
+        vec2 mousePos = vec2(params.mouseX, params.mouseY);
+        vec2 mousePrev = vec2(params.mousePrevX, params.mousePrevY);
         float radius = params.brushRadius * float(params.sdfHeight);
 
         // 如果鼠标移动距离很小，画圆；否则画线段（保证轨迹连续）

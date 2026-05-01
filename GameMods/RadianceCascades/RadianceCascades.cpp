@@ -17,6 +17,12 @@ RadianceCascades::RadianceCascades(Configuration wConfiguration)
     : Configuration{wConfiguration}
 {
     Global::Monitor = true;
+
+    int sw = mSwapChain->getExtent().width;
+    int sh = mSwapChain->getExtent().height;
+    mCascadeResX = sw / 4;
+    mCascadeResY = sh / 4;
+
     createBuffers();
     createComputePipelines();
     createDescriptorSets();
@@ -35,8 +41,8 @@ RadianceCascades::~RadianceCascades() {
 int RadianceCascades::calculateTotalCascadeEntries() const {
     int total = 0;
     for (int n = 0; n < N_CASCADES; ++n) {
-        int sn_x = C_SRES_X >> n;
-        int sn_y = C_SRES_Y >> n;
+        int sn_x = mCascadeResX >> n;
+        int sn_y = mCascadeResY >> n;
         int dn = (n == 0) ? 1 : (C_DRES << (2 * (n - 1)));
         total += sn_x * sn_y * dn;
     }
@@ -467,8 +473,8 @@ void RadianceCascades::dispatchCompute() {
     p.frameCount = mFrameCount;
     p.emissiveMode = (mMouseRightDown && !mMouseLeftDown) ? 1 : 0;
     p.brushRadius = BRUSH_RADIUS;
-    p.c_sResX = C_SRES_X;
-    p.c_sResY = C_SRES_Y;
+    p.c_sResX = mCascadeResX;
+    p.c_sResY = mCascadeResY;
     p.c_dRes = C_DRES;
     p.nCascades = N_CASCADES;
     p.c_intervalLength = C_INTERVAL_LENGTH * float(sdfHeight) / 720.0f;
@@ -696,7 +702,7 @@ void RadianceCascades::GameLoop(unsigned int mCurrentFrame) {
             int sdfWidth = mSwapChain->getExtent().width;
             int sdfHeight = mSwapChain->getExtent().height;
             for (int i = 0; i < sdfWidth * sdfHeight; ++i) {
-                entries[i] = { 0.0f, 0.0f, 0.0f, 0.0f };
+                entries[i] = { maxF, 0.0f, 0.0f, 0.0f };
             }
             mSDFBuffer->endupdateBufferByMap();
         }

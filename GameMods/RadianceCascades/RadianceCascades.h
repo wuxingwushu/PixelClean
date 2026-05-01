@@ -55,13 +55,15 @@ public:
 
 private:
     // ---- 级联参数常量 ----
-    static constexpr int C_SRES_X = 320;          // cascade 0 空间分辨率X
-    static constexpr int C_SRES_Y = 180;          // cascade 0 空间分辨率Y
     static constexpr int C_DRES = 16;             // 基础方向分辨率
     static constexpr int N_CASCADES = 4;          // 级联总数
     static constexpr float C_INTERVAL_LENGTH = 7.0f; // cascade 0 光线行进长度
     static constexpr float C_SMOOTH_DIST_SCALE = 10.0f; // 平滑距离缩放
     static constexpr float BRUSH_RADIUS = 0.02f;  // 画笔半径（占屏幕高度比例）
+
+    // ---- 根据窗口大小自动适应的级联参数 ----
+    int mCascadeResX = 320;                       // cascade 0 空间分辨率X（=窗口宽度/4）
+    int mCascadeResY = 180;                       // cascade 0 空间分辨率Y（=窗口高度/4）
 
     // ---- GPU缓冲区 ----
     VulKan::Buffer* mParamBuffer = nullptr;       // 参数缓冲区

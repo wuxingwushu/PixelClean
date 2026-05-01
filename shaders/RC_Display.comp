@@ -100,10 +100,10 @@ void main() {
     vec2 w = p - vec2(q) - 0.5;
 
     // 4个最近邻采样 + 双线性混合
-    vec4 S0 = cascade0Fetch(q + ivec2(1, 1));
-    vec4 S1 = cascade0Fetch(q + ivec2(0, 1));
-    vec4 S2 = cascade0Fetch(q + ivec2(1, 0));
-    vec4 S3 = cascade0Fetch(q + ivec2(0, 0));
+    vec4 S0 = cascade0Fetch(q + ivec2(0, 0));
+    vec4 S1 = cascade0Fetch(q + ivec2(1, 0));
+    vec4 S2 = cascade0Fetch(q + ivec2(0, 1));
+    vec4 S3 = cascade0Fetch(q + ivec2(1, 1));
     vec4 interpolated = mix(mix(S0, S1, w.x), mix(S2, S3, w.x), w.y);
 
     // cascade 0存储的是方向平均辐射度，乘以2π得到总辐射通量

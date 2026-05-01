@@ -116,11 +116,9 @@ void main() {
     float edgeBlend = clamp(3.0 - data.x, 0.0, 1.0);
     fluence = mix(fluence, data.yzw * 2.0 * PI, edgeBlend);
 
-    // ---- 3. 色调映射 + Gamma校正 ----
+    // ---- 3. 色调映射 ----
     vec3 mapped = tonemap(fluence);
-    mapped = pow(mapped, vec3(1.0 / 2.2)); // Gamma校正
 
-    // ---- 4. 输出打包RGBA8 ----
     int outIdx = x + y * params.sdfWidth;
     outColor[outIdx] = packRGBA(vec4(mapped, 1.0));
 }

@@ -600,7 +600,13 @@ void RadianceCascades::GameLoop(unsigned int mCurrentFrame) {
 
         static bool escWasPressed = false;
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && !escWasPressed) {
-            Global::GameResourceUninstallBool = true;
+            if (Global::ConsoleBool) {
+                Global::ConsoleBool = false;
+                InterFace->ConsoleFocusHere = true;
+            }
+            else {
+                InterFace->SetInterFaceBool();
+            }
         }
         escWasPressed = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
     }

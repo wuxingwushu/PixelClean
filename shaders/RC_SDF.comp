@@ -96,28 +96,28 @@ void main() {
         float light1 = distance(fragCoord, center + vec2(-150.0, 50.0)) - 15.0;
         if (light1 < sd) {
             sd = light1;
-            emissivity = vec3(1.0, 0.8, 0.3) * 5.0;
+            emissivity = vec3(1.0, 0.8, 0.3);
         }
 
         // 右侧冷色光源
         float light2 = distance(fragCoord, center + vec2(150.0, -50.0)) - 12.0;
         if (light2 < sd) {
             sd = light2;
-            emissivity = vec3(0.3, 0.7, 1.0) * 5.0;
+            emissivity = vec3(0.3, 0.7, 1.0);
         }
 
         // 底部彩色光源
         float light3 = distance(fragCoord, center + vec2(0.0, -100.0)) - 10.0;
         if (light3 < sd) {
             sd = light3;
-            emissivity = vec3(0.8, 0.2, 1.0) * 4.0;
+            emissivity = vec3(0.8, 0.2, 1.0);
         }
     }
 
     // ---- 鼠标绘制 ----
     if (params.mouseLeftDown > 0 && params.frameCount > 0) {
-        vec2 mousePos = vec2(params.mouseX, params.mouseY);
-        vec2 mousePrev = vec2(params.mousePrevX, params.mousePrevY);
+        vec2 mousePos = vec2(params.mouseX, params.sdfHeight - params.mouseY);
+        vec2 mousePrev = vec2(params.mousePrevX, params.sdfHeight - params.mousePrevY);
         float radius = params.brushRadius * float(params.sdfHeight);
 
         // 如果鼠标移动距离很小，画圆；否则画线段（保证轨迹连续）
@@ -133,7 +133,7 @@ void main() {
             sd = min(d, sd);
             if (params.emissiveMode == 0) {
                 // 发光模式：彩虹色随时间变化
-                emissivity = pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2)) * 3.0;
+                emissivity = pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
             } else {
                 // 非发光模式：绘制障碍物
                 emissivity = vec3(0.0);

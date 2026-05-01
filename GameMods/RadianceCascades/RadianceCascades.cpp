@@ -7,7 +7,6 @@
 #include <cmath>
 #include <algorithm>
 #include <GLFW/glfw3.h>
-
 namespace GAME {
 
 const std::string RadianceCascades::SDF_SHADER_PATH = "shaders/RC_SDF.spv";
@@ -461,9 +460,9 @@ void RadianceCascades::dispatchCompute() {
     p.sdfWidth = sdfWidth;
     p.sdfHeight = sdfHeight;
     p.mouseX = static_cast<float>(mMouseX);
-    p.mouseY = static_cast<float>(sdfHeight - mMouseY);
+    p.mouseY = static_cast<float>(mMouseY);
     p.mousePrevX = static_cast<float>(mMousePrevX);
-    p.mousePrevY = static_cast<float>(sdfHeight - mMousePrevY);
+    p.mousePrevY = static_cast<float>(mMousePrevY);
     p.mouseLeftDown = (mMouseLeftDown || mMouseRightDown) ? 1 : 0;
     p.frameCount = mFrameCount;
     p.emissiveMode = (mMouseRightDown && !mMouseLeftDown) ? 1 : 0;
@@ -472,7 +471,7 @@ void RadianceCascades::dispatchCompute() {
     p.c_sResY = C_SRES_Y;
     p.c_dRes = C_DRES;
     p.nCascades = N_CASCADES;
-    p.c_intervalLength = C_INTERVAL_LENGTH;
+    p.c_intervalLength = C_INTERVAL_LENGTH * float(sdfHeight) / 720.0f;
     p.c_smoothDistScale = C_SMOOTH_DIST_SCALE;
     p.totalCascadeEntries = totalCascade;
     mParamBuffer->updateBufferByMap(&p, sizeof(Params));
@@ -697,7 +696,7 @@ void RadianceCascades::GameLoop(unsigned int mCurrentFrame) {
             int sdfWidth = mSwapChain->getExtent().width;
             int sdfHeight = mSwapChain->getExtent().height;
             for (int i = 0; i < sdfWidth * sdfHeight; ++i) {
-                entries[i] = { maxF, 0.0f, 0.0f, 0.0f };
+                entries[i] = { 0.0f, 0.0f, 0.0f, 0.0f };
             }
             mSDFBuffer->endupdateBufferByMap();
         }
@@ -709,6 +708,13 @@ void RadianceCascades::GameLoop(unsigned int mCurrentFrame) {
             mFrameCount = 0;
         }
         rWasPressed = rIsPressed;
+
+        static bool escWasPressed = false;
+        bool escIsPressed = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+        if (escIsPressed && !escWasPressed) {
+            Global::GameResourceUninstallBool = true;
+        }
+        escWasPressed = escIsPressed;
     }
 
     dispatchCompute();
@@ -748,6 +754,7 @@ void RadianceCascades::GameUI() {
     ImGui::Text("Right Click: Draw Wall");
     ImGui::Text("C: Clear Canvas");
     ImGui::Text("R: Reset Scene");
+    ImGui::Text("Esc: Exit");
     ImGui::Text("Frame: %d", mFrameCount);
     ImGui::End();
 }

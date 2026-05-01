@@ -31,7 +31,7 @@ layout(std430, binding = 0) buffer Params {
     float c_intervalLength;
     float c_smoothDistScale;
     int totalCascadeEntries;
-    int pad0;
+    int cascadeLevel;
 } params;
 
 // SDF缓冲区（只读，用于边缘叠加）

@@ -28,7 +28,7 @@ layout(std430, binding = 0) buffer Params {
     float c_intervalLength;    // cascade 0 光线行进长度
     float c_smoothDistScale;   // 级联间平滑过渡距离缩放
     int totalCascadeEntries;   // 级联缓冲区总条目数
-    int pad0;                  // 对齐填充
+    int cascadeLevel;
 } params;
 
 // SDF缓冲区：.x=有符号距离, .yzw=自发光颜色(linear RGB)

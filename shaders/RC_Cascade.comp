@@ -4,14 +4,9 @@ layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 // ============================================================================
 // RC_Cascade.comp — 辐射级联核心计算着色器
 //
-// Radiance Cascades 算法核心：
-//   将2D全局光照分解为多个级联层级，低级联覆盖近距离（高空间分辨率/低方向分辨率），
-//   高级联覆盖远距离（低空间分辨率/高方向分辨率），自底向上合并辐射度。
-//
-// 核心公式：辐射度 = 本级联直接辐射度 + 可见性 × 上级联辐射度
-//           可见性逐级相乘（链式传播遮挡信息）
-//
-// 数据流：SDF缓冲区(只读) + 上一帧级联缓冲区(只读) → 当前帧级联缓冲区(只写)
+// 一次 dispatch 处理所有级联层级。每个 entry 从 SDF 计算直接辐射度，
+// 然后从上一帧的上级联（cascadeRead）合并辐射度和可见性。
+// 这与 Shadertoy 参考实现的行为一致（n 帧延迟完全传播）。
 // ============================================================================
 
 layout(std430, binding = 0) buffer Params {
@@ -27,27 +22,24 @@ layout(std430, binding = 0) buffer Params {
     int frameCount;
     int emissiveMode;
     float brushRadius;
-    int c_sResX;               // cascade 0 空间分辨率X
-    int c_sResY;               // cascade 0 空间分辨率Y
-    int c_dRes;                // cascade 0 方向分辨率（基础方向数）
-    int nCascades;             // 级联总数
-    float c_intervalLength;    // cascade 0 光线行进长度（像素）
-    float c_smoothDistScale;   // 级联间平滑过渡距离缩放因子
-    int totalCascadeEntries;   // 级联缓冲区总条目数
-    int pad0;
+    int c_sResX;
+    int c_sResY;
+    int c_dRes;
+    int nCascades;
+    float c_intervalLength;
+    float c_smoothDistScale;
+    int totalCascadeEntries;
+    int cascadeLevel;
 } params;
 
-// SDF缓冲区（只读）
 layout(std430, binding = 1) readonly buffer SDFBuffer {
     vec4 sdf[];
 };
 
-// 上一帧级联缓冲区（只读，用于级间合并）
 layout(std430, binding = 2) readonly buffer CascadeRead {
     vec4 cascadeRead[];
 };
 
-// 当前帧级联缓冲区（只写）
 layout(std430, binding = 3) writeonly buffer CascadeWrite {
     vec4 cascadeWrite[];
 };
@@ -56,26 +48,34 @@ const float MAX_FLOAT = 3.402823466e+38;
 const float PI = 3.14159265359;
 
 // ============================================================================
-// SDF采样函数
+// SDF 双线性采样
 // ============================================================================
 
-// 采样SDF的距离值和自发光颜色
 vec4 sampleDrawing(vec2 P) {
-    ivec2 pos = ivec2(floor(P));
-    pos = clamp(pos, ivec2(0), ivec2(params.sdfWidth - 1, params.sdfHeight - 1));
-    return sdf[pos.x + pos.y * params.sdfWidth];
+    vec2 coord = P - 0.5;
+    ivec2 p0 = ivec2(floor(coord));
+    vec2 w = coord - vec2(p0);
+    ivec2 p1 = p0 + ivec2(1, 1);
+
+    p0 = clamp(p0, ivec2(0), ivec2(params.sdfWidth - 1, params.sdfHeight - 1));
+    p1 = clamp(p1, ivec2(0), ivec2(params.sdfWidth - 1, params.sdfHeight - 1));
+
+    vec4 s00 = sdf[p0.x + p0.y * params.sdfWidth];
+    vec4 s10 = sdf[p1.x + p0.y * params.sdfWidth];
+    vec4 s01 = sdf[p0.x + p1.y * params.sdfWidth];
+    vec4 s11 = sdf[p1.x + p1.y * params.sdfWidth];
+
+    return mix(mix(s00, s10, w.x), mix(s01, s11, w.x), w.y);
 }
 
-// 仅采样SDF的距离值
 float sdDrawing(vec2 P) {
     return sampleDrawing(P).x;
 }
 
 // ============================================================================
-// 光线追踪（Sphere Tracing / 球体追踪）
+// 光线追踪（Sphere Tracing）
 // ============================================================================
 
-// 光线与屏幕AABB求交，返回入口距离和出口距离
 vec2 intersectAABB(vec2 ro, vec2 rd, vec2 a, vec2 b) {
     vec2 ta = (a - ro) / rd;
     vec2 tb = (b - ro) / rd;
@@ -85,7 +85,6 @@ vec2 intersectAABB(vec2 ro, vec2 rd, vec2 a, vec2 b) {
     return t.x > t.y ? vec2(-1.0) : t;
 }
 
-// 球体追踪，返回命中距离，未命中返回-1
 float intersect(vec2 ro, vec2 rd, float tMax) {
     vec2 screenRes = vec2(float(params.sdfWidth), float(params.sdfHeight));
     float tOffset = 0.0;
@@ -123,7 +122,7 @@ float intersect(vec2 ro, vec2 rd, float tMax) {
 }
 
 // ============================================================================
-// 天空辐射度计算
+// 辐射度采样
 // ============================================================================
 
 struct RayHit {
@@ -133,12 +132,12 @@ struct RayHit {
 
 RayHit radiance(vec2 ro, vec2 rd, float tMax) {
     vec4 p = sampleDrawing(ro);
-    float t = 0.0f;
+    float t = 0.0;
     if (p.r > 0.0) {
         t = intersect(ro, rd, tMax);
 
         if (t == -1.0) {
-            return RayHit(vec4(0.0, 0.0, 0.0, 1.0), 1e5f);
+            return RayHit(vec4(0.0, 0.0, 0.0, 1.0), 1e5);
         }
 
         p = sampleDrawing(ro + rd * t);
@@ -147,18 +146,22 @@ RayHit radiance(vec2 ro, vec2 rd, float tMax) {
     return RayHit(vec4(p.gba, 0.0), t);
 }
 
+// ============================================================================
+// 天空辐射度（当前禁用，与参考实现一致）
+// ============================================================================
+
 vec3 integrateSkyRadiance_(vec2 angle) {
     float a1 = angle[1];
     float a0 = angle[0];
 
-    const vec3 SkyColor = vec3(0.2,0.5,1.);
-    const vec3 SunColor = vec3(1.,0.7,0.1)*10.;
+    const vec3 SkyColor = vec3(0.2, 0.5, 1.0);
+    const vec3 SunColor = vec3(1.0, 0.7, 0.1) * 10.0;
     const float SunA = 2.0;
     const float SunS = 64.0;
     const float SSunS = sqrt(SunS);
-    const float ISSunS = 1./SSunS;
-    vec3 SI = SkyColor*(a1-a0-0.5*(cos(a1)-cos(a0)));
-    SI += SunColor*(atan(SSunS*(SunA-a0))-atan(SSunS*(SunA-a1)))*ISSunS;
+    const float ISSunS = 1.0 / SSunS;
+    vec3 SI = SkyColor * (a1 - a0 - 0.5 * (cos(a1) - cos(a0)));
+    SI += SunColor * (atan(SSunS * (SunA - a0)) - atan(SSunS * (SunA - a1))) * ISSunS;
     return SI / 6.0;
 }
 
@@ -177,10 +180,9 @@ float smoothDist(int cascadeIndex) {
 }
 
 // ============================================================================
-// 级联缓冲区索引计算
+// 级联缓冲区索引
 // ============================================================================
 
-// 计算级联n的缓冲区偏移量（前面所有级联的总条目数）
 int cascadeOffset(int n) {
     int offset = 0;
     for (int i = 0; i < n; ++i) {
@@ -192,8 +194,6 @@ int cascadeOffset(int n) {
     return offset;
 }
 
-// 从上一帧级联缓冲区中查找指定级联n、位置p、方向d的辐射度
-// 使用最近邻采样
 vec4 cascadeFetch(int n, ivec2 p, int d) {
     int sn_x = params.c_sResX >> n;
     int sn_y = params.c_sResY >> n;
@@ -205,14 +205,13 @@ vec4 cascadeFetch(int n, ivec2 p, int d) {
 }
 
 // ============================================================================
-// 主函数：计算每个级联条目的辐射度
+// 主函数：遍历所有级联，每个 entry 独立计算
 // ============================================================================
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= uint(params.totalCascadeEntries)) return;
 
-    // ---- 1. 确定此条目所属的级联级别 ----
     int n = 0;
     int offset = 0;
     for (int i = 0; i < params.nCascades; ++i) {
@@ -227,64 +226,52 @@ void main() {
         offset += cascadeSize;
     }
 
-    // ---- 2. 解码条目的位置和方向 ----
     int localIdx = int(idx) - offset;
     int sn_x = params.c_sResX >> n;
     int sn_y = params.c_sResY >> n;
     int dn = (n == 0) ? 1 : (params.c_dRes << (2 * (n - 1)));
-    // 此级联每个像素存储的方向数
-    int nDirs = params.c_dRes << (2 * n); // 此级联总方向数
+    int nDirs = params.c_dRes << (2 * n);
 
-    int d = localIdx % dn;         // 方向索引
+    int d = localIdx % dn;
     localIdx /= dn;
-    int px = localIdx % sn_x;      // 空间X索引
-    int py = localIdx / sn_x;      // 空间Y索引
+    int px = localIdx % sn_x;
+    int py = localIdx / sn_x;
 
-    // ---- 3. 计算光线起点（世界坐标） ----
     vec2 ro = (vec2(float(px), float(py)) + 0.5) / vec2(float(sn_x), float(sn_y))
             * vec2(float(params.sdfWidth), float(params.sdfHeight));
 
-    // ---- 4. 计算光线行进区间 [tMin, tMax] ----
-    // 每个级联覆盖的距离范围按4倍递增
     float t1 = params.c_intervalLength;
     float tMin = (n == 0) ? 0.0 : t1 * float(1 << (2 * (n - 1)));
     float tMax = t1 * float(1 << (2 * n));
 
-    // ---- 5. 级联间平滑过渡距离 ----
-    // smoothDist(n) = 2^n，级联越高过渡区域越宽
     float sMin = smoothDist(n) * params.c_smoothDistScale;
     float sMax = smoothDist(n + 1) * params.c_smoothDistScale;
     float tMinSmoothed = tMin - sMin * 0.5;
     float tMaxSmoothed = tMax + sMax * 0.5;
     float tMinClamped = max(0.0, tMinSmoothed);
 
-    // ---- 6. 对每个方向子区间发射光线并累积 ----
-    // 每个存储方向负责 nDirs/dn 个子方向，取平均
     vec4 s = vec4(0.0);
     int subDirs = nDirs / dn;
 
     for (int i = 0; i < subDirs; ++i) {
-        int j = 4 * d + i; // 全局方向索引
+        int j = 4 * d + i;
         float angle = (float(j) + 0.5) / float(nDirs) * 2.0 * PI;
         vec2 rd = vec2(cos(angle), sin(angle));
 
-        // 从区间起点发射光线
         RayHit hit = radiance(ro + rd * tMinClamped, rd, tMaxSmoothed - tMinClamped);
 
-        // ---- 7. 应用平滑过渡（参考Shadertoy公式）----
-        vec4 empty_radiance = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-        hit.radiance = mix(hit.radiance, empty_radiance, 1.0f - clamp((tMinClamped - tMinSmoothed + hit.dist) / sMin, 0.0f, 1.0f));
-        hit.radiance = mix(hit.radiance, empty_radiance, clamp(((tMinClamped + hit.dist) - (tMaxSmoothed)) / sMax + 1.0f, 0.0f, 1.0f));
+        vec4 empty_radiance = vec4(0.0, 0.0, 0.0, 1.0);
+        hit.radiance = mix(hit.radiance, empty_radiance,
+            1.0 - clamp((tMinClamped - tMinSmoothed + hit.dist) / sMin, 0.0, 1.0));
+        hit.radiance = mix(hit.radiance, empty_radiance,
+            clamp(((tMinClamped + hit.dist) - (tMaxSmoothed)) / sMax + 1.0, 0.0, 1.0));
         vec4 si = hit.radiance;
 
-        // ---- 8. 级间合并 ----
         if (si.a != 0.0) {
             if (n == params.nCascades - 1) {
-                // 顶层级联：合并天空辐射度（参考源码设为 0.0，禁用天空光）
                 vec2 angle = vec2(j, j + 1) / float(nDirs) * 2.0 * PI;
-                si.rgb += 0.0f * integrateSkyRadiance(angle) / (angle.y - angle.x);
+                si.rgb += 0.0 * integrateSkyRadiance(angle) / (angle.y - angle.x);
             } else {
-                // 非顶层：从上级联双线性插值获取辐射度并合并
                 vec2 pf = (vec2(float(px), float(py)) + 0.5) / 2.0;
                 ivec2 q = ivec2(round(pf)) - 1;
                 vec2 w = pf - vec2(q) - 0.5;
@@ -305,5 +292,5 @@ void main() {
 
     s /= float(nDirs / dn);
 
-    cascadeWrite[idx] = s;
+    cascadeWrite[int(idx)] = s;
 }

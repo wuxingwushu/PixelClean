@@ -152,7 +152,7 @@ namespace GAME {
 		init_info.Device = mDevice->getDevice();
 		init_info.QueueFamily = mDevice->getGraphicQueueFamily().value();
 		init_info.Queue = mDevice->getGraphicQueue();
-		init_info.PipelineCache = nullptr;
+		init_info.PipelineCache = VK_NULL_HANDLE;
 		init_info.Subpass = 0;
 		init_info.ImageCount = mSwapChain->getImageCount();
 		init_info.MSAASamples = mDevice->getMaxUsableSampleCount();

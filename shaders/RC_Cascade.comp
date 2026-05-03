@@ -1,6 +1,32 @@
 #version 450
+// ============================================================================
+// RC_Cascade.comp — 级联光线追踪着色器
+// ============================================================================
+// Radiance Cascades GI 算法的核心 shader。
+// 对每个级联等级 n（n=5→0 自上而下），对每个探头/方向组合：
+//   1. 从探头位置 cast 射线（radiance 函数）
+//   2. 如果射线 miss（穿透空空间）：
+//      - 顶层 (n=4)：无天空辐射注入（暗背景设计）
+//      - 其他层：合并上级级联的光照数据
+//   3. 如果射线 hit（命中表面）：捕获表面 emissivity
+//   4. 将结果写入级联乒乓缓冲区
+//
+// 级联乒乓机制：
+//   - cascadeRead / cascadeWrite 每层交替使用 A/B 缓冲区
+//   - setIdx = (N_CASCADES - 1 - n) % 2 控制读写指向
+//   - 每层 dispatch 之间有内存屏障确保数据一致性
+//
+// 关键参数：
+//   c_intervalLength ≈ 8.6 像素（屏幕对角线 1/1023）
+//   tMin/tMax 按 4 的幂次增长（每层 ×4）
+//   nDirs = C_DRES << (2*n)，方向数也按 4 的幂次增长
+// ============================================================================
+
+// ---- 线程组配置 ----
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
+// ---- 统一参数缓冲区 (binding 0) ----
+// CPU 端每帧通过 map 更新，全体 shader 共享
 layout(std430, binding = 0) buffer Params {
     float time;
     float timeDelta;
@@ -39,48 +65,102 @@ layout(std430, binding = 0) buffer Params {
     int clearScreen;
 } params;
 
+// ---- SDF 缓冲区 (binding 1, 只读) ----
+// 包含每个像素的距离场和发光颜色
+// sd.x > 0: 空空间距离    sd.x <= 0: 表面内部
+// sd.yzw: 发光颜色
 layout(std430, binding = 1) readonly buffer SDFBuffer {
     vec4 sdf[];
 };
 
+// ---- 级联读取缓冲区 (binding 2, 只读) ----
+// 乒乓缓冲 A/B 之一，读取上级（n+1）已计算的级联数据用于合并
 layout(std430, binding = 2) readonly buffer CascadeRead {
     vec4 cascadeRead[];
 };
 
+// ---- 级联写入缓冲区 (binding 3, 只写) ----
+// 乒乓缓冲 A/B 之一，写入当前级联等级的计算结果
 layout(std430, binding = 3) writeonly buffer CascadeWrite {
     vec4 cascadeWrite[];
 };
 
+// ---- 常量 ----
 const float MAX_FLOAT = 3.402823466e+38;
 const float PI = 3.1415927;
 
+// ---- Push Constant ----
+// 从 CPU 传入当前正在计算的级联等级 (0..4)
+// 每次 dispatch 前通过 vkCmdPushConstants 设置
 layout(push_constant) uniform PushConstants {
     int cascadeLevel;
 } pc;
 
+// ============================================================================
+// hsv2rgb — HSV 转 RGB（与 RC_SDF.comp 中相同）
+// ============================================================================
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
+// ============================================================================
+// getEmissivity — 获取发光颜色（级联版本，不检查 keyToggledSpace）
+// ============================================================================
+// 用于直线段绘制模式 (keyToggled1) 时在 sampleDrawing 中临时覆盖 SDF。
+// 与 RC_SDF.comp 版本的区别：不检查 keyToggledSpace（级联 shader 中
+// keyToggledSpace 由 SDF shader 处理，级联只需读取最终 SDF 值）
 vec3 getEmissivity() {
     return pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
 }
 
+// ============================================================================
+// sampleDrawing — 双线性采样 SDF 数据
+// ============================================================================
+// 在连续位置 P 处采样 SDF 缓冲区（双线性插值）。
+//
+// 关键修复：clamp sd 值到 50.0
+// 原始参考代码使用 MAX_FLOAT 作为空空间的默认值，但 MAX_FLOAT 会
+// 污染双线性插值——当 3 个邻居是 MAX_FLOAT 而 1 个是表面时，插值结果
+// 仍然是 ~MAX_FLOAT。clamp 到 50.0 确保插值产生合理的中值。
+//
+// 特殊情况：当 keyToggled1 激活且鼠标左键按下时：
+//   在临时直线段上覆盖 SDF，用于直线绘制模式的实时预览
+//
+// 返回：vec4(distance, emissive_R, emissive_G, emissive_B)
 vec4 sampleDrawing(vec2 P) {
+    // 转为以像素中心为原点的坐标（Shadertoy 惯例：P-0.5）
     vec2 coord = P - 0.5;
     ivec2 p0 = ivec2(floor(coord));
     vec2 w = coord - vec2(p0);
     ivec2 p1 = p0 + ivec2(1, 1);
+    // clamp 到有效范围，防止越界
     p0 = clamp(p0, ivec2(0), ivec2(params.sdfWidth - 1, params.sdfHeight - 1));
     p1 = clamp(p1, ivec2(0), ivec2(params.sdfWidth - 1, params.sdfHeight - 1));
+
+    // 读取四个邻居的 SDF 值
     vec4 s00 = sdf[p0.x + p0.y * params.sdfWidth];
     vec4 s10 = sdf[p1.x + p0.y * params.sdfWidth];
     vec4 s01 = sdf[p0.x + p1.y * params.sdfWidth];
     vec4 s11 = sdf[p1.x + p1.y * params.sdfWidth];
+
+    // ---- 修复双线性插值污染 ----
+    // 将 sd 值 clamp 到 50.0，防止 MAX_FLOAT（≈3.4e38）污染插值
+    // 50.0 远大于级联 tMax（最多 ~2200 像素），被视为"空空间"
+    // 但足够小，不会在浮点混合中压倒正常值
+    s00.x = min(s00.x, 50.0);
+    s10.x = min(s10.x, 50.0);
+    s01.x = min(s01.x, 50.0);
+    s11.x = min(s11.x, 50.0);
+
+    // 双线性插值
     vec4 data = mix(mix(s00, s10, w.x), mix(s01, s11, w.x), w.y);
 
+    // ---- 直线段实时预览 ----
+    // 当键 1 激活且鼠标左键按下时：
+    //   在 SDF 上叠加从 mouseClickStart 到 mouseRaw 的直线段
+    //   用于交互式直线绘制
     if (params.keyToggled1 != 0 && params.mouseLeftDown > 0 && params.mouseRightDown == 0) {
         float radius = params.brushRadius * float(params.sdfHeight);
         vec2 segStart = vec2(params.mouseClickStartX, params.mouseClickStartY);
@@ -89,6 +169,7 @@ vec4 sampleDrawing(vec2 P) {
         vec2 ba = segEnd - segStart;
         float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
         float sd = length(pa - ba * h) - radius;
+        // 只有当线段距离比现有 SDF 更近时才覆盖
         if (sd <= max(data.r, 0.0)) {
             data = vec4(min(sd, data.r), getEmissivity());
         }
@@ -97,10 +178,20 @@ vec4 sampleDrawing(vec2 P) {
     return data;
 }
 
+// ============================================================================
+// sdDrawing — 获取位置 P 处的 SDF 距离
+// ============================================================================
+// sampleDrawing 的便捷包装，仅返回距离分量
 float sdDrawing(vec2 P) {
     return sampleDrawing(P).x;
 }
 
+// ============================================================================
+// intersectAABB — 射线与 AABB 的交点
+// ============================================================================
+// 计算射线 ro + t*rd 与轴对齐包围盒 [a,b] 的交点区间。
+// 返回 vec2(t_enter, t_exit)。
+// 如果无交点（t_enter > t_exit），返回 (-1,-1)。
 vec2 intersectAABB(vec2 ro, vec2 rd, vec2 a, vec2 b) {
     vec2 ta = (a - ro) / rd;
     vec2 tb = (b - ro) / rd;
@@ -110,35 +201,84 @@ vec2 intersectAABB(vec2 ro, vec2 rd, vec2 a, vec2 b) {
     return t.x > t.y ? vec2(-1.0) : t;
 }
 
+// ============================================================================
+// intersect — SDF 射线步进（Sphere Marching）
+// ============================================================================
+// 沿射线 ro + t*rd 步进，在 tMax 范围内搜索最近的表面。
+//
+// 算法：
+//   1. AABB 裁剪：先与屏幕边界求交，裁剪掉屏幕外的部分
+//   2. 在有效范围内迭代步进：
+//      - 取当前位置的 SDF 距离 d
+//      - 前进 abs(d)（保守步进，不穿透表面）
+//      - 如果 d < 1.0 且 t > 0.2，视为命中表面
+//   3. 超过 tMax 或步数用完 → 返回 -1（miss）
+//
+// 返回：命中时的 t 值（从射线原点起算），未命中返回 -1.0
 float intersect(vec2 ro, vec2 rd, float tMax) {
     vec2 screenRes = vec2(float(params.sdfWidth), float(params.sdfHeight));
     float tOffset = 0.0;
+
+    // ---- AABB 裁剪 ----
+    // 计算射线与屏幕边界 [0, screenRes] 的交点
     vec2 tAABB = intersectAABB(ro, rd, vec2(0.0001), screenRes - 0.0001);
     if (tAABB.x > tMax || tAABB.y < 0.0) return -1.0;
-    if (tAABB.x > 0.0) { ro += tAABB.x * rd; tOffset += tAABB.x; tMax -= tAABB.x; }
+
+    // 跳过屏幕外的起点
+    if (tAABB.x > 0.0) {
+        ro += tAABB.x * rd;
+        tOffset += tAABB.x;
+        tMax -= tAABB.x;
+    }
+    // 以屏幕边界为最大搜索范围
     if (tAABB.y < tMax) tMax = tAABB.y;
+
+    // ---- 射线步进循环 ----
     float t = 0.0;
     for (int i = 0; i < 100; i++) {
         float d = sdDrawing(ro + rd * t);
-        t += abs(d);
+        t += abs(d);  // 保守步进：前进 SDF 报告的距离
         if (t >= tMax) break;
+        // 命中条件：t > 0.2（防止自交）且 d < 1.0 像素（接近表面）
         if (0.2 < t && d < 1.0) return tOffset + t;
     }
-    return -1.0;
+    return -1.0;  // 未命中
 }
 
+// ============================================================================
+// radiance — 单条射线的辐射度计算
+// ============================================================================
+// 从 ro 沿 rd 方向，在 tMax 范围内计算辐射度。
+//
+// 行为：
+//   - 在空空间 (sd > 0)：进入 intersect 搜索最近的表面
+//   - 在表面 (sd <= 0)：直接返回表面 emissivity
+//
+// 返回 vec4(R, G, B, alpha)：
+//   alpha = 0：命中表面，RGB = 表面 emissivity（直接光）
+//   alpha = 1：穿透空空间未命中，RGB = (0,0,0)（信号给上级联或天空）
 vec4 radiance(vec2 ro, vec2 rd, float tMax) {
     vec4 p = sampleDrawing(ro);
     if (p.r > 0.0) {
+        // 从空空间开始 → 射线步进寻找表面
         float t = intersect(ro, rd, tMax);
         if (t == -1.0) {
+            // 未命中任何表面 → 返回透明标记
             return vec4(0.0, 0.0, 0.0, 1.0);
         }
+        // 命中表面 → 在命中点采样 emissivity
         p = sampleDrawing(ro + rd * t);
     }
+    // 返回表面 emissivity + alpha=0（命中）
     return vec4(p.gba, 0.0);
 }
 
+// ============================================================================
+// integrateSkyRadiance_ — 天空辐射度角度积分（辅助函数）
+// ============================================================================
+// 在角度区间 [a0, a1] 上解析积分天空颜色（SkyColor）和太阳颜色（SunColor）。
+// 使用解析公式避免数值积分。
+// 当前版本已禁用天空辐射（暗背景设计），此函数保留供未来使用。
 vec3 integrateSkyRadiance_(vec2 angle) {
     float a1 = angle[1], a0 = angle[0];
     const vec3 SkyColor = vec3(0.2, 0.5, 1.0);
@@ -150,6 +290,11 @@ vec3 integrateSkyRadiance_(vec2 angle) {
     return SI / 6.0;
 }
 
+// ============================================================================
+// integrateSkyRadiance — 天空辐射度角度积分（处理 2π 环绕）
+// ============================================================================
+// 如果角度区间跨越 2π 边界，拆分为两段分别积分。
+// 当前版本已禁用。
 vec3 integrateSkyRadiance(vec2 angle) {
     if (angle[1] < 2.0 * PI)
         return integrateSkyRadiance_(angle);
@@ -157,6 +302,14 @@ vec3 integrateSkyRadiance(vec2 angle) {
          + integrateSkyRadiance_(vec2(0.0, angle[1] - 2.0 * PI));
 }
 
+// ============================================================================
+// cascadeOffset — 计算级联等级 n 在级联缓冲区中的起始偏移
+// ============================================================================
+// 级联缓冲区布局（紧密打包）：
+//   [level0 数据] [level1 数据] ... [level4 数据]
+// 每个 level 的大小 = sx * sy * dn，其中：
+//   sx = c_sResX >> n, sy = c_sResY >> n
+//   dn = 1 (n=0) 或 C_DRES << (2*(n-1)) (n>0)
 int cascadeOffset(int n) {
     int off = 0;
     for (int i = 0; i < n; ++i) {
@@ -168,6 +321,11 @@ int cascadeOffset(int n) {
     return off;
 }
 
+// ============================================================================
+// cascadeFetch — 在级联等级 n 中按探针位置 (p) 和方向 (d) 取数据
+// ============================================================================
+// 用于读取上级级联 (n+1) 的辐射度数据进行合并。
+// 自动 clamp 越界访问。
 vec4 cascadeFetch(int n, ivec2 p, int d) {
     int dn = (n == 0) ? 1 : (params.c_dRes << (2 * (n - 1)));
     ivec2 sn = ivec2(params.c_sResX >> n, params.c_sResY >> n);
@@ -177,57 +335,112 @@ vec4 cascadeFetch(int n, ivec2 p, int d) {
     return cascadeRead[idx];
 }
 
+// ============================================================================
+// main — 级联光线追踪主函数
+// ============================================================================
+// 流程：
+//   1. 获取当前级联等级 n（从 push constant）
+//   2. 计算当前级联的分辨率和条目计数
+//   3. 清屏检查：若设置则写 (0,0,0,0) 并返回
+//   4. 反算当前线程对应的探针位置 (p) 和方向子集 (d)
+//   5. 对方向子集中的每个方向：
+//      a. 计算射线方向 rd = (cos(angle), sin(angle))
+//      b. 从 tMin 偏移处 cast radiance 射线
+//      c. 如果 alpha != 0（穿透空空间）：
+//         - 顶层 (n=4)：无操作（天空辐射已禁用）
+//         - 其他层：双线性采样上级级联 (n+1)，合并辐射度
+//      d. 累积到 s
+//   6. 平均并写入级联缓冲区
 void main() {
     int n = pc.cascadeLevel;
-    int dn = (n == 0) ? 1 : (params.c_dRes << (2 * (n - 1)));
-    ivec2 sn = ivec2(params.c_sResX >> n, params.c_sResY >> n);
-    int cnt = sn.x * sn.y * dn;
+
+    // ---- 当前级联参数 ----
+    int dn = (n == 0) ? 1 : (params.c_dRes << (2 * (n - 1)));  // 当前级联储存的方向数/探针
+    ivec2 sn = ivec2(params.c_sResX >> n, params.c_sResY >> n); // 当前级联探针网格分辨率
+    int cnt = sn.x * sn.y * dn;  // 当前级联总条目数
+
     uint i = gl_GlobalInvocationID.x;
     if (i >= uint(cnt)) return;
 
-    int d = int(i) % dn;
-    int j = int(i) / dn;
-    ivec2 p = ivec2(j % sn.x, j / sn.x);
+    // ---- 清屏：整层级联数据清零 ----
+    if (params.clearScreen != 0) {
+        cascadeWrite[cascadeOffset(n) + int(i)] = vec4(0.0);
+        return;
+    }
+
+    // ---- 反算：全局线程 ID → (方向子集 d, 探针位置 p) ----
+    int d = int(i) % dn;         // 该线程处理的方向子集索引（每组 4 个方向）
+    int j = int(i) / dn;         // 探针线性索引
+    ivec2 p = ivec2(j % sn.x, j / sn.x);  // 探针网格位置
+
+    // 当前级联的总方向数
     int nDirs = params.c_dRes << (2 * n);
 
+    // ---- 探针在世界空间的位置 ----
+    // 级联探针均匀覆盖整个 SDF 画布
+    // (p + 0.5) / sn → 归一化坐标 [0,1] → * screenRes → 像素坐标
     vec2 screenRes = vec2(float(params.sdfWidth), float(params.sdfHeight));
     vec2 ro = (vec2(p) + 0.5) / vec2(sn) * screenRes;
 
+    // ---- 射线搜索范围 ----
+    // t1 = c_intervalLength ≈ 8.6 像素（基本间隔）
+    // tMin = t1 * 4^(n-1)  (n>0)  或 0  (n=0)
+    // tMax = t1 * 4^n
+    // 即每层的搜索范围是上一层的 4 倍
     float t1 = params.c_intervalLength;
     float tMin = (n == 0) ? 0.0 : t1 * float(1 << (2 * (n - 1)));
     float tMax = t1 * float(1 << (2 * n));
 
-    vec4 s = vec4(0.0);
-    int sub = nDirs / dn;
+    vec4 s = vec4(0.0);  // 该条目的累积辐射度
+    int sub = nDirs / dn; // 每个线程处理的方向数（通常为 4）
 
+    // ---- 方向循环 ----
     for (int k = 0; k < sub; ++k) {
-        int jj = 4 * d + k;
+        int jj = 4 * d + k;  // 全局方向索引
+
+        // 方向角均匀分布：jj/(nDirs) * 2π
         float angle = (float(jj) + 0.5) / float(nDirs) * 2.0 * PI;
         vec2 rd = vec2(cos(angle), sin(angle));
 
+        // ---- Cast 射线 ----
+        // 射线从 ro + rd * tMin 出发（避免自交，跳过近距离已由下级联覆盖的区域）
         vec4 si = radiance(ro + rd * tMin, rd, tMax - tMin);
 
+        // ---- 透明度处理 ----
+        // si.a != 0 表示射线穿透了空空间未命中任何表面
         if (si.a != 0.0) {
             if (n == params.nCascades - 1) {
-                vec2 angleInt = vec2(jj, jj + 1) / float(nDirs) * 2.0 * PI;
-                si.rgb += integrateSkyRadiance(angleInt) / (angleInt.y - angleInt.x);
+                // 顶层 (n=4)：天空辐射已禁用。
+                // 保持 si 为 (0, 0, 0, 1)，向下传播"无光"标记。
+                // 原始参考代码此处注入 integrateSkyRadiance。
             } else {
+                // ---- 合并上级级联 ----
+                // 在上级级联 (n+1) 中双线性采样对应方向 jj 的辐射度数据。
+                // pf = 探针网格坐标到上级级联坐标的映射（上级分辨率减半）。
                 vec2 pf = (vec2(p) + 0.5) / 2.0;
                 ivec2 q = ivec2(round(pf)) - 1;
                 vec2 w = pf - vec2(q) - 0.5;
                 ivec2 h = ivec2(1, 0);
+
+                // 双线性采样上级级联的 4 个邻居探针
                 vec4 S0 = cascadeFetch(n + 1, q + h.yy, jj);
                 vec4 S1 = cascadeFetch(n + 1, q + h.xy, jj);
                 vec4 S2 = cascadeFetch(n + 1, q + h.yx, jj);
                 vec4 S3 = cascadeFetch(n + 1, q + h.xx, jj);
                 vec4 S = mix(mix(S0, S1, w.x), mix(S2, S3, w.x), w.y);
+
+                // alpha 混合：
+                //   si.rgb += si.a * S.rgb  — 上级辐射度 × 穿透透明度
+                //   si.a *= S.a             — 透明度级联（上级的 alpha 向下传播）
                 si.rgb += si.a * S.rgb;
                 si.a *= S.a;
             }
         }
-        s += si;
+        s += si;  // 累加该方向的辐射度
     }
 
+    // ---- 平均并写入 ----
+    // 除以方向子集大小，得到该 (探针,方向子集) 的平均辐射度
     s /= float(nDirs / dn);
     cascadeWrite[cascadeOffset(n) + int(i)] = s;
 }

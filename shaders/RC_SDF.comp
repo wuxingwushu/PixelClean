@@ -1,52 +1,81 @@
 #version 450
+// ============================================================================
+// RC_SDF.comp — SDF (Signed Distance Field) 绘制着色器
+// ============================================================================
+// 每帧第一个执行的 compute shader。
+// 负责：
+//   1. 将鼠标笔画转换为 2D SDF 数据（距离场 + 发光颜色）
+//   2. 处理 C 键清屏（重置所有像素为默认空空间值 50.0）
+//   3. 支持左键（发光画笔）和右键（不发光画笔）
+//
+// 输出到 SDFBuffer：每个像素存储 vec4(sd, R, G, B)
+//   sd  > 0 : 距最近表面的距离（空空间，级联光线可穿透）
+//   sd <= 0 : 在表面内部（光线在此停止，显示 emissivity 颜色）
+//   RGB     : 该像素的发光颜色（emissivity），空空间为 (0,0,0)
+// ============================================================================
+
+// ---- 线程组配置 ----
+// 64 线程一组，一维布局，每个线程处理一个像素
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
+// ---- 统一参数缓冲区 (binding 0) ----
+// CPU 端每帧通过 map 更新，GPU 端只读
+// std430 布局确保与 C++ GPUParams 结构体字节对齐
 layout(std430, binding = 0) buffer Params {
-    float time;
-    float timeDelta;
-    int sdfWidth;
-    int sdfHeight;
-    float mouseX;
-    float mouseY;
-    float mousePrevX;
-    float mousePrevY;
-    int mouseLeftDown;
-    int mouseRightDown;
-    int frameCount;
-    int emissiveMode;
-    float brushRadius;
-    int c_sResX;
-    int c_sResY;
-    int c_dRes;
-    int nCascades;
-    float c_intervalLength;
-    float c_smoothDistScale;
-    int totalCascadeEntries;
-    int cascadeLevel;
-    float mouseSmoothAX;
-    float mouseSmoothAY;
-    float mouseSmoothBX;
-    float mouseSmoothBY;
-    int mouseSmoothADown;
-    int mouseSmoothBDown;
-    int mouseMagic;
-    int keyToggledSpace;
-    int keyToggled1;
-    float mouseClickStartX;
-    float mouseClickStartY;
-    float mouseRawX;
-    float mouseRawY;
-    int clearScreen;
+    float time;              // 程序运行时间（秒），用于 HSV 颜色循环
+    float timeDelta;         // 帧间隔时间（秒）
+    int sdfWidth;            // SDF 缓冲区宽度（像素，=窗口宽度）
+    int sdfHeight;           // SDF 缓冲区高度（像素，=窗口高度）
+    float mouseX;            // 平滑后的鼠标 X（像素坐标，用于画笔曲线）
+    float mouseY;            // 平滑后的鼠标 Y
+    float mousePrevX;        // 上一帧原始鼠标 X
+    float mousePrevY;        // 上一帧原始鼠标 Y
+    int mouseLeftDown;       // 平滑后的鼠标按下状态（用于画笔）
+    int mouseRightDown;      // 右键是否按下（0=未按, 1=按下）
+    int frameCount;          // 帧计数（首帧为 0，用于初始化逻辑）
+    int emissiveMode;        // 发光模式（当前版本未使用）
+    float brushRadius;       // 画笔半径（归一化，BRUSH_RADIUS=0.01）
+    int c_sResX;             // 级联分辨率 X（=sdfWidth/4）
+    int c_sResY;             // 级联分辨率 Y（=sdfHeight/4）
+    int c_dRes;              // 级联方向分辨率（C_DRES=16）
+    int nCascades;           // 级联层数（N_CASCADES=5）
+    float c_intervalLength;  // 级联间隔长度（像素，≈8.6）
+    float c_smoothDistScale;  // 平滑距离缩放（当前设为 0，已弃用）
+    int totalCascadeEntries; // 级联缓冲区总条目数
+    int cascadeLevel;        // 当前级联等级（此 shader 中不用）
+    float mouseSmoothAX;     // 画笔历史 A 位置 X（贝塞尔曲线控制点）
+    float mouseSmoothAY;     // 画笔历史 A 位置 Y
+    float mouseSmoothBX;     // 画笔历史 B 位置 X
+    float mouseSmoothBY;     // 画笔历史 B 位置 Y
+    int mouseSmoothADown;    // 历史 A 是否按下
+    int mouseSmoothBDown;    // 历史 B 是否按下
+    int mouseMagic;          // 魔法模式标记（当前版本未使用）
+    int keyToggledSpace;     // 空格键切换：是否强制不发光（1=强制无光）
+    int keyToggled1;         // 键 1 切换：直线段绘制模式
+    float mouseClickStartX;  // 按下瞬间的鼠标 X（直线模式起点）
+    float mouseClickStartY;  // 按下瞬间的鼠标 Y
+    float mouseRawX;         // 原始鼠标 X（未平滑，直线模式终点）
+    float mouseRawY;         // 原始鼠标 Y
+    int clearScreen;         // 清屏标志（1=本帧清屏，CPU 在 dispatch 后清零）
 } params;
 
+// ---- SDF 缓冲区 (binding 1) ----
+// 可读写。每像素存储 vec4(distance, emissive_R, emissive_G, emissive_B)
+// distance 初始值 50.0（空空间，级联可穿透）；<0 表示表面内部
 layout(std430, binding = 1) buffer SDFBuffer {
     vec4 sdf[];
 };
 
-const float MAX_FLOAT = 3.402823466e+38;
+// ---- 常量 ----
+const float MAX_FLOAT = 3.402823466e+38;  // float 最大值，用作"无穷远"标记
 const float PI = 3.1415927;
-const float MAGIC = 1e25;
+const float MAGIC = 1e25;                  // 魔法模式标记值（当前未使用）
 
+// ============================================================================
+// sdSegment — 点到线段的 SDF 距离
+// ============================================================================
+// 计算点 p 到线段 ab 的最近距离（用于画笔路径的直线段连接）
+// 通过 clamp(dot)/dot 将投影参数限制在 [0,1]，实现对有限线段的距离计算
 float sdSegment(vec2 p, vec2 a, vec2 b) {
     vec2 pa = p - a;
     vec2 ba = b - a;
@@ -54,6 +83,11 @@ float sdSegment(vec2 p, vec2 a, vec2 b) {
     return length(pa - ba * h);
 }
 
+// ============================================================================
+// solveQuadratic — 解二次方程 a*t² + b*t + c = 0
+// ============================================================================
+// 用于 sdBezier 中求解贝塞尔曲线最近点的多项式
+// 返回实根数量，根存入 roots[0..1]
 int solveQuadratic(float a, float b, float c, out vec2 roots) {
     float discriminant = b * b - 4.0 * a * c;
     if (discriminant < 0.0) return 0;
@@ -64,6 +98,11 @@ int solveQuadratic(float a, float b, float c, out vec2 roots) {
     return 2;
 }
 
+// ============================================================================
+// solveCubic — 解三次方程 a*t³ + b*t² + c*t + d = 0
+// ============================================================================
+// 使用三角解法求解。用于 sdBezier 中求解贝塞尔曲线最近点的多项式。
+// 返回实根数量，根存入 roots[0..2]
 int solveCubic(float a, float b, float c, float d, out vec3 roots) {
     const float TAU = 6.2831853071795862;
     float A = b / a; float B = c / a; float C = d / a;
@@ -73,20 +112,27 @@ int solveCubic(float a, float b, float c, float d, out vec3 roots) {
     float sQ = sqrt(abs(Q));
     roots = vec3(-A / 3.0);
     if (S > 0.0) {
+        // 三个不同实根（三角函数形式）
         roots += -2.0 * sQ * cos(acos(R / (sQ * abs(Q))) / 3.0 + vec3(TAU, 0.0, -TAU) / 3.0);
         return 3;
     }
     if (Q == 0.0) { roots[0] += -pow(C - A * A * A / 27.0, 1.0 / 3.0); return 1; }
     if (S < 0.0) {
+        // 一个实根（双曲函数形式）
         float u = abs(R / (sQ * Q));
         float v = Q > 0.0 ? cosh(acosh(u) / 3.0) : sinh(asinh(u) / 3.0);
         roots[0] += -2.0 * sign(R) * sQ * v;
         return 1;
     }
+    // 一个二重根 + 一个单根
     roots.xy += vec2(-2.0, 1.0) * sign(R) * sQ;
     return 2;
 }
 
+// ============================================================================
+// solve — 通用多项式求解器（最高三次）
+// ============================================================================
+// 根据系数自动降级：三次 → 二次 → 一次
 int solve(float a, float b, float c, float d, out vec3 roots) {
     if (a == 0.0) {
         if (b == 0.0) { if (c == 0.0) return 0; roots[0] = -d / c; return 1; }
@@ -95,6 +141,12 @@ int solve(float a, float b, float c, float d, out vec3 roots) {
     return solveCubic(a, b, c, d, roots);
 }
 
+// ============================================================================
+// sdBezier — 点到二次贝塞尔曲线的 SDF 距离
+// ============================================================================
+// 计算点 p 到由控制点 a,b,c 定义的二次贝塞尔曲线的最小距离。
+// 通过求解五次多项式（降次到三次）找到最近参数 t，然后 clamp 到 [0,1]。
+// 当鼠标快速移动时，使用贝塞尔曲线平滑连接线段，产生更自然的笔画。
 float sdBezier(vec2 p, vec2 a, vec2 b, vec2 c) {
     vec2 A = a - 2.0 * b + c;
     vec2 B = 2.0 * (b - a);
@@ -113,17 +165,42 @@ float sdBezier(vec2 p, vec2 a, vec2 b, vec2 c) {
     return sqrt(best);
 }
 
+// ============================================================================
+// hsv2rgb — HSV 颜色空间转 RGB
+// ============================================================================
+// 标准 HSV→RGB 转换。用于生成随时间循环变化的画笔颜色。
+// c.x=色相(H), c.y=饱和度(S), c.z=明度(V)
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
+// ============================================================================
+// getEmissivity — 获取当前画笔的发光颜色
+// ============================================================================
+// 基于时间循环的 HSV 颜色（色相随时间旋转），经 gamma 2.2 校正。
+// 如果空格键切换为开 (keyToggledSpace=1)，则返回纯黑色（不发光）。
 vec3 getEmissivity() {
     if (params.keyToggledSpace != 0) return vec3(0.0);
     return pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
 }
 
+// ============================================================================
+// main — SDF 绘制主函数
+// ============================================================================
+// 流程：
+//   1. 检查清屏标志：若设置则将该像素 SDF 重置为 (50.0, 0, 0, 0)，返回
+//   2. 读取当前像素的 SDF 数据
+//   3. 根据鼠标历史（A/B/C）选择画笔几何体：
+//      - 单点：点到鼠标 C 的距离
+//      - 线段：点到线段 B→C 的距离
+//      - 曲线：点到二次贝塞尔曲线 A→B→C 的距离
+//   4. 从距离中减去画笔半径，得到"雕刻"深度
+//   5. 如果新距离 < 当前 SDF 的 max(0, sd)，则：
+//      - sd = min(新距离, 当前sd)（雕刻更近的表面）
+//      - emissivity = 对应的发光颜色（右键强制为 0）
+//   6. 写回 SDF 缓冲区
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= uint(params.sdfWidth * params.sdfHeight)) return;
@@ -131,17 +208,26 @@ void main() {
     int x = int(idx) % params.sdfWidth;
     int y = int(idx) / params.sdfWidth;
 
+    // ---- 清屏处理 ----
+    // 将所有像素重置为 50.0（空空间），emissivity=(0,0,0)
+    // 50.0 > 0 使级联进入射线追踪；不是 MAX_FLOAT 避免了双线性插值污染
     if (params.clearScreen != 0) {
-        sdf[x + y * params.sdfWidth] = vec4(MAX_FLOAT, 0.0, 0.0, 0.0);
+        sdf[x + y * params.sdfWidth] = vec4(50.0, 0.0, 0.0, 0.0);
         return;
     }
 
+    // 像素坐标（整数，对应 SDF 缓冲区索引）
     vec2 fragCoord = vec2(float(x), float(y));
 
+    // ---- 读取当前像素 SDF 数据 ----
     vec4 data = sdf[x + y * params.sdfWidth];
-    float sd = (params.frameCount != 0) ? data.x : MAX_FLOAT;
+    // 帧 0 时 SDF 缓冲区未初始化，使用显式默认值 50.0
+    float sd = (params.frameCount != 0) ? data.x : 50.0;
     vec3 emissivity = (params.frameCount != 0) ? data.yzw : vec3(0.0);
 
+    // ---- 鼠标历史 A/B/C（贝塞尔曲线控制点） ----
+    // 鼠标位置经过平滑处理，产生 A→B→C 三级历史
+    // 三级历史共同定义画笔路径的几何形状
     vec4 mouseA = vec4(params.mouseSmoothAX, params.mouseSmoothAY,
         float(params.mouseSmoothADown), 0.0);
     vec4 mouseB = vec4(params.mouseSmoothBX, params.mouseSmoothBY,
@@ -149,31 +235,58 @@ void main() {
     vec4 mouseC = vec4(params.mouseX, params.mouseY,
         float(params.mouseLeftDown), 0.0);
 
-    float d = MAX_FLOAT;
+    // ---- 计算当前像素到画笔路径的距离 d ----
+    float d = MAX_FLOAT;  // 默认无穷远（无有效路径）
+
+    // 各情况对应鼠标状态：
+    //   z <= 0: 鼠标未按下或无历史
+    //   z > 0:  鼠标在该历史帧按下
 
     if (mouseB.z <= 0.0 && mouseC.z > 0.0) {
+        // 情况1：只有当前点按下（新笔画开始）
+        // 使用点到点的距离
         d = distance(fragCoord, mouseC.xy);
     } else if (mouseA.z <= 0.0 && mouseB.z > 0.0 && mouseC.z > 0.0) {
+        // 情况2：B 和 C 按下（两个历史点，形成线段）
+        // 使用点到线段的距离，中点用于平滑
         d = sdSegment(fragCoord, mouseB.xy, mix(mouseB.xy, mouseC.xy, 0.5));
     } else if (mouseA.z > 0.0 && mouseB.z > 0.0 && mouseC.z > 0.0) {
+        // 情况3：A、B、C 全部按下（三个历史点，形成贝塞尔曲线）
+        // 使用点到二次贝塞尔曲线的距离，产生平滑曲线笔画
         d = sdBezier(fragCoord, mix(mouseA.xy, mouseB.xy, 0.5), mouseB.xy,
             mix(mouseB.xy, mouseC.xy, 0.5));
     } else if (mouseA.z > 0.0 && mouseB.z > 0.0 && mouseC.z <= 0.0) {
+        // 情况4：A 和 B 按下但 C 抬起（笔画结束，只有历史）
+        // 使用点到线段的距离（历史轨迹）
         d = sdSegment(fragCoord, mix(mouseA.xy, mouseB.xy, 0.5), mouseB.xy);
     }
 
+    // ---- 减去画笔半径，产生"雕刻"效果 ----
+    // brushRadius * sdfHeight ≈ 10.8 像素（对于 1080p）
+    // 使画笔路径附近的 SDF 变成负值（表面内部）
     d -= params.brushRadius * float(params.sdfHeight);
 
+    // ---- 闪烁逻辑（仅魔法模式时闪烁，当前魔法模式未启用） ----
     bool blinking = (params.mouseMagic == 0) || (cos(params.time * 20.0) > 0.5);
 
+    // ---- 像素更新判断 ----
+    // 条件：
+    //   d < max(0, sd): 新距离比当前 SDF 更近（在空空间雕刻，或在已有表面内进一步雕刻）
+    //   keyToggled1 == 0: 直线段模式未激活（否则由级联 shader 的 sampleDrawing 处理）
+    //   blinking: 非闪烁隐藏期
     if (d < max(0.0, sd) && params.keyToggled1 == 0 && blinking) {
+        // 取更小的（更近的）距离值，实现 CSG union
         sd = min(d, sd);
         if (params.mouseRightDown != 0) {
+            // 右键：不发光画笔（emissivity = 0）
             emissivity = vec3(0.0);
         } else {
+            // 左键：发光画笔（随时间循环的 HSV 颜色）
             emissivity = getEmissivity() * float(params.mouseMagic == 0 || cos(params.time * 10.0) > 0.5);
         }
     }
 
+    // ---- 写回 SDF 缓冲区 ----
+    // 存储更新后的距离和发光颜色
     sdf[x + y * params.sdfWidth] = vec4(sd, emissivity);
 }

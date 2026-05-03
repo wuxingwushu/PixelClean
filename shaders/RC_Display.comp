@@ -1,6 +1,26 @@
 #version 450
+// ============================================================================
+// RC_Display.comp — 显示合成着色器
+// ============================================================================
+// 每帧最后执行的 compute shader（在级联计算完成后）。
+// 负责：
+//   1. 从级联缓冲区 level 0 双线性采样 fluence（光照能量密度）
+//   2. 从 SDF 缓冲区采样 emissivity（表面发光颜色）
+//   3. 根据 SDF 距离值混合 cascade fluence 和 SDF emissivity：
+//      - 空空间 (sd > 3)：显示级联 fluence（间接光照穿透空空间）
+//      - 表面 (sd ≤ 0)：显示 SDF emissivity（直接发光）
+//      - 过渡带 (0 < sd < 3)：平滑混合
+//   4. 色调映射（Simple Reinhard 变体）
+//   5. 输出 RGBA8 到输出缓冲区，供 copyBufferToImage → ImGui 显示
+//
+// SDF 距离 clamp 到 50.0（与 RC_Cascade.comp 相同的修复），
+// 防止双线性插值被 MAX_FLOAT 污染。
+// ============================================================================
+
+// ---- 线程组配置 ----
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
+// ---- 统一参数缓冲区 (binding 0) ----
 layout(std430, binding = 0) buffer Params {
     float time;
     float timeDelta;
@@ -39,36 +59,65 @@ layout(std430, binding = 0) buffer Params {
     int clearScreen;
 } params;
 
+// ---- SDF 缓冲区 (binding 1, 只读) ----
+// 包含每个像素的距离场和发光颜色
 layout(std430, binding = 1) readonly buffer SDFBuffer {
     vec4 sdf[];
 };
 
+// ---- 级联数据缓冲区 (binding 2, 只读) ----
+// 包含所有级联等级的辐射度数据。
+// 主要使用 level 0（最精细网格）的 fluence 进行双线性采样
 layout(std430, binding = 2) readonly buffer CascadeData {
     vec4 cascade[];
 };
 
+// ---- 输出缓冲区 (binding 3, 只写) ----
+// 存储每个像素的 RGBA8 颜色（uint32 打包格式）。
+// dispatch 后通过 vkCmdCopyBufferToImage 复制到 mOutputImage 纹理
+// 供 ImGui::Image 显示
 layout(std430, binding = 3) writeonly buffer OutputBuffer {
     uint outColor[];
 };
 
 const float PI = 3.1415927;
 
+// ============================================================================
+// hsv2rgb — HSV 转 RGB（与 RC_SDF.comp、RC_Cascade.comp 相同）
+// ============================================================================
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
+// ============================================================================
+// getEmissivity — 获取发光颜色（显示版本）
+// ============================================================================
+// 与 RC_SDF.comp 版本相同：检查 keyToggledSpace，Gamma 2.2。
+// 用于直线段模式时的临时覆盖。
 vec3 getEmissivity() {
     if (params.keyToggledSpace != 0) return vec3(0.0);
     return pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
 }
 
+// ============================================================================
+// cascade0Fetch — 级联 level 0 探针数据采样
+// ============================================================================
+// 级联 level 0 有 c_sResX × c_sResY 个探针，每个探针 1 个值（1 方向）。
+// 即 level 0 缓冲区就是一张 c_sResX × c_sResY 的"光照图"。
+// 自动 clamp 越界访问
 vec4 cascade0Fetch(ivec2 p) {
     p = clamp(p, ivec2(0), ivec2(params.c_sResX - 1, params.c_sResY - 1));
     return cascade[p.x + p.y * params.c_sResX];
 }
 
+// ============================================================================
+// sampleDrawing — 双线性采样 SDF 数据（与 RC_Cascade.comp 完全相同）
+// ============================================================================
+// 在连续位置 P 处采样 SDF 缓冲区（双线性插值）。
+// 关键：clamp sd 值到 50.0 防止 MAX_FLOAT 污染插值。
+// 支持 keyToggled1 直线段实时预览。
 vec4 sampleDrawing(vec2 P) {
     vec2 coord = P - 0.5;
     ivec2 p0 = ivec2(floor(coord));
@@ -80,8 +129,17 @@ vec4 sampleDrawing(vec2 P) {
     vec4 s10 = sdf[p1.x + p0.y * params.sdfWidth];
     vec4 s01 = sdf[p0.x + p1.y * params.sdfWidth];
     vec4 s11 = sdf[p1.x + p1.y * params.sdfWidth];
+
+    // ---- 修复双线性插值污染 ----
+    // clamp sd 到 50.0，防止 MAX_FLOAT 污染
+    s00.x = min(s00.x, 50.0);
+    s10.x = min(s10.x, 50.0);
+    s01.x = min(s01.x, 50.0);
+    s11.x = min(s11.x, 50.0);
+
     vec4 data = mix(mix(s00, s10, w.x), mix(s01, s11, w.x), w.y);
 
+    // ---- 直线段实时预览 ----
     if (params.keyToggled1 != 0 && params.mouseLeftDown > 0 && params.mouseRightDown == 0) {
         float radius = params.brushRadius * float(params.sdfHeight);
         vec2 segStart = vec2(params.mouseClickStartX, params.mouseClickStartY);
@@ -98,16 +156,43 @@ vec4 sampleDrawing(vec2 P) {
     return data;
 }
 
+// ============================================================================
+// main — 显示合成主函数
+// ============================================================================
+// 流程：
+//   1. 线程 ID → 像素坐标 (x, y)
+//   2. 清屏检查：写 0xFF000000（纯黑不透明）并返回
+//   3. 从级联 level 0 双线性采样 fluence（光照能量密度）
+//   4. 从 SDF 采样 data（距离 + emissivity）
+//   5. 混合：fluence = mix(cascade_fluence, sdf_emissivity * 2π, weight)
+//      weight = clamp(3.0 - data.r, 0, 1)：
+//        - 空空间 (data.r≥50)：weight=0 → 纯级联 fluence
+//        - 表面 (data.r≤0)：weight=1 → 纯 SDF emissivity
+//        - 过渡 (0<data.r<3)：平滑混合
+//   6. 色调映射：Reinhard 变体（1 - 1/(1+fluence)^2.5）
+//   7. RGBA8 打包写入输出缓冲区
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= uint(params.sdfWidth * params.sdfHeight)) return;
 
+    // ---- 清屏 ----
+    if (params.clearScreen != 0) {
+        outColor[idx] = 0xFF000000;  // 纯黑不透明（BGRA: 0x00, 0x00, 0x00, 0xFF）
+        return;
+    }
+
+    // ---- 像素坐标 ----
     int x = int(idx) % params.sdfWidth;
     int y = int(idx) / params.sdfWidth;
     vec2 fragCoord = vec2(float(x), float(y));
 
+    // ---- 级联 level 0 fluence 采样 ----
+    // pc = 像素坐标到级联坐标的映射
+    // c_sResX = sdfWidth/4，c_sResY = sdfHeight/4
     vec2 pc = fragCoord / vec2(float(params.sdfWidth), float(params.sdfHeight))
             * vec2(float(params.c_sResX), float(params.c_sResY));
+    // 双线性采样级联 level 0 的 4 个邻居探针
+    // q = 左下邻居，w = 插值权重
     ivec2 q = ivec2(round(pc)) - 1;
     vec2 w = pc - vec2(q) - 0.5;
     ivec2 h = ivec2(1, 0);
@@ -115,17 +200,32 @@ void main() {
     vec4 S1 = cascade0Fetch(q + h.xy);
     vec4 S2 = cascade0Fetch(q + h.yx);
     vec4 S3 = cascade0Fetch(q + h.xx);
+    // fluence = 插值后的辐射度 × 2π（角度积分归一化）
     vec3 fluence = mix(mix(S0, S1, w.x), mix(S2, S3, w.x), w.y).rgb * 2.0 * PI;
 
+    // ---- SDF 采样 + 混合 ----
+    // data = SDF 在当前像素的双线性采样值
     vec4 data = sampleDrawing(fragCoord);
+    // 混合权重：靠近表面 (data.r→负) 时偏向 SDF emissivity；
+    //           远离表面 (data.r→大) 时偏向级联 fluence
+    // clamp(3.0 - data.r, 0, 1) 将距离映射到 [0,1]：
+    //   data.r >= 3  → weight = 0（空空间，用级联 fluence）
+    //   data.r <= 0  → weight = 1（表面，用 SDF emissivity）
     fluence = mix(fluence, data.gba * 2.0 * PI, clamp(3.0 - data.r, 0.0, 1.0));
 
+    // ---- 色调映射 ----
+    // 公式：mapped = 1 - 1/(1 + fluence)^2.5
+    // 这是 Reinhard 变体，将 HDR 值映射到 [0,1]，并保持颜色饱和度
+    // 对于低值 fluence≈0：mapped≈0（黑色）
+    // 对于高值 fluence>>1：mapped≈1（白色）
     vec3 mapped = vec3(1.0) - vec3(1.0) / pow(vec3(1.0) + fluence, vec3(2.5));
 
+    // ---- RGBA8 打包 ----
     vec4 fc = clamp(vec4(mapped, 1.0), 0.0, 1.0);
     uint r = uint(fc.r * 255.0 + 0.5);
     uint g = uint(fc.g * 255.0 + 0.5);
     uint b = uint(fc.b * 255.0 + 0.5);
     uint a = uint(fc.a * 255.0 + 0.5);
+    // BGRA 顺序（Vulkan R8G8B8A8_UNORM 兼容）
     outColor[x + y * params.sdfWidth] = r | (g << 8) | (b << 16) | (a << 24);
 }

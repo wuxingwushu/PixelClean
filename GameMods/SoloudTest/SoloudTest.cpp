@@ -11,22 +11,19 @@ namespace GAME
 
 	SoloudTest::SoloudTest(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
-		// 初始化辅助线渲染器，最大 100000 个顶点
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 100000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 200000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
 			mCameraVPMatricesBuffer);
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
-		// 从全局 SoundEffect 单例获取 SoLoud 引擎指针
 		mSoloud = SoundEffect::SoundEffect::GetSoundEffect()->GetSoloud();
-		// 停止其他模组可能正在播放的音频，避免冲突
 		SoundEffect::SoundEffect::GetSoundEffect()->StopAll();
 
 		CreateScene();
 		InitAudio();
 
-		mCamera->setCameraPos({0, 0, 30});
+		mCamera->setCameraPos({0, 0, 40});
 	}
 
 	SoloudTest::~SoloudTest()
@@ -41,48 +38,125 @@ namespace GAME
 
 	// ==================== 场景创建 ====================
 	//
-	// 创建 40×25 的侧视图地图，包含：
-	//   - 四周边界墙
-	//   - 一个大型建筑（左墙 x=14, 右墙 x=32, 地板 y=6, 天花板 y=18）
-	//   - 左墙门洞 (x=14, y=11~12)
-	//   - 内部分隔墙 (x=23)，将建筑分为 Room A (左) 和 Room B (右)
-	//   - 分隔墙门洞 (x=23, y=10~12)
-	//   - 走廊天花板 (y=7)，将建筑下部隔为走廊
-	//   - 走廊天花板门洞 (x=18~19)
-	//   - 玩家圆形、装饰球、可推动方块
+	// 创建 64×40 的大型侧视图地图，包含：
+	//   建筑群：A楼（左楼）+ B楼（右楼）+ 中央庭院
+	//
+	//   A楼 (左楼, 网格 x=[5,30] y=[4,27], 世界 x=[-27,-2] y=[-16,7])：
+	//     ┌─────────────────────────┐
+	//     │  音乐室A1  │  图书室A2  │  ← y=17~26 (上层)
+	//     │            │            │
+	//     ├────────────┤            │  ← y=16 地板
+	//     │            │            │
+	//     │  储藏室A3  │  工坊A4    │  ← y=9~15 (中层)
+	//     │            │            │
+	//     ├────────────┴────────────┤  ← y=8 地板
+	//     │      下层走廊          │  ← y=5~7
+	//     └─────────────────────────┘
+	//
+	//   B楼 (右楼, 网格 x=[34,58] y=[4,27], 世界 x=[2,26] y=[-16,7])：
+	//     ┌─────────────────────────┐
+	//     │  水泵房B1  │  实验室B2  │  ← y=13~26 (上层)
+	//     │            │            │
+	//     ├────────────┴────────────┤  ← y=12 地板
+	//     │      下层大厅          │  ← y=5~11
+	//     └─────────────────────────┘
+	//
+	//   庭院 (网格 x=[30,34] y=[4,15], 世界 x=[-2,2] y=[-16,-5])：
+	//     连接两楼的露天庭院
+	//
+	// 声源分布 (7个)：
+	//   1. 室外风声 — 地图左上角室外
+	//   2. 音乐室旋律 — A1 音乐室内
+	//   3. 水滴声 — B1 水泵房内
+	//   4. 走廊嗡嗡声 — A楼下层走廊
+	//   5. 机器轰鸣 — A4 工坊内
+	//   6. 室外雨声 — 地图右上角室外
+	//   7. 实验室电子音 — B2 实验室内
 
 	void SoloudTest::CreateScene()
 	{
-		// 创建物理世界，重力向下 9.8，不开启风力
-		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
-
-		// 创建空白地图
+		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, 0.0}, false);
 		mMapStatic = new PhysicsBlock::MapStatic(MAP_WIDTH, MAP_HEIGHT);
 
-		// 先将所有格子清空
 		for (int i = 0; i < MAP_WIDTH * MAP_HEIGHT; ++i) {
 			mMapStatic->at(i).Entity = false;
 			mMapStatic->at(i).Collision = false;
 			mMapStatic->at(i).mass = 1.0;
 		}
 
-		// 四周边界墙
+		// ===== 四周边界墙 =====
 		for (int i = 0; i < MAP_WIDTH; ++i) {
-			mMapStatic->at(i, 0).Entity = true;       // 底部
+			mMapStatic->at(i, 0).Entity = true;
 			mMapStatic->at(i, 0).Collision = true;
-			mMapStatic->at(i, MAP_HEIGHT - 1).Entity = true;  // 顶部
+			mMapStatic->at(i, MAP_HEIGHT - 1).Entity = true;
 			mMapStatic->at(i, MAP_HEIGHT - 1).Collision = true;
 		}
 		for (int i = 0; i < MAP_HEIGHT; ++i) {
-			mMapStatic->at(0, i).Entity = true;       // 左侧
+			mMapStatic->at(0, i).Entity = true;
 			mMapStatic->at(0, i).Collision = true;
-			mMapStatic->at(MAP_WIDTH - 1, i).Entity = true;  // 右侧
+			mMapStatic->at(MAP_WIDTH - 1, i).Entity = true;
 			mMapStatic->at(MAP_WIDTH - 1, i).Collision = true;
 		}
 
-		// 建筑四面墙：左墙 x=14, 右墙 x=32, 地板 y=6, 天花板 y=18
-		int bx1 = 14, bx2 = 32;
-		int by1 = 6, by2 = 18;
+		// ===== A楼 (左楼) x=[5,30] y=[4,27] =====
+		int ax1 = 5, ax2 = 30;
+		int ay1 = 4, ay2 = 27;
+
+		// A楼四壁
+		for (int y = ay1; y <= ay2; ++y) {
+			mMapStatic->at(ax1, y).Entity = true;
+			mMapStatic->at(ax1, y).Collision = true;
+			mMapStatic->at(ax2, y).Entity = true;
+			mMapStatic->at(ax2, y).Collision = true;
+		}
+		for (int x = ax1; x <= ax2; ++x) {
+			mMapStatic->at(x, ay1).Entity = true;
+			mMapStatic->at(x, ay1).Collision = true;
+			mMapStatic->at(x, ay2).Entity = true;
+			mMapStatic->at(x, ay2).Collision = true;
+		}
+
+		// A楼 内部垂直隔墙 x=17, 门洞 y=8~10 (下层通道), y=17~19 (上层通道)
+		int awx = 17;
+		for (int y = ay1; y <= ay2; ++y) {
+			if ((y >= 8 && y <= 10) || (y >= 17 && y <= 19)) continue;
+			mMapStatic->at(awx, y).Entity = true;
+			mMapStatic->at(awx, y).Collision = true;
+		}
+
+		// A楼 内部水平地板 y=8 (下层走廊天花板), 开口 x=10~12, x=23~25 (楼梯井)
+		for (int x = ax1 + 1; x <= ax2 - 1; ++x) {
+			if ((x >= 10 && x <= 12) || (x >= 23 && x <= 25)) continue;
+			mMapStatic->at(x, 8).Entity = true;
+			mMapStatic->at(x, 8).Collision = true;
+		}
+
+		// A楼 内部水平地板 y=16 (中层房间地板 / 上层走廊天花板), 开口 x=10~12, x=23~25
+		for (int x = ax1 + 1; x <= ax2 - 1; ++x) {
+			if ((x >= 10 && x <= 12) || (x >= 23 && x <= 25)) continue;
+			mMapStatic->at(x, 16).Entity = true;
+			mMapStatic->at(x, 16).Collision = true;
+		}
+
+		// A楼 左墙入口: x=5, y=5~6 (下层入口), y=18~19 (上层入口/外楼梯)
+		mMapStatic->at(ax1, 5).Entity = false;
+		mMapStatic->at(ax1, 5).Collision = false;
+		mMapStatic->at(ax1, 6).Entity = false;
+		mMapStatic->at(ax1, 6).Collision = false;
+		mMapStatic->at(ax1, 18).Entity = false;
+		mMapStatic->at(ax1, 18).Collision = false;
+		mMapStatic->at(ax1, 19).Entity = false;
+		mMapStatic->at(ax1, 19).Collision = false;
+
+		// A楼 右墙出口到庭院: x=30, y=8~9
+		mMapStatic->at(ax2, 8).Entity = false;
+		mMapStatic->at(ax2, 8).Collision = false;
+		mMapStatic->at(ax2, 9).Entity = false;
+		mMapStatic->at(ax2, 9).Collision = false;
+
+		// ===== B楼 (右楼) x=[34,58] y=[4,27] =====
+		int bx1 = 34, bx2 = 58;
+		int by1 = 4, by2 = 27;
 
 		for (int y = by1; y <= by2; ++y) {
 			mMapStatic->at(bx1, y).Entity = true;
@@ -97,78 +171,176 @@ namespace GAME
 			mMapStatic->at(x, by2).Collision = true;
 		}
 
-		// 左墙门洞 (x=14, y=11~12) — 从室外进入建筑的入口
-		mMapStatic->at(bx1, 11).Entity = false;
-		mMapStatic->at(bx1, 11).Collision = false;
-		mMapStatic->at(bx1, 12).Entity = false;
-		mMapStatic->at(bx1, 12).Collision = false;
-
-		// 内部分隔墙 (x=23)，将建筑分为 Room A (左) 和 Room B (右)
-		int wx = 23;
+		// B楼 内部垂直隔墙 x=46, 门洞 y=14~16
+		int bwx = 46;
 		for (int y = by1; y <= by2; ++y) {
-			if (y != 10 && y != 11 && y != 12) {  // 分隔墙门洞 (y=10~12)
-				mMapStatic->at(wx, y).Entity = true;
-				mMapStatic->at(wx, y).Collision = true;
-			}
+			if (y >= 14 && y <= 16) continue;
+			mMapStatic->at(bwx, y).Entity = true;
+			mMapStatic->at(bwx, y).Collision = true;
 		}
 
-		// 走廊天花板 (y=7)，将建筑下部隔为走廊区域
-		int cx1 = bx1 + 1, cx2 = bx2 - 1;
-		int cy1 = 7, cy2 = 9;
-		for (int x = cx1; x <= cx2; ++x) {
-			mMapStatic->at(x, cy1).Entity = true;
-			mMapStatic->at(x, cy1).Collision = true;
+		// B楼 内部水平地板 y=12, 开口 x=41~43
+		for (int x = bx1 + 1; x <= bx2 - 1; ++x) {
+			if (x >= 41 && x <= 43) continue;
+			mMapStatic->at(x, 12).Entity = true;
+			mMapStatic->at(x, 12).Collision = true;
 		}
-		// 走廊天花板门洞 (x=18~19) — 从走廊进入上层房间的楼梯口
-		mMapStatic->at(18, cy1).Entity = false;
-		mMapStatic->at(18, cy1).Collision = false;
-		mMapStatic->at(19, cy1).Entity = false;
-		mMapStatic->at(19, cy1).Collision = false;
 
-		// 设置地图中心点，将地图坐标转换为以中心为原点的世界坐标
+		// B楼 左墙入口: x=34, y=5~6 (庭院进入下层大厅), y=17~18 (庭院进入上层B1)
+		mMapStatic->at(bx1, 5).Entity = false;
+		mMapStatic->at(bx1, 5).Collision = false;
+		mMapStatic->at(bx1, 6).Entity = false;
+		mMapStatic->at(bx1, 6).Collision = false;
+		mMapStatic->at(bx1, 17).Entity = false;
+		mMapStatic->at(bx1, 17).Collision = false;
+		mMapStatic->at(bx1, 18).Entity = false;
+		mMapStatic->at(bx1, 18).Collision = false;
+
+		// ===== 庭院地面 (两楼之间) =====
+		for (int x = 31; x <= 33; ++x) {
+			mMapStatic->at(x, 4).Entity = true;
+			mMapStatic->at(x, 4).Collision = true;
+		}
+
+		// ===== 室外装饰柱/树 =====
+		// 左上角柱子群
+		for (int y = 30; y <= 32; ++y) {
+			mMapStatic->at(2, y).Entity = true;
+			mMapStatic->at(2, y).Collision = true;
+			mMapStatic->at(4, y).Entity = true;
+			mMapStatic->at(4, y).Collision = true;
+		}
+		// 右上角柱子
+		for (int y = 32; y <= 34; ++y) {
+			mMapStatic->at(60, y).Entity = true;
+			mMapStatic->at(60, y).Collision = true;
+		}
+		// 中央上方平台
+		for (int x = 28; x <= 36; ++x) {
+			mMapStatic->at(x, 34).Entity = true;
+			mMapStatic->at(x, 34).Collision = true;
+		}
+		// 平台开口
+		mMapStatic->at(31, 34).Entity = false;
+		mMapStatic->at(31, 34).Collision = false;
+		mMapStatic->at(32, 34).Entity = false;
+		mMapStatic->at(32, 34).Collision = false;
+		mMapStatic->at(33, 34).Entity = false;
+		mMapStatic->at(33, 34).Collision = false;
+
+		// 设置地图中心点
 		mMapStatic->SetCentrality({MAP_WIDTH / 2.0, MAP_HEIGHT / 2.0});
 		mPhysicsWorld->SetMapFormwork(mMapStatic);
 
-		// 渲染所有静态地图方块
-		for (size_t x = 0; x < mMapStatic->width; x++) {
-			for (size_t y = 0; y < mMapStatic->height; y++) {
-				if (mMapStatic->at(x, y).Entity) {
-					Vec2_ worldPos = Vec2_{(FLOAT_)x, (FLOAT_)y} - mMapStatic->centrality;
-					// 内墙和走廊天花板用不同颜色标识
-					bool isInteriorWall = (x == wx && y >= by1 && y <= by2 && y != 10 && y != 11 && y != 12);
-					bool isCorridorCeiling = (y == cy1 && x >= cx1 && x <= cx2 && x != 18 && x != 19);
-					glm::vec4 color = {0, 1, 0, 1};
-					if (isInteriorWall || isCorridorCeiling) {
-						color = {0, 0.7f, 0.3f, 1};
-					}
-					ShowStaticSquare(worldPos, 0, color);
+		// ===== 渲染所有静态地图方块 =====
+		Vec2_ centrality = mMapStatic->centrality;
+		for (size_t x = 0; x < mMapStatic->width; ++x) {
+			for (size_t y = 0; y < mMapStatic->height; ++y) {
+				if (!mMapStatic->at(x, y).Entity) continue;
+
+				Vec2_ worldPos = Vec2_{(FLOAT_)x, (FLOAT_)y} - centrality;
+				glm::vec4 color = {0.15f, 0.7f, 0.15f, 1.0f};
+
+				// 边界墙 → 暗灰色
+				if (x == 0 || x == MAP_WIDTH - 1 || y == 0 || y == MAP_HEIGHT - 1) {
+					color = {0.3f, 0.3f, 0.35f, 1.0f};
 				}
+				// A楼外墙 → 深绿
+				else if (((x == ax1 || x == ax2) && y >= ay1 && y <= ay2) ||
+					     ((y == ay1 || y == ay2) && x >= ax1 && x <= ax2)) {
+					color = {0.15f, 0.6f, 0.2f, 1.0f};
+				}
+				// A楼内墙 → 浅绿
+				else if ((x == awx && y >= ay1 && y <= ay2) || (y == 8 && x >= ax1 + 1 && x <= ax2 - 1) || (y == 16 && x >= ax1 + 1 && x <= ax2 - 1)) {
+					color = {0.25f, 0.75f, 0.35f, 1.0f};
+				}
+				// B楼外墙 → 蓝绿
+				else if (((x == bx1 || x == bx2) && y >= by1 && y <= by2) ||
+					     ((y == by1 || y == by2) && x >= bx1 && x <= bx2)) {
+					color = {0.15f, 0.55f, 0.55f, 1.0f};
+				}
+				// B楼内墙 → 青色
+				else if ((x == bwx && y >= by1 && y <= by2) || (y == 12 && x >= bx1 + 1 && x <= bx2 - 1)) {
+					color = {0.2f, 0.7f, 0.7f, 1.0f};
+				}
+				// 庭院地面/装饰 → 暖黄绿
+				else if ((x >= 31 && x <= 33) && y == 4) {
+					color = {0.4f, 0.65f, 0.2f, 1.0f};
+				}
+				// 装饰柱/平台 → 棕色
+				else {
+					color = {0.45f, 0.5f, 0.25f, 1.0f};
+				}
+
+				ShowStaticSquare(worldPos, 0, color);
 			}
 		}
 
-		// 创建玩家 — 蓝色圆形，半径 0.5，质量 2.0
-		mPlayer = new PhysicsBlock::PhysicsCircle({-8, -8}, 0.5, 2.0, 0.3);
+		// ===== 物理对象 =====
+
+		// 玩家 — 蓝色圆形，放在A楼左下外侧
+		mPlayer = new PhysicsBlock::PhysicsCircle({-24, -15}, 0.55, 2.5, 0.3);
 		mPhysicsWorld->AddObject(mPlayer);
 
-		// 装饰球 1
-		PhysicsBlock::PhysicsCircle *ball1 = new PhysicsBlock::PhysicsCircle({-3, -6}, 0.6, 1.5, 0.3);
+		// ---- 装饰球 ----
+		PhysicsBlock::PhysicsCircle *ball1 = new PhysicsBlock::PhysicsCircle({-18, -13}, 0.5, 1.5, 0.3);
 		mPhysicsWorld->AddObject(ball1);
 
-		// 装饰球 2
-		PhysicsBlock::PhysicsCircle *ball2 = new PhysicsBlock::PhysicsCircle({5, -5}, 0.4, 1.0, 0.3);
+		PhysicsBlock::PhysicsCircle *ball2 = new PhysicsBlock::PhysicsCircle({-10, -5}, 0.35, 1.0, 0.3);
 		mPhysicsWorld->AddObject(ball2);
 
-		// 可推动方块 — 3×2 网格形状
-		PhysicsBlock::PhysicsShape *box1 = new PhysicsBlock::PhysicsShape({8, -7}, {3, 2});
+		PhysicsBlock::PhysicsCircle *ball3 = new PhysicsBlock::PhysicsCircle({10, -14}, 0.6, 2.0, 0.3);
+		mPhysicsWorld->AddObject(ball3);
+
+		PhysicsBlock::PhysicsCircle *ball4 = new PhysicsBlock::PhysicsCircle({20, -12}, 0.45, 1.2, 0.3);
+		mPhysicsWorld->AddObject(ball4);
+
+		// ---- 可推动方块 ----
+		// 方块1 — A4工坊内的大箱子
+		PhysicsBlock::PhysicsShape *box1 = new PhysicsBlock::PhysicsShape({-10, -6}, {3, 2});
 		for (size_t i = 0; i < box1->width * box1->height; ++i) {
 			box1->at(i).Collision = true;
 			box1->at(i).Entity = true;
 			box1->at(i).mass = 1;
-			box1->at(i).FrictionFactor = 0.2;
+			box1->at(i).FrictionFactor = 0.3;
 		}
 		box1->UpdateAll();
-		box1->angle = 0;
+		box1->angle = 0.2;
 		mPhysicsWorld->AddObject(box1);
+
+		// 方块2 — 庭院里的箱子
+		PhysicsBlock::PhysicsShape *box2 = new PhysicsBlock::PhysicsShape({0, -14}, {2, 2});
+		for (size_t i = 0; i < box2->width * box2->height; ++i) {
+			box2->at(i).Collision = true;
+			box2->at(i).Entity = true;
+			box2->at(i).mass = 1;
+			box2->at(i).FrictionFactor = 0.25;
+		}
+		box2->UpdateAll();
+		mPhysicsWorld->AddObject(box2);
+
+		// 方块3 — B楼大厅里的箱子
+		PhysicsBlock::PhysicsShape *box3 = new PhysicsBlock::PhysicsShape({15, -13}, {2, 2});
+		for (size_t i = 0; i < box3->width * box3->height; ++i) {
+			box3->at(i).Collision = true;
+			box3->at(i).Entity = true;
+			box3->at(i).mass = 1;
+			box3->at(i).FrictionFactor = 0.2;
+		}
+		box3->UpdateAll();
+		mPhysicsWorld->AddObject(box3);
+
+		// 方块4 — 高处平台上的物件
+		PhysicsBlock::PhysicsShape *box4 = new PhysicsBlock::PhysicsShape({-1, 15}, {2, 1});
+		for (size_t i = 0; i < box4->width * box4->height; ++i) {
+			box4->at(i).Collision = true;
+			box4->at(i).Entity = true;
+			box4->at(i).mass = 1;
+			box4->at(i).FrictionFactor = 0.4;
+		}
+		box4->UpdateAll();
+		box4->angle = 0;
+		mPhysicsWorld->AddObject(box4);
 	}
 
 	// ==================== 音频初始化 ====================
@@ -178,62 +350,62 @@ namespace GAME
 	//   ├── Environment Bus（环境声总线）
 	//   │   ├── Filter 0: FreeverbFilter（混响 — 室内时增大）
 	//   │   ├── Filter 1: EchoFilter（回声 — 走廊时增大）
-	//   │   ├── SfxrWind（室外风声，循环）
-	//   │   ├── SfxrWater（Room B 水滴声，循环）
-	//   │   └── SfxrHum（走廊嗡嗡声，循环）
+	//   │   ├── SfxrWind（室外风声）
+	//   │   ├── SfxrWater（水泵房水滴声）
+	//   │   ├── SfxrHum（走廊嗡嗡声）
+	//   │   ├── SfxrMachine（工坊机器轰鸣）
+	//   │   └── SfxrRain（室外雨声）
 	//   ├── Music Bus（音乐总线）
-	//   │   ├── Filter 0: BiquadResonantFilter LPF（音乐遮挡低通）
-	//   │   └── SfxrMusic（Room A 音乐，循环）
+	//   │   ├── Filter 0: BiquadResonantFilter LPF
+	//   │   └── SfxrMusic（音乐室旋律）
 	//   └── SFX Bus（音效总线）
-	//       ├── Filter 0: LofiFilter（走廊 LoFi 效果）
-	//       ├── SfxrFootstep（脚步声，一次性）
-	//       ├── SfxrImpact（碰撞冲击声，一次性）
-	//       └── SfxrBlip（区域过渡提示音，一次性）
-	//
-	// 每个循环声源还单独挂载了 BiquadResonantFilter (LOWPASS)，
-	// 用于根据墙壁遮挡数量动态调整截止频率。
+	//       ├── Filter 0: LofiFilter（走廊LoFi — 保留）
+	//       ├── SfxrFootstep（脚步声）
+	//       ├── SfxrImpact（碰撞冲击声）
+	//       ├── SfxrBlip（区域过渡提示音）
+	//       └── SfxrLab（实验室电子音 → 走 SFX Bus）
 
 	void SoloudTest::InitAudio()
 	{
-		// ---- 初始化滤波器参数 ----
-		mReverbFilter.setParams(0, 0.5f, 0.5f, 1.0f);                              // 混响：默认低湿信号
-		mOcclusionLPF.setParams(SoLoud::BiquadResonantFilter::LOWPASS, 22000, 1);   // 遮挡 LPF：默认全频通过
-		mMusicLPF.setParams(SoLoud::BiquadResonantFilter::LOWPASS, 22000, 1);       // 音乐 LPF：默认全频通过
-		mEchoFilter.setParams(0.2f, 0.6f);                                           // 回声：延迟 0.2s，衰减 0.6
-		mLofiFilter.setParams(8000, 8);                                              // LoFi：采样率 8000Hz，位深 8bit
+		// ---- 初始化滤波器 ----
+		mReverbFilter.setParams(0, 0.5f, 0.5f, 1.0f);
+		mOcclusionLPF.setParams(SoLoud::BiquadResonantFilter::LOWPASS, 22000, 1);
+		mMusicLPF.setParams(SoLoud::BiquadResonantFilter::LOWPASS, 22000, 1);
+		mEchoFilter.setParams(0.2f, 0.6f);
+		mLofiFilter.setParams(8000, 8);
 
-		// ---- 将滤波器挂载到总线 ----
-		mEnvironmentBus.setFilter(0, &mReverbFilter);   // 环境声总线 → 混响
-		mEnvironmentBus.setFilter(1, &mEchoFilter);      // 环境声总线 → 回声
-		mMusicBus.setFilter(0, &mMusicLPF);              // 音乐总线 → 低通
-		mSfxBus.setFilter(0, &mLofiFilter);              // 音效总线 → LoFi
+		// ---- 挂载滤波器到总线 ----
+		mEnvironmentBus.setFilter(0, &mReverbFilter);
+		mEnvironmentBus.setFilter(1, &mEchoFilter);
+		mMusicBus.setFilter(0, &mMusicLPF);
+		mSfxBus.setFilter(0, &mLofiFilter);
 
-		// ---- 启动三条总线（总线必须先 play 才能接收子音频）----
+		// ---- 启动总线 ----
 		mEnvironmentBusHandle = mSoloud->play(mEnvironmentBus);
 		mMusicBusHandle = mSoloud->play(mMusicBus);
 		mSfxBusHandle = mSoloud->play(mSfxBus);
 
-		mSoloud->setVolume(mEnvironmentBusHandle, 0.6f);
+		mSoloud->setVolume(mEnvironmentBusHandle, 0.85f);
 		mSoloud->setVolume(mMusicBusHandle, mMusicVolume);
 		mSoloud->setVolume(mSfxBusHandle, mSfxVolume);
 
-		// ---- 初始化 SFXR 程序化音效 ----
+		// ---- SFXR 程序化音效 ----
 
-		// 室外风声 — 基于 HURT 预设修改，低频噪声，循环播放
+		// 1. 室外风声 — HURT预设改，低频噪声
 		mSfxrWind.loadPreset(SoLoud::Sfxr::HURT, 12345);
-		mSfxrWind.mParams.wave_type = 3;                         // 噪声波形
+		mSfxrWind.mParams.wave_type = 3;
 		mSfxrWind.mParams.p_env_attack = 0.3f;
 		mSfxrWind.mParams.p_env_sustain = 0.4f;
 		mSfxrWind.mParams.p_env_decay = 0.3f;
 		mSfxrWind.mParams.p_env_punch = 0.1f;
-		mSfxrWind.mParams.p_base_freq = 0.15f * 44100 / 22050;  // 低基频
-		mSfxrWind.mParams.p_freq_ramp = -0.1f;                   // 频率缓慢下降
+		mSfxrWind.mParams.p_base_freq = 0.15f * 44100 / 22050;
+		mSfxrWind.mParams.p_freq_ramp = -0.1f;
 		mSfxrWind.setLooping(true);
-		mSfxrWind.setFilter(0, &mOcclusionLPF);                  // 挂载遮挡低通滤波
+		mSfxrWind.setFilter(0, &mOcclusionLPF);
 
-		// Room A 音乐 — 基于 POWERUP 预设修改，方波旋律，循环播放
+		// 2. 音乐室旋律 — POWERUP预设改，方波
 		mSfxrMusic.loadPreset(SoLoud::Sfxr::POWERUP, 42);
-		mSfxrMusic.mParams.wave_type = 2;                         // 方波
+		mSfxrMusic.mParams.wave_type = 2;
 		mSfxrMusic.mParams.p_base_freq = 0.4f * 44100 / 22050;
 		mSfxrMusic.mParams.p_env_attack = 0.1f;
 		mSfxrMusic.mParams.p_env_sustain = 0.3f;
@@ -242,87 +414,129 @@ namespace GAME
 		mSfxrMusic.setLooping(true);
 		mSfxrMusic.setFilter(0, &mOcclusionLPF);
 
-		// Room B 水滴声 — 基于 COIN 预设修改，正弦波短促音，循环播放
+		// 3. 水滴声 — COIN预设改，正弦波短促音
 		mSfxrWater.loadPreset(SoLoud::Sfxr::COIN, 99);
-		mSfxrWater.mParams.wave_type = 1;                         // 正弦波
+		mSfxrWater.mParams.wave_type = 1;
 		mSfxrWater.mParams.p_base_freq = 0.6f * 44100 / 22050;
 		mSfxrWater.mParams.p_env_sustain = 0.1f;
 		mSfxrWater.mParams.p_env_decay = 0.2f;
 		mSfxrWater.setLooping(true);
 		mSfxrWater.setFilter(0, &mOcclusionLPF);
 
-		// 走廊嗡嗡声 — 基于 BLIP 预设修改，极低频持续音，循环播放
+		// 4. 走廊嗡嗡声 — BLIP预设改，极低频
 		mSfxrHum.loadPreset(SoLoud::Sfxr::BLIP, 77);
-		mSfxrHum.mParams.wave_type = 0;                           // 方波（默认）
-		mSfxrHum.mParams.p_base_freq = 0.08f * 44100 / 22050;    // 极低基频
+		mSfxrHum.mParams.wave_type = 0;
+		mSfxrHum.mParams.p_base_freq = 0.08f * 44100 / 22050;
 		mSfxrHum.mParams.p_env_attack = 0.2f;
 		mSfxrHum.mParams.p_env_sustain = 0.5f;
 		mSfxrHum.mParams.p_env_decay = 0.2f;
 		mSfxrHum.setLooping(true);
 		mSfxrHum.setFilter(0, &mOcclusionLPF);
 
-		// 脚步声 — 基于 HURT 预设修改，极短促噪声
+		// 5. NEW 工坊机器轰鸣 — LASER预设改，工业感低频方波+颤音
+		mSfxrMachine.loadPreset(SoLoud::Sfxr::LASER, 555);
+		mSfxrMachine.mParams.wave_type = 0;
+		mSfxrMachine.mParams.p_base_freq = 0.14f * 44100 / 22050;
+		mSfxrMachine.mParams.p_freq_limit = 0.3f;
+		mSfxrMachine.mParams.p_freq_ramp = -0.08f;
+		mSfxrMachine.mParams.p_env_attack = 0.4f;
+		mSfxrMachine.mParams.p_env_sustain = 0.35f;
+		mSfxrMachine.mParams.p_env_decay = 0.3f;
+		mSfxrMachine.mParams.p_vib_strength = 0.2f;
+		mSfxrMachine.mParams.p_vib_speed = 0.3f;
+		mSfxrMachine.mParams.p_arp_mod = -0.15f;
+		mSfxrMachine.setLooping(true);
+		mSfxrMachine.setFilter(0, &mOcclusionLPF);
+
+		// 6. NEW 室外雨声 — HURT预设改，白噪声+低频滚雷
+		mSfxrRain.loadPreset(SoLoud::Sfxr::HURT, 7777);
+		mSfxrRain.mParams.wave_type = 3;
+		mSfxrRain.mParams.p_base_freq = 0.22f * 44100 / 22050;
+		mSfxrRain.mParams.p_freq_limit = 0.6f;
+		mSfxrRain.mParams.p_freq_ramp = 0.05f;
+		mSfxrRain.mParams.p_env_attack = 0.5f;
+		mSfxrRain.mParams.p_env_sustain = 0.45f;
+		mSfxrRain.mParams.p_env_decay = 0.3f;
+		mSfxrRain.mParams.p_env_punch = 0.05f;
+		mSfxrRain.mParams.p_arp_mod = 0.1f;
+		mSfxrRain.setLooping(true);
+		mSfxrRain.setFilter(0, &mOcclusionLPF);
+
+		// 7. NEW 实验室电子音 — BLIP预设改，高频短促正弦波循环
+		mSfxrLab.loadPreset(SoLoud::Sfxr::BLIP, 3333);
+		mSfxrLab.mParams.wave_type = 1;
+		mSfxrLab.mParams.p_base_freq = 0.55f * 44100 / 22050;
+		mSfxrLab.mParams.p_freq_limit = 0.25f;
+		mSfxrLab.mParams.p_freq_ramp = 0.15f;
+		mSfxrLab.mParams.p_env_attack = 0.02f;
+		mSfxrLab.mParams.p_env_sustain = 0.08f;
+		mSfxrLab.mParams.p_env_decay = 0.15f;
+		mSfxrLab.mParams.p_arp_mod = 0.3f;
+		mSfxrLab.mParams.p_arp_speed = 0.6f;
+		mSfxrLab.setLooping(true);
+		mSfxrLab.setFilter(0, &mOcclusionLPF);
+
+		// 脚步声 — HURT预设，极短促噪声
 		mSfxrFootstep.loadPreset(SoLoud::Sfxr::HURT, 55);
 		mSfxrFootstep.mParams.wave_type = 3;
-		mSfxrFootstep.mParams.p_env_attack = 0.0f;               // 无起音
-		mSfxrFootstep.mParams.p_env_sustain = 0.01f;             // 极短持续
-		mSfxrFootstep.mParams.p_env_decay = 0.05f;               // 快速衰减
-		mSfxrFootstep.mParams.p_env_punch = 0.4f;                // 强冲击感
+		mSfxrFootstep.mParams.p_env_attack = 0.0f;
+		mSfxrFootstep.mParams.p_env_sustain = 0.01f;
+		mSfxrFootstep.mParams.p_env_decay = 0.05f;
+		mSfxrFootstep.mParams.p_env_punch = 0.4f;
 		mSfxrFootstep.mParams.p_base_freq = 0.3f * 44100 / 22050;
 
-		// 碰撞冲击声 — 基于 EXPLOSION 预设修改
+		// 碰撞冲击声 — EXPLOSION预设
 		mSfxrImpact.loadPreset(SoLoud::Sfxr::EXPLOSION, 33);
 		mSfxrImpact.mParams.p_base_freq = 0.2f * 44100 / 22050;
 		mSfxrImpact.mParams.p_env_decay = 0.3f;
 
-		// 区域过渡提示音 — BLIP 预设
+		// 区域过渡提示音 — BLIP预设
 		mSfxrBlip.loadPreset(SoLoud::Sfxr::BLIP, 88);
 
 		// ---- 创建声源并播放 ----
 		Vec2_ centrality = mMapStatic->centrality;
-
 		mSoundSources.clear();
 
-		// 声源 1：室外风声 — 位于建筑上方的室外区域
+		// 声源1：室外风声 (地图左上角单体柱附近)
 		{
 			SoundSource src;
-			src.name = u8"Outdoor Wind";
-			src.position = Vec2_{5, 15} - centrality;
+			src.name = u8"室外风声";
+			src.position = Vec2_{3, 35} - centrality;
 			src.sfxr = &mSfxrWind;
-			src.baseVolume = 0.4f;
-			src.maxDistance = SOUND_MAX_DISTANCE;
+			src.baseVolume = 0.6f;
+			src.maxDistance = 35.0f;
 			src.active = false;
-			src.color = {0.5f, 0.8f, 1.0f, 1.0f};
+			src.color = {0.5f, 0.75f, 1.0f, 1.0f};
 			src.wallCount = 0;
 			src.handle = mEnvironmentBus.play(mSfxrWind, 0.0f, 0.0f);
 			mSoloud->setPause(src.handle, false);
 			mSoundSources.push_back(src);
 		}
 
-		// 声源 2：Room A 音乐 — 位于建筑左半部分上层
+		// 声源2：音乐室旋律 (A1室内)
 		{
 			SoundSource src;
-			src.name = u8"Room A Music";
-			src.position = Vec2_{18, 13} - centrality;
+			src.name = u8"音乐室旋律";
+			src.position = Vec2_{11, 21} - centrality;
 			src.sfxr = &mSfxrMusic;
-			src.baseVolume = 0.5f;
-			src.maxDistance = SOUND_MAX_DISTANCE;
+			src.baseVolume = 0.7f;
+			src.maxDistance = 28.0f;
 			src.active = false;
-			src.color = {1.0f, 0.9f, 0.3f, 1.0f};
+			src.color = {1.0f, 0.85f, 0.3f, 1.0f};
 			src.wallCount = 0;
 			src.handle = mMusicBus.play(mSfxrMusic, 0.0f, 0.0f);
 			mSoloud->setPause(src.handle, false);
 			mSoundSources.push_back(src);
 		}
 
-		// 声源 3：Room B 水滴声 — 位于建筑右半部分上层
+		// 声源3：水滴声 (B1水泵房)
 		{
 			SoundSource src;
-			src.name = u8"Room B Water";
-			src.position = Vec2_{28, 13} - centrality;
+			src.name = u8"水滴声";
+			src.position = Vec2_{40, 22} - centrality;
 			src.sfxr = &mSfxrWater;
-			src.baseVolume = 0.35f;
-			src.maxDistance = SOUND_MAX_DISTANCE;
+			src.baseVolume = 0.55f;
+			src.maxDistance = 28.0f;
 			src.active = false;
 			src.color = {0.3f, 0.6f, 1.0f, 1.0f};
 			src.wallCount = 0;
@@ -331,14 +545,14 @@ namespace GAME
 			mSoundSources.push_back(src);
 		}
 
-		// 声源 4：走廊嗡嗡声 — 位于走廊中央
+		// 声源4：走廊嗡嗡声 (A楼下层走廊中央)
 		{
 			SoundSource src;
-			src.name = u8"Corridor Hum";
-			src.position = Vec2_{23, 8} - centrality;
+			src.name = u8"走廊嗡嗡声";
+			src.position = Vec2_{18, 6} - centrality;
 			src.sfxr = &mSfxrHum;
-			src.baseVolume = 0.3f;
-			src.maxDistance = 15.0f;    // 走廊声源可听距离较短
+			src.baseVolume = 0.5f;
+			src.maxDistance = 20.0f;
 			src.active = false;
 			src.color = {1.0f, 0.5f, 0.2f, 1.0f};
 			src.wallCount = 0;
@@ -346,11 +560,58 @@ namespace GAME
 			mSoloud->setPause(src.handle, false);
 			mSoundSources.push_back(src);
 		}
+
+		// 声源5：NEW 工坊机器轰鸣声 (A4工坊内)
+		{
+			SoundSource src;
+			src.name = u8"工坊机器";
+			src.position = Vec2_{25, 12} - centrality;
+			src.sfxr = &mSfxrMachine;
+			src.baseVolume = 0.55f;
+			src.maxDistance = 24.0f;
+			src.active = false;
+			src.color = {1.0f, 0.6f, 0.2f, 1.0f};
+			src.wallCount = 0;
+			src.handle = mEnvironmentBus.play(mSfxrMachine, 0.0f, 0.0f);
+			mSoloud->setPause(src.handle, false);
+			mSoundSources.push_back(src);
+		}
+
+		// 声源6：NEW 室外雨声 (地图右上角)
+		{
+			SoundSource src;
+			src.name = u8"室外雨声";
+			src.position = Vec2_{56, 36} - centrality;
+			src.sfxr = &mSfxrRain;
+			src.baseVolume = 0.6f;
+			src.maxDistance = 38.0f;
+			src.active = false;
+			src.color = {0.4f, 0.5f, 0.8f, 1.0f};
+			src.wallCount = 0;
+			src.handle = mEnvironmentBus.play(mSfxrRain, 0.0f, 0.0f);
+			mSoloud->setPause(src.handle, false);
+			mSoundSources.push_back(src);
+		}
+
+		// 声源7：NEW 实验室电子音 (B2实验室内)
+		{
+			SoundSource src;
+			src.name = u8"实验室电音";
+			src.position = Vec2_{52, 21} - centrality;
+			src.sfxr = &mSfxrLab;
+			src.baseVolume = 0.5f;
+			src.maxDistance = 22.0f;
+			src.active = false;
+			src.color = {0.8f, 0.4f, 1.0f, 1.0f};
+			src.wallCount = 0;
+			src.handle = mSfxBus.play(mSfxrLab, 0.0f, 0.0f);
+			mSoloud->setPause(src.handle, false);
+			mSoundSources.push_back(src);
+		}
 	}
 
 	// ==================== 环境检测 ====================
 
-	// 判断某位置是否在室内：从该位置向上射线，如果遇到任何 Entity 格子则认为有天花板，即为室内
 	bool SoloudTest::IsPositionIndoor(Vec2_ pos)
 	{
 		Vec2_ mapPos = pos + mMapStatic->centrality;
@@ -367,19 +628,15 @@ namespace GAME
 		return false;
 	}
 
-	// 统计两点之间穿过的墙壁数量
-	// 使用射线采样：沿 from→to 方向等间距采样，检测每个采样点是否为碰撞格
-	// 相邻的连续墙壁只计为一次穿越（lastWasWall 去重）
 	int SoloudTest::CountWallsBetween(Vec2_ from, Vec2_ to)
 	{
 		Vec2_ mapFrom = from + mMapStatic->centrality;
 		Vec2_ mapTo = to + mMapStatic->centrality;
 
 		int wallCount = 0;
-		// 采样步数 = 距离 × 2，保证每半格至少一个采样点
 		int steps = (int)(PhysicsBlock::Modulus(mapTo - mapFrom) * 2) + 1;
 		if (steps < 2) steps = 2;
-		if (steps > 200) steps = 200;   // 上限防止性能问题
+		if (steps > 200) steps = 200;
 
 		bool lastWasWall = false;
 		for (int i = 0; i <= steps; ++i) {
@@ -399,7 +656,6 @@ namespace GAME
 		return wallCount;
 	}
 
-	// 判断玩家是否站在地面上：检测玩家脚下（圆心下方 radius+0.2）是否有碰撞块
 	bool SoloudTest::IsPlayerOnGround()
 	{
 		Vec2_ below = mPlayer->pos + Vec2_{0, -(mPlayer->radius + 0.2)};
@@ -414,45 +670,34 @@ namespace GAME
 
 	// ==================== 音效播放 ====================
 
-	// 播放脚步声：室内时音量略低（模拟室内地面吸音）
 	void SoloudTest::PlayFootstep()
 	{
-		float vol = mSfxVolume * 0.5f;
+		float vol = mSfxVolume * 0.65f;
 		if (mIndoorBlend > 0.5f) {
 			vol *= 0.7f;
 		}
 		mSfxBus.play(mSfxrFootstep, vol, 0);
 	}
 
-	// 播放碰撞冲击声：intensity 为速度突变强度，映射到 0.1~1.0 音量范围
 	void SoloudTest::PlayImpactSound(float intensity)
 	{
-		float vol = glm::clamp(intensity / 50.0f, 0.1f, 1.0f) * mSfxVolume;
+		float vol = glm::clamp(intensity / 40.0f, 0.15f, 1.0f) * mSfxVolume;
 		mSfxBus.play(mSfxrImpact, vol, 0);
 	}
 
-	// 播放区域过渡提示音：进入室内时音调较低 (0.8x)，离开室内时音调较高 (1.3x)
 	void SoloudTest::PlayZoneTransitionSound(bool enteringIndoor)
 	{
-		float vol = mSfxVolume * 0.3f;
+		float vol = mSfxVolume * 0.35f;
 		SoLoud::handle h = mSfxBus.play(mSfxrBlip, vol, 0);
 		if (enteringIndoor) {
-			mSoloud->setRelativePlaySpeed(h, 0.8f);
+			mSoloud->setRelativePlaySpeed(h, 0.75f);
 		}
 		else {
-			mSoloud->setRelativePlaySpeed(h, 1.3f);
+			mSoloud->setRelativePlaySpeed(h, 1.35f);
 		}
 	}
 
-	// ==================== 音频状态更新（每帧调用）====================
-	//
-	// 更新流程：
-	//   1. 检测室内/室外状态，平滑过渡 indoorBlend
-	//   2. 检测走廊状态，平滑过渡 corridorBlend
-	//   3. 根据混合因子更新总线滤波器参数（混响、回声、LoFi）
-	//   4. 遍历所有声源，计算距离衰减、遮挡衰减、声像、低通截止频率
-	//   5. 更新总线音量
-	//   6. 检测脚步声和碰撞冲击声
+	// ==================== 音频状态更新 ====================
 
 	void SoloudTest::UpdateAudio()
 	{
@@ -461,31 +706,30 @@ namespace GAME
 		Vec2_ playerPos = mPlayer->pos;
 		bool isIndoor = IsPositionIndoor(playerPos);
 
-		// 室内/室外状态切换时播放过渡提示音
 		if (isIndoor != mLastIndoorState) {
 			PlayZoneTransitionSound(isIndoor);
 			mLastIndoorState = isIndoor;
 		}
 
-		// 平滑过渡室内混合因子（指数衰减插值，5.0 为过渡速度）
 		float targetIndoor = isIndoor ? 1.0f : 0.0f;
 		float blendFactor = (float)glm::min((double)(TOOL::FPStime * 5.0f), 1.0);
 		mIndoorBlend += (targetIndoor - mIndoorBlend) * blendFactor;
 
-		// 检测是否在走廊区域（地图坐标 x=15~31, y=7~9）
+		// 走廊检测：A楼下层走廊 + B楼大厅
 		Vec2_ mapPos = playerPos + mMapStatic->centrality;
-		bool inCorridor = (mapPos.x >= 15 && mapPos.x <= 31 && mapPos.y >= 7 && mapPos.y <= 9);
+		bool inCorridor = false;
+		if (mapPos.x >= 6 && mapPos.x <= 29 && mapPos.y >= 5 && mapPos.y <= 7) inCorridor = true;
+		if (mapPos.x >= 35 && mapPos.x <= 57 && mapPos.y >= 5 && mapPos.y <= 11) inCorridor = true;
+
 		float targetCorridor = inCorridor ? 1.0f : 0.0f;
 		blendFactor = (float)glm::min((double)(TOOL::FPStime * 5.0f), 1.0);
 		mCorridorBlend += (targetCorridor - mCorridorBlend) * blendFactor;
 
-		// 根据混合因子计算滤波器参数
-		mReverbWet = mIndoorBlend * 0.7f;        // 室内时混响湿信号最大 0.7
-		mReverbRoomSize = mIndoorBlend * 0.8f;    // 室内时房间大小最大 0.8
-		mEchoWet = mCorridorBlend * 0.5f;         // 走廊时回声湿信号最大 0.5
-		mLofiWet = mCorridorBlend * 0.3f;         // 走廊时 LoFi 湿信号最大 0.3
+		mReverbWet = mIndoorBlend * 0.7f;
+		mReverbRoomSize = mIndoorBlend * 0.8f;
+		mEchoWet = mCorridorBlend * 0.5f;
+		mLofiWet = mCorridorBlend * 0.35f;
 
-		// 使用 fadeFilterParameter 平滑过渡滤波器参数（0.1s 过渡时间）
 		mSoloud->fadeFilterParameter(mEnvironmentBusHandle, 0,
 			SoLoud::FreeverbFilter::WET, mReverbWet, 0.1f);
 		mSoloud->fadeFilterParameter(mEnvironmentBusHandle, 0,
@@ -495,57 +739,47 @@ namespace GAME
 		mSoloud->fadeFilterParameter(mSfxBusHandle, 0,
 			SoLoud::LofiFilter::WET, mLofiWet, 0.1f);
 
-		// 遍历所有声源，更新音量、声像、遮挡低通
+		// 遍历所有声源
 		for (auto &src : mSoundSources) {
-			// 距离衰减：使用反平方衰减 1/(1+d²×0.02)
 			float distance = (float)PhysicsBlock::Modulus(playerPos - src.position);
-			float attenuation = 1.0f / (1.0f + distance * distance * 0.02f);
+			float attenuation = 1.0f / (1.0f + distance * distance * 0.015f);
 			attenuation = glm::clamp(attenuation, 0.0f, 1.0f);
 
-			// 超过最大可听距离则静音
 			if (distance > src.maxDistance) {
 				attenuation = 0.0f;
 			}
 
-			// 遮挡计算：统计玩家到声源之间穿过的墙壁数量
 			int walls = CountWallsBetween(playerPos, src.position);
 			src.wallCount = walls;
 
-			// 遮挡衰减：墙壁越多音量越低 1/(1+walls×0.8)
 			float occlusionFactor = 1.0f;
-			// 遮挡低通：墙壁越多截止频率越低 22000/(1+walls×3)，最低 400Hz
 			float lpfFreq = 22000.0f;
 			if (walls > 0) {
 				occlusionFactor = 1.0f / (1.0f + walls * 0.8f);
 				lpfFreq = glm::max(400.0f, 22000.0f / (1.0f + walls * 3.0f));
 			}
 
-			// 最终音量 = 基础音量 × 距离衰减 × 遮挡衰减 × 主音量
 			float volume = src.baseVolume * attenuation * occlusionFactor * mMasterVolume;
 			mSoloud->setVolume(src.handle, volume);
 
-			// 立体声声像：声源在玩家左方 pan<0，右方 pan>0
 			float pan = (float)((src.position.x - playerPos.x) / src.maxDistance);
 			pan = glm::clamp(pan, -1.0f, 1.0f);
 			mSoloud->setPan(src.handle, pan);
 
-			// 平滑过渡遮挡低通截止频率（0.15s 过渡时间）
 			mSoloud->fadeFilterParameter(src.handle, 0,
 				SoLoud::BiquadResonantFilter::FREQUENCY, lpfFreq, 0.15f);
 		}
 
-		// 更新总线音量
-		mSoloud->setVolume(mEnvironmentBusHandle, 0.6f * mMasterVolume);
+		mSoloud->setVolume(mEnvironmentBusHandle, 0.85f * mMasterVolume);
 		mSoloud->setVolume(mMusicBusHandle, mMusicVolume * mMasterVolume);
 		mSoloud->setVolume(mSfxBusHandle, mSfxVolume * mMasterVolume);
 
-		// 脚步声检测：速度 > 1 且在地面时，按速度间隔触发
+		// 脚步声
 		float speed = (float)PhysicsBlock::Modulus(mPlayer->speed);
 		if (speed > 1.0f && IsPlayerOnGround()) {
 			mFootstepTimer -= TOOL::FPStime;
 			if (mFootstepTimer <= 0) {
 				PlayFootstep();
-				// 速度越快脚步间隔越短，最短 0.2s
 				mFootstepTimer = glm::max(0.2f, 0.5f - speed * 0.02f);
 			}
 		}
@@ -553,7 +787,7 @@ namespace GAME
 			mFootstepTimer = 0;
 		}
 
-		// 碰撞冲击检测：速度突变 > 8 时触发冲击音效
+		// 碰撞冲击检测
 		Vec2_ speedChange = mPlayer->speed - mPlayerPrevSpeed;
 		float impactIntensity = (float)PhysicsBlock::Modulus(speedChange);
 		if (impactIntensity > 8.0f) {
@@ -568,23 +802,22 @@ namespace GAME
 	{
 	}
 
-	// 鼠标滚轮：缩放相机（Z 轴距离）
 	void SoloudTest::MouseRoller(int z)
 	{
 		if (Global::ClickWindow) return;
 
 		glm::vec3 camPos = mCamera->getCameraPos();
 		if (camPos.z <= 10) {
-			camPos.z += (camPos.z / 2) * z;   // 近距离时小步缩放
+			camPos.z += (camPos.z / 2) * z;
 		}
 		else {
-			camPos.z += z * 5;                  // 远距离时大步缩放
+			camPos.z += z * 5;
 		}
 		if (camPos.z <= 0.1f) camPos.z = 0.1f;
+		if (camPos.z > 200.0f) camPos.z = 200.0f;
 		mCameraTarget.z = camPos.z;
 	}
 
-	// 键盘事件
 	void SoloudTest::KeyDown(GameKeyEnum moveDirection)
 	{
 		if (!mPlayer) return;
@@ -598,12 +831,10 @@ namespace GAME
 			mPlayer->AddForce({PLAYER_FORCE, 0});
 			break;
 		case GameKeyEnum::MOVE_FRONT:
-			if (IsPlayerOnGround()) {
-				mPlayer->AddForce({0, PLAYER_JUMP_FORCE});   // 仅在地面时可跳跃
-			}
+			mPlayer->AddForce({0, PLAYER_JUMP_FORCE});
 			break;
 		case GameKeyEnum::MOVE_BACK:
-			mPlayer->AddForce({0, -PLAYER_FORCE * 0.5});
+			mPlayer->AddForce({0, -PLAYER_FORCE});
 			break;
 		case GameKeyEnum::ESC:
 			if (Global::ConsoleBool) {
@@ -636,7 +867,6 @@ namespace GAME
 	{
 		mAuxiliaryVision->Begin();
 
-		// 固定时间步长物理仿真 (100Hz)，防止帧率波动影响物理稳定性
 		if (mPhysicsSwitch) {
 			#define PhysicsTick (1.0 / 100.0)
 			static float AddUpTime = 0;
@@ -644,23 +874,18 @@ namespace GAME
 			if (AddUpTime > PhysicsTick) {
 				AddUpTime -= PhysicsTick;
 				mPhysicsWorld->PhysicsEmulator(PhysicsTick);
-				if (AddUpTime > 1.0) AddUpTime = 0.1;   // 防止累积延迟
+				if (AddUpTime > 1.0) AddUpTime = 0.1;
 			}
 		}
 		else {
-			// 物理暂停时仅更新碰撞信息（不移动物体）
 			mPhysicsWorld->PhysicsInformationUpdate();
 		}
 
-		// 每帧更新音频状态
 		UpdateAudio();
-
-		// 渲染场景
 		RenderScene();
 
 		mAuxiliaryVision->End();
 
-		// 相机平滑跟随玩家
 		if (mPlayer) {
 			glm::vec3 currentPos = mCamera->getCameraPos();
 			glm::vec3 targetPos = {(float)mPlayer->pos.x, (float)mPlayer->pos.y, mCameraTarget.z};
@@ -669,7 +894,6 @@ namespace GAME
 			mCamera->setCameraPos(newPos);
 		}
 
-		// 更新 VP 矩阵到 GPU Uniform Buffer
 		mCamera->update();
 		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
 		mVPMatrices->mViewMatrix = mCamera->getViewMatrix();
@@ -682,7 +906,7 @@ namespace GAME
 	{
 		if (!mPhysicsWorld) return;
 
-		// 渲染网格形状（PhysicsShape）— 绿色线框
+		// 网格形状
 		for (auto i : mPhysicsWorld->GetPhysicsShape()) {
 			for (size_t x = 0; x < i->width; ++x) {
 				for (size_t y = 0; y < i->height; ++y) {
@@ -690,110 +914,98 @@ namespace GAME
 						ShowSquare(
 							PhysicsBlock::vec2angle(Vec2_{(FLOAT_)x, (FLOAT_)y} - i->CentreMass, i->angle) + i->pos,
 							i->angle,
-							{0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});   // 静止时变暗
+							{0.5f, (i->StaticNum < 10 ? 0.7f : 0.2f), 0.15f, 1});
 					}
 				}
 			}
 		}
 
-		// 渲染粒子（PhysicsParticle）— 绿色小点
+		// 粒子
 		for (auto i : mPhysicsWorld->GetPhysicsParticle()) {
-			mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
+			mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, {0.5f, (i->StaticNum < 10 ? 0.7f : 0.2f), 0.15f, 1});
 		}
 
-		// 渲染圆形（PhysicsCircle）— 玩家蓝色，其他绿色
+		// 圆形
 		for (auto i : mPhysicsWorld->GetPhysicsCircle()) {
 			glm::vec4 color;
 			if (i == mPlayer) {
 				color = {0.3f, 0.5f, 1.0f, 1.0f};
 			}
 			else {
-				color = {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1};
+				color = {0.5f, (i->StaticNum < 10 ? 0.75f : 0.2f), 0.2f, 1};
 			}
 			mAuxiliaryVision->Circle({i->pos, 0}, i->radius, color);
 
-			// 玩家额外渲染朝向指示线
 			if (i == mPlayer) {
 				mAuxiliaryVision->Line({i->pos, 0}, {1, 1, 0, 1},
 					{i->pos + PhysicsBlock::vec2angle({i->radius, 0}, i->angle), 0}, {1, 1, 0, 1});
 			}
 		}
 
-		// 渲染线段（PhysicsLine）— 绿色
+		// 线段
 		for (auto i : mPhysicsWorld->GetPhysicsLine()) {
 			Vec2_ pR = PhysicsBlock::vec2angle({i->radius, 0}, i->angle);
 			mAuxiliaryVision->Line({i->pos + pR, 0}, {0, 1, 0, 1}, {i->pos - pR, 0}, {0, 1, 0, 1});
 		}
 
-		// 渲染关节（PhysicsJoint）— 绿色连接线
+		// 关节
 		for (auto i : mPhysicsWorld->GetPhysicsJoint()) {
 			mAuxiliaryVision->Line({i->body1->pos, 0}, {0, 1, 0, 1}, {i->body1->pos + i->r1, 0}, {0, 1, 0, 1});
 			mAuxiliaryVision->Line({i->body2->pos, 0}, {0, 1, 0, 1}, {i->body2->pos + i->r2, 0}, {0, 1, 0, 1});
 		}
-		// 渲染绳索/弹簧（BaseJunction）— 绿色连接线
 		for (auto j : mPhysicsWorld->GetBaseJunction()) {
 			mAuxiliaryVision->Line({j->GetA(), 0}, {0, 1, 0, 1}, {j->GetB(), 0}, {0, 1, 0, 1});
 		}
 
-		// 渲染声源标记
 		RenderSoundSources();
-		// 渲染音频调试可视化
 		if (mDebugVisualization) {
 			RenderAudioDebug();
 		}
 	}
 
-	// 渲染声源位置标记和声音半径圈
 	void SoloudTest::RenderSoundSources()
 	{
 		for (auto &src : mSoundSources) {
-			// 声源中心点
 			mAuxiliaryVision->Spot({src.position, 0}, 0.15f, src.color);
 
-			// 脉冲动画圆圈 — 模拟声音传播的视觉效果
 			float pulsePhase = fmod((float)glfwGetTime() * 2.0f, 1.0f);
 			glm::vec4 pulseColor = src.color * (0.5f + pulsePhase * 0.5f);
 			pulseColor.a = 0.5f;
 			mAuxiliaryVision->Circle({src.position, 0}, 0.3f, pulseColor);
 
-			// 声音最大可听距离圈
 			if (mShowSoundRadius) {
 				glm::vec4 radiusColor = src.color;
-				radiusColor.a = 0.2f;
+				radiusColor.a = 0.15f;
 				mAuxiliaryVision->Circle({src.position, 0}, src.maxDistance, radiusColor);
 			}
 		}
 	}
 
-	// 渲染音频调试信息
 	void SoloudTest::RenderAudioDebug()
 	{
 		if (!mPlayer) return;
 
 		Vec2_ playerPos = mPlayer->pos;
 
-		// 遮挡射线：绿色=无遮挡，红色=有墙壁遮挡
 		for (auto &src : mSoundSources) {
 			if (mShowOcclusionRays) {
-				glm::vec4 rayColor = src.wallCount > 0 ? glm::vec4{1, 0.2, 0.2, 0.6} : glm::vec4{0.2, 1, 0.2, 0.6};
+				glm::vec4 rayColor = src.wallCount > 0 ? glm::vec4{1, 0.2, 0.2, 0.5} : glm::vec4{0.2, 1, 0.2, 0.5};
 				mAuxiliaryVision->Line({playerPos, 0}, rayColor, {src.position, 0}, rayColor);
 			}
 		}
 
-		// 室内指示圈：蓝色半透明圆圈，透明度随 indoorBlend 增大
 		if (mIndoorBlend > 0.1f) {
 			glm::vec4 indoorColor = {0.2, 0.5, 1.0, mIndoorBlend * 0.3f};
 			mAuxiliaryVision->Circle({playerPos, 0}, 1.5f, indoorColor);
 		}
 	}
 
-	// ==================== ImGui UI ====================
+	// ==================== ImGui UI (全中文) ====================
 
 	void SoloudTest::GameUI()
 	{
-		ImGui::Begin(u8"SoLoud Audio Demo");
+		ImGui::Begin(u8"🔊 SoLoud 环境音效演示");
 
-		// 检测鼠标是否在 ImGui 窗口上，避免同时触发游戏操作
 		ImVec2 window_pos = ImGui::GetWindowPos();
 		ImVec2 window_size = ImGui::GetWindowSize();
 		if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
@@ -801,32 +1013,50 @@ namespace GAME
 			Global::ClickWindow = true;
 		}
 
-		// 音量控制滑块
-		ImGui::Text(u8"--- Volume Control ---");
-		ImGui::SliderFloat(u8"Master", &mMasterVolume, 0.0f, 1.0f);
-		ImGui::SliderFloat(u8"Music", &mMusicVolume, 0.0f, 1.0f);
-		ImGui::SliderFloat(u8"SFX", &mSfxVolume, 0.0f, 1.0f);
+		// ---- 音量控制 ----
+		ImGui::TextColored({0.3f, 0.9f, 0.5f, 1.0f}, u8"── 音量控制 ──");
+		ImGui::SliderFloat(u8"主音量", &mMasterVolume, 0.0f, 1.5f);
+		ImGui::SliderFloat(u8"音乐音量", &mMusicVolume, 0.0f, 1.0f);
+		ImGui::SliderFloat(u8"音效音量", &mSfxVolume, 0.0f, 1.0f);
 
-		// 环境状态显示
+		// ---- 环境状态 ----
 		ImGui::Separator();
-		ImGui::Text(u8"--- Environment Status ---");
+		ImGui::TextColored({0.3f, 0.7f, 1.0f, 1.0f}, u8"── 环境状态 ──");
 
-		const char *locationStr = mIndoorBlend > 0.5f ? u8"Indoor" : u8"Outdoor";
-		ImGui::Text(u8"Location: %s", locationStr);
-		ImGui::Text(u8"Indoor Blend: %.2f", mIndoorBlend);
-		ImGui::Text(u8"Corridor Blend: %.2f", mCorridorBlend);
+		const char *zoneLabel;
+		ImVec4 zoneColor;
+		if (mCorridorBlend > 0.3f) {
+			zoneLabel = u8"走廊区域";
+			zoneColor = {1.0f, 0.6f, 0.2f, 1.0f};
+		}
+		else if (mIndoorBlend > 0.5f) {
+			zoneLabel = u8"室内";
+			zoneColor = {0.3f, 0.7f, 1.0f, 1.0f};
+		}
+		else {
+			zoneLabel = u8"室外";
+			zoneColor = {0.5f, 1.0f, 0.5f, 1.0f};
+		}
+		ImGui::TextColored(zoneColor, u8"当前区域: %s", zoneLabel);
+		ImGui::Text(u8"室内系数: %.2f", mIndoorBlend);
+		ImGui::Text(u8"走廊系数: %.2f", mCorridorBlend);
 
-		// 音频效果参数显示
+		// ---- 音频效果 ----
 		ImGui::Separator();
-		ImGui::Text(u8"--- Audio Effects ---");
-		ImGui::Text(u8"Reverb Wet: %.2f", mReverbWet);
-		ImGui::Text(u8"Reverb RoomSize: %.2f", mReverbRoomSize);
-		ImGui::Text(u8"Echo Wet: %.2f", mEchoWet);
-		ImGui::Text(u8"LoFi Wet: %.2f", mLofiWet);
+		ImGui::TextColored({1.0f, 0.8f, 0.4f, 1.0f}, u8"── 音频效果 ──");
+		ImGui::Text(u8"混响湿信号:  %.2f", mReverbWet);
+		ImGui::ProgressBar(mReverbWet / 0.7f, {-1, 12}, "");
+		ImGui::Text(u8"混响房间大小: %.2f", mReverbRoomSize);
+		ImGui::ProgressBar(mReverbRoomSize / 0.8f, {-1, 12}, "");
+		ImGui::Text(u8"回声湿信号:  %.2f", mEchoWet);
+		ImGui::ProgressBar(mEchoWet / 0.5f, {-1, 12}, "");
+		ImGui::Text(u8"LoFi失真:   %.2f", mLofiWet);
+		ImGui::ProgressBar(mLofiWet / 0.35f, {-1, 12}, "");
 
-		// 声源列表：距离、遮挡墙壁数、当前音量
+		// ---- 声源列表 ----
 		ImGui::Separator();
-		ImGui::Text(u8"--- Sound Sources ---");
+		ImGui::TextColored({0.9f, 0.6f, 0.3f, 1.0f}, u8"── 声源列表 (%d个) ──", (int)mSoundSources.size());
+		ImGui::BeginChild("Sources", {0, 140}, true);
 		for (auto &src : mSoundSources) {
 			float dist = mPlayer ? (float)PhysicsBlock::Modulus(mPlayer->pos - src.position) : 0;
 			float vol = 0;
@@ -834,35 +1064,44 @@ namespace GAME
 				vol = mSoloud->getVolume(src.handle);
 			}
 			ImGui::PushStyleColor(ImGuiCol_Text, {src.color.r, src.color.g, src.color.b, src.color.a});
-			ImGui::Text(u8"%s", src.name.c_str());
+			ImGui::Text(u8"◆ %s", src.name.c_str());
 			ImGui::PopStyleColor();
-			ImGui::SameLine();
-			ImGui::Text(u8" Dist:%.1f Walls:%d Vol:%.2f", dist, src.wallCount, vol);
+			ImGui::SameLine(200);
+			ImGui::TextColored(vol > 0.05f ? ImVec4{0.4f, 1, 0.4f, 1} : ImVec4{0.5f, 0.5f, 0.5f, 1},
+				u8"距:%.1f 墙:%d 音:%.2f", dist, src.wallCount, vol);
 		}
+		ImGui::EndChild();
 
-		// 调试开关
+		// ---- 调试开关 ----
 		ImGui::Separator();
-		ImGui::Text(u8"--- Debug ---");
-		ImGui::Checkbox(u8"Debug Visualization", &mDebugVisualization);
-		ImGui::Checkbox(u8"Show Sound Radius", &mShowSoundRadius);
-		ImGui::Checkbox(u8"Show Occlusion Rays", &mShowOcclusionRays);
-		if (ImGui::Button(mPhysicsSwitch ? u8"Pause Physics" : u8"Resume Physics")) {
+		ImGui::TextColored({0.7f, 0.7f, 0.7f, 1.0f}, u8"── 调试开关 ──");
+		ImGui::Checkbox(u8"音频调试可视化", &mDebugVisualization);
+		ImGui::SameLine();
+		ImGui::Checkbox(u8"显示声音半径", &mShowSoundRadius);
+		ImGui::Checkbox(u8"显示遮挡射线", &mShowOcclusionRays);
+		if (ImGui::Button(mPhysicsSwitch ? u8"■ 暂停物理" : u8"▶ 恢复物理", {100, 22})) {
 			mPhysicsSwitch = !mPhysicsSwitch;
 		}
+		ImGui::SameLine();
+		ImGui::TextColored(mPhysicsSwitch ? ImVec4{0.4f, 1, 0.4f, 1} : ImVec4{1, 0.4f, 0.4f, 1},
+			mPhysicsSwitch ? u8"运行中" : u8"已暂停");
 
-		// 操作提示
+		// ---- 操作提示 ----
 		ImGui::Separator();
-		ImGui::Text(u8"--- Controls ---");
-		ImGui::Text(u8"A/D: Move  W: Jump  S: Down");
-		ImGui::Text(u8"1: Toggle Debug  2: Toggle Physics");
-		ImGui::Text(u8"Scroll: Zoom");
+		ImGui::TextColored({0.6f, 0.6f, 1.0f, 1.0f}, u8"── 操作说明 ──");
+		ImGui::BulletText(u8"W/A/S/D 或 方向键 — 上下左右自由移动（上帝视角）");
+		ImGui::BulletText(u8"1 — 切换调试可视化    2 — 暂停/恢复物理");
+		ImGui::BulletText(u8"滚轮 — 缩放相机");
 
-		// 玩家状态
+		// ---- 玩家状态 ----
 		if (mPlayer) {
 			ImGui::Separator();
-			ImGui::Text(u8"Player Pos: (%.1f, %.1f)", mPlayer->pos.x, mPlayer->pos.y);
-			ImGui::Text(u8"Player Speed: (%.1f, %.1f)", mPlayer->speed.x, mPlayer->speed.y);
-			ImGui::Text(u8"On Ground: %s", IsPlayerOnGround() ? u8"Yes" : u8"No");
+			ImGui::TextColored({0.3f, 0.5f, 1.0f, 1.0f}, u8"── 玩家状态 ──");
+			ImGui::Text(u8"位置: (%.1f, %.1f)  速度: (%.1f, %.1f)",
+				mPlayer->pos.x, mPlayer->pos.y, mPlayer->speed.x, mPlayer->speed.y);
+			ImGui::Text(u8"着地: %s", IsPlayerOnGround() ? u8"是" : u8"否");
+			float spd = (float)PhysicsBlock::Modulus(mPlayer->speed);
+			ImGui::Text(u8"速度: %.1f", spd);
 		}
 
 		ImGui::End();
@@ -879,7 +1118,6 @@ namespace GAME
 	{
 	}
 
-	// TCP 网络事件循环
 	void SoloudTest::GameTCPLoop()
 	{
 		if (Global::MultiplePeopleMode) {
@@ -894,20 +1132,18 @@ namespace GAME
 
 	// ==================== 渲染辅助 ====================
 
-	// 绘制静态方块（地图墙壁）— 使用 AddStaticLine 一次性录制，不会每帧重新录制
 	void SoloudTest::ShowStaticSquare(glm::dvec2 pos, double angle, glm::vec4 color)
 	{
 		glm::dvec2 Angle = PhysicsBlock::AngleFloatToAngleVec(angle);
-		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, Angle);   // 上方向角点偏移
-		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, Angle);   // 右方向角点偏移
-		glm::dvec2 jiao3 = jiao2 + jiao1;                            // 右上角点偏移
+		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, Angle);
+		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, Angle);
+		glm::dvec2 jiao3 = jiao2 + jiao1;
 		mAuxiliaryVision->AddStaticLine({pos, 0}, {pos + jiao1, 0}, color);
 		mAuxiliaryVision->AddStaticLine({pos, 0}, {pos + jiao2, 0}, color);
 		mAuxiliaryVision->AddStaticLine({pos + jiao3, 0}, {pos + jiao1, 0}, color);
 		mAuxiliaryVision->AddStaticLine({pos + jiao3, 0}, {pos + jiao2, 0}, color);
 	}
 
-	// 绘制动态方块（物理对象）— 使用 Line 每帧重新录制
 	void SoloudTest::ShowSquare(glm::dvec2 pos, double angle, glm::vec4 color)
 	{
 		glm::dvec2 Angle = PhysicsBlock::AngleFloatToAngleVec(angle);

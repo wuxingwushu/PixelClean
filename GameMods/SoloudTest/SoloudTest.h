@@ -17,22 +17,32 @@
  *  11. 区域过渡音效 — 进入/离开室内时播放 BLIP 音效，音调不同
  *  12. 三条音频总线 — Environment Bus / Music Bus / SFX Bus，分别控制音量和滤波
  *
- * 场景布局 (40×25 侧视图，重力向下)：
- *   ┌──────────────────────────────────────┐
- *   │            室外区域 (Outdoor)          │
- *   │            ← 风声声源 →               │
- *   │         ┌──────────────┐              │
- *   │         │ RoomA │RoomB │              │
- *   │         │ 音乐  │ 水滴  │              │
- *   │         │  门   │  门   │              │
- *   │         │门 ─── ┤      │              │
- *   │         │   走廊(回声)  │              │
- *   │         └──────────────┘              │
- *   │  玩家●    ●球   ■方块                 │
- *   └──────────────────────────────────────┘
+ * 场景布局 (64×40 侧视图，重力向下)：
+ *   建筑群：A楼（左楼）+ B楼（右楼）+ 中央庭院
+ *   ┌──────────────────────────────────────────────────┐
+ *   │              室外区域 (Outdoor)                   │
+ *   │   风声●                                 雨声●     │
+ *   │   ┌──────────────────────┐ ┌──────────────────┐  │
+ *   │   │  音乐室A1 │ 图书室A2 │ │ 水泵房B1│实验室B2 │  │
+ *   │   │  音乐●   │          │ │ 水滴●  │ 电音●   │  │
+ *   │   ├──────────┤          │ ├────────┤         │  │
+ *   │   │          │          │ │        │         │  │
+ *   │   │ 储藏室A3 │ 工坊A4   │ │        │         │  │
+ *   │   │          │ 机器●    │ │        │         │  │
+ *   │   ├──────────┴──────────┤ ├────────┴─────────┤  │
+ *   │   │    下层走廊(嗡嗡●)  │ │   下层大厅       │  │
+ *   │   └──────────────────────┘ └──────────────────┘  │
+ *   │         ┌─庭院─┐                                  │
+ *   │  玩家●   ■箱子■     ●球    ■箱子                 │
+ *   └──────────────────────────────────────────────────┘
+ *
+ *   7个环境声源分布：
+ *     1.室外风声(左上) 2.音乐室旋律(A1) 3.水滴声(B1)
+ *     4.走廊嗡嗡声(A楼走廊) 5.工坊机器(A4)
+ *     6.室外雨声(右上) 7.实验室电音(B2)
  *
  * 操作方式：
- *   A/D — 左右移动    W — 跳跃    S — 向下施力
+ *   W/A/S/D — 上下左右自由移动（上帝视角，无重力）
  *   1 — 切换调试可视化    2 — 暂停/恢复物理
  *   滚轮 — 缩放相机
  */
@@ -156,6 +166,9 @@ namespace GAME
 		SoLoud::Sfxr mSfxrMusic;      // Room A 音乐
 		SoLoud::Sfxr mSfxrWater;      // Room B 水滴声
 		SoLoud::Sfxr mSfxrHum;        // 走廊嗡嗡声
+		SoLoud::Sfxr mSfxrMachine;    // 工坊机器轰鸣声
+		SoLoud::Sfxr mSfxrRain;       // 室外雨声
+		SoLoud::Sfxr mSfxrLab;        // 实验室电子音
 
 		// ==================== 音频状态变量 ====================
 		float mFootstepTimer = 0.0f;          // 脚步声计时器，控制脚步间隔
@@ -180,14 +193,14 @@ namespace GAME
 		bool mPhysicsSwitch = true;            // 物理仿真开关（true=运行, false=暂停）
 		bool mShowSoundRadius = true;          // 是否显示声源最大可听距离圈
 		bool mShowOcclusionRays = true;        // 是否显示遮挡检测射线
-		glm::vec3 mCameraTarget = {0, 0, 30}; // 相机目标位置（Z 分量控制缩放）
+		glm::vec3 mCameraTarget = {0, 0, 40}; // 相机目标位置（Z 分量控制缩放）
 
 		// ==================== 常量 ====================
-		static constexpr float PLAYER_FORCE = 60.0f;        // 玩家水平移动施力大小
+		static constexpr float PLAYER_FORCE = 30.0f;        // 玩家水平移动施力大小
 		static constexpr float PLAYER_JUMP_FORCE = 250.0f;  // 玩家跳跃施力大小
-		static constexpr float SOUND_MAX_DISTANCE = 25.0f;  // 默认声源最大可听距离
-		static constexpr int MAP_WIDTH = 40;                 // 地图宽度（格子数）
-		static constexpr int MAP_HEIGHT = 25;                // 地图高度（格子数）
+		static constexpr float SOUND_MAX_DISTANCE = 30.0f;  // 默认声源最大可听距离
+		static constexpr int MAP_WIDTH = 64;                 // 地图宽度（格子数）
+		static constexpr int MAP_HEIGHT = 40;                // 地图高度（格子数）
 	};
 
 }

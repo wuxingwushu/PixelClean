@@ -36,6 +36,7 @@ layout(std430, binding = 0) buffer Params {
     float mouseClickStartY;
     float mouseRawX;
     float mouseRawY;
+    int clearScreen;
 } params;
 
 layout(std430, binding = 1) buffer SDFBuffer {
@@ -129,6 +130,12 @@ void main() {
 
     int x = int(idx) % params.sdfWidth;
     int y = int(idx) / params.sdfWidth;
+
+    if (params.clearScreen != 0) {
+        sdf[x + y * params.sdfWidth] = vec4(MAX_FLOAT, 0.0, 0.0, 0.0);
+        return;
+    }
+
     vec2 fragCoord = vec2(float(x), float(y));
 
     vec4 data = sdf[x + y * params.sdfWidth];
@@ -141,12 +148,6 @@ void main() {
         float(params.mouseSmoothBDown), 0.0);
     vec4 mouseC = vec4(params.mouseX, params.mouseY,
         float(params.mouseLeftDown), 0.0);
-
-    if (params.frameCount > 0) {
-        mouseA.xy += 0.5;
-        mouseB.xy += 0.5;
-        mouseC.xy += 0.5;
-    }
 
     float d = MAX_FLOAT;
 
@@ -167,7 +168,11 @@ void main() {
 
     if (d < max(0.0, sd) && params.keyToggled1 == 0 && blinking) {
         sd = min(d, sd);
-        emissivity = getEmissivity() * float(params.mouseMagic == 0 || cos(params.time * 10.0) > 0.5);
+        if (params.mouseRightDown != 0) {
+            emissivity = vec3(0.0);
+        } else {
+            emissivity = getEmissivity() * float(params.mouseMagic == 0 || cos(params.time * 10.0) > 0.5);
+        }
     }
 
     sdf[x + y * params.sdfWidth] = vec4(sd, emissivity);

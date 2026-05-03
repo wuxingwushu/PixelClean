@@ -47,6 +47,7 @@ struct GPUParams {
     float mouseClickStartY;
     float mouseRawX;
     float mouseRawY;
+    int clearScreen;
 };
 
 class RadianceCascades : public GameMods, Configuration {
@@ -120,6 +121,9 @@ private:
     bool mInitialized = false;
     bool mKeyToggledSpace = false;
     bool mKeyToggled1 = false;
+    bool mNeedClear = false;
+    bool mCleanedUp = false;
+    int mPrevCKey = 0;
     float mMouseClickStartX = 0.0f;
     float mMouseClickStartY = 0.0f;
 

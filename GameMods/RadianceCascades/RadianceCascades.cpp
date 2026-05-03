@@ -72,7 +72,15 @@ void RadianceCascades::MouseRoller(int) {}
 
 void RadianceCascades::KeyDown(GameKeyEnum k) {
     if (k == GameKeyEnum::ESC) {
-        return;
+        if (Global::ConsoleBool)
+        {
+            Global::ConsoleBool = false;
+            InterFace->ConsoleFocusHere = true;
+        }
+        else
+        {
+            InterFace->SetInterFaceBool();
+        }
     }
     if (k == GameKeyEnum::Key_1) {
         mKeyToggled1 = !mKeyToggled1;
@@ -449,8 +457,10 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     }
 
     int leftState  = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+    int rightState = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
     bool leftDown  = (leftState == GLFW_PRESS);
-    bool realMouseDown = leftDown;
+    bool rightDown = (rightState == GLFW_PRESS);
+    bool realMouseDown = leftDown || rightDown;
 
     // ---- Shadertoy Buffer A exact: 鼠标平滑 ----
     const float SMOOTH_RADIUS = float(ext.height) * 0.015f;
@@ -459,17 +469,6 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     float rawX = (float)mMouseX;
     float rawY = (float)mMouseY;
     float rawZ = realMouseDown ? 1.0f : 0.0f;
-
-    if (!realMouseDown && !mKeyToggledSpace) {
-        float t = mTime * 3.0f;
-        rawX = cos(3.14159f * t) + sin(0.72834f * t + 0.3f);
-        rawY = sin(2.781374f * t + 3.47912f) + cos(t);
-        rawX = rawX * 0.25f + 0.5f;
-        rawY = rawY * 0.25f + 0.5f;
-        rawX *= (float)ext.width;
-        rawY *= (float)ext.height;
-        rawZ = MAGIC;
-    }
 
     if (mFrameCount == 0) {
         mMouseCX = rawX;
@@ -482,16 +481,10 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
         mMouseBY = 0.0f;
         mMouseBZ = 0.0f;
     } else {
-        if (mMouseBZ == MAGIC && rawZ != MAGIC) {
-            mMouseBX = 0.0f;
-            mMouseBY = 0.0f;
-            mMouseBZ = 0.0f;
-        }
-
         float dist = std::sqrt((mMouseBX - rawX) * (mMouseBX - rawX) +
                                (mMouseBY - rawY) * (mMouseBY - rawY));
 
-        if (mMouseBZ > 0.0f && (mMouseBZ != MAGIC || rawZ == MAGIC) && dist > 0.0f) {
+        if (mMouseBZ > 0.0f && dist > 0.0f) {
             float ndx = (rawX - mMouseBX) / dist;
             float ndy = (rawY - mMouseBY) / dist;
             float len = std::max(dist - SMOOTH_RADIUS, 0.0f);
@@ -513,7 +506,6 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
         mMouseBZ = mMouseCZ;
     }
 
-    bool rightDown = (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
     if (!mMouseLeftDown && leftDown) {
         mMouseClickStartX = rawX;
         mMouseClickStartY = rawY;
@@ -521,6 +513,11 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
 
     mMouseLeftDown  = leftDown;
     mMouseRightDown = rightDown;
+
+    if (glfwGetKey(mWindow->getWindow(), GLFW_KEY_C) == GLFW_PRESS && mPrevCKey == 0) {
+        mNeedClear = true;
+    }
+    mPrevCKey = glfwGetKey(mWindow->getWindow(), GLFW_KEY_C);
 
     GPUParams p{};
     p.time              = mTime;
@@ -558,10 +555,12 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     p.keyToggled1       = mKeyToggled1 ? 1 : 0;
     p.mouseClickStartX  = mMouseClickStartX;
     p.mouseClickStartY  = mMouseClickStartY;
+    p.clearScreen       = mNeedClear ? 1 : 0;
 
     mParamBuffer->updateBufferByMap(&p, sizeof(p));
 
     dispatchCompute();
+    mNeedClear = false;
 }
 
 // ============================================================================
@@ -683,7 +682,6 @@ void RadianceCascades::GameCommandBuffers(unsigned int) {
 }
 
 void RadianceCascades::GameStopInterfaceLoop(unsigned int) {
-    cleanup();
 }
 
 void RadianceCascades::GameTCPLoop() {}
@@ -691,10 +689,12 @@ void RadianceCascades::GameTCPLoop() {}
 void RadianceCascades::GameUI() {
     if (!mOutputImage || mImGuiDescriptorSet == VK_NULL_HANDLE) return;
 
+    VkExtent2D ext = mSwapChain->getExtent();
+
     ImGui::Begin(u8"Radiance Cascades GI", nullptr,
-        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-	ImGui::SetWindowPos(ImVec2(0, 0));
-    ImGui::SetWindowSize(ImVec2(1920, 1080));
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
+    ImGui::SetWindowPos(ImVec2(0, 0));
+    ImGui::SetWindowSize(ImVec2((float)ext.width, (float)ext.height));
 
 
     ImVec2 winsz = ImGui::GetContentRegionAvail();
@@ -710,29 +710,32 @@ void RadianceCascades::GameUI() {
 // 清理
 // ============================================================================
 void RadianceCascades::cleanup() {
+    if (mCleanedUp) return;
+    mCleanedUp = true;
+
     VkDevice dev = mDevice ? mDevice->getDevice() : VK_NULL_HANDLE;
 
-    if (mImGuiSampler)            { vkDestroySampler(dev, mImGuiSampler, nullptr); mImGuiSampler = VK_NULL_HANDLE; }
-    if (mImGuiDescriptorSetLayout) { vkDestroyDescriptorSetLayout(dev, mImGuiDescriptorSetLayout, nullptr); }
-    if (mImGuiDescriptorPool)      { vkDestroyDescriptorPool(dev, mImGuiDescriptorPool, nullptr); }
+    if (mImGuiSampler)               { vkDestroySampler(dev, mImGuiSampler, nullptr); mImGuiSampler = VK_NULL_HANDLE; }
+    if (mImGuiDescriptorSetLayout)   { vkDestroyDescriptorSetLayout(dev, mImGuiDescriptorSetLayout, nullptr); mImGuiDescriptorSetLayout = VK_NULL_HANDLE; }
+    if (mImGuiDescriptorPool)        { vkDestroyDescriptorPool(dev, mImGuiDescriptorPool, nullptr); mImGuiDescriptorPool = VK_NULL_HANDLE; }
 
-    if (mDescriptorPool)          { vkDestroyDescriptorPool(dev, mDescriptorPool, nullptr); mDescriptorPool = VK_NULL_HANDLE; }
+    if (mDescriptorPool)             { vkDestroyDescriptorPool(dev, mDescriptorPool, nullptr); mDescriptorPool = VK_NULL_HANDLE; }
 
-    if (mSDFPipeline)             { vkDestroyPipeline(dev, mSDFPipeline, nullptr); mSDFPipeline = VK_NULL_HANDLE; }
-    if (mCascadePipeline)         { vkDestroyPipeline(dev, mCascadePipeline, nullptr); mCascadePipeline = VK_NULL_HANDLE; }
-    if (mDisplayPipeline)         { vkDestroyPipeline(dev, mDisplayPipeline, nullptr); mDisplayPipeline = VK_NULL_HANDLE; }
+    if (mSDFPipeline)                { vkDestroyPipeline(dev, mSDFPipeline, nullptr); mSDFPipeline = VK_NULL_HANDLE; }
+    if (mCascadePipeline)            { vkDestroyPipeline(dev, mCascadePipeline, nullptr); mCascadePipeline = VK_NULL_HANDLE; }
+    if (mDisplayPipeline)            { vkDestroyPipeline(dev, mDisplayPipeline, nullptr); mDisplayPipeline = VK_NULL_HANDLE; }
 
-    if (mSDFPipelineLayout)       { vkDestroyPipelineLayout(dev, mSDFPipelineLayout, nullptr); }
-    if (mCascadePipelineLayout)   { vkDestroyPipelineLayout(dev, mCascadePipelineLayout, nullptr); }
-    if (mDisplayPipelineLayout)   { vkDestroyPipelineLayout(dev, mDisplayPipelineLayout, nullptr); }
+    if (mSDFPipelineLayout)          { vkDestroyPipelineLayout(dev, mSDFPipelineLayout, nullptr); mSDFPipelineLayout = VK_NULL_HANDLE; }
+    if (mCascadePipelineLayout)      { vkDestroyPipelineLayout(dev, mCascadePipelineLayout, nullptr); mCascadePipelineLayout = VK_NULL_HANDLE; }
+    if (mDisplayPipelineLayout)      { vkDestroyPipelineLayout(dev, mDisplayPipelineLayout, nullptr); mDisplayPipelineLayout = VK_NULL_HANDLE; }
 
-    if (mSDFDescriptorSetLayout)     { vkDestroyDescriptorSetLayout(dev, mSDFDescriptorSetLayout, nullptr); }
-    if (mCascadeDescriptorSetLayout) { vkDestroyDescriptorSetLayout(dev, mCascadeDescriptorSetLayout, nullptr); }
-    if (mDisplayDescriptorSetLayout) { vkDestroyDescriptorSetLayout(dev, mDisplayDescriptorSetLayout, nullptr); }
+    if (mSDFDescriptorSetLayout)     { vkDestroyDescriptorSetLayout(dev, mSDFDescriptorSetLayout, nullptr); mSDFDescriptorSetLayout = VK_NULL_HANDLE; }
+    if (mCascadeDescriptorSetLayout) { vkDestroyDescriptorSetLayout(dev, mCascadeDescriptorSetLayout, nullptr); mCascadeDescriptorSetLayout = VK_NULL_HANDLE; }
+    if (mDisplayDescriptorSetLayout) { vkDestroyDescriptorSetLayout(dev, mDisplayDescriptorSetLayout, nullptr); mDisplayDescriptorSetLayout = VK_NULL_HANDLE; }
 
-    if (mSDFShaderModule)         { vkDestroyShaderModule(dev, mSDFShaderModule, nullptr); }
-    if (mCascadeShaderModule)     { vkDestroyShaderModule(dev, mCascadeShaderModule, nullptr); }
-    if (mDisplayShaderModule)     { vkDestroyShaderModule(dev, mDisplayShaderModule, nullptr); }
+    if (mSDFShaderModule)            { vkDestroyShaderModule(dev, mSDFShaderModule, nullptr); mSDFShaderModule = VK_NULL_HANDLE; }
+    if (mCascadeShaderModule)        { vkDestroyShaderModule(dev, mCascadeShaderModule, nullptr); mCascadeShaderModule = VK_NULL_HANDLE; }
+    if (mDisplayShaderModule)        { vkDestroyShaderModule(dev, mDisplayShaderModule, nullptr); mDisplayShaderModule = VK_NULL_HANDLE; }
 
     delete mOutputImage;       mOutputImage = nullptr;
     delete mOutputBuffer;      mOutputBuffer = nullptr;

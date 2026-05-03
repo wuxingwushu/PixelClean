@@ -1,657 +1,748 @@
 #include "RadianceCascades.h"
-#include "../../Vulkan/device.h"
-#include "../../Vulkan/swapChain.h"
-#include "../../Vulkan/window.h"
-#include "../../GlobalVariable.h"
 #include <fstream>
+#include <vector>
+#include <chrono>
 #include <cmath>
 #include <algorithm>
-#include <GLFW/glfw3.h>
+
 namespace GAME {
 
-const std::string RadianceCascades::SDF_SHADER_PATH = "shaders/RC_SDF.spv";
-const std::string RadianceCascades::CASCADE_SHADER_PATH = "shaders/RC_Cascade.spv";
-const std::string RadianceCascades::DISPLAY_SHADER_PATH = "shaders/RC_Display.spv";
+// ============================================================================
+// SPIR‑V 文件路径（相对于工作目录：build/ 执行时 ../shaders/ 就是项目根目录的 shaders/）
+// ============================================================================
+static const char* kSDFSpvPath     = "./shaders/RC_SDF.spv";
+static const char* kCascadeSpvPath = "./shaders/RC_Cascade.spv";
+static const char* kDisplaySpvPath = "./shaders/RC_Display.spv";
 
-RadianceCascades::RadianceCascades(Configuration wConfiguration)
-    : Configuration{wConfiguration}
-{
-    Global::Monitor = true;
+// ============================================================================
+// 工具：读取二进制文件
+// ============================================================================
+static std::vector<char> readFile(const std::string& path) {
+    std::ifstream f(path, std::ios::ate | std::ios::binary);
+    if (!f.is_open()) {
+        throw std::runtime_error("Cannot open: " + path);
+    }
+    size_t sz = (size_t)f.tellg();
+    std::vector<char> buf(sz);
+    f.seekg(0);
+    f.read(buf.data(), sz);
+    return buf;
+}
 
-    int sw = mSwapChain->getExtent().width;
-    int sh = mSwapChain->getExtent().height;
-    mCascadeResX = sw / 4;
-    mCascadeResY = sh / 4;
+// ============================================================================
+// 工具：从 SPIR‑V 文件创建 VkShaderModule
+// ============================================================================
+static VkShaderModule createShaderModule(VkDevice device, const std::string& path) {
+    auto code = readFile(path);
+    VkShaderModuleCreateInfo ci{};
+    ci.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    ci.codeSize = code.size();
+    ci.pCode    = reinterpret_cast<const uint32_t*>(code.data());
+    VkShaderModule mod;
+    vkCreateShaderModule(device, &ci, nullptr, &mod);
+    return mod;
+}
 
-    createBuffers();
-    createComputePipelines();
-    createDescriptorSets();
-    createImGuiResources();
+// ============================================================================
+// 构造 / 析构
+// ============================================================================
+RadianceCascades::RadianceCascades(Configuration wCfg)
+    : Configuration(wCfg) {
+    mTime = 0.0f;
+    mMouseAX = 0; mMouseAY = 0; mMouseAZ = 0;
+    mMouseBX = 0; mMouseBY = 0; mMouseBZ = 0;
+    mMouseCX = 0; mMouseCY = 0; mMouseCZ = 0;
 }
 
 RadianceCascades::~RadianceCascades() {
     cleanup();
 }
 
+// ============================================================================
+// 输入
+// ============================================================================
+void RadianceCascades::MouseMove(double x, double y) {
+    mMousePrevX = mMouseX;
+    mMousePrevY = mMouseY;
+    mMouseX = x;
+    mMouseY = y;
+}
+
+void RadianceCascades::MouseRoller(int) {}
+
+void RadianceCascades::KeyDown(GameKeyEnum k) {
+    if (k == GameKeyEnum::ESC) {
+        return;
+    }
+    if (k == GameKeyEnum::Key_1) {
+        mKeyToggled1 = !mKeyToggled1;
+        return;
+    }
+    if (k == GameKeyEnum::SPACE) {
+        mKeyToggledSpace = !mKeyToggledSpace;
+        return;
+    }
+}
+
+// ============================================================================
+// 级联条目计数
+// ============================================================================
 int RadianceCascades::calculateTotalCascadeEntries() const {
     int total = 0;
-    for (int n = 0; n < N_CASCADES; ++n) {
-        int sn_x = mCascadeResX >> n;
-        int sn_y = mCascadeResY >> n;
-        int dn = (n == 0) ? 1 : (C_DRES << (2 * (n - 1)));
-        total += sn_x * sn_y * dn;
+    for (int lv = 0; lv < N_CASCADES; ++lv) {
+        total += calculateCascadeLevelEntries(lv);
     }
     return total;
 }
 
+int RadianceCascades::calculateCascadeLevelEntries(int lv) const {
+    int sx = mCascadeResX >> lv;
+    int sy = mCascadeResY >> lv;
+    int dn = (lv == 0) ? 1 : (C_DRES << (2 * (lv - 1)));
+    return sx * sy * dn;
+}
+
+// ============================================================================
+// 创建全部 GPU 缓冲区
+// ============================================================================
 void RadianceCascades::createBuffers() {
-    auto device = mDevice;
-    int sdfWidth = mSwapChain->getExtent().width;
-    int sdfHeight = mSwapChain->getExtent().height;
-    int totalCascade = calculateTotalCascadeEntries();
-    VkDeviceSize paramSize = 256;
-    VkDeviceSize sdfSize = sdfWidth * sdfHeight * sizeof(float) * 4;
-    VkDeviceSize cascadeSize = totalCascade * sizeof(float) * 4;
-    VkDeviceSize outputSize = sdfWidth * sdfHeight * sizeof(uint32_t);
+    VkExtent2D ext = mSwapChain->getExtent();
+    int sdfW = (int)ext.width;
+    int sdfH = (int)ext.height;
+    mCascadeResX = sdfW / 4;
+    mCascadeResY = sdfH / 4;
+    int cascadeTotal = calculateTotalCascadeEntries();
 
-    mParamBuffer = new VulKan::Buffer(device, paramSize,
+    auto dev = mDevice;
+
+    // Params（CPU 可见，每帧 map 更新）
+    mParamBuffer = new VulKan::Buffer(
+        dev, sizeof(GPUParams),
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    mSDFBuffer = new VulKan::Buffer(device, sdfSize,
+    // SDF（GPU only）
+    mSDFBuffer = new VulKan::Buffer(
+        dev, (VkDeviceSize)sdfW * sdfH * sizeof(float) * 4,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    {
-        float maxF = std::numeric_limits<float>::max();
-        void* data = mSDFBuffer->getupdateBufferByMap();
-        struct SDFEntry { float dist; float r, g, b; };
-        SDFEntry* entries = static_cast<SDFEntry*>(data);
-        for (int i = 0; i < sdfWidth * sdfHeight; ++i) {
-            entries[i] = { maxF, 0.0f, 0.0f, 0.0f };
-        }
-        mSDFBuffer->endupdateBufferByMap();
-    }
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    mCascadeBufferA = new VulKan::Buffer(device, cascadeSize,
+    // Cascade 乒乓
+    VkDeviceSize csize = (VkDeviceSize)cascadeTotal * sizeof(float) * 4;
+    mCascadeBufferA = new VulKan::Buffer(
+        dev, csize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    mCascadeBufferB = new VulKan::Buffer(device, cascadeSize,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    mCascadeBufferB = new VulKan::Buffer(
+        dev, csize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    {
-        void* dataA = mCascadeBufferA->getupdateBufferByMap();
-        memset(dataA, 0, (size_t)cascadeSize);
-        mCascadeBufferA->endupdateBufferByMap();
-        void* dataB = mCascadeBufferB->getupdateBufferByMap();
-        memset(dataB, 0, (size_t)cascadeSize);
-        mCascadeBufferB->endupdateBufferByMap();
-    }
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    mOutputBuffer = new VulKan::Buffer(device, outputSize,
+    // Output（uint32 RGBA8，同时需要被 transfer 读出）
+    mOutputBuffer = new VulKan::Buffer(
+        dev, (VkDeviceSize)sdfW * sdfH * sizeof(uint32_t),
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
+    // Output image（供 ImGui 显示的 R8G8B8A8_UNORM 纹理）
     mOutputImage = new VulKan::Image(
-        device, sdfWidth, sdfHeight,
+        dev,
+        sdfW, sdfH,
         VK_FORMAT_R8G8B8A8_UNORM,
-        VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_TYPE_2D,
+        VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_SAMPLE_COUNT_1_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VK_IMAGE_ASPECT_COLOR_BIT);
-
-    {
-        VkImageSubresourceRange range{};
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        range.levelCount = 1; range.layerCount = 1;
-        mOutputImage->setImageLayout(
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            range, mCommandPool);
-    }
-
-    mComputeCommandPool = new VulKan::CommandPool(device,
-        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    mComputeCommandBuffer = new VulKan::CommandBuffer(device, mComputeCommandPool);
 }
 
-static std::vector<char> readFile(const std::string& filename) {
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open shader file: " + filename);
-    }
-    size_t fileSize = (size_t)file.tellg();
-    std::vector<char> buffer(fileSize);
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-    file.close();
-    return buffer;
-}
-
-static VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code) {
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-    VkShaderModule shaderModule;
-    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create shader module");
-    }
-    return shaderModule;
-}
-
-static void createComputePipeline(
-    VkDevice device, const std::string& shaderPath,
-    const std::vector<VkDescriptorSetLayoutBinding>& bindings,
-    VkShaderModule& outShaderModule,
-    VkDescriptorSetLayout& outDescriptorSetLayout,
-    VkPipelineLayout& outPipelineLayout,
-    VkPipeline& outPipeline)
-{
-    auto code = readFile(shaderPath);
-    outShaderModule = createShaderModule(device, code);
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
-    vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &outDescriptorSetLayout);
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &outDescriptorSetLayout;
-    vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &outPipelineLayout);
-
-    VkPipelineShaderStageCreateInfo shaderStageInfo{};
-    shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    shaderStageInfo.module = outShaderModule;
-    shaderStageInfo.pName = "main";
-
-    VkComputePipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipelineInfo.stage = shaderStageInfo;
-    pipelineInfo.layout = outPipelineLayout;
-    vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &outPipeline);
-}
-
+// ============================================================================
+// 创建 compute pipelines
+// ============================================================================
 void RadianceCascades::createComputePipelines() {
-    VkDevice device = mDevice->getDevice();
+    VkDevice dev = mDevice->getDevice();
 
-    std::vector<VkDescriptorSetLayoutBinding> sdfBindings = {
-        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-    };
-    createComputePipeline(device, SDF_SHADER_PATH, sdfBindings,
-        mSDFShaderModule, mSDFDescriptorSetLayout, mSDFPipelineLayout, mSDFPipeline);
+    // ---- Shader modules ----
+    mSDFShaderModule     = createShaderModule(dev, kSDFSpvPath);
+    mCascadeShaderModule = createShaderModule(dev, kCascadeSpvPath);
+    mDisplayShaderModule = createShaderModule(dev, kDisplaySpvPath);
 
-    std::vector<VkDescriptorSetLayoutBinding> cascadeBindings = {
-        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
+    // ---- Descriptor set layouts ----
+    auto makeLayout = [&](int bindCount) {
+        std::vector<VkDescriptorSetLayoutBinding> b(bindCount);
+        for (int i = 0; i < bindCount; ++i) {
+            b[i].binding         = (uint32_t)i;
+            b[i].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            b[i].descriptorCount = 1;
+            b[i].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
+        }
+        VkDescriptorSetLayoutCreateInfo ci{};
+        ci.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ci.bindingCount = (uint32_t)bindCount;
+        ci.pBindings    = b.data();
+        VkDescriptorSetLayout lay;
+        vkCreateDescriptorSetLayout(dev, &ci, nullptr, &lay);
+        return lay;
     };
-    createComputePipeline(device, CASCADE_SHADER_PATH, cascadeBindings,
-        mCascadeShaderModule, mCascadeDescriptorSetLayout, mCascadePipelineLayout, mCascadePipeline);
 
-    std::vector<VkDescriptorSetLayoutBinding> displayBindings = {
-        {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
-        {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
+    mSDFDescriptorSetLayout     = makeLayout(2);  // binding 0=Params  1=SDF
+    mCascadeDescriptorSetLayout = makeLayout(4);  // 0=Params 1=SDF 2=CascadeRead 3=CascadeWrite
+    mDisplayDescriptorSetLayout = makeLayout(4);  // 0=Params 1=SDF 2=CascadeData 3=Output
+
+    // ---- Pipeline layouts ----
+    // SDF 无 push constant
+    {
+        VkPipelineLayoutCreateInfo ci{};
+        ci.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        ci.setLayoutCount = 1;
+        ci.pSetLayouts    = &mSDFDescriptorSetLayout;
+        vkCreatePipelineLayout(dev, &ci, nullptr, &mSDFPipelineLayout);
+    }
+    // Cascade 有 push constant（cascadeLevel）
+    {
+        VkPushConstantRange pr{};
+        pr.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        pr.offset = 0;
+        pr.size   = sizeof(int32_t);
+
+        VkPipelineLayoutCreateInfo ci{};
+        ci.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        ci.setLayoutCount         = 1;
+        ci.pSetLayouts            = &mCascadeDescriptorSetLayout;
+        ci.pushConstantRangeCount = 1;
+        ci.pPushConstantRanges    = &pr;
+        vkCreatePipelineLayout(dev, &ci, nullptr, &mCascadePipelineLayout);
+    }
+    // Display 无 push constant
+    {
+        VkPipelineLayoutCreateInfo ci{};
+        ci.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        ci.setLayoutCount = 1;
+        ci.pSetLayouts    = &mDisplayDescriptorSetLayout;
+        vkCreatePipelineLayout(dev, &ci, nullptr, &mDisplayPipelineLayout);
+    }
+
+    // ---- Compute pipelines ----
+    auto makeComputePipeline = [&](VkShaderModule mod, VkPipelineLayout lay) {
+        VkComputePipelineCreateInfo ci{};
+        ci.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        ci.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ci.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
+        ci.stage.module = mod;
+        ci.stage.pName  = "main";
+        ci.layout       = lay;
+        VkPipeline pipe;
+        vkCreateComputePipelines(dev, VK_NULL_HANDLE, 1, &ci, nullptr, &pipe);
+        return pipe;
     };
-    createComputePipeline(device, DISPLAY_SHADER_PATH, displayBindings,
-        mDisplayShaderModule, mDisplayDescriptorSetLayout, mDisplayPipelineLayout, mDisplayPipeline);
+
+    mSDFPipeline     = makeComputePipeline(mSDFShaderModule,     mSDFPipelineLayout);
+    mCascadePipeline = makeComputePipeline(mCascadeShaderModule, mCascadePipelineLayout);
+    mDisplayPipeline = makeComputePipeline(mDisplayShaderModule, mDisplayPipelineLayout);
 }
 
+// ============================================================================
+// 描述符池 + 描述符集
+// ============================================================================
 void RadianceCascades::createDescriptorSets() {
-    VkDevice device = mDevice->getDevice();
+    VkDevice dev = mDevice->getDevice();
 
-    std::vector<VkDescriptorPoolSize> poolSizes = {
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 20}
-    };
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.maxSets = 5;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    vkCreateDescriptorPool(device, &poolInfo, nullptr, &mDescriptorPool);
-
-    // SDF
-    {
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = mDescriptorPool;
-        allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts = &mSDFDescriptorSetLayout;
-        vkAllocateDescriptorSets(device, &allocInfo, &mSDFDescriptorSet);
-
-        VkDescriptorBufferInfo paramInfo = mParamBuffer->getBufferInfo();
-        VkDescriptorBufferInfo sdfInfo = mSDFBuffer->getBufferInfo();
-        VkWriteDescriptorSet writes[2] = {};
-        writes[0] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mSDFDescriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &paramInfo, nullptr};
-        writes[1] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mSDFDescriptorSet, 1, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &sdfInfo, nullptr};
-        vkUpdateDescriptorSets(device, 2, writes, 0, nullptr);
-    }
-
-    // Cascade (2套乒乓)
-    {
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = mDescriptorPool;
-        allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts = &mCascadeDescriptorSetLayout;
-
-        VkDescriptorBufferInfo paramInfo = mParamBuffer->getBufferInfo();
-        VkDescriptorBufferInfo sdfInfo = mSDFBuffer->getBufferInfo();
-
-        vkAllocateDescriptorSets(device, &allocInfo, &mCascadeDescriptorSets[0]);
-        VkDescriptorBufferInfo readA = mCascadeBufferA->getBufferInfo();
-        VkDescriptorBufferInfo writeB = mCascadeBufferB->getBufferInfo();
-        VkWriteDescriptorSet w0[4] = {};
-        w0[0] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mCascadeDescriptorSets[0], 0, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &paramInfo, nullptr};
-        w0[1] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mCascadeDescriptorSets[0], 1, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &sdfInfo, nullptr};
-        w0[2] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mCascadeDescriptorSets[0], 2, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &readA, nullptr};
-        w0[3] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mCascadeDescriptorSets[0], 3, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &writeB, nullptr};
-        vkUpdateDescriptorSets(device, 4, w0, 0, nullptr);
-
-        vkAllocateDescriptorSets(device, &allocInfo, &mCascadeDescriptorSets[1]);
-        VkDescriptorBufferInfo readB = mCascadeBufferB->getBufferInfo();
-        VkDescriptorBufferInfo writeA = mCascadeBufferA->getBufferInfo();
-        VkWriteDescriptorSet w1[4] = {};
-        w1[0] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mCascadeDescriptorSets[1], 0, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &paramInfo, nullptr};
-        w1[1] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mCascadeDescriptorSets[1], 1, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &sdfInfo, nullptr};
-        w1[2] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mCascadeDescriptorSets[1], 2, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &readB, nullptr};
-        w1[3] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mCascadeDescriptorSets[1], 3, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &writeA, nullptr};
-        vkUpdateDescriptorSets(device, 4, w1, 0, nullptr);
-    }
-
-    // Display (2套乒乓)
-    {
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = mDescriptorPool;
-        allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts = &mDisplayDescriptorSetLayout;
-
-        VkDescriptorBufferInfo paramInfo = mParamBuffer->getBufferInfo();
-        VkDescriptorBufferInfo sdfInfo = mSDFBuffer->getBufferInfo();
-        VkDescriptorBufferInfo outputInfo = mOutputBuffer->getBufferInfo();
-
-        vkAllocateDescriptorSets(device, &allocInfo, &mDisplayDescriptorSets[0]);
-        VkDescriptorBufferInfo cascadeB = mCascadeBufferB->getBufferInfo();
-        VkWriteDescriptorSet w0[4] = {};
-        w0[0] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mDisplayDescriptorSets[0], 0, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &paramInfo, nullptr};
-        w0[1] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mDisplayDescriptorSets[0], 1, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &sdfInfo, nullptr};
-        w0[2] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mDisplayDescriptorSets[0], 2, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &cascadeB, nullptr};
-        w0[3] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mDisplayDescriptorSets[0], 3, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &outputInfo, nullptr};
-        vkUpdateDescriptorSets(device, 4, w0, 0, nullptr);
-
-        vkAllocateDescriptorSets(device, &allocInfo, &mDisplayDescriptorSets[1]);
-        VkDescriptorBufferInfo cascadeA = mCascadeBufferA->getBufferInfo();
-        VkWriteDescriptorSet w1[4] = {};
-        w1[0] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mDisplayDescriptorSets[1], 0, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &paramInfo, nullptr};
-        w1[1] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mDisplayDescriptorSets[1], 1, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &sdfInfo, nullptr};
-        w1[2] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mDisplayDescriptorSets[1], 2, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &cascadeA, nullptr};
-        w1[3] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, mDisplayDescriptorSets[1], 3, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &outputInfo, nullptr};
-        vkUpdateDescriptorSets(device, 4, w1, 0, nullptr);
-    }
-}
-
-void RadianceCascades::createImGuiResources() {
-    VkDevice device = mDevice->getDevice();
-
-    VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.anisotropyEnable = VK_FALSE;
-    samplerInfo.maxAnisotropy = 1.0f;
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.mipLodBias = 0.0f;
-    samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = 0.0f;
-    vkCreateSampler(device, &samplerInfo, nullptr, &mImGuiSampler);
-
-    VkDescriptorSetLayoutBinding binding{};
-    binding.binding = 0;
-    binding.descriptorCount = 1;
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &binding;
-    vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &mImGuiDescriptorSetLayout);
-
+    // ---- 池 ----
     VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSize.descriptorCount = 1;
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.maxSets = 1;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-    vkCreateDescriptorPool(device, &poolInfo, nullptr, &mImGuiDescriptorPool);
+    poolSize.type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSize.descriptorCount = 20;
+    VkDescriptorPoolCreateInfo poolCI{};
+    poolCI.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolCI.maxSets       = 10;
+    poolCI.poolSizeCount = 1;
+    poolCI.pPoolSizes    = &poolSize;
+    vkCreateDescriptorPool(dev, &poolCI, nullptr, &mDescriptorPool);
 
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = mImGuiDescriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &mImGuiDescriptorSetLayout;
-    vkAllocateDescriptorSets(device, &allocInfo, &mImGuiDescriptorSet);
+    // ---- 更新工具 ----
+    auto writeBuf = [&](VkDescriptorSet set, uint32_t bind, VkBuffer buf, VkDeviceSize sz) {
+        VkDescriptorBufferInfo bi{};
+        bi.buffer = buf;
+        bi.offset = 0;
+        bi.range  = sz;
+        VkWriteDescriptorSet w{};
+        w.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        w.dstSet          = set;
+        w.dstBinding      = bind;
+        w.descriptorCount = 1;
+        w.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        w.pBufferInfo     = &bi;
+        vkUpdateDescriptorSets(dev, 1, &w, 0, nullptr);
+    };
 
-    VkDescriptorImageInfo imageInfo{};
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo.imageView = mOutputImage->getImageView();
-    imageInfo.sampler = mImGuiSampler;
+    auto allocSet = [&](VkDescriptorSetLayout lay) {
+        VkDescriptorSetAllocateInfo ai{};
+        ai.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        ai.descriptorPool     = mDescriptorPool;
+        ai.descriptorSetCount = 1;
+        ai.pSetLayouts        = &lay;
+        VkDescriptorSet s;
+        vkAllocateDescriptorSets(dev, &ai, &s);
+        return s;
+    };
 
-    VkWriteDescriptorSet write{};
-    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstSet = mImGuiDescriptorSet;
-    write.dstBinding = 0;
-    write.dstArrayElement = 0;
-    write.descriptorCount = 1;
-    write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    write.pImageInfo = &imageInfo;
-    vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+    VkExtent2D ext = mSwapChain->getExtent();
+    VkDeviceSize sdfSz  = (VkDeviceSize)ext.width * ext.height * sizeof(float) * 4;
+    VkDeviceSize cascSz = (VkDeviceSize)calculateTotalCascadeEntries() * sizeof(float) * 4;
+    VkDeviceSize outSz  = (VkDeviceSize)ext.width * ext.height * sizeof(uint32_t);
+
+    // ---- SDF descriptor set ----
+    mSDFDescriptorSet = allocSet(mSDFDescriptorSetLayout);
+    writeBuf(mSDFDescriptorSet, 0, mParamBuffer->getBuffer(), sizeof(GPUParams));
+    writeBuf(mSDFDescriptorSet, 1, mSDFBuffer->getBuffer(),    sdfSz);
+
+    // ---- Cascade descriptor sets（乒乓） ----
+    VkBuffer bufA = mCascadeBufferA->getBuffer();
+    VkBuffer bufB = mCascadeBufferB->getBuffer();
+    VkBuffer sdfB = mSDFBuffer->getBuffer();
+
+    // set 0: read=A  write=B
+    mCascadeDescriptorSets[0] = allocSet(mCascadeDescriptorSetLayout);
+    writeBuf(mCascadeDescriptorSets[0], 0, mParamBuffer->getBuffer(), sizeof(GPUParams));
+    writeBuf(mCascadeDescriptorSets[0], 1, sdfB,  sdfSz);
+    writeBuf(mCascadeDescriptorSets[0], 2, bufA, cascSz);
+    writeBuf(mCascadeDescriptorSets[0], 3, bufB, cascSz);
+
+    // set 1: read=B  write=A
+    mCascadeDescriptorSets[1] = allocSet(mCascadeDescriptorSetLayout);
+    writeBuf(mCascadeDescriptorSets[1], 0, mParamBuffer->getBuffer(), sizeof(GPUParams));
+    writeBuf(mCascadeDescriptorSets[1], 1, sdfB,  sdfSz);
+    writeBuf(mCascadeDescriptorSets[1], 2, bufB, cascSz);
+    writeBuf(mCascadeDescriptorSets[1], 3, bufA, cascSz);
+
+    // ---- Display descriptor sets ----
+    // set 0: reads cascade buffer B
+    mDisplayDescriptorSets[0] = allocSet(mDisplayDescriptorSetLayout);
+    writeBuf(mDisplayDescriptorSets[0], 0, mParamBuffer->getBuffer(), sizeof(GPUParams));
+    writeBuf(mDisplayDescriptorSets[0], 1, sdfB,  sdfSz);
+    writeBuf(mDisplayDescriptorSets[0], 2, bufB, cascSz);
+    writeBuf(mDisplayDescriptorSets[0], 3, mOutputBuffer->getBuffer(), outSz);
+
+    // set 1: reads cascade buffer A
+    mDisplayDescriptorSets[1] = allocSet(mDisplayDescriptorSetLayout);
+    writeBuf(mDisplayDescriptorSets[1], 0, mParamBuffer->getBuffer(), sizeof(GPUParams));
+    writeBuf(mDisplayDescriptorSets[1], 1, sdfB,  sdfSz);
+    writeBuf(mDisplayDescriptorSets[1], 2, bufA, cascSz);
+    writeBuf(mDisplayDescriptorSets[1], 3, mOutputBuffer->getBuffer(), outSz);
 }
 
-void RadianceCascades::dispatchCompute() {
-    int sdfWidth = mSwapChain->getExtent().width;
-    int sdfHeight = mSwapChain->getExtent().height;
-    int totalCascade = calculateTotalCascadeEntries();
-    int toggleIdx = mCascadeToggle ? 1 : 0;
+// ============================================================================
+// ImGui 显示输出纹理所需资源
+// ============================================================================
+void RadianceCascades::createImGuiResources() {
+    VkDevice dev = mDevice->getDevice();
 
-    struct Params {
-        float time; float timeDelta;
-        int sdfWidth; int sdfHeight;
-        float mouseX; float mouseY;
-        float mousePrevX; float mousePrevY;
-        int mouseLeftDown;
-        int frameCount;
-        int emissiveMode;
-        float brushRadius;
-        int c_sResX; int c_sResY;
-        int c_dRes; int nCascades;
-        float c_intervalLength; float c_smoothDistScale;
-        int totalCascadeEntries; int cascadeLevel;
-    };
-    Params p{};
-    p.time = mTime;
-    p.timeDelta = 1.0f / 60.0f;
-    p.sdfWidth = sdfWidth;
-    p.sdfHeight = sdfHeight;
-    p.mouseX = static_cast<float>(mMouseX);
-    p.mouseY = static_cast<float>(mMouseY);
-    p.mousePrevX = static_cast<float>(mMousePrevX);
-    p.mousePrevY = static_cast<float>(mMousePrevY);
-    p.mouseLeftDown = (mMouseLeftDown || mMouseRightDown) ? 1 : 0;
-    p.frameCount = mFrameCount;
-    p.emissiveMode = (mMouseRightDown && !mMouseLeftDown) ? 1 : 0;
-    p.brushRadius = BRUSH_RADIUS;
-    p.c_sResX = mCascadeResX;
-    p.c_sResY = mCascadeResY;
-    p.c_dRes = C_DRES;
-    p.nCascades = N_CASCADES;
-    p.c_intervalLength = C_INTERVAL_LENGTH * float(sdfHeight) / 720.0f;
-    p.c_smoothDistScale = C_SMOOTH_DIST_SCALE;
-    p.totalCascadeEntries = totalCascade;
-    p.cascadeLevel = 0;
-    mParamBuffer->updateBufferByMap(&p, sizeof(Params));
+    // Sampler
+    VkSamplerCreateInfo sci{};
+    sci.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sci.magFilter    = VK_FILTER_LINEAR;
+    sci.minFilter    = VK_FILTER_LINEAR;
+    sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    vkCreateSampler(dev, &sci, nullptr, &mImGuiSampler);
 
-    mComputeCommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    VkCommandBuffer cmd = mComputeCommandBuffer->getCommandBuffer();
+    // Descriptor set layout (combined image sampler)
+    VkDescriptorSetLayoutBinding lb{};
+    lb.binding         = 0;
+    lb.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    lb.descriptorCount = 1;
+    lb.stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+    VkDescriptorSetLayoutCreateInfo lici{};
+    lici.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    lici.bindingCount = 1;
+    lici.pBindings    = &lb;
+    vkCreateDescriptorSetLayout(dev, &lici, nullptr, &mImGuiDescriptorSetLayout);
 
-    auto storageBarrier = [](VkBuffer b, VkDeviceSize sz) {
-        VkBufferMemoryBarrier bar{};
-        bar.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        bar.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    // Pool
+    VkDescriptorPoolSize psz{};
+    psz.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    psz.descriptorCount = 1;
+    VkDescriptorPoolCreateInfo pci{};
+    pci.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pci.maxSets       = 1;
+    pci.poolSizeCount = 1;
+    pci.pPoolSizes    = &psz;
+    vkCreateDescriptorPool(dev, &pci, nullptr, &mImGuiDescriptorPool);
+
+    // Set
+    VkDescriptorSetAllocateInfo ai{};
+    ai.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    ai.descriptorPool     = mImGuiDescriptorPool;
+    ai.descriptorSetCount = 1;
+    ai.pSetLayouts        = &mImGuiDescriptorSetLayout;
+    vkAllocateDescriptorSets(dev, &ai, &mImGuiDescriptorSet);
+
+    // Update
+    VkDescriptorImageInfo ii{};
+    ii.imageView   = mOutputImage->getImageView();
+    ii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    ii.sampler     = mImGuiSampler;
+    VkWriteDescriptorSet w{};
+    w.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    w.dstSet          = mImGuiDescriptorSet;
+    w.dstBinding      = 0;
+    w.descriptorCount = 1;
+    w.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    w.pImageInfo      = &ii;
+    vkUpdateDescriptorSets(dev, 1, &w, 0, nullptr);
+
+    // --- Output image layout 初始化 ---
+    {
+        mComputeCommandPool = new VulKan::CommandPool(mDevice);
+        mComputeCommandBuffer = new VulKan::CommandBuffer(mDevice, mComputeCommandPool);
+        mComputeCommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+        VkImageMemoryBarrier bar{};
+        bar.sType         = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        bar.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
+        bar.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        bar.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        bar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        bar.image         = mOutputImage->getImage();
+        bar.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        bar.srcAccessMask = 0;
         bar.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        bar.buffer = b; bar.offset = 0; bar.size = sz;
-        return bar;
-    };
 
-    uint32_t sdfGroups = (sdfWidth * sdfHeight + 63) / 64;
+        mComputeCommandBuffer->transferImageLayout(bar,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
-    // Pass 1: SDF
+        mComputeCommandBuffer->end();
+        mComputeCommandBuffer->submitSync(mDevice->getGraphicQueue());
+    }
+}
+
+// ============================================================================
+// 初始化：录制 CommandBuffer
+// ============================================================================
+void RadianceCascades::GameRecordCommandBuffers() {
+    createBuffers();
+    createComputePipelines();
+    createDescriptorSets();
+    createImGuiResources();
+}
+
+// ============================================================================
+// 每帧逻辑：更新参数 + GPU dispatch
+// ============================================================================
+void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
+    static auto t0 = std::chrono::high_resolution_clock::now();
+    auto t1 = std::chrono::high_resolution_clock::now();
+    float dt = std::chrono::duration<float>(t1 - t0).count();
+    t0 = t1;
+    mTime += dt;
+
+    VkExtent2D ext = mSwapChain->getExtent();
+
+    if (!mInitialized) {
+        GameRecordCommandBuffers();
+        mFrameCount = 0;
+        mInitialized = true;
+    } else {
+        ++mFrameCount;
+    }
+
+    int leftState  = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+    bool leftDown  = (leftState == GLFW_PRESS);
+    bool realMouseDown = leftDown;
+
+    // ---- Shadertoy Buffer A exact: 鼠标平滑 ----
+    const float SMOOTH_RADIUS = float(ext.height) * 0.015f;
+    const float SMOOTH_FRICTION = 0.05f;
+
+    float rawX = (float)mMouseX;
+    float rawY = (float)mMouseY;
+    float rawZ = realMouseDown ? 1.0f : 0.0f;
+
+    if (!realMouseDown && !mKeyToggledSpace) {
+        float t = mTime * 3.0f;
+        rawX = cos(3.14159f * t) + sin(0.72834f * t + 0.3f);
+        rawY = sin(2.781374f * t + 3.47912f) + cos(t);
+        rawX = rawX * 0.25f + 0.5f;
+        rawY = rawY * 0.25f + 0.5f;
+        rawX *= (float)ext.width;
+        rawY *= (float)ext.height;
+        rawZ = MAGIC;
+    }
+
+    if (mFrameCount == 0) {
+        mMouseCX = rawX;
+        mMouseCY = rawY;
+        mMouseCZ = rawZ;
+        mMouseAX = 0.0f;
+        mMouseAY = 0.0f;
+        mMouseAZ = 0.0f;
+        mMouseBX = 0.0f;
+        mMouseBY = 0.0f;
+        mMouseBZ = 0.0f;
+    } else {
+        if (mMouseBZ == MAGIC && rawZ != MAGIC) {
+            mMouseBX = 0.0f;
+            mMouseBY = 0.0f;
+            mMouseBZ = 0.0f;
+        }
+
+        float dist = std::sqrt((mMouseBX - rawX) * (mMouseBX - rawX) +
+                               (mMouseBY - rawY) * (mMouseBY - rawY));
+
+        if (mMouseBZ > 0.0f && (mMouseBZ != MAGIC || rawZ == MAGIC) && dist > 0.0f) {
+            float ndx = (rawX - mMouseBX) / dist;
+            float ndy = (rawY - mMouseBY) / dist;
+            float len = std::max(dist - SMOOTH_RADIUS, 0.0f);
+            float ease = 1.0f - std::pow(SMOOTH_FRICTION, dt * 10.0f);
+            mMouseCX = mMouseBX + ndx * len * ease;
+            mMouseCY = mMouseBY + ndy * len * ease;
+            mMouseCZ = rawZ;
+        } else {
+            mMouseCX = rawX;
+            mMouseCY = rawY;
+            mMouseCZ = rawZ;
+        }
+
+        mMouseAX = mMouseBX;
+        mMouseAY = mMouseBY;
+        mMouseAZ = mMouseBZ;
+        mMouseBX = mMouseCX;
+        mMouseBY = mMouseCY;
+        mMouseBZ = mMouseCZ;
+    }
+
+    bool rightDown = (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
+    if (!mMouseLeftDown && leftDown) {
+        mMouseClickStartX = rawX;
+        mMouseClickStartY = rawY;
+    }
+
+    mMouseLeftDown  = leftDown;
+    mMouseRightDown = rightDown;
+
+    GPUParams p{};
+    p.time              = mTime;
+    p.timeDelta         = dt;
+    p.sdfWidth          = (int)ext.width;
+    p.sdfHeight         = (int)ext.height;
+    p.mouseX            = mMouseCX;
+    p.mouseY            = mMouseCY;
+    p.mousePrevX        = (float)mMousePrevX;
+    p.mousePrevY        = (float)mMousePrevY;
+    p.mouseLeftDown     = (mMouseCZ > 0.0f) ? 1 : 0;
+    p.mouseRightDown    = mMouseRightDown ? 1 : 0;
+    p.mouseRawX         = rawX;
+    p.mouseRawY         = rawY;
+    p.frameCount        = mFrameCount;
+    p.emissiveMode      = 0;
+    p.brushRadius       = BRUSH_RADIUS;
+    p.c_sResX           = mCascadeResX;
+    p.c_sResY           = mCascadeResY;
+    p.c_dRes            = C_DRES;
+    p.nCascades         = N_CASCADES;
+    float screenLen = std::sqrt((float)(ext.width * ext.width + ext.height * ext.height));
+    p.c_intervalLength  = screenLen * 4.0f / float((1 << (2 * N_CASCADES)) - 1);
+    p.c_smoothDistScale = 0.0f;
+    p.totalCascadeEntries = calculateTotalCascadeEntries();
+    p.cascadeLevel      = 0;
+    p.mouseSmoothAX     = mMouseAX;
+    p.mouseSmoothAY     = mMouseAY;
+    p.mouseSmoothBX     = mMouseBX;
+    p.mouseSmoothBY     = mMouseBY;
+    p.mouseSmoothADown  = (mMouseAZ > 0.0f) ? 1 : 0;
+    p.mouseSmoothBDown  = (mMouseBZ > 0.0f) ? 1 : 0;
+    p.mouseMagic        = (mMouseCZ == MAGIC) ? 1 : 0;
+    p.keyToggledSpace   = mKeyToggledSpace ? 1 : 0;
+    p.keyToggled1       = mKeyToggled1 ? 1 : 0;
+    p.mouseClickStartX  = mMouseClickStartX;
+    p.mouseClickStartY  = mMouseClickStartY;
+
+    mParamBuffer->updateBufferByMap(&p, sizeof(p));
+
+    dispatchCompute();
+}
+
+// ============================================================================
+// 录制+提交全部 compute dispatch
+// ============================================================================
+void RadianceCascades::dispatchCompute() {
+    VkExtent2D ext = mSwapChain->getExtent();
+    int sdfW = (int)ext.width;
+    int sdfH = (int)ext.height;
+    uint32_t sdfGroups = (uint32_t)((sdfW * sdfH + 63) / 64);
+
+    VkCommandBuffer cmd = mComputeCommandBuffer->getCommandBuffer();
+    mComputeCommandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    // === SDF ===
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mSDFPipeline);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
-        mSDFPipelineLayout, 0, 1, &mSDFDescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mSDFPipelineLayout,
+        0, 1, &mSDFDescriptorSet, 0, nullptr);
     vkCmdDispatch(cmd, sdfGroups, 1, 1);
 
-    VkBufferMemoryBarrier b1 = storageBarrier(
-        mSDFBuffer->getBuffer(), mSDFBuffer->getBufferInfo().range);
+    // 屏障：SDF write → SDF read
+    VkMemoryBarrier memBar{};
+    memBar.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    memBar.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    memBar.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     vkCmdPipelineBarrier(cmd,
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        0, 0, nullptr, 1, &b1, 0, nullptr);
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        0, 1, &memBar, 0, nullptr, 0, nullptr);
 
-    // Pass 2: Cascade（一次dispatch处理所有级联）
+    // === Cascade（自上而下） ===
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mCascadePipeline);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
-        mCascadePipelineLayout, 0, 1, &mCascadeDescriptorSets[toggleIdx], 0, nullptr);
-    uint32_t cascadeGroups = (totalCascade + 63) / 64;
-    vkCmdDispatch(cmd, cascadeGroups, 1, 1);
+    for (int n = N_CASCADES - 1; n >= 0; --n) {
+        int setIdx = (N_CASCADES - 1 - n) % 2; // n=3→0, n=2→1, n=1→0, n=0→1
+        int entries = calculateCascadeLevelEntries(n);
+        uint32_t groups = (uint32_t)((entries + 63) / 64);
 
-    VkBuffer barBuf = mCascadeToggle ?
-        mCascadeBufferA->getBuffer() : mCascadeBufferB->getBuffer();
-    VkBufferMemoryBarrier b2 = storageBarrier(barBuf, mCascadeBufferA->getBufferInfo().range);
-    vkCmdPipelineBarrier(cmd,
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        0, 0, nullptr, 1, &b2, 0, nullptr);
+        vkCmdPushConstants(cmd, mCascadePipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT,
+            0, sizeof(int32_t), &n);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mCascadePipelineLayout,
+            0, 1, &mCascadeDescriptorSets[setIdx], 0, nullptr);
+        vkCmdDispatch(cmd, groups, 1, 1);
 
-    // Pass 3: Display
+        // 屏障：cascade write → cascade read（下一级联需要上一级联的结果）
+        vkCmdPipelineBarrier(cmd,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0, 1, &memBar, 0, nullptr, 0, nullptr);
+    }
+
+    // === Display ===
+    int dispSet = (N_CASCADES - 1) % 2; // cascade 0 final output: n=3→B, n=2→A, n=1→B, n=0→A → setIdx=(3)%2=1 → reads A
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mDisplayPipeline);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
-        mDisplayPipelineLayout, 0, 1, &mDisplayDescriptorSets[toggleIdx], 0, nullptr);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mDisplayPipelineLayout,
+        0, 1, &mDisplayDescriptorSets[dispSet], 0, nullptr);
     vkCmdDispatch(cmd, sdfGroups, 1, 1);
 
-    VkBufferMemoryBarrier outBar{};
-    outBar.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    // === copy output buffer → image ===
+    // 屏障：output buffer write → transfer read
+    VkMemoryBarrier outBar{};
+    outBar.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
     outBar.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     outBar.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    outBar.buffer = mOutputBuffer->getBuffer();
-    outBar.offset = 0;
-    outBar.size = mOutputBuffer->getBufferInfo().range;
     vkCmdPipelineBarrier(cmd,
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        0, 0, nullptr, 1, &outBar, 0, nullptr);
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0, 1, &outBar, 0, nullptr, 0, nullptr);
 
-    VkImageSubresourceRange range{};
-    range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    range.levelCount = 1; range.layerCount = 1;
-
-    VkImageMemoryBarrier toDst{};
-    toDst.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    toDst.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    toDst.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    toDst.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    toDst.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    toDst.image = mOutputImage->getImage();
-    toDst.subresourceRange = range;
-    vkCmdPipelineBarrier(cmd,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        0, 0, nullptr, 0, nullptr, 1, &toDst);
+    // 图片布局：SHADER_READ_ONLY → TRANSFER_DST
+    {
+        VkImageMemoryBarrier imgBar{};
+        imgBar.sType         = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imgBar.oldLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imgBar.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imgBar.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imgBar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imgBar.image         = mOutputImage->getImage();
+        imgBar.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        imgBar.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        imgBar.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        mComputeCommandBuffer->transferImageLayout(imgBar,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT);
+    }
 
     mComputeCommandBuffer->copyBufferToImage(
         mOutputBuffer->getBuffer(),
         mOutputImage->getImage(),
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        sdfWidth, sdfHeight);
+        (uint32_t)mOutputImage->getWidth(),
+        (uint32_t)mOutputImage->getHeight());
 
-    VkImageMemoryBarrier toRead{};
-    toRead.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    toRead.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    toRead.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    toRead.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    toRead.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    toRead.image = mOutputImage->getImage();
-    toRead.subresourceRange = range;
-    vkCmdPipelineBarrier(cmd,
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        0, 0, nullptr, 0, nullptr, 1, &toRead);
+    // 图片布局：TRANSFER_DST → SHADER_READ_ONLY
+    {
+        VkImageMemoryBarrier imgBar{};
+        imgBar.sType         = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        imgBar.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imgBar.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imgBar.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imgBar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imgBar.image         = mOutputImage->getImage();
+        imgBar.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        imgBar.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        imgBar.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        mComputeCommandBuffer->transferImageLayout(imgBar,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
 
     mComputeCommandBuffer->end();
-    mComputeCommandBuffer->submitSync(mDevice->getGraphicQueue(), VK_NULL_HANDLE);
-    mCascadeToggle = !mCascadeToggle;
+    mComputeCommandBuffer->submitSync(mDevice->getGraphicQueue());
 }
 
-void RadianceCascades::cleanup() {
-    VkDevice device = mDevice->getDevice();
-    vkDeviceWaitIdle(device);
-
-    if (mImGuiDescriptorSetLayout) vkDestroyDescriptorSetLayout(device, mImGuiDescriptorSetLayout, nullptr);
-    if (mImGuiDescriptorPool) vkDestroyDescriptorPool(device, mImGuiDescriptorPool, nullptr);
-    if (mImGuiSampler) vkDestroySampler(device, mImGuiSampler, nullptr);
-    if (mDescriptorPool) vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
-
-    if (mSDFPipeline) vkDestroyPipeline(device, mSDFPipeline, nullptr);
-    if (mSDFPipelineLayout) vkDestroyPipelineLayout(device, mSDFPipelineLayout, nullptr);
-    if (mSDFDescriptorSetLayout) vkDestroyDescriptorSetLayout(device, mSDFDescriptorSetLayout, nullptr);
-    if (mSDFShaderModule) vkDestroyShaderModule(device, mSDFShaderModule, nullptr);
-
-    if (mCascadePipeline) vkDestroyPipeline(device, mCascadePipeline, nullptr);
-    if (mCascadePipelineLayout) vkDestroyPipelineLayout(device, mCascadePipelineLayout, nullptr);
-    if (mCascadeDescriptorSetLayout) vkDestroyDescriptorSetLayout(device, mCascadeDescriptorSetLayout, nullptr);
-    if (mCascadeShaderModule) vkDestroyShaderModule(device, mCascadeShaderModule, nullptr);
-
-    if (mDisplayPipeline) vkDestroyPipeline(device, mDisplayPipeline, nullptr);
-    if (mDisplayPipelineLayout) vkDestroyPipelineLayout(device, mDisplayPipelineLayout, nullptr);
-    if (mDisplayDescriptorSetLayout) vkDestroyDescriptorSetLayout(device, mDisplayDescriptorSetLayout, nullptr);
-    if (mDisplayShaderModule) vkDestroyShaderModule(device, mDisplayShaderModule, nullptr);
-
-    delete mOutputImage;
-    delete mOutputBuffer;
-    delete mCascadeBufferA;
-    delete mCascadeBufferB;
-    delete mSDFBuffer;
-    delete mParamBuffer;
-
-    delete mComputeCommandBuffer;
-    delete mComputeCommandPool;
+// ============================================================================
+// 其余接口
+// ============================================================================
+void RadianceCascades::GameCommandBuffers(unsigned int) {
+    // 本项目不使用 swap‑chain 图形管线，compute 在 GameLoop 中提交
 }
 
-void RadianceCascades::MouseMove(double xpos, double ypos) {
-    if (mMouseLeftDown || mMouseRightDown) {
-        mMousePrevX = mMouseX;
-        mMousePrevY = mMouseY;
-    } else {
-        mMousePrevX = xpos;
-        mMousePrevY = ypos;
-    }
-    mMouseX = xpos;
-    mMouseY = ypos;
+void RadianceCascades::GameStopInterfaceLoop(unsigned int) {
+    cleanup();
 }
 
-void RadianceCascades::MouseRoller(int z) {}
-void RadianceCascades::KeyDown(GameKeyEnum moveDirection) {}
-
-void RadianceCascades::GameLoop(unsigned int mCurrentFrame) {
-    mTime += 1.0f / 60.0f;
-
-    GLFWwindow* window = mWindow->getWindow();
-    if (window) {
-        bool leftDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-        bool rightDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-        bool anyDown = leftDown || rightDown;
-        bool wasAnyDown = mMouseLeftDown || mMouseRightDown;
-
-        if (anyDown && !wasAnyDown) {
-            mMousePrevX = mMouseX;
-            mMousePrevY = mMouseY;
-        } else if (anyDown) {
-            mMousePrevX = mMouseX;
-            mMousePrevY = mMouseY;
-        }
-
-        mMouseLeftDown = leftDown;
-        mMouseRightDown = rightDown;
-
-        static bool cWasPressed = false;
-        bool cIsPressed = glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS;
-        if (cIsPressed && !cWasPressed) {
-            float maxF = std::numeric_limits<float>::max();
-            void* data = mSDFBuffer->getupdateBufferByMap();
-            struct SDFEntry { float dist; float r, g, b; };
-            SDFEntry* entries = static_cast<SDFEntry*>(data);
-            int w = mSwapChain->getExtent().width;
-            int h = mSwapChain->getExtent().height;
-            for (int i = 0; i < w * h; ++i) {
-                entries[i] = { maxF, 0.0f, 0.0f, 0.0f };
-            }
-            mSDFBuffer->endupdateBufferByMap();
-        }
-        cWasPressed = cIsPressed;
-
-        static bool rWasPressed = false;
-        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rWasPressed) {
-            mFrameCount = 0;
-        }
-        rWasPressed = glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS;
-
-        static bool escWasPressed = false;
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && !escWasPressed) {
-            if (Global::ConsoleBool) {
-                Global::ConsoleBool = false;
-                InterFace->ConsoleFocusHere = true;
-            }
-            else {
-                InterFace->SetInterFaceBool();
-            }
-        }
-        escWasPressed = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
-    }
-
-    dispatchCompute();
-    mFrameCount++;
-}
-
-void RadianceCascades::GameUI() {
-    int width = mSwapChain->getExtent().width;
-    int height = mSwapChain->getExtent().height;
-
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(float(width), float(height)));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::Begin("##RCMain", nullptr,
-        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoScrollWithMouse);
-
-    ImVec2 sz = ImGui::GetContentRegionAvail();
-    ImGui::Image((ImTextureID)mImGuiDescriptorSet, sz, ImVec2(0, 0), ImVec2(1, 1));
-
-    ImGui::End();
-    ImGui::PopStyleVar();
-
-    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.5f);
-    ImGui::Begin("##RCControls", nullptr,
-        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoInputs);
-    ImGui::Text("Left Click: Draw Emissive");
-    ImGui::Text("Right Click: Draw Wall");
-    ImGui::Text("C: Clear  R: Reset  Esc: Exit");
-    ImGui::Text("Frame: %d", mFrameCount);
-    ImGui::End();
-}
-
-void RadianceCascades::GameCommandBuffers(unsigned int Format_i) {}
-void RadianceCascades::GameRecordCommandBuffers() {}
-void RadianceCascades::GameStopInterfaceLoop(unsigned int mCurrentFrame) {
-    mMouseLeftDown = false;
-    mMouseRightDown = false;
-}
 void RadianceCascades::GameTCPLoop() {}
 
+void RadianceCascades::GameUI() {
+    if (!mOutputImage || mImGuiDescriptorSet == VK_NULL_HANDLE) return;
+
+    ImGui::Begin(u8"Radiance Cascades GI", nullptr,
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+	ImGui::SetWindowPos(ImVec2(0, 0));
+    ImGui::SetWindowSize(ImVec2(1920, 1080));
+
+
+    ImVec2 winsz = ImGui::GetContentRegionAvail();
+    float imgW = (float)mOutputImage->getWidth();
+    float imgH = (float)mOutputImage->getHeight();
+    float scale = std::min(winsz.x / imgW, winsz.y / imgH);
+    ImVec2 sz(imgW * scale, imgH * scale);
+    ImGui::Image((ImTextureID)(intptr_t)mImGuiDescriptorSet, sz);
+    ImGui::End();
 }
+
+// ============================================================================
+// 清理
+// ============================================================================
+void RadianceCascades::cleanup() {
+    VkDevice dev = mDevice ? mDevice->getDevice() : VK_NULL_HANDLE;
+
+    if (mImGuiSampler)            { vkDestroySampler(dev, mImGuiSampler, nullptr); mImGuiSampler = VK_NULL_HANDLE; }
+    if (mImGuiDescriptorSetLayout) { vkDestroyDescriptorSetLayout(dev, mImGuiDescriptorSetLayout, nullptr); }
+    if (mImGuiDescriptorPool)      { vkDestroyDescriptorPool(dev, mImGuiDescriptorPool, nullptr); }
+
+    if (mDescriptorPool)          { vkDestroyDescriptorPool(dev, mDescriptorPool, nullptr); mDescriptorPool = VK_NULL_HANDLE; }
+
+    if (mSDFPipeline)             { vkDestroyPipeline(dev, mSDFPipeline, nullptr); mSDFPipeline = VK_NULL_HANDLE; }
+    if (mCascadePipeline)         { vkDestroyPipeline(dev, mCascadePipeline, nullptr); mCascadePipeline = VK_NULL_HANDLE; }
+    if (mDisplayPipeline)         { vkDestroyPipeline(dev, mDisplayPipeline, nullptr); mDisplayPipeline = VK_NULL_HANDLE; }
+
+    if (mSDFPipelineLayout)       { vkDestroyPipelineLayout(dev, mSDFPipelineLayout, nullptr); }
+    if (mCascadePipelineLayout)   { vkDestroyPipelineLayout(dev, mCascadePipelineLayout, nullptr); }
+    if (mDisplayPipelineLayout)   { vkDestroyPipelineLayout(dev, mDisplayPipelineLayout, nullptr); }
+
+    if (mSDFDescriptorSetLayout)     { vkDestroyDescriptorSetLayout(dev, mSDFDescriptorSetLayout, nullptr); }
+    if (mCascadeDescriptorSetLayout) { vkDestroyDescriptorSetLayout(dev, mCascadeDescriptorSetLayout, nullptr); }
+    if (mDisplayDescriptorSetLayout) { vkDestroyDescriptorSetLayout(dev, mDisplayDescriptorSetLayout, nullptr); }
+
+    if (mSDFShaderModule)         { vkDestroyShaderModule(dev, mSDFShaderModule, nullptr); }
+    if (mCascadeShaderModule)     { vkDestroyShaderModule(dev, mCascadeShaderModule, nullptr); }
+    if (mDisplayShaderModule)     { vkDestroyShaderModule(dev, mDisplayShaderModule, nullptr); }
+
+    delete mOutputImage;       mOutputImage = nullptr;
+    delete mOutputBuffer;      mOutputBuffer = nullptr;
+    delete mCascadeBufferA;    mCascadeBufferA = nullptr;
+    delete mCascadeBufferB;    mCascadeBufferB = nullptr;
+    delete mSDFBuffer;         mSDFBuffer = nullptr;
+    delete mParamBuffer;       mParamBuffer = nullptr;
+
+    delete mComputeCommandBuffer; mComputeCommandBuffer = nullptr;
+    delete mComputeCommandPool;   mComputeCommandPool = nullptr;
+}
+
+} // namespace GAME

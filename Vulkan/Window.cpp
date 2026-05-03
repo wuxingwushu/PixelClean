@@ -199,5 +199,10 @@ namespace VulKan {
 			mApp->KeyDown(GameKeyEnum::Key_2);
 		}
 		KeysRisingEdgeTrigger_1 = glfwGetKey(mWindow, GLFW_KEY_2);
+
+		if (glfwGetKey(mWindow, GLFW_KEY_SPACE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_SPACE) != KeysRisingEdgeTrigger_Space) {
+			mApp->KeyDown(GameKeyEnum::SPACE);
+		}
+		KeysRisingEdgeTrigger_Space = glfwGetKey(mWindow, GLFW_KEY_SPACE);
 	}
 }

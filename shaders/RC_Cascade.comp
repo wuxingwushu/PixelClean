@@ -1,14 +1,6 @@
 #version 450
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
-// ============================================================================
-// RC_Cascade.comp — 辐射级联核心计算着色器
-//
-// 一次 dispatch 处理所有级联层级。每个 entry 从 SDF 计算直接辐射度，
-// 然后从上一帧的上级联（cascadeRead）合并辐射度和可见性。
-// 这与 Shadertoy 参考实现的行为一致（n 帧延迟完全传播）。
-// ============================================================================
-
 layout(std430, binding = 0) buffer Params {
     float time;
     float timeDelta;
@@ -19,6 +11,7 @@ layout(std430, binding = 0) buffer Params {
     float mousePrevX;
     float mousePrevY;
     int mouseLeftDown;
+    int mouseRightDown;
     int frameCount;
     int emissiveMode;
     float brushRadius;
@@ -30,6 +23,19 @@ layout(std430, binding = 0) buffer Params {
     float c_smoothDistScale;
     int totalCascadeEntries;
     int cascadeLevel;
+    float mouseSmoothAX;
+    float mouseSmoothAY;
+    float mouseSmoothBX;
+    float mouseSmoothBY;
+    int mouseSmoothADown;
+    int mouseSmoothBDown;
+    int mouseMagic;
+    int keyToggledSpace;
+    int keyToggled1;
+    float mouseClickStartX;
+    float mouseClickStartY;
+    float mouseRawX;
+    float mouseRawY;
 } params;
 
 layout(std430, binding = 1) readonly buffer SDFBuffer {
@@ -45,36 +51,54 @@ layout(std430, binding = 3) writeonly buffer CascadeWrite {
 };
 
 const float MAX_FLOAT = 3.402823466e+38;
-const float PI = 3.14159265359;
+const float PI = 3.1415927;
 
-// ============================================================================
-// SDF 双线性采样
-// ============================================================================
+layout(push_constant) uniform PushConstants {
+    int cascadeLevel;
+} pc;
+
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec3 getEmissivity() {
+    return pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
+}
 
 vec4 sampleDrawing(vec2 P) {
     vec2 coord = P - 0.5;
     ivec2 p0 = ivec2(floor(coord));
     vec2 w = coord - vec2(p0);
     ivec2 p1 = p0 + ivec2(1, 1);
-
     p0 = clamp(p0, ivec2(0), ivec2(params.sdfWidth - 1, params.sdfHeight - 1));
     p1 = clamp(p1, ivec2(0), ivec2(params.sdfWidth - 1, params.sdfHeight - 1));
-
     vec4 s00 = sdf[p0.x + p0.y * params.sdfWidth];
     vec4 s10 = sdf[p1.x + p0.y * params.sdfWidth];
     vec4 s01 = sdf[p0.x + p1.y * params.sdfWidth];
     vec4 s11 = sdf[p1.x + p1.y * params.sdfWidth];
+    vec4 data = mix(mix(s00, s10, w.x), mix(s01, s11, w.x), w.y);
 
-    return mix(mix(s00, s10, w.x), mix(s01, s11, w.x), w.y);
+    if (params.keyToggled1 != 0 && params.mouseLeftDown > 0 && params.mouseRightDown == 0) {
+        float radius = params.brushRadius * float(params.sdfHeight);
+        vec2 segStart = vec2(params.mouseClickStartX, params.mouseClickStartY);
+        vec2 segEnd = vec2(params.mouseRawX, params.mouseRawY);
+        vec2 pa = P - segStart;
+        vec2 ba = segEnd - segStart;
+        float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+        float sd = length(pa - ba * h) - radius;
+        if (sd <= max(data.r, 0.0)) {
+            data = vec4(min(sd, data.r), getEmissivity());
+        }
+    }
+
+    return data;
 }
 
 float sdDrawing(vec2 P) {
     return sampleDrawing(P).x;
 }
-
-// ============================================================================
-// 光线追踪（Sphere Tracing）
-// ============================================================================
 
 vec2 intersectAABB(vec2 ro, vec2 rd, vec2 a, vec2 b) {
     vec2 ta = (a - ro) / rd;
@@ -89,208 +113,120 @@ float intersect(vec2 ro, vec2 rd, float tMax) {
     vec2 screenRes = vec2(float(params.sdfWidth), float(params.sdfHeight));
     float tOffset = 0.0;
     vec2 tAABB = intersectAABB(ro, rd, vec2(0.0001), screenRes - 0.0001);
-
-    if (tAABB.x > tMax || tAABB.y < 0.0) {
-        return -1.0;
-    }
-
-    if (tAABB.x > 0.0) {
-        ro += tAABB.x * rd;
-        tOffset += tAABB.x;
-        tMax -= tAABB.x;
-    }
-
-    if (tAABB.y < tMax) {
-        tMax = tAABB.y;
-    }
-
+    if (tAABB.x > tMax || tAABB.y < 0.0) return -1.0;
+    if (tAABB.x > 0.0) { ro += tAABB.x * rd; tOffset += tAABB.x; tMax -= tAABB.x; }
+    if (tAABB.y < tMax) tMax = tAABB.y;
     float t = 0.0;
     for (int i = 0; i < 100; i++) {
         float d = sdDrawing(ro + rd * t);
         t += abs(d);
-
-        if (t >= tMax) {
-            break;
-        }
-
-        if (0.2 < t && d < 1.0) {
-            return tOffset + t;
-        }
+        if (t >= tMax) break;
+        if (0.2 < t && d < 1.0) return tOffset + t;
     }
-
     return -1.0;
 }
 
-// ============================================================================
-// 辐射度采样
-// ============================================================================
-
-struct RayHit {
-    vec4 radiance;
-    float dist;
-};
-
-RayHit radiance(vec2 ro, vec2 rd, float tMax) {
+vec4 radiance(vec2 ro, vec2 rd, float tMax) {
     vec4 p = sampleDrawing(ro);
-    float t = 0.0;
     if (p.r > 0.0) {
-        t = intersect(ro, rd, tMax);
-
+        float t = intersect(ro, rd, tMax);
         if (t == -1.0) {
-            return RayHit(vec4(0.0, 0.0, 0.0, 1.0), 1e5);
+            return vec4(0.0, 0.0, 0.0, 1.0);
         }
-
         p = sampleDrawing(ro + rd * t);
     }
-
-    return RayHit(vec4(p.gba, 0.0), t);
+    return vec4(p.gba, 0.0);
 }
 
-// ============================================================================
-// 天空辐射度（当前禁用，与参考实现一致）
-// ============================================================================
-
 vec3 integrateSkyRadiance_(vec2 angle) {
-    float a1 = angle[1];
-    float a0 = angle[0];
-
+    float a1 = angle[1], a0 = angle[0];
     const vec3 SkyColor = vec3(0.2, 0.5, 1.0);
     const vec3 SunColor = vec3(1.0, 0.7, 0.1) * 10.0;
-    const float SunA = 2.0;
-    const float SunS = 64.0;
-    const float SSunS = sqrt(SunS);
-    const float ISSunS = 1.0 / SSunS;
+    const float SunA = 2.0, SunS = 64.0;
+    const float SSunS = sqrt(SunS), ISSunS = 1.0 / SSunS;
     vec3 SI = SkyColor * (a1 - a0 - 0.5 * (cos(a1) - cos(a0)));
     SI += SunColor * (atan(SSunS * (SunA - a0)) - atan(SSunS * (SunA - a1))) * ISSunS;
     return SI / 6.0;
 }
 
 vec3 integrateSkyRadiance(vec2 angle) {
-    if (angle[1] < 2.0 * PI) {
+    if (angle[1] < 2.0 * PI)
         return integrateSkyRadiance_(angle);
-    }
-
-    return
-        integrateSkyRadiance_(vec2(angle[0], 2.0 * PI)) +
-        integrateSkyRadiance_(vec2(0.0, angle[1] - 2.0 * PI));
+    return integrateSkyRadiance_(vec2(angle[0], 2.0 * PI))
+         + integrateSkyRadiance_(vec2(0.0, angle[1] - 2.0 * PI));
 }
-
-float smoothDist(int cascadeIndex) {
-    return float(1 << cascadeIndex);
-}
-
-// ============================================================================
-// 级联缓冲区索引
-// ============================================================================
 
 int cascadeOffset(int n) {
-    int offset = 0;
+    int off = 0;
     for (int i = 0; i < n; ++i) {
-        int sn_x = params.c_sResX >> i;
-        int sn_y = params.c_sResY >> i;
+        int sx = params.c_sResX >> i;
+        int sy = params.c_sResY >> i;
         int dn = (i == 0) ? 1 : (params.c_dRes << (2 * (i - 1)));
-        offset += sn_x * sn_y * dn;
+        off += sx * sy * dn;
     }
-    return offset;
+    return off;
 }
 
 vec4 cascadeFetch(int n, ivec2 p, int d) {
-    int sn_x = params.c_sResX >> n;
-    int sn_y = params.c_sResY >> n;
     int dn = (n == 0) ? 1 : (params.c_dRes << (2 * (n - 1)));
-    p = clamp(p, ivec2(0), ivec2(sn_x - 1, sn_y - 1));
+    ivec2 sn = ivec2(params.c_sResX >> n, params.c_sResY >> n);
+    p = clamp(p, ivec2(0), sn - ivec2(1));
     d = clamp(d, 0, dn - 1);
-    int idx = cascadeOffset(n) + d + dn * (p.x + sn_x * p.y);
+    int idx = cascadeOffset(n) + d + dn * (p.x + sn.x * p.y);
     return cascadeRead[idx];
 }
 
-// ============================================================================
-// 主函数：遍历所有级联，每个 entry 独立计算
-// ============================================================================
-
 void main() {
-    uint idx = gl_GlobalInvocationID.x;
-    if (idx >= uint(params.totalCascadeEntries)) return;
-
-    int n = 0;
-    int offset = 0;
-    for (int i = 0; i < params.nCascades; ++i) {
-        int sn_x = params.c_sResX >> i;
-        int sn_y = params.c_sResY >> i;
-        int dn = (i == 0) ? 1 : (params.c_dRes << (2 * (i - 1)));
-        int cascadeSize = sn_x * sn_y * dn;
-        if (int(idx) < offset + cascadeSize) {
-            n = i;
-            break;
-        }
-        offset += cascadeSize;
-    }
-
-    int localIdx = int(idx) - offset;
-    int sn_x = params.c_sResX >> n;
-    int sn_y = params.c_sResY >> n;
+    int n = pc.cascadeLevel;
     int dn = (n == 0) ? 1 : (params.c_dRes << (2 * (n - 1)));
+    ivec2 sn = ivec2(params.c_sResX >> n, params.c_sResY >> n);
+    int cnt = sn.x * sn.y * dn;
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= uint(cnt)) return;
+
+    int d = int(i) % dn;
+    int j = int(i) / dn;
+    ivec2 p = ivec2(j % sn.x, j / sn.x);
     int nDirs = params.c_dRes << (2 * n);
 
-    int d = localIdx % dn;
-    localIdx /= dn;
-    int px = localIdx % sn_x;
-    int py = localIdx / sn_x;
-
-    vec2 ro = (vec2(float(px), float(py)) + 0.5) / vec2(float(sn_x), float(sn_y))
-            * vec2(float(params.sdfWidth), float(params.sdfHeight));
+    vec2 screenRes = vec2(float(params.sdfWidth), float(params.sdfHeight));
+    vec2 ro = (vec2(p) + 0.5) / vec2(sn) * screenRes;
 
     float t1 = params.c_intervalLength;
     float tMin = (n == 0) ? 0.0 : t1 * float(1 << (2 * (n - 1)));
     float tMax = t1 * float(1 << (2 * n));
 
-    float sMin = smoothDist(n) * params.c_smoothDistScale;
-    float sMax = smoothDist(n + 1) * params.c_smoothDistScale;
-    float tMinSmoothed = tMin - sMin * 0.5;
-    float tMaxSmoothed = tMax + sMax * 0.5;
-    float tMinClamped = max(0.0, tMinSmoothed);
-
     vec4 s = vec4(0.0);
-    int subDirs = nDirs / dn;
+    int sub = nDirs / dn;
 
-    for (int i = 0; i < subDirs; ++i) {
-        int j = 4 * d + i;
-        float angle = (float(j) + 0.5) / float(nDirs) * 2.0 * PI;
+    for (int k = 0; k < sub; ++k) {
+        int jj = 4 * d + k;
+        float angle = (float(jj) + 0.5) / float(nDirs) * 2.0 * PI;
         vec2 rd = vec2(cos(angle), sin(angle));
 
-        RayHit hit = radiance(ro + rd * tMinClamped, rd, tMaxSmoothed - tMinClamped);
-
-        vec4 empty_radiance = vec4(0.0, 0.0, 0.0, 1.0);
-        hit.radiance = mix(hit.radiance, empty_radiance,
-            1.0 - clamp((tMinClamped - tMinSmoothed + hit.dist) / sMin, 0.0, 1.0));
-        hit.radiance = mix(hit.radiance, empty_radiance,
-            clamp(((tMinClamped + hit.dist) - (tMaxSmoothed)) / sMax + 1.0, 0.0, 1.0));
-        vec4 si = hit.radiance;
+        vec4 si = radiance(ro + rd * tMin, rd, tMax - tMin);
 
         if (si.a != 0.0) {
             if (n == params.nCascades - 1) {
-                vec2 angle = vec2(j, j + 1) / float(nDirs) * 2.0 * PI;
-                si.rgb += 0.0 * integrateSkyRadiance(angle) / (angle.y - angle.x);
+                vec2 angleInt = vec2(jj, jj + 1) / float(nDirs) * 2.0 * PI;
+                si.rgb += integrateSkyRadiance(angleInt) / (angleInt.y - angleInt.x);
             } else {
-                vec2 pf = (vec2(float(px), float(py)) + 0.5) / 2.0;
+                vec2 pf = (vec2(p) + 0.5) / 2.0;
                 ivec2 q = ivec2(round(pf)) - 1;
                 vec2 w = pf - vec2(q) - 0.5;
                 ivec2 h = ivec2(1, 0);
-                vec4 S0 = cascadeFetch(n + 1, q + h.yy, j);
-                vec4 S1 = cascadeFetch(n + 1, q + h.xy, j);
-                vec4 S2 = cascadeFetch(n + 1, q + h.yx, j);
-                vec4 S3 = cascadeFetch(n + 1, q + h.xx, j);
+                vec4 S0 = cascadeFetch(n + 1, q + h.yy, jj);
+                vec4 S1 = cascadeFetch(n + 1, q + h.xy, jj);
+                vec4 S2 = cascadeFetch(n + 1, q + h.yx, jj);
+                vec4 S3 = cascadeFetch(n + 1, q + h.xx, jj);
                 vec4 S = mix(mix(S0, S1, w.x), mix(S2, S3, w.x), w.y);
-
                 si.rgb += si.a * S.rgb;
                 si.a *= S.a;
             }
         }
-
         s += si;
     }
 
     s /= float(nDirs / dn);
-
-    cascadeWrite[int(idx)] = s;
+    cascadeWrite[cascadeOffset(n) + int(i)] = s;
 }

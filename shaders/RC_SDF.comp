@@ -1,145 +1,174 @@
 #version 450
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
-// ============================================================================
-// RC_SDF.comp — SDF（有符号距离场）绘制着色器
-// 功能：维护场景的SDF缓冲区，支持鼠标绘制和初始场景生成
-// 数据格式：每个像素存储 vec4(有符号距离, 自发光R, 自发光G, 自发光B)
-// ============================================================================
-
-// 参数缓冲区
 layout(std430, binding = 0) buffer Params {
-    float time;                // 当前时间（秒）
-    float timeDelta;           // 帧间隔时间
-    int sdfWidth;              // SDF缓冲区宽度
-    int sdfHeight;             // SDF缓冲区高度
-    float mouseX;              // 鼠标X位置（SDF坐标系）
-    float mouseY;              // 鼠标Y位置（SDF坐标系）
-    float mousePrevX;          // 上一帧鼠标X
-    float mousePrevY;          // 上一帧鼠标Y
-    int mouseLeftDown;         // 鼠标左键状态（1=按下，0=松开）
-    int frameCount;            // 帧计数
-    int emissiveMode;          // 发光模式（0=发光画笔，1=非发光画笔）
-    float brushRadius;         // 画笔半径（占屏幕高度的比例）
-    int c_sResX;               // cascade 0 空间分辨率X
-    int c_sResY;               // cascade 0 空间分辨率Y
-    int c_dRes;                // cascade 0 方向分辨率
-    int nCascades;             // 级联总数
-    float c_intervalLength;    // cascade 0 光线行进长度
-    float c_smoothDistScale;   // 级联间平滑过渡距离缩放
-    int totalCascadeEntries;   // 级联缓冲区总条目数
+    float time;
+    float timeDelta;
+    int sdfWidth;
+    int sdfHeight;
+    float mouseX;
+    float mouseY;
+    float mousePrevX;
+    float mousePrevY;
+    int mouseLeftDown;
+    int mouseRightDown;
+    int frameCount;
+    int emissiveMode;
+    float brushRadius;
+    int c_sResX;
+    int c_sResY;
+    int c_dRes;
+    int nCascades;
+    float c_intervalLength;
+    float c_smoothDistScale;
+    int totalCascadeEntries;
     int cascadeLevel;
+    float mouseSmoothAX;
+    float mouseSmoothAY;
+    float mouseSmoothBX;
+    float mouseSmoothBY;
+    int mouseSmoothADown;
+    int mouseSmoothBDown;
+    int mouseMagic;
+    int keyToggledSpace;
+    int keyToggled1;
+    float mouseClickStartX;
+    float mouseClickStartY;
+    float mouseRawX;
+    float mouseRawY;
 } params;
 
-// SDF缓冲区：.x=有符号距离, .yzw=自发光颜色(linear RGB)
 layout(std430, binding = 1) buffer SDFBuffer {
     vec4 sdf[];
 };
 
 const float MAX_FLOAT = 3.402823466e+38;
-const float PI = 3.14159265359;
+const float PI = 3.1415927;
+const float MAGIC = 1e25;
 
-// HSV转RGB颜色空间，用于生成彩虹色发光
-vec3 hsv2rgb(vec3 c) {
-    vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-    return c.z * mix(vec3(1.0), rgb, c.y);
-}
-
-// 点到线段的最短距离（用于绘制连续的鼠标轨迹）
 float sdSegment(vec2 p, vec2 a, vec2 b) {
-    vec2 pa = p - a, ba = b - a;
+    vec2 pa = p - a;
+    vec2 ba = b - a;
     float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
     return length(pa - ba * h);
 }
 
-// 点到轴对齐矩形框的距离（用于绘制墙壁）
-float sdBox(vec2 p, vec2 b) {
-    vec2 d = abs(p) - b;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+int solveQuadratic(float a, float b, float c, out vec2 roots) {
+    float discriminant = b * b - 4.0 * a * c;
+    if (discriminant < 0.0) return 0;
+    if (discriminant == 0.0) { roots[0] = -b / (2.0 * a); return 1; }
+    float SQRT = sqrt(discriminant);
+    roots[0] = (-b + SQRT) / (2.0 * a);
+    roots[1] = (-b - SQRT) / (2.0 * a);
+    return 2;
+}
+
+int solveCubic(float a, float b, float c, float d, out vec3 roots) {
+    const float TAU = 6.2831853071795862;
+    float A = b / a; float B = c / a; float C = d / a;
+    float Q = (A * A - 3.0 * B) / 9.0;
+    float R = (2.0 * A * A * A - 9.0 * A * B + 27.0 * C) / 54.0;
+    float S = Q * Q * Q - R * R;
+    float sQ = sqrt(abs(Q));
+    roots = vec3(-A / 3.0);
+    if (S > 0.0) {
+        roots += -2.0 * sQ * cos(acos(R / (sQ * abs(Q))) / 3.0 + vec3(TAU, 0.0, -TAU) / 3.0);
+        return 3;
+    }
+    if (Q == 0.0) { roots[0] += -pow(C - A * A * A / 27.0, 1.0 / 3.0); return 1; }
+    if (S < 0.0) {
+        float u = abs(R / (sQ * Q));
+        float v = Q > 0.0 ? cosh(acosh(u) / 3.0) : sinh(asinh(u) / 3.0);
+        roots[0] += -2.0 * sign(R) * sQ * v;
+        return 1;
+    }
+    roots.xy += vec2(-2.0, 1.0) * sign(R) * sQ;
+    return 2;
+}
+
+int solve(float a, float b, float c, float d, out vec3 roots) {
+    if (a == 0.0) {
+        if (b == 0.0) { if (c == 0.0) return 0; roots[0] = -d / c; return 1; }
+        vec2 r; int num = solveQuadratic(b, c, d, r); roots.xy = r; return num;
+    }
+    return solveCubic(a, b, c, d, roots);
+}
+
+float sdBezier(vec2 p, vec2 a, vec2 b, vec2 c) {
+    vec2 A = a - 2.0 * b + c;
+    vec2 B = 2.0 * (b - a);
+    vec2 C = a - p;
+    vec3 T;
+    int num = solve(2.0 * dot(A, A), 3.0 * dot(A, B), 2.0 * dot(A, C) + dot(B, B), dot(B, C), T);
+    T = clamp(T, 0.0, 1.0);
+    float best = 1e30;
+    for (int i = 0; i < 3; ++i) {
+        if (i >= num) break;
+        float t = T[i];
+        float u = 1.0 - t;
+        vec2 d = u * u * a + 2.0 * t * u * b + t * t * c - p;
+        best = min(best, dot(d, d));
+    }
+    return sqrt(best);
+}
+
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec3 getEmissivity() {
+    if (params.keyToggledSpace != 0) return vec3(0.0);
+    return pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
 }
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
-    int totalPixels = params.sdfWidth * params.sdfHeight;
-    if (idx >= uint(totalPixels)) return;
+    if (idx >= uint(params.sdfWidth * params.sdfHeight)) return;
 
     int x = int(idx) % params.sdfWidth;
     int y = int(idx) / params.sdfWidth;
     vec2 fragCoord = vec2(float(x), float(y));
-    vec2 center = vec2(float(params.sdfWidth), float(params.sdfHeight)) * 0.5;
 
-    float sd = sdf[idx].x;
-    vec3 emissivity = sdf[idx].yzw;
+    vec4 data = sdf[x + y * params.sdfWidth];
+    float sd = (params.frameCount != 0) ? data.x : MAX_FLOAT;
+    vec3 emissivity = (params.frameCount != 0) ? data.yzw : vec3(0.0);
 
-    // ---- 首帧初始化：创建默认场景 ----
-    if (params.frameCount == 0) {
-        sd = MAX_FLOAT;
-        emissivity = vec3(0.0);
+    vec4 mouseA = vec4(params.mouseSmoothAX, params.mouseSmoothAY,
+        float(params.mouseSmoothADown), 0.0);
+    vec4 mouseB = vec4(params.mouseSmoothBX, params.mouseSmoothBY,
+        float(params.mouseSmoothBDown), 0.0);
+    vec4 mouseC = vec4(params.mouseX, params.mouseY,
+        float(params.mouseLeftDown), 0.0);
 
-        // 四面墙壁（厚度5像素）
-        float wallThickness = 5.0;
-        float wallDist = min(min(float(x), float(params.sdfWidth - 1 - x)),
-                             min(float(y), float(params.sdfHeight - 1 - y)));
-        if (wallDist < wallThickness) {
-            sd = wallDist - wallThickness;
-            emissivity = vec3(0.0);
-        }
-
-        // 中央障碍物（非发光方块）
-        float box = sdBox(fragCoord - center, vec2(30.0, 30.0));
-        if (box < sd) {
-            sd = box;
-            emissivity = vec3(0.0);
-        }
-
-        // 左侧暖色光源
-        float light1 = distance(fragCoord, center + vec2(-150.0, 50.0)) - 15.0;
-        if (light1 < sd) {
-            sd = light1;
-            emissivity = vec3(1.0, 0.8, 0.3);
-        }
-
-        // 右侧冷色光源
-        float light2 = distance(fragCoord, center + vec2(150.0, -50.0)) - 12.0;
-        if (light2 < sd) {
-            sd = light2;
-            emissivity = vec3(0.3, 0.7, 1.0);
-        }
-
-        // 底部彩色光源
-        float light3 = distance(fragCoord, center + vec2(0.0, -100.0)) - 10.0;
-        if (light3 < sd) {
-            sd = light3;
-            emissivity = vec3(0.8, 0.2, 1.0);
-        }
+    if (params.frameCount > 0) {
+        mouseA.xy += 0.5;
+        mouseB.xy += 0.5;
+        mouseC.xy += 0.5;
     }
 
-    // ---- 鼠标绘制 ----
-    if (params.mouseLeftDown > 0 && params.frameCount > 0) {
-        vec2 mousePos = vec2(params.mouseX, params.mouseY);
-        vec2 mousePrev = vec2(params.mousePrevX, params.mousePrevY);
-        float radius = params.brushRadius * float(params.sdfHeight);
+    float d = MAX_FLOAT;
 
-        // 如果鼠标移动距离很小，画圆；否则画线段（保证轨迹连续）
-        float d;
-        if (length(mousePos - mousePrev) < 1.0) {
-            d = distance(fragCoord, mousePos) - radius;
-        } else {
-            d = sdSegment(fragCoord, mousePrev, mousePos) - radius;
-        }
-
-        // 只在距离更小时更新（SDF的并集操作）
-        if (d < max(0.0, sd)) {
-            sd = min(d, sd);
-            if (params.emissiveMode == 0) {
-                // 发光模式：彩虹色随时间变化
-                emissivity = pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
-            } else {
-                // 非发光模式：绘制障碍物
-                emissivity = vec3(0.0);
-            }
-        }
+    if (mouseB.z <= 0.0 && mouseC.z > 0.0) {
+        d = distance(fragCoord, mouseC.xy);
+    } else if (mouseA.z <= 0.0 && mouseB.z > 0.0 && mouseC.z > 0.0) {
+        d = sdSegment(fragCoord, mouseB.xy, mix(mouseB.xy, mouseC.xy, 0.5));
+    } else if (mouseA.z > 0.0 && mouseB.z > 0.0 && mouseC.z > 0.0) {
+        d = sdBezier(fragCoord, mix(mouseA.xy, mouseB.xy, 0.5), mouseB.xy,
+            mix(mouseB.xy, mouseC.xy, 0.5));
+    } else if (mouseA.z > 0.0 && mouseB.z > 0.0 && mouseC.z <= 0.0) {
+        d = sdSegment(fragCoord, mix(mouseA.xy, mouseB.xy, 0.5), mouseB.xy);
     }
 
-    sdf[idx] = vec4(sd, emissivity);
+    d -= params.brushRadius * float(params.sdfHeight);
+
+    bool blinking = (params.mouseMagic == 0) || (cos(params.time * 20.0) > 0.5);
+
+    if (d < max(0.0, sd) && params.keyToggled1 == 0 && blinking) {
+        sd = min(d, sd);
+        emissivity = getEmissivity() * float(params.mouseMagic == 0 || cos(params.time * 10.0) > 0.5);
+    }
+
+    sdf[x + y * params.sdfWidth] = vec4(sd, emissivity);
 }

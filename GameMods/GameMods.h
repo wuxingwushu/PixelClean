@@ -29,6 +29,7 @@ enum GameKeyEnum
 	ESC,
 	Key_1,
 	Key_2,
+	SPACE,
 };
 
 class GameMods

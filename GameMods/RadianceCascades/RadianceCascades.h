@@ -7,42 +7,53 @@
 #include "../../Vulkan/commandBuffer.h"
 #include "../../Vulkan/device.h"
 #include "../../Vulkan/image.h"
-#include "../../Vulkan/pipeline.h"
 #include "../../Vulkan/shader.h"
-#include "../../Vulkan/descriptorSetLayout.h"
-#include "../../Vulkan/descriptorPool.h"
-#include "../../Vulkan/descriptorSet.h"
-#include "../../Vulkan/sampler.h"
-#include "../../ImGui/imgui.h"
-
-// ============================================================================
-// RadianceCascades — 2D全局光照 GameMod
-//
-// 基于Radiance Cascades算法实现实时2D全局光照效果
-// 支持鼠标绘制场景（发光/非发光物体），实时计算多次反弹的间接光照
-//
-// 操作说明：
-//   鼠标左键拖动 - 绘制发光物体
-//   鼠标右键拖动 - 绘制墙壁（遮挡光线）
-//   C键          - 清空画布（全部变为空地）
-//   R键          - 重置为默认场景
-//   Esc键        - 退出返回菜单
-//
-// 算法原理：
-//   将2D光照分解为多个级联层级：
-//   - 低级联(cascade 0)：高空间分辨率、低方向分辨率、覆盖近距离
-//   - 高级联(cascade N)：低空间分辨率、高方向分辨率、覆盖远距离
-//   自底向上合并：辐射度 = 本级直接辐射度 + 可见性 × 上级联辐射度
-// ============================================================================
+#include "../../Imgui/imgui.h"
 
 namespace GAME {
+
+struct GPUParams {
+    float time;
+    float timeDelta;
+    int sdfWidth;
+    int sdfHeight;
+    float mouseX;
+    float mouseY;
+    float mousePrevX;
+    float mousePrevY;
+    int mouseLeftDown;
+    int mouseRightDown;
+    int frameCount;
+    int emissiveMode;
+    float brushRadius;
+    int c_sResX;
+    int c_sResY;
+    int c_dRes;
+    int nCascades;
+    float c_intervalLength;
+    float c_smoothDistScale;
+    int totalCascadeEntries;
+    int cascadeLevel;
+    float mouseSmoothAX;
+    float mouseSmoothAY;
+    float mouseSmoothBX;
+    float mouseSmoothBY;
+    int mouseSmoothADown;
+    int mouseSmoothBDown;
+    int mouseMagic;
+    int keyToggledSpace;
+    int keyToggled1;
+    float mouseClickStartX;
+    float mouseClickStartY;
+    float mouseRawX;
+    float mouseRawY;
+};
 
 class RadianceCascades : public GameMods, Configuration {
 public:
     RadianceCascades(Configuration wConfiguration);
     ~RadianceCascades();
 
-    // ---- GameMods接口 ----
     void MouseMove(double xpos, double ypos) override;
     void MouseRoller(int z) override;
     void KeyDown(GameKeyEnum moveDirection) override;
@@ -54,83 +65,72 @@ public:
     void GameUI() override;
 
 private:
-    // ---- 级联参数常量 ----
-    static constexpr int C_DRES = 16;             // 基础方向分辨率
-    static constexpr int N_CASCADES = 4;          // 级联总数
-    static constexpr float C_INTERVAL_LENGTH = 7.0f; // cascade 0 光线行进长度
-    static constexpr float C_SMOOTH_DIST_SCALE = 10.0f; // 平滑距离缩放
-    static constexpr float BRUSH_RADIUS = 0.02f;  // 画笔半径（占屏幕高度比例）
+    static constexpr int C_DRES = 16;
+    static constexpr int N_CASCADES = 5;
+    static constexpr float BRUSH_RADIUS = 0.01f;
+    static constexpr float MAGIC = 1e25f;
 
-    // ---- 根据窗口大小自动适应的级联参数 ----
-    int mCascadeResX = 320;                       // cascade 0 空间分辨率X（=窗口宽度/4）
-    int mCascadeResY = 180;                       // cascade 0 空间分辨率Y（=窗口高度/4）
+    int mCascadeResX = 320;
+    int mCascadeResY = 180;
 
-    // ---- GPU缓冲区 ----
-    VulKan::Buffer* mParamBuffer = nullptr;       // 参数缓冲区
-    VulKan::Buffer* mSDFBuffer = nullptr;         // SDF缓冲区（持久化）
-    VulKan::Buffer* mCascadeBufferA = nullptr;    // 级联缓冲区A（乒乓）
-    VulKan::Buffer* mCascadeBufferB = nullptr;    // 级联缓冲区B（乒乓）
-    VulKan::Buffer* mOutputBuffer = nullptr;      // 输出缓冲区
+    VulKan::Buffer* mParamBuffer = nullptr;
+    VulKan::Buffer* mSDFBuffer = nullptr;
+    VulKan::Buffer* mCascadeBufferA = nullptr;
+    VulKan::Buffer* mCascadeBufferB = nullptr;
+    VulKan::Buffer* mOutputBuffer = nullptr;
+    VulKan::Image* mOutputImage = nullptr;
 
-    // ---- 纹理与显示 ----
-    VulKan::Image* mOutputImage = nullptr;         // 输出纹理（UNORM格式，GPU端直接拷贝）
-
-    // ---- 计算管线资源 ----
     VulKan::CommandPool* mComputeCommandPool = nullptr;
     VulKan::CommandBuffer* mComputeCommandBuffer = nullptr;
 
-    // SDF管线
     VkShaderModule mSDFShaderModule = VK_NULL_HANDLE;
     VkDescriptorSetLayout mSDFDescriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout mSDFPipelineLayout = VK_NULL_HANDLE;
     VkPipeline mSDFPipeline = VK_NULL_HANDLE;
     VkDescriptorSet mSDFDescriptorSet = VK_NULL_HANDLE;
 
-    // Cascade管线
     VkShaderModule mCascadeShaderModule = VK_NULL_HANDLE;
     VkDescriptorSetLayout mCascadeDescriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout mCascadePipelineLayout = VK_NULL_HANDLE;
     VkPipeline mCascadePipeline = VK_NULL_HANDLE;
     VkDescriptorSet mCascadeDescriptorSets[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
 
-    // Display管线
     VkShaderModule mDisplayShaderModule = VK_NULL_HANDLE;
     VkDescriptorSetLayout mDisplayDescriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout mDisplayPipelineLayout = VK_NULL_HANDLE;
     VkPipeline mDisplayPipeline = VK_NULL_HANDLE;
     VkDescriptorSet mDisplayDescriptorSets[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
 
-    // 描述符池（所有管线共用）
     VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
 
-    // ---- ImGui纹理显示 ----
     VkDescriptorSetLayout mImGuiDescriptorSetLayout = VK_NULL_HANDLE;
     VkDescriptorPool mImGuiDescriptorPool = VK_NULL_HANDLE;
     VkDescriptorSet mImGuiDescriptorSet = VK_NULL_HANDLE;
     VkSampler mImGuiSampler = VK_NULL_HANDLE;
 
-    // ---- 状态 ----
     int mFrameCount = 0;
-    bool mCascadeToggle = false;
     double mMouseX = 0, mMouseY = 0;
     double mMousePrevX = 0, mMousePrevY = 0;
     bool mMouseLeftDown = false;
     bool mMouseRightDown = false;
     float mTime = 0.0f;
+    float mMouseAX = 0.0f, mMouseAY = 0.0f, mMouseAZ = 0.0f;
+    float mMouseBX = 0.0f, mMouseBY = 0.0f, mMouseBZ = 0.0f;
+    float mMouseCX = 0.0f, mMouseCY = 0.0f, mMouseCZ = 0.0f;
+    bool mInitialized = false;
+    bool mKeyToggledSpace = false;
+    bool mKeyToggled1 = false;
+    float mMouseClickStartX = 0.0f;
+    float mMouseClickStartY = 0.0f;
 
-    // ---- 辅助函数 ----
     int calculateTotalCascadeEntries() const;
+    int calculateCascadeLevelEntries(int level) const;
     void createBuffers();
     void createComputePipelines();
     void createDescriptorSets();
     void createImGuiResources();
     void dispatchCompute();
     void cleanup();
-
-    // 着色器SPIR-V文件路径
-    static const std::string SDF_SHADER_PATH;
-    static const std::string CASCADE_SHADER_PATH;
-    static const std::string DISPLAY_SHADER_PATH;
 };
 
-}
+} // namespace GAME

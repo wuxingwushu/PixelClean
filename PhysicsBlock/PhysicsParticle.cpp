@@ -11,11 +11,15 @@ namespace PhysicsBlock
      * @details 初始化粒子的位置、质量、质量倒数和摩擦因数
      * 如果质量为 FLOAT_MAX，则质量倒数设为 0，表示粒子不可移动
      */
-    PhysicsParticle::PhysicsParticle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction) : OldPos(Pos), pos(Pos), mass(Mass), invMass(1.0 / Mass), friction(Friction)
+    PhysicsParticle::PhysicsParticle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction) : OldPos(Pos), pos(Pos), mass(Mass), friction(Friction)
     {
-        if (mass == FLOAT_MAX)
+        if (mass == FLOAT_MAX || mass <= FLOAT_(0))
         {
             invMass = 0;
+        }
+        else
+        {
+            invMass = FLOAT_(1.0) / mass;
         }
     }
 

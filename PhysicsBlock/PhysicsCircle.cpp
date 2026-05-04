@@ -21,8 +21,15 @@ namespace PhysicsBlock
             MomentInertia = FLOAT_MAX;
             invMomentInertia = 0;
         }else{
-            MomentInertia = FLOAT_(0.5) * mass * radius * radius; // 圆形转动惯量公式
-            invMomentInertia = FLOAT_(1.0) / MomentInertia;
+            MomentInertia = FLOAT_(0.5) * mass * radius * radius;
+            if (MomentInertia <= FLOAT_(0))
+            {
+                invMomentInertia = 0;
+            }
+            else
+            {
+                invMomentInertia = FLOAT_(1.0) / MomentInertia;
+            }
         }
     }
     

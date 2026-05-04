@@ -1,5 +1,6 @@
 #pragma once
 #include <assert.h>
+#include <type_traits>
 
 /**
  * @brief   板块移动信息结构体
@@ -21,6 +22,9 @@ struct MovePlateInfo
 template<typename PlateT>
 class MovePlate
 {
+	static_assert(std::is_trivially_copyable<PlateT>::value,
+		"MovePlate requires a trivially copyable PlateT type. "
+		"Use a pointer type or POD struct.");
     /**
      * @brief   板块生成回调函数类型
      * @param   mT 板块指针

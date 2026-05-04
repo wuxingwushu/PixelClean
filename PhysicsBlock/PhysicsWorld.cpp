@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <map>
 #include <iostream>
+#include <climits>
 #include "PhysicsBaseArbiter.hpp"
 #include "PhysicsBaseCollide.hpp"
 
@@ -102,6 +103,13 @@ namespace PhysicsBlock
         }
 #endif
 
+        for (auto i : CollideGroupS)
+        {
+            DeleteArbiter(i.second);
+        }
+        CollideGroupS.clear();
+        CollideGroupVector.clear();
+
         if (GridWind != nullptr)
         {
             delete GridWind;
@@ -146,10 +154,6 @@ namespace PhysicsBlock
         for (auto i : PhysicsLineS)
         {
             delete i;
-        }
-        for (auto i : CollideGroupS)
-        {
-            DeleteArbiter(i.second);
         }
     }
 
@@ -1101,6 +1105,7 @@ namespace PhysicsBlock
         case PhysicsObjectEnum::line:
         {
             PhysicsLine *line = (PhysicsLine *)Object;
+            mGridSearch.Remove(line);
             for (size_t i = 0; i < PhysicsLineS.size(); ++i)
             {
                 if (PhysicsLineS[i] == line)
@@ -1434,7 +1439,10 @@ namespace PhysicsBlock
                 PhysicsJoint *joint = new PhysicsJoint(data["PhysicsJointS"][i]);
                 joint->body1 = (PhysicsAngle *)GetIndexPtr(data["PhysicsJointS"][i]["body1Type"], data["PhysicsJointS"][i]["body1"]);
                 joint->body2 = (PhysicsAngle *)GetIndexPtr(data["PhysicsJointS"][i]["body2Type"], data["PhysicsJointS"][i]["body2"]);
-                AddObject(joint);
+                if (joint->body1 && joint->body2)
+                    AddObject(joint);
+                else
+                    delete joint;
             }
         }
         if (data.find("BaseJunctionS") != data.end())
@@ -1451,23 +1459,35 @@ namespace PhysicsBlock
                     JunctionSS = new PhysicsJunctionSS(data["BaseJunctionS"][i]);
                     JunctionSS->mParticle1 = (PhysicsAngle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
                     JunctionSS->mParticle2 = (PhysicsAngle *)GetIndexPtr(data["BaseJunctionS"][i]["body2Type"], data["BaseJunctionS"][i]["body2"]);
-                    AddObject(JunctionSS);
+                    if (JunctionSS->mParticle1 && JunctionSS->mParticle2)
+                        AddObject(JunctionSS);
+                    else
+                        delete JunctionSS;
                     break;
                 case CordObjectType::JunctionA:
                     JunctionS = new PhysicsJunctionS(data["BaseJunctionS"][i]);
                     JunctionS->mParticle = (PhysicsAngle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
-                    AddObject(JunctionS);
+                    if (JunctionS->mParticle)
+                        AddObject(JunctionS);
+                    else
+                        delete JunctionS;
                     break;
                 case CordObjectType::JunctionP:
                     JunctionP = new PhysicsJunctionP(data["BaseJunctionS"][i]);
                     JunctionP->mParticle = (PhysicsParticle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
-                    AddObject(JunctionP);
+                    if (JunctionP->mParticle)
+                        AddObject(JunctionP);
+                    else
+                        delete JunctionP;
                     break;
                 case CordObjectType::JunctionPP:
                     JunctionPP = new PhysicsJunctionPP(data["BaseJunctionS"][i]);
                     JunctionPP->mParticle1 = (PhysicsParticle *)GetIndexPtr(data["BaseJunctionS"][i]["body1Type"], data["BaseJunctionS"][i]["body1"]);
                     JunctionPP->mParticle2 = (PhysicsParticle *)GetIndexPtr(data["BaseJunctionS"][i]["body2Type"], data["BaseJunctionS"][i]["body2"]);
-                    AddObject(JunctionPP);
+                    if (JunctionPP->mParticle1 && JunctionPP->mParticle2)
+                        AddObject(JunctionPP);
+                    else
+                        delete JunctionPP;
                     break;
 
                 default:
@@ -1480,15 +1500,21 @@ namespace PhysicsBlock
 #define CollideGroupVectorContrarySerialization(Arbiter_, Type1, Type2)                                                  \
     Type1##1 = (Type1 *)GetIndexPtr(data["CollideGroupVector"][i]["body1Type"], data["CollideGroupVector"][i]["body1"]); \
     Type2##2 = (Type2 *)GetIndexPtr(data["CollideGroupVector"][i]["body2Type"], data["CollideGroupVector"][i]["body2"]); \
-    Arbiter_##Ptr = Pool##Arbiter_.newElement(Type1##1, Type2##2);                                                       \
-    Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]);                                             \
-    NewCollideGroup.push_back(Arbiter_##Ptr);
+    if (Type1##1 && Type2##2)                                                                                            \
+    {                                                                                                                    \
+        Arbiter_##Ptr = Pool##Arbiter_.newElement(Type1##1, Type2##2);                                                   \
+        Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]);                                         \
+        NewCollideGroup.push_back(Arbiter_##Ptr);                                                                        \
+    }
 
 #define CollideGroupVectorContrarySerializationMapFormwork(Arbiter_, Type)                                             \
     Type##1 = (Type *)GetIndexPtr(data["CollideGroupVector"][i]["body1Type"], data["CollideGroupVector"][i]["body1"]); \
-    Arbiter_##Ptr = Pool##Arbiter_.newElement(Type##1, wMapFormwork);                                                  \
-    Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]);                                           \
-    NewCollideGroup.push_back(Arbiter_##Ptr);
+    if (Type##1 && wMapFormwork)                                                                                       \
+    {                                                                                                                   \
+        Arbiter_##Ptr = Pool##Arbiter_.newElement(Type##1, wMapFormwork);                                               \
+        Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]);                                        \
+        NewCollideGroup.push_back(Arbiter_##Ptr);                                                                       \
+    }
 
             PhysicsShape *PhysicsShape1, *PhysicsShape2;
             PhysicsParticle *PhysicsParticle1, *PhysicsParticle2;
@@ -1583,29 +1609,33 @@ namespace PhysicsBlock
         default:
             break;
         }
-        return 0;
+        return UINT_MAX;
     }
     void *PhysicsWorld::GetIndexPtr(PhysicsObjectEnum Enum, unsigned int index)
     {
         switch (Enum)
         {
         case PhysicsObjectEnum::shape:
-            return PhysicsShapeS[index];
+            if (index < PhysicsShapeS.size())
+                return PhysicsShapeS[index];
             break;
         case PhysicsObjectEnum::particle:
-            return PhysicsParticleS[index];
+            if (index < PhysicsParticleS.size())
+                return PhysicsParticleS[index];
             break;
         case PhysicsObjectEnum::circle:
-            return PhysicsCircleS[index];
+            if (index < PhysicsCircleS.size())
+                return PhysicsCircleS[index];
             break;
         case PhysicsObjectEnum::line:
-            return PhysicsLineS[index];
+            if (index < PhysicsLineS.size())
+                return PhysicsLineS[index];
             break;
 
         default:
             break;
         }
-        return 0;
+        return nullptr;
     }
 #endif
 }

@@ -13,7 +13,14 @@ namespace PhysicsBlock
         radius = Modulus(begin_ - end_);
         angle = EdgeVecToCosAngleFloat(begin_ - end_);
         MomentInertia = radius * radius * mass_ / 12;
-        invMomentInertia = 1.0 / MomentInertia;
+        if (MomentInertia <= FLOAT_(0))
+        {
+            invMomentInertia = 0;
+        }
+        else
+        {
+            invMomentInertia = FLOAT_(1.0) / MomentInertia;
+        }
         radius /= 2;
     }
 

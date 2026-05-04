@@ -11,21 +11,26 @@ uint32_t* readFile(uint32_t& length, const char* filename) {
     FILE* fp = fopen(filename, "rb");
     if (fp == NULL) {
         printf("Could not find or open file: %s\n", filename);
+        length = 0;
+        return nullptr;
     }
 
-    // get file size.
     fseek(fp, 0, SEEK_END);
     long filesize = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
+    if (filesize <= 0) {
+        fclose(fp);
+        length = 0;
+        return nullptr;
+    }
+
     long filesizepadded = long(ceil(filesize / 4.0)) * 4;
 
-    // read file contents.
     char* str = new char[filesizepadded];
     fread(str, filesize, sizeof(char), fp);
     fclose(fp);
 
-    // data padding. 
     for (int i = filesize; i < filesizepadded; ++i) {
         str[i] = 0;
     }

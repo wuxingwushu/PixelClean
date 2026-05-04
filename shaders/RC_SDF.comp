@@ -209,10 +209,10 @@ void main() {
     int y = int(idx) / params.sdfWidth;
 
     // ---- 清屏处理 ----
-    // 将所有像素重置为 50.0（空空间），emissivity=(0,0,0)
-    // 50.0 > 0 使级联进入射线追踪；不是 MAX_FLOAT 避免了双线性插值污染
+    // 将所有像素重置为 MAX_FLOAT（无穷远空空间），emissivity=(0,0,0)
+    // MAX_FLOAT > 0 使级联进入射线追踪；射线从空空间出发会立即 miss 并向顶层合并
     if (params.clearScreen != 0) {
-        sdf[x + y * params.sdfWidth] = vec4(50.0, 0.0, 0.0, 0.0);
+        sdf[x + y * params.sdfWidth] = vec4(MAX_FLOAT, 0.0, 0.0, 0.0);
         return;
     }
 
@@ -221,8 +221,8 @@ void main() {
 
     // ---- 读取当前像素 SDF 数据 ----
     vec4 data = sdf[x + y * params.sdfWidth];
-    // 帧 0 时 SDF 缓冲区未初始化，使用显式默认值 50.0
-    float sd = (params.frameCount != 0) ? data.x : 50.0;
+    // 帧 0 时 SDF 缓冲区未初始化，使用显式默认值 MAX_FLOAT（与参考代码一致）
+    float sd = (params.frameCount != 0) ? data.x : MAX_FLOAT;
     vec3 emissivity = (params.frameCount != 0) ? data.yzw : vec3(0.0);
 
     // ---- 鼠标历史 A/B/C（贝塞尔曲线控制点） ----

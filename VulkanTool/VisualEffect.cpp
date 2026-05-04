@@ -105,10 +105,16 @@ namespace VulKan {
 
 		delete mPixelTexture;
 
-		for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
-		{
-			delete mUniformParams[1]->mBuffers[i];
-			delete mCommandBuffer[i];
+		if (wSwapChain != nullptr) {
+			for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
+			{
+				if (mUniformParams.size() > 1 && i < mUniformParams[1]->mBuffers.size()) {
+					delete mUniformParams[1]->mBuffers[i];
+				}
+				if (mCommandBuffer != nullptr) {
+					delete mCommandBuffer[i];
+				}
+			}
 		}
 		for (size_t i = 0; i < mUniformParams.size(); ++i)
 		{

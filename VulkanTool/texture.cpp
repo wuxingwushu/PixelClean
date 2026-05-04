@@ -8,8 +8,6 @@ namespace VulKan {
 	Texture::Texture(Device* device, const CommandPool* commandPool, const std::string& imageFilePath, Sampler* sampler)
 		:wDevice(device), wCommandPool(commandPool)
 	{
-		wDevice = device;
-
 		int texWidth, texHeight, texChannles;
 		stbi_uc* pixels = stbi_load(imageFilePath.c_str(), &texWidth, &texHeight, &texChannles, STBI_rgb_alpha);
 

@@ -145,16 +145,6 @@ vec4 sampleDrawing(vec2 P) {
     vec4 s01 = sdf[p0.x + p1.y * params.sdfWidth];
     vec4 s11 = sdf[p1.x + p1.y * params.sdfWidth];
 
-    // ---- 修复双线性插值污染 ----
-    // 将 sd 值 clamp 到 50.0，防止 MAX_FLOAT（≈3.4e38）污染插值
-    // 50.0 远大于级联 tMax（最多 ~2200 像素），被视为"空空间"
-    // 但足够小，不会在浮点混合中压倒正常值
-    s00.x = min(s00.x, 50.0);
-    s10.x = min(s10.x, 50.0);
-    s01.x = min(s01.x, 50.0);
-    s11.x = min(s11.x, 50.0);
-
-    // 双线性插值
     vec4 data = mix(mix(s00, s10, w.x), mix(s01, s11, w.x), w.y);
 
     // ---- 直线段实时预览 ----

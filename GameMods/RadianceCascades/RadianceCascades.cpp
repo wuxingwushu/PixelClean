@@ -169,9 +169,13 @@ void RadianceCascades::createBuffers() {
     VkExtent2D ext = mSwapChain->getExtent();
     int sdfW = (int)ext.width;
     int sdfH = (int)ext.height;
-    // 级联分辨率 = SDF 分辨率的 1/4
-    mCascadeResX = sdfW / 4;
-    mCascadeResY = sdfH / 4;
+    // 级联分辨率：使用参考公式动态计算，最大化利用可用缓冲区空间
+    // 参考：ivec2 c0_sRes = ivec2(sqrt(4.0*nPixels/(4.0+c_dRes*(nCascades-1))) * screenRes/screenRes.yx)
+    int nPixels = sdfW * sdfH;
+    float denom = 4.0f + (float)(C_DRES * (N_CASCADES - 1));
+    float ratio = (float)sdfW / (float)sdfH;
+    mCascadeResX = (int)std::sqrt(4.0f * nPixels / denom * ratio);
+    mCascadeResY = (int)std::sqrt(4.0f * nPixels / denom / ratio);
     int cascadeTotal = calculateTotalCascadeEntries();
 
     auto dev = mDevice;

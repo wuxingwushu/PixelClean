@@ -78,6 +78,10 @@ namespace VulKan {
 
 		uint32_t filelength;
 		uint32_t* code = readFile(filelength, Comp);
+		if (code == nullptr || filelength == 0) {
+			throw std::runtime_error("Error: failed to read compute shader file");
+		}
+
 		VkShaderModuleCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		createInfo.pCode = code;

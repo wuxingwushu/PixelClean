@@ -129,14 +129,6 @@ vec4 sampleDrawing(vec2 P) {
     vec4 s10 = sdf[p1.x + p0.y * params.sdfWidth];
     vec4 s01 = sdf[p0.x + p1.y * params.sdfWidth];
     vec4 s11 = sdf[p1.x + p1.y * params.sdfWidth];
-
-    // ---- 修复双线性插值污染 ----
-    // clamp sd 到 50.0，防止 MAX_FLOAT 污染
-    s00.x = min(s00.x, 50.0);
-    s10.x = min(s10.x, 50.0);
-    s01.x = min(s01.x, 50.0);
-    s11.x = min(s11.x, 50.0);
-
     vec4 data = mix(mix(s00, s10, w.x), mix(s01, s11, w.x), w.y);
 
     // ---- 直线段实时预览 ----

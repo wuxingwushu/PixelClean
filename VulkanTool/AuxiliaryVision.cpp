@@ -42,7 +42,7 @@ namespace VulKan {
 		AuxiliarySpotS->endupdateBufferByMap();
 		// 圆
 		AuxiliaryCircleS = new Buffer(
-			wDevice, sizeof(AuxiliarySpot) * Number,
+			wDevice, sizeof(AuxiliaryCircle) * Number,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
@@ -73,13 +73,16 @@ namespace VulKan {
 		delete AuxiliaryCircleS;
 
 		//资源
-		for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
-		{
-			delete mCommandBuffer[i];
+		if (wSwapChain != nullptr) {
+			for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
+			{
+				delete mCommandBuffer[i];
+			}
 		}
 		delete mCommandBuffer;
 		delete mDescriptorSetLine;
 		delete mDescriptorSetSpot;
+		delete mDescriptorSetCircle;
 		delete mDescriptorPool;
 		delete mCommandPool;
 	}
@@ -148,6 +151,7 @@ namespace VulKan {
 	void AuxiliaryVision::Begin() {
 		//线
 		LinePointerHOST = (AuxiliaryLineSpot*)AuxiliaryLineS->getupdateBufferByMap();
+		AuxiliaryLineSpot* const LineBufferEnd = LinePointerHOST + (Number * 2);
 		//静态
 		if (StaticLineVertexUpData) {
 			StaticLineVertexUpData = false;
@@ -155,6 +159,7 @@ namespace VulKan {
 			StaticLineVertexDeviation = 0;
 			for (auto L : StaticLineVertex)
 			{
+				if (LinePointerHOST >= LineBufferEnd) break;
 				*LinePointerHOST = L;
 				++LinePointerHOST;
 				++StaticLineVertexDeviation;
@@ -167,13 +172,14 @@ namespace VulKan {
 		}
 		if (StaticLineUpData) {
 			StaticLineUpData = false;
-			int Number;
+			int FuncNumber;
 			StaticLineDeviation = 0;
 			for (auto& i : *StaticContinuousAuxiliaryLine) {
 				if (i.Size != 0) {
-					Number = i.Function(LinePointerHOST, i.Pointer, i.Size);
-					StaticLineDeviation += Number;
-					LinePointerHOST += Number;
+					if (LinePointerHOST >= LineBufferEnd) break;
+					FuncNumber = i.Function(LinePointerHOST, i.Pointer, i.Size);
+					StaticLineDeviation += FuncNumber;
+					LinePointerHOST += FuncNumber;
 				}
 			}
 			LineNumber += StaticLineDeviation;
@@ -185,6 +191,7 @@ namespace VulKan {
 		//动态
 		for (auto& i : *ContinuousAuxiliaryLine)
 		{
+			if (LinePointerHOST + 2 > LineBufferEnd) break;
 			LinePointerHOST->Pos = { *i.Head, 0.0};
 			LinePointerHOST->Color = i.Color;
 			++LinePointerHOST;
@@ -194,6 +201,7 @@ namespace VulKan {
 		}
 		for (auto& i : *ContinuousAuxiliaryForce)
 		{
+			if (LinePointerHOST + 2 > LineBufferEnd) break;
 			LinePointerHOST->Pos = { *i.pos, 0.0f };
 			LinePointerHOST->Color = i.Color;
 			++LinePointerHOST;
@@ -206,6 +214,7 @@ namespace VulKan {
 		LineNumber += LineVertex.size();
 		while (LineVertex.size() != 0)
 		{
+			if (LinePointerHOST >= LineBufferEnd) break;
 			*LinePointerHOST = LineVertex.back();
 			++LinePointerHOST;
 			LineVertex.pop_back();
@@ -213,6 +222,7 @@ namespace VulKan {
 		
 		//点
 		SpotPointerHOST = (AuxiliarySpot*)AuxiliarySpotS->getupdateBufferByMap();
+		AuxiliarySpot* const SpotBufferEnd = SpotPointerHOST + Number;
 		//静态
 		if (StaticSpotVertexUpData) {
 			StaticSpotVertexUpData = false;
@@ -220,6 +230,7 @@ namespace VulKan {
 			StaticSpotVertexDeviation = 0;
 			for (auto S : StaticSpotVertex)
 			{
+				if (SpotPointerHOST >= SpotBufferEnd) break;
 				*SpotPointerHOST = S;
 				++SpotPointerHOST;
 				++StaticSpotVertexDeviation;
@@ -233,24 +244,26 @@ namespace VulKan {
 		if (StaticSpotUpData) {
 			StaticSpotUpData = false;
 			StaticSpotDeviation = 0;
-			int Number;
+			int FuncNumber;
 			for (auto& i : *StaticContinuousAuxiliarySpot) {
 				if (i.Size != 0) {
-					Number = i.Function(SpotPointerHOST, i.Pointer, i.Size);
-					StaticSpotDeviation += Number;
-					SpotPointerHOST += Number;
+					if (SpotPointerHOST >= SpotBufferEnd) break;
+					FuncNumber = i.Function(SpotPointerHOST, i.Pointer, i.Size);
+					StaticSpotDeviation += FuncNumber;
+					SpotPointerHOST += FuncNumber;
 				}
 			}
 			SpotNumber += StaticSpotDeviation;
 		}
 		else {
 			SpotNumber += StaticSpotDeviation;
-			SpotPointerHOST += SpotNumber;
+			SpotPointerHOST += StaticSpotDeviation;
 		}
 		//动态
 		SpotNumber += ContinuousAuxiliarySpot->GetNumber();
 		for (auto& i : *ContinuousAuxiliarySpot)
 		{
+			if (SpotPointerHOST >= SpotBufferEnd) break;
 			SpotPointerHOST->Pos = { *i.pos, 0.0f };
 			SpotPointerHOST->Color = i.Color;
 			++SpotPointerHOST;
@@ -259,35 +272,40 @@ namespace VulKan {
 		SpotNumber += SpotVertex.size();
 		while (SpotVertex.size() != 0)
 		{
+			if (SpotPointerHOST >= SpotBufferEnd) break;
 			*SpotPointerHOST = SpotVertex.back();
 			++SpotPointerHOST;
 			SpotVertex.pop_back();
 		}
 		// 圆
 		CirclePointerHOST = (AuxiliaryCircle*)AuxiliaryCircleS->getupdateBufferByMap();
+		AuxiliaryCircle* const CircleBufferEnd = CirclePointerHOST + Number;
 		if (StaticCircleVertexUpData) {
 			StaticCircleVertexUpData = false;
+			StaticCircleVertexDeviation = 0;
 			for (auto S : StaticCircleVertex)
 			{
+				if (CirclePointerHOST >= CircleBufferEnd) break;
 				*CirclePointerHOST = S;
 				++CirclePointerHOST;
+				++StaticCircleVertexDeviation;
 			}
-			StaticCircleVertexDeviation = StaticCircleVertex.size();
 		}
 		CircleNumber = StaticCircleVertexDeviation;
 		while (CircleVertex.size() != 0)
 		{
+			if (CirclePointerHOST >= CircleBufferEnd) break;
 			*CirclePointerHOST = CircleVertex.back();
 			++CirclePointerHOST;
 			CircleVertex.pop_back();
+			++CircleNumber;
 		}
-		CircleNumber += CircleVertex.size();
 	}
 
 	void AuxiliaryVision::End() {
 		//线段多余
 		if (LineMax > LineNumber) {
-			for (size_t i = LineNumber; i <= LineMax; ++i)
+			for (size_t i = LineNumber; i < LineMax; ++i)
 			{
 				LinePointerHOST->Pos.z = -10000.0;
 				++LinePointerHOST;
@@ -299,7 +317,7 @@ namespace VulKan {
 
 		//点多余
 		if (SpotMax > SpotNumber) {
-			for (size_t i = SpotNumber; i <= SpotMax; ++i)
+			for (size_t i = SpotNumber; i < SpotMax; ++i)
 			{
 				SpotPointerHOST->Pos.z = -10000.0;
 				++SpotPointerHOST;
@@ -311,7 +329,7 @@ namespace VulKan {
 
 		//圆多余
 		if (CircleMax > CircleNumber) {
-			for (size_t i = CircleNumber; i <= CircleMax; ++i)
+			for (size_t i = CircleNumber; i < CircleMax; ++i)
 			{
 				CirclePointerHOST->Pos.z = -10000.0;
 				++CirclePointerHOST;

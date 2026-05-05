@@ -48,8 +48,9 @@ endif()
 
 # 设置 include 的引用头文件路径
 include_directories(
-	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/GLFW/include
+	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/glfw/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/include
+	${CMAKE_BINARY_DIR}/Environment/libevent/include  # libevent 的 event-config.h 生成在这里
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment  # zlib 源代码父目录，支持 #include "zlib/zlib.h"
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/Soloud/include
@@ -68,25 +69,14 @@ endif()
 # 设置 lib 的文件路径（区分 Debug / Release）
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	link_directories(
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/GLFW/lib
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/debug/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/lib/Debug
 	)
 else()
 	link_directories(
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/GLFW/lib
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/lib
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/lib/Release
 	)
 endif()
 
-
-
-if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
-	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/debug/bin ${CMAKE_CURRENT_BINARY_DIR})
-else()
-	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/bin ${CMAKE_CURRENT_BINARY_DIR})
-endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/PhysicsBlock.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Info.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
@@ -131,6 +121,8 @@ add_custom_target(compile_shaders ALL
     VERBATIM
 )
 
+add_subdirectory(Environment/glfw)
+add_subdirectory(Environment/libevent)
 add_subdirectory(Environment/zlib)
 add_subdirectory(Environment/Soloud)
 add_subdirectory(Vulkan)
@@ -191,20 +183,14 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		PhysicsBlockLib
 		SoloudTestLib
 		RadianceCascadesLib
+		glfw
+		libevent
 
 		# Soloud 音频库
 		soloud
 
 		# VulKan API
 		vulkan-1.lib
-
-		#跨平台窗口
-		glfw3.lib
-
-		#网络协议
-		event.lib
-		event_core.lib
-		event_extra.lib
 
 		# zlib 数据压缩
 		zlib
@@ -243,20 +229,14 @@ else()
 		PhysicsBlockLib
 		SoloudTestLib
 		RadianceCascadesLib
+		glfw
+		libevent
 
 		# Soloud 音频库
 		soloud
 	
 		# VulKan API
 		vulkan-1.lib 
-		
-		#跨平台窗口
-		glfw3.lib
-	
-		#网络协议
-		event.lib
-		event_core.lib
-		event_extra.lib
 
 		# zlib 数据压缩
 		zlib

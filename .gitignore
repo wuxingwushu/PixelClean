@@ -7,3 +7,5 @@ nul
 Environment/*
 !Environment/Soloud/
 !Environment/zlib/
+!Environment/libevent/
+!Environment/glfw/

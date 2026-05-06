@@ -13,6 +13,7 @@ namespace PhysicsBlock
      */
     PhysicsShape::PhysicsShape(Vec2_ Pos, glm::ivec2 Size) : PhysicsAngle(Pos), BaseOutline(Size.x, Size.y)
     {
+        type = PhysicsObjectEnum::shape;
     }
 
     /**

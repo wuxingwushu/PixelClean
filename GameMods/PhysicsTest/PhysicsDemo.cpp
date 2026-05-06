@@ -1108,4 +1108,112 @@ namespace PhysicsBlock
 		(*myPhysicsWorld)->AddObject(PhysicsCircle1);
 	}
 
+	void PhysicsDemo18(PhysicsWorld** myPhysicsWorld, Camera* mCamera)
+	{
+		if ((*myPhysicsWorld) != nullptr)
+		{
+			delete (*myPhysicsWorld);
+		}
+		(*myPhysicsWorld) = new PhysicsBlock::PhysicsWorld({ 0.0, -9.8 }, false);
+		int MapSize = 20;
+
+		// 设置摄像机位置
+		mCamera->setCameraPos({ 0, 0, MapSize * 2 });
+
+		PhysicsBlock::MapStatic* mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
+		{
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
+		}
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(0, i).Entity = true;
+			mMapStatic->at(0, i).Collision = true;
+			mMapStatic->at(MapSize - 1, i).Entity = true;
+			mMapStatic->at(MapSize - 1, i).Collision = true;
+			mMapStatic->at(i, 0).Entity = true;
+			mMapStatic->at(i, 0).Collision = true;
+		}
+		mMapStatic->SetCentrality({ MapSize / 2, MapSize / 2 });
+		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
+
+		// === PhysicsAssembly Demo ===
+		PhysicsBlock::PhysicsAssembly* assembly = new PhysicsBlock::PhysicsAssembly();
+
+		// 1. 一个矩形形状 — 主体
+		const FLOAT_ BR = 1.5;
+		PhysicsBlock::PhysicsShape* bodyShape = new PhysicsBlock::PhysicsShape({ 0, 0 }, { 3, 3 });
+		for (size_t i = 0; i < (bodyShape->width * bodyShape->height); ++i)
+		{
+			bodyShape->at(i).Entity = false;
+			bodyShape->at(i).Collision = false;
+			bodyShape->at(i).mass = 1;
+		}
+		for (int x = 0; x < 3; ++x)
+		{
+			for (int y = 0; y < 3; ++y)
+			{
+				if (x == 1 && y == 1) continue;
+				bodyShape->at(x, y).Entity = true;
+				bodyShape->at(x, y).Collision = true;
+			}
+		}
+		bodyShape->UpdateAll();
+		bodyShape->pos = { 0, -4 };
+		bodyShape->angle = 0;
+		assembly->Add(bodyShape);
+
+		// 2. 一个圆形 — 顶部轮子
+		PhysicsBlock::PhysicsCircle* topCircle = new PhysicsBlock::PhysicsCircle({ 0, -1.5 }, BR, 1);
+		assembly->Add(topCircle);
+
+		// 3. 小型圆 — 分布在主体周围（用作 PhysicsJunctionSS 的端点）
+		PhysicsBlock::PhysicsCircle* p1 = new PhysicsBlock::PhysicsCircle({ -BR, -4 }, 0.2, 1);
+		PhysicsBlock::PhysicsCircle* p2 = new PhysicsBlock::PhysicsCircle({ BR, -4 }, 0.2, 1);
+		PhysicsBlock::PhysicsCircle* p3 = new PhysicsBlock::PhysicsCircle({ 0, -7 }, 0.2, 1);
+		assembly->Add(p1);
+		assembly->Add(p2);
+		assembly->Add(p3);
+
+		// 4. 线段 — 连接两个小圆
+		PhysicsBlock::PhysicsLine* line1 = new PhysicsBlock::PhysicsLine({ -BR, -4 }, { BR, -4 }, 1);
+		assembly->Add(line1);
+
+		// 5. 用 PhysicsJoint 将顶部圆和主体刚性连接
+		PhysicsBlock::PhysicsJoint* jointCS = new PhysicsBlock::PhysicsJoint;
+		jointCS->Set(topCircle, bodyShape, { 0, -2.5 });
+
+		// 6. 用 PhysicsJunctionSS 将小圆连接到主体（绳索约束）
+		PhysicsBlock::PhysicsJunctionSS* juncP1 = new PhysicsBlock::PhysicsJunctionSS(bodyShape, { 0, -1.0 }, p1, { 0, 0 }, PhysicsBlock::cord);
+		PhysicsBlock::PhysicsJunctionSS* juncP2 = new PhysicsBlock::PhysicsJunctionSS(bodyShape, { 1.0, 0 }, p2, { 0, 0 }, PhysicsBlock::cord);
+
+		// 将组装体注册到物理世界
+		(*myPhysicsWorld)->AddObject(assembly);
+
+		// 注册关节和连接
+		(*myPhysicsWorld)->AddObject(jointCS);
+		(*myPhysicsWorld)->AddObject(juncP1);
+		(*myPhysicsWorld)->AddObject(juncP2);
+
+		// 7. 外部测试物体 — 会对组装体产生碰撞
+		PhysicsBlock::PhysicsCircle* externalCircle = new PhysicsBlock::PhysicsCircle({ 5, -1 }, BR * 0.6, 1);
+		(*myPhysicsWorld)->AddObject(externalCircle);
+		PhysicsBlock::PhysicsShape* externalShape = new PhysicsBlock::PhysicsShape({ -5, -1 }, { 2, 2 });
+		for (size_t i = 0; i < (externalShape->width * externalShape->height); ++i)
+		{
+			externalShape->at(i).Entity = true;
+			externalShape->at(i).Collision = true;
+			externalShape->at(i).mass = 1;
+		}
+		externalShape->UpdateAll();
+		externalShape->angle = 0.5;
+		(*myPhysicsWorld)->AddObject(externalShape);
+
+		PhysicsBlock::PhysicsParticle* externalParticle = new PhysicsBlock::PhysicsParticle({ 5, 2 }, 1);
+		(*myPhysicsWorld)->AddObject(externalParticle);
+	}
+
 }

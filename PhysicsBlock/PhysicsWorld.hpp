@@ -5,9 +5,10 @@
 #include "PhysicsParticle.hpp" // 物理粒子
 #include "PhysicsLine.hpp"     // 物理线
 #include "PhysicsArbiter.hpp"  // 物理解析單元
-#include "PhysicsJoint.hpp"    // 物理关节
-#include "PhysicsJunction.hpp" // 物理连接
-#include "GridSearch.hpp"      // 网格搜索
+#include "PhysicsJoint.hpp"     // 物理关节
+#include "PhysicsJunction.hpp"  // 物理连接
+#include "PhysicsAssembly.hpp"  // 物理组装体
+#include "GridSearch.hpp"       // 网格搜索
 #include <unordered_map>
 
 #define MemoryPoolBool 1
@@ -179,7 +180,8 @@ namespace PhysicsBlock
         std::vector<PhysicsJoint *> PhysicsJointS;       // 物理关节
         std::vector<BaseJunction *> BaseJunctionS;       // 物理绳子
         std::vector<PhysicsCircle *> PhysicsCircleS;     // 物理圆
-        std::vector<PhysicsLine *> PhysicsLineS;         // 物理圆
+        std::vector<PhysicsLine *> PhysicsLineS;         // 物理线
+        std::vector<PhysicsAssembly *> PhysicsAssemblyS; // 物理组装体
 
         std::unordered_map<ArbiterKey, BaseArbiter *, ArbiterKeyHash> CollideGroupS; // 碰撞对-键值容器
         std::vector<BaseArbiter *> CollideGroupVector;                               // 碰撞对数组
@@ -274,7 +276,14 @@ namespace PhysicsBlock
             PhysicsLineS.push_back(Object);
         }
 
+        void AddObject(PhysicsAssembly *Object)
+        {
+            Object->AddToWorld(this);
+            PhysicsAssemblyS.push_back(Object);
+        }
+
         void RemoveObject(PhysicsFormwork *Object);
+        void RemoveObject(PhysicsAssembly *Object);
 
         std::vector<PhysicsShape *> &GetPhysicsShape()
         {
@@ -306,6 +315,11 @@ namespace PhysicsBlock
             return PhysicsLineS;
         }
 
+        std::vector<PhysicsAssembly *> &GetPhysicsAssembly()
+        {
+            return PhysicsAssemblyS;
+        }
+
         MapFormwork *GetMapFormwork()
         {
             return wMapFormwork;
@@ -317,6 +331,16 @@ namespace PhysicsBlock
          * @return 对象指针
          * @retval nullptr 没有对象 */
         PhysicsFormwork *Get(Vec2_ pos);
+
+        /**
+         * @brief 检查两个物体是否属于同一个组装体
+         * @param a 第一个物体
+         * @param b 第二个物体
+         * @return 如果属于同一个非空组装体返回 true */
+        inline static bool SameAssembly(const PhysicsFormwork *a, const PhysicsFormwork *b)
+        {
+            return a->assembly && a->assembly == b->assembly;
+        }
 
         /**
          * @brief 设置地图

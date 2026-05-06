@@ -14,7 +14,7 @@ namespace PhysicsBlock
 #if PhysicsBlock_Serialization
     public:
         /** @brief 从JSON反序列化构造 */
-        PhysicsLine(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : PhysicsAngle(data) {};
+        PhysicsLine(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : PhysicsAngle(data) { type = PhysicsObjectEnum::line; };
 #endif
     public:
         /** @brief 构造物理线段
@@ -26,10 +26,6 @@ namespace PhysicsBlock
         /** @brief 析构函数 */
         ~PhysicsLine(){};
 
-        /**
-         * @brief 获取对象类型
-         * @return 类型 */
-        virtual PhysicsObjectEnum PFGetType() { return PhysicsObjectEnum::line; }
     };
 
 }

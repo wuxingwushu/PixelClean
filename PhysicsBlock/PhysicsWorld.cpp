@@ -125,6 +125,13 @@ namespace PhysicsBlock
                 delete (MapDynamic *)wMapFormwork;
             }
         }
+        // 物理组装体（必须在类型向量之前销毁，因为 Assembly 的 RemoveFromWorld
+        // 会通过 RemoveObject 将子对象从类型向量中移除并删除）
+        for (auto i : PhysicsAssemblyS)
+        {
+            delete i;
+        }
+        PhysicsAssemblyS.clear();
         // 物理形状
         for (auto i : PhysicsShapeS)
         {
@@ -241,6 +248,7 @@ namespace PhysicsBlock
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
+                        if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
                         if (!CollideAABB(PhysicsShapeS[SizeD], ((PhysicsCircle *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
@@ -250,6 +258,7 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
                         if (PhysicsShapeS[SizeD]->DropCollision(((PhysicsParticle *)i)->pos).Collision)
                         {
                             ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
@@ -262,6 +271,7 @@ namespace PhysicsBlock
                         }
                         break;
                     case PhysicsObjectEnum::shape:
+                        if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
                         if (PhysicsShapeS[SizeD] == ((PhysicsShape *)i))
                         {
                             break;
@@ -307,7 +317,7 @@ namespace PhysicsBlock
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
-                        if (PhysicsCircleS[SizeD] == ((PhysicsCircle *)i))
+                        if (PhysicsCircleS[SizeD] == ((PhysicsCircle *)i) || SameAssembly(PhysicsCircleS[SizeD], i))
                         {
                             break;
                         }
@@ -320,6 +330,7 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (SameAssembly(PhysicsCircleS[SizeD], i)) break;
                         if (CollideAABB(PhysicsCircleS[SizeD], ((PhysicsParticle *)i)))
                         {
                             ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
@@ -363,6 +374,7 @@ namespace PhysicsBlock
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
+                        if (SameAssembly(PhysicsLineS[SizeD], i)) break;
                         if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsCircle *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsLineS[SizeD]);
@@ -372,9 +384,11 @@ namespace PhysicsBlock
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsCircle *)i));
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (SameAssembly(PhysicsLineS[SizeD], i)) break;
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsParticle *)i));
                         break;
                     case PhysicsObjectEnum::shape:
+                        if (SameAssembly(PhysicsLineS[SizeD], i)) break;
                         if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsShape *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsLineS[SizeD]);
@@ -665,6 +679,7 @@ namespace PhysicsBlock
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
+                        if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
                         if (!CollideAABB(PhysicsShapeS[SizeD], ((PhysicsCircle *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
@@ -674,9 +689,10 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
                         if (PhysicsShapeS[SizeD]->DropCollision(((PhysicsParticle *)i)->pos).Collision)
                         {
-                            ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
+                            ((PhysicsParticle *)i)->OldPosUpDataBool = false;
                             Arbiter(PhysicsShapeS[SizeD], ((PhysicsParticle *)i));
                         }
                         else
@@ -686,6 +702,7 @@ namespace PhysicsBlock
                         }
                         break;
                     case PhysicsObjectEnum::shape:
+                        if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
                         if (PhysicsShapeS[SizeD] == ((PhysicsShape *)i))
                         {
                             break;
@@ -721,7 +738,7 @@ namespace PhysicsBlock
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
-                        if (PhysicsCircleS[SizeD] == ((PhysicsCircle *)i))
+                        if (PhysicsCircleS[SizeD] == ((PhysicsCircle *)i) || SameAssembly(PhysicsCircleS[SizeD], i))
                         {
                             break;
                         }
@@ -734,6 +751,7 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (SameAssembly(PhysicsCircleS[SizeD], i)) break;
                         if (CollideAABB(PhysicsCircleS[SizeD], ((PhysicsParticle *)i)))
                         {
                             ((PhysicsParticle *)i)->OldPosUpDataBool = false; // 关闭旧位置更新
@@ -768,6 +786,7 @@ namespace PhysicsBlock
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
+                        if (SameAssembly(PhysicsLineS[SizeD], i)) break;
                         if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsCircle *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsLineS[SizeD]);
@@ -777,9 +796,11 @@ namespace PhysicsBlock
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsCircle *)i));
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (SameAssembly(PhysicsLineS[SizeD], i)) break;
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsParticle *)i));
                         break;
                     case PhysicsObjectEnum::shape:
+                        if (SameAssembly(PhysicsLineS[SizeD], i)) break;
                         if (!CollideAABB(PhysicsLineS[SizeD], ((PhysicsShape *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsLineS[SizeD]);
@@ -905,6 +926,10 @@ namespace PhysicsBlock
 
     void PhysicsWorld::RemoveObject(PhysicsFormwork *Object)
     {
+        if (Object->assembly)
+        {
+            Object->assembly->RemoveChild(Object);
+        }
         switch (Object->PFGetType())
         {
         case PhysicsObjectEnum::shape:
@@ -1153,6 +1178,21 @@ namespace PhysicsBlock
         }
         if (ObjectSize > 0)
             --ObjectSize;
+    }
+
+    void PhysicsWorld::RemoveObject(PhysicsAssembly *Object)
+    {
+        Object->RemoveFromWorld(this);
+        for (size_t i = 0; i < PhysicsAssemblyS.size(); ++i)
+        {
+            if (PhysicsAssemblyS[i] == Object)
+            {
+                PhysicsAssemblyS[i] = PhysicsAssemblyS.back();
+                PhysicsAssemblyS.pop_back();
+                break;
+            }
+        }
+        delete Object;
     }
 
     PhysicsFormwork *PhysicsWorld::Get(Vec2_ pos)

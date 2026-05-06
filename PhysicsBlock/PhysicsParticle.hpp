@@ -136,18 +136,6 @@ namespace PhysicsBlock
          */
         virtual void PhysicsPos(FLOAT_ time, Vec2_ Ga);
 
-        /**
-         * @brief 获取对象类型
-         * @return 物理对象类型，返回 PhysicsObjectEnum::particle
-         * @note 实现了 PhysicsFormwork 中的虚函数
-         */
-        virtual PhysicsObjectEnum PFGetType() { return PhysicsObjectEnum::particle; }
-        
-        /**
-         * @brief 获取位置
-         * @return 粒子的当前位置
-         * @note 实现了 PhysicsFormwork 中的虚函数
-         */
         virtual Vec2_ PFGetPos() { return pos; }
         
         /**

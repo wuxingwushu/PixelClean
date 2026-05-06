@@ -13,6 +13,7 @@ namespace PhysicsBlock
      */
     PhysicsParticle::PhysicsParticle(Vec2_ Pos, FLOAT_ Mass, FLOAT_ Friction) : OldPos(Pos), pos(Pos), mass(Mass), friction(Friction)
     {
+        type = PhysicsObjectEnum::particle;
         if (mass == FLOAT_MAX || mass <= FLOAT_(0))
         {
             invMass = 0;
@@ -31,6 +32,7 @@ namespace PhysicsBlock
      */
     PhysicsParticle::PhysicsParticle(Vec2_ Pos) : OldPos(Pos), pos(Pos)
     {
+        type = PhysicsObjectEnum::particle;
     }
 
     /**
@@ -122,6 +124,7 @@ namespace PhysicsBlock
      */
     PhysicsParticle::PhysicsParticle(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
     {
+        type = PhysicsObjectEnum::particle;
         JsonContrarySerialization(data);
     }
 

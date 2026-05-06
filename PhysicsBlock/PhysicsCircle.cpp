@@ -17,6 +17,7 @@ namespace PhysicsBlock
     PhysicsCircle::PhysicsCircle(Vec2_ Pos, FLOAT_ Radius, FLOAT_ Mass, FLOAT_ Friction)
     : PhysicsAngle(Pos, Mass, Friction, Radius)
     {
+        type = PhysicsObjectEnum::circle;
         if (mass == FLOAT_MAX) {
             MomentInertia = FLOAT_MAX;
             invMomentInertia = 0;

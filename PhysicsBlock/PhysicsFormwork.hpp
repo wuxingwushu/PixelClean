@@ -4,11 +4,16 @@
 namespace PhysicsBlock
 {
 
+    class PhysicsAssembly;
+
     /**
      * @brief 动态物体的类模板 */
     class PhysicsFormwork
     {
     public:
+        PhysicsAssembly *assembly = nullptr;
+        PhysicsObjectEnum type = PhysicsObjectEnum::Null;
+
         PhysicsFormwork(){};
         ~PhysicsFormwork(){};
 
@@ -29,7 +34,7 @@ namespace PhysicsBlock
         /**
          * @brief 获取对象类型
          * @return 类型 */
-        virtual PhysicsObjectEnum PFGetType(){ return PhysicsObjectEnum::Null; }
+        PhysicsObjectEnum PFGetType(){ return type; }
         /**
          * @brief 获取碰撞半径
          * @return 半径 */

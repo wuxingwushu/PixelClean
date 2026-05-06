@@ -18,7 +18,7 @@ namespace PhysicsBlock
          * @brief 从 JSON 数据构造物理圆形对象
          * @param data JSON 数据
          */
-        PhysicsCircle(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : PhysicsAngle(data) {};
+        PhysicsCircle(const nlohmann::json_abi_v3_12_0::basic_json<>& data) : PhysicsAngle(data) { type = PhysicsObjectEnum::circle; };
 #endif
     public:
         /**
@@ -31,7 +31,7 @@ namespace PhysicsBlock
          * 并计算转动惯量
          */
         PhysicsCircle(Vec2_ Pos, FLOAT_ Radius, FLOAT_ Mass, FLOAT_ Friction = 0.2);
-        
+
         /**
          * @brief 析构函数
          */
@@ -39,13 +39,6 @@ namespace PhysicsBlock
 
         /*=========PhysicsFormwork=========*/
 
-        /**
-         * @brief 获取对象类型
-         * @return 物理对象类型，返回 PhysicsObjectEnum::circle
-         * @note 实现了 PhysicsFormwork 中的虚函数
-         */
-        virtual PhysicsObjectEnum PFGetType() { return PhysicsObjectEnum::circle; }
-        
     };
-    
+
 }

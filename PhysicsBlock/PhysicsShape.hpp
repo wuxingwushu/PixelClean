@@ -34,6 +34,7 @@ namespace PhysicsBlock
          */
         PhysicsShape(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : PhysicsAngle(data), BaseOutline(data)
         {
+            type = PhysicsObjectEnum::shape;
             UpdateAll();
             ContrarySerializationVec2(data, pos);
             ContrarySerializationVec2(data, OldPos);
@@ -140,12 +141,6 @@ namespace PhysicsBlock
 
         /*=========PhysicsFormwork=========*/
 
-        /**
-         * @brief 获取对象类型
-         * @return 物理对象类型，返回 PhysicsObjectEnum::shape
-         * @note 实现了 PhysicsFormwork 中的虚函数 GetType
-         */
-        virtual PhysicsObjectEnum PFGetType() { return PhysicsObjectEnum::shape; }
     };
 
 }

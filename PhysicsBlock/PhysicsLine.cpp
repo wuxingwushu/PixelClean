@@ -10,6 +10,7 @@ namespace PhysicsBlock
      *  @param mass_ 质量
      *  @param friction_ 摩擦系数 */
     PhysicsLine::PhysicsLine(Vec2_ begin_, Vec2_ end_, FLOAT_ mass_, FLOAT_ friction_) : PhysicsAngle((begin_ + end_) / FLOAT_(2), mass_, friction_) {
+        type = PhysicsObjectEnum::line;
         radius = Modulus(begin_ - end_);
         angle = EdgeVecToCosAngleFloat(begin_ - end_);
         MomentInertia = radius * radius * mass_ / 12;

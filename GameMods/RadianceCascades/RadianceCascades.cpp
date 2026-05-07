@@ -569,6 +569,33 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
 
     float rawX = (float)mMouseX;
     float rawY = (float)mMouseY;
+
+    float prevRawX = (float)mMousePrevX;
+    float prevRawY = (float)mMousePrevY;
+
+    if (mImageViewDisplayScale > 0.0f && mImageViewSize.x > 0.0f && mImageViewSize.y > 0.0f) {
+        auto toImgX = [&](float wx) {
+            return (wx - mImageViewScreenPos.x) / mImageViewDisplayScale;
+        };
+        auto toImgY = [&](float wy) {
+            return (wy - mImageViewScreenPos.y) / mImageViewDisplayScale;
+        };
+        auto inside = [&](float wx, float wy) {
+            return wx >= mImageViewScreenPos.x &&
+                   wx < mImageViewScreenPos.x + mImageViewSize.x &&
+                   wy >= mImageViewScreenPos.y &&
+                   wy < mImageViewScreenPos.y + mImageViewSize.y;
+        };
+
+        if (inside(rawX, rawY)) {
+            rawX = std::clamp(toImgX(rawX), 0.0f, mImageViewDataW - 1.0f);
+            rawY = std::clamp(toImgY(rawY), 0.0f, mImageViewDataH - 1.0f);
+        }
+        if (inside(prevRawX, prevRawY)) {
+            prevRawX = std::clamp(toImgX(prevRawX), 0.0f, mImageViewDataW - 1.0f);
+            prevRawY = std::clamp(toImgY(prevRawY), 0.0f, mImageViewDataH - 1.0f);
+        }
+    }
     float rawZ = realMouseDown ? 1.0f : 0.0f;
 
     if (mFrameCount == 0) {
@@ -637,8 +664,8 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     p.sdfHeight         = (int)ext.height;
     p.mouseX            = mMouseCX;
     p.mouseY            = mMouseCY;
-    p.mousePrevX        = (float)mMousePrevX;
-    p.mousePrevY        = (float)mMousePrevY;
+    p.mousePrevX        = prevRawX;
+    p.mousePrevY        = prevRawY;
     p.mouseLeftDown     = (mMouseCZ > 0.0f) ? 1 : 0;  // 平滑后的左键状态
     p.mouseRightDown    = mMouseRightDown ? 1 : 0;
     p.mouseRawX         = rawX;
@@ -893,6 +920,13 @@ void RadianceCascades::GameUI() {
     float scale = std::min(ImGui::GetContentRegionAvail().x / imgW,
                            ImGui::GetContentRegionAvail().y / imgH);
     ImVec2 sz(imgW * scale, imgH * scale);
+
+    mImageViewScreenPos = ImGui::GetCursorScreenPos();
+    mImageViewSize = ImVec2(imgAreaWidth, avail.y);
+    mImageViewDisplayScale = scale;
+    mImageViewDataW = imgW;
+    mImageViewDataH = imgH;
+
     ImGui::Image((ImTextureID)(intptr_t)mImGuiDescriptorSet, sz);
     ImGui::EndChild();
 

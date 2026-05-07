@@ -142,6 +142,12 @@ private:
     int mPendingNCascades = 5;
     bool mNeedsCascadeRebuild = false;
 
+    ImVec2 mImageViewScreenPos = ImVec2(0, 0);
+    ImVec2 mImageViewSize = ImVec2(0, 0);
+    float mImageViewDisplayScale = 1.0f;
+    float mImageViewDataW = 0.0f;
+    float mImageViewDataH = 0.0f;
+
     bool mUIShowBrush = true;
     bool mUIShowColor = true;
     bool mUIShowCascade = true;

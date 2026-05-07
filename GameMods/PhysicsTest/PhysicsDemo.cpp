@@ -1,4 +1,5 @@
 #include "PhysicsDemo.h"
+#include <cstdio>
 
 namespace PhysicsBlock
 {
@@ -1214,6 +1215,365 @@ namespace PhysicsBlock
 
 		PhysicsBlock::PhysicsParticle* externalParticle = new PhysicsBlock::PhysicsParticle({ 5, 2 }, 1);
 		(*myPhysicsWorld)->AddObject(externalParticle);
+	}
+
+	void PhysicsDemo19(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
+	{
+		if (*myPhysicsWorld != nullptr)
+		{
+			delete *myPhysicsWorld;
+		}
+		*myPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
+		int MapSize = 30;
+
+		mCamera->setCameraPos({0, 0, MapSize * 2});
+
+		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
+		{
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
+		}
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(0, i).Entity = true;
+			mMapStatic->at(0, i).Collision = true;
+			mMapStatic->at(MapSize - 1, i).Entity = true;
+			mMapStatic->at(MapSize - 1, i).Collision = true;
+			mMapStatic->at(i, 0).Entity = true;
+			mMapStatic->at(i, 0).Collision = true;
+		}
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(i, MapSize - 1).Entity = true;
+			mMapStatic->at(i, MapSize - 1).Collision = true;
+		}
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
+		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
+
+		LayerMask layerGround = LayerMaskDefault;
+		LayerMask layerGroupA = 1 << 1;
+		LayerMask layerGroupB = 1 << 2;
+		LayerMask layerGhost = 1 << 3;
+
+		PhysicsBlock::PhysicsShape *divider = new PhysicsBlock::PhysicsShape({-6, 8}, {2, 14});
+		for (size_t i = 0; i < (divider->width * divider->height); ++i)
+		{
+			divider->at(i).Entity = true;
+			divider->at(i).Collision = true;
+			divider->at(i).mass = FLOAT_MAX;
+		}
+		divider->UpdateAll();
+		divider->angle = 0;
+		(*myPhysicsWorld)->AddObject(divider);
+		(*myPhysicsWorld)->mCollision.SetCollisionLayers(divider, layerGround);
+
+		divider = new PhysicsBlock::PhysicsShape({6, 8}, {2, 14});
+		for (size_t i = 0; i < (divider->width * divider->height); ++i)
+		{
+			divider->at(i).Entity = true;
+			divider->at(i).Collision = true;
+			divider->at(i).mass = FLOAT_MAX;
+		}
+		divider->UpdateAll();
+		divider->angle = 0;
+		(*myPhysicsWorld)->AddObject(divider);
+		(*myPhysicsWorld)->mCollision.SetCollisionLayers(divider, layerGround);
+
+		for (int i = 0; i < 5; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+			{
+				PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape(
+					{-12 + j * 2.2f + Random(-0.05f, 0.05f), 12 + i * 2.2f},
+					{2, 2});
+				for (size_t k = 0; k < (box->width * box->height); ++k)
+				{
+					box->at(k).Entity = true;
+					box->at(k).Collision = true;
+					box->at(k).mass = 1;
+				}
+				box->UpdateAll();
+				box->angle = 0;
+				(*myPhysicsWorld)->AddObject(box);
+				(*myPhysicsWorld)->mCollision.SetCollisionLayers(box, layerGroupA);
+			}
+		}
+
+		for (int i = 0; i < 5; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+			{
+				PhysicsBlock::PhysicsCircle *ball = new PhysicsBlock::PhysicsCircle(
+					{1 + j * 2.2f + Random(-0.05f, 0.05f), 12 + i * 2.2f},
+					0.9, 1);
+				(*myPhysicsWorld)->AddObject(ball);
+				(*myPhysicsWorld)->mCollision.SetCollisionLayers(ball, layerGroupB);
+			}
+		}
+
+		for (int i = 0; i < 3; ++i)
+		{
+			PhysicsBlock::PhysicsCircle *ghost = new PhysicsBlock::PhysicsCircle(
+				{8 + i * 2.0f + Random(-0.1f, 0.1f), 12 + i * 2.5f},
+				0.7, 1);
+			(*myPhysicsWorld)->AddObject(ghost);
+			(*myPhysicsWorld)->mCollision.SetCollisionLayers(ghost, layerGhost);
+		}
+
+		for (int i = 0; i < 3; ++i)
+		{
+			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(
+				(*myPhysicsWorld)->PhysicsShapeS[i],
+				[](const CollisionData &data) {
+					printf("[Collision Enter] Shape hit at (%.1f, %.1f) depth=%.2f\n",
+						data.ContactPoint.x, data.ContactPoint.y, data.PenetrationDepth);
+				});
+			(*myPhysicsWorld)->mCollision.AddCollisionExitListener(
+				(*myPhysicsWorld)->PhysicsShapeS[i],
+				[](const CollisionData &data) {
+					printf("[Collision Exit] Shape separated\n");
+				});
+		}
+
+		for (int i = 0; i < 3; ++i)
+		{
+			int idx = (int)(*myPhysicsWorld)->PhysicsCircleS.size() - 3 - i;
+			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(
+				(*myPhysicsWorld)->PhysicsCircleS[idx],
+				[](const CollisionData &data) {
+					printf("[Collision Enter] Circle hit at (%.1f, %.1f) vel=(%.1f, %.1f)\n",
+						data.ContactPoint.x, data.ContactPoint.y,
+						data.RelativeVelocity.x, data.RelativeVelocity.y);
+				});
+		}
+
+		(*myPhysicsWorld)->mCollision.SetCollisionPriority(
+			(*myPhysicsWorld)->PhysicsShapeS[0], 90);
+		(*myPhysicsWorld)->mCollision.SetCollisionPriority(
+			(*myPhysicsWorld)->PhysicsShapeS[1], 50);
+		(*myPhysicsWorld)->mCollision.SetCollisionPriority(
+			(*myPhysicsWorld)->PhysicsShapeS[2], 10);
+	}
+
+	void PhysicsDemo20(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
+	{
+		if (*myPhysicsWorld != nullptr)
+		{
+			delete *myPhysicsWorld;
+		}
+		*myPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
+		int MapSize = 30;
+
+		mCamera->setCameraPos({0, 5, MapSize * 2});
+
+		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
+		{
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
+		}
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(0, i).Entity = true;
+			mMapStatic->at(0, i).Collision = true;
+			mMapStatic->at(MapSize - 1, i).Entity = true;
+			mMapStatic->at(MapSize - 1, i).Collision = true;
+			mMapStatic->at(i, 0).Entity = true;
+			mMapStatic->at(i, 0).Collision = true;
+		}
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
+		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
+
+		PhysicsBlock::PhysicsShape *platform = new PhysicsBlock::PhysicsShape({-5, -8}, {8, 2});
+		for (size_t i = 0; i < (platform->width * platform->height); ++i)
+		{
+			platform->at(i).Entity = true;
+			platform->at(i).Collision = true;
+			platform->at(i).mass = 1;
+		}
+		platform->UpdateAll();
+		platform->angle = 0;
+		(*myPhysicsWorld)->AddObject(platform);
+
+		(*myPhysicsWorld)->mKinematic.SetIsKinematic(platform, true);
+		(*myPhysicsWorld)->mKinematic.MoveTo(platform, {-5, 0}, 3.0f);
+
+		for (int i = 0; i < 4; ++i)
+		{
+			PhysicsBlock::PhysicsCircle *ball = new PhysicsBlock::PhysicsCircle(
+				{-6 + i * 1.2f + Random(-0.1f, 0.1f), -5 + i * 1.5f},
+				0.5, 1);
+			(*myPhysicsWorld)->AddObject(ball);
+		}
+
+		PhysicsBlock::PhysicsShape *arm = new PhysicsBlock::PhysicsShape({7, 6}, {8, 3});
+		for (size_t i = 0; i < (arm->width * arm->height); ++i)
+		{
+			arm->at(i).Entity = true;
+			arm->at(i).Collision = true;
+			arm->at(i).mass = 1;
+		}
+		arm->UpdateAll();
+		arm->angle = 0;
+		(*myPhysicsWorld)->AddObject(arm);
+
+		(*myPhysicsWorld)->mKinematic.SetIsKinematic(arm, true);
+		(*myPhysicsWorld)->mKinematic.RotateTo(arm, M_PI / 3, 4.0f);
+
+		for (int i = 0; i < 3; ++i)
+		{
+			PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape(
+				{-(MapSize / 2) + 3 + i * 2.2f, 10 + i * 2.5f},
+				{2, 2});
+			for (size_t k = 0; k < (box->width * box->height); ++k)
+			{
+				box->at(k).Entity = true;
+				box->at(k).Collision = true;
+				box->at(k).mass = 1;
+			}
+			box->UpdateAll();
+			box->angle = 0;
+			(*myPhysicsWorld)->AddObject(box);
+		}
+	}
+
+	void PhysicsDemo21(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
+	{
+		if (*myPhysicsWorld != nullptr)
+		{
+			delete *myPhysicsWorld;
+		}
+		*myPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
+		int MapSize = 30;
+
+		mCamera->setCameraPos({0, 0, MapSize * 2});
+
+		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
+		{
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
+		}
+		for (int i = 0; i < MapSize; ++i)
+		{
+			mMapStatic->at(0, i).Entity = true;
+			mMapStatic->at(0, i).Collision = true;
+			mMapStatic->at(MapSize - 1, i).Entity = true;
+			mMapStatic->at(MapSize - 1, i).Collision = true;
+			mMapStatic->at(i, 0).Entity = true;
+			mMapStatic->at(i, 0).Collision = true;
+		}
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
+		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
+
+		PhysicsBlock::PhysicsShape *triggerObj1 = new PhysicsBlock::PhysicsShape({-6, 5}, {2, 2});
+		for (size_t i = 0; i < (triggerObj1->width * triggerObj1->height); ++i)
+		{
+			triggerObj1->at(i).Entity = true;
+			triggerObj1->at(i).Collision = false;
+			triggerObj1->at(i).mass = FLOAT_MAX;
+		}
+		triggerObj1->UpdateAll();
+		triggerObj1->angle = 0;
+		(*myPhysicsWorld)->AddObject(triggerObj1);
+
+		Bounds triggerZone1({-6, 7}, {10, 4});
+		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(triggerObj1, triggerZone1);
+
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj1, TriggerEventType::Enter,
+			[](PhysicsFormwork *other) {
+				printf("[Trigger Enter] Object entered Zone-1 at y=%.1f\n", other->PFGetPos().y);
+			});
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj1, TriggerEventType::Exit,
+			[](PhysicsFormwork *other) {
+				printf("[Trigger Exit] Object left Zone-1 at y=%.1f\n", other->PFGetPos().y);
+			});
+
+		PhysicsBlock::PhysicsShape *triggerObj2 = new PhysicsBlock::PhysicsShape({6, -2}, {2, 2});
+		for (size_t i = 0; i < (triggerObj2->width * triggerObj2->height); ++i)
+		{
+			triggerObj2->at(i).Entity = true;
+			triggerObj2->at(i).Collision = false;
+			triggerObj2->at(i).mass = FLOAT_MAX;
+		}
+		triggerObj2->UpdateAll();
+		triggerObj2->angle = 0;
+		(*myPhysicsWorld)->AddObject(triggerObj2);
+
+		Bounds triggerZone2({6, 0}, {8, 4});
+		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(triggerObj2, triggerZone2);
+		(*myPhysicsWorld)->mTrigger.SetTriggerLayers(triggerObj2, 1 << 0);
+
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj2, TriggerEventType::Enter,
+			[](PhysicsFormwork *other) {
+				printf("[Trigger Enter] Object entered Zone-2 (Layer-0 only) at y=%.1f\n",
+					other->PFGetPos().y);
+			});
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj2, TriggerEventType::Stay,
+			[](PhysicsFormwork *other) {
+				static int frameCount = 0;
+				if (++frameCount % 30 == 0)
+					printf("[Trigger Stay] Object staying in Zone-2 at (%.1f, %.1f)\n",
+						other->PFGetPos().x, other->PFGetPos().y);
+			});
+
+		PhysicsBlock::PhysicsShape *triggerObj3 = new PhysicsBlock::PhysicsShape({0, -9}, {2, 2});
+		for (size_t i = 0; i < (triggerObj3->width * triggerObj3->height); ++i)
+		{
+			triggerObj3->at(i).Entity = true;
+			triggerObj3->at(i).Collision = false;
+			triggerObj3->at(i).mass = FLOAT_MAX;
+		}
+		triggerObj3->UpdateAll();
+		triggerObj3->angle = 0;
+		(*myPhysicsWorld)->AddObject(triggerObj3);
+
+		Bounds triggerZone3({0, -5}, {14, 6});
+		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(triggerObj3, triggerZone3);
+
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj3, TriggerEventType::Enter,
+			[](PhysicsFormwork *other) {
+				printf("[Trigger Enter] Object entered Catch-Zone at (%.1f, %.1f)\n",
+					other->PFGetPos().x, other->PFGetPos().y);
+			});
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj3, TriggerEventType::Exit,
+			[](PhysicsFormwork *other) {
+				printf("[Trigger Exit] Object escaped Catch-Zone\n");
+			});
+
+		for (int g = 0; g < 4; ++g)
+		{
+			PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape(
+				{-(MapSize / 2) + 3 + g * 3.5f, 12 + g * 2.0f},
+				{2, 2});
+			for (size_t k = 0; k < (box->width * box->height); ++k)
+			{
+				box->at(k).Entity = true;
+				box->at(k).Collision = true;
+				box->at(k).mass = 1;
+			}
+			box->UpdateAll();
+			box->angle = Random(0, M_PI);
+			(*myPhysicsWorld)->AddObject(box);
+		}
+
+		for (int g = 0; g < 4; ++g)
+		{
+			PhysicsBlock::PhysicsCircle *ball = new PhysicsBlock::PhysicsCircle(
+				{MapSize / 2 - 3 - g * 3.5f, 12 + g * 1.5f},
+				0.9, 1);
+			(*myPhysicsWorld)->AddObject(ball);
+		}
+
+		PhysicsBlock::PhysicsCircle *centerBall = new PhysicsBlock::PhysicsCircle({0, 10}, 1.2, 3);
+		(*myPhysicsWorld)->AddObject(centerBall);
 	}
 
 }

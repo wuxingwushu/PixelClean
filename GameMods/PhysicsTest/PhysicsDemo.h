@@ -61,10 +61,12 @@ namespace PhysicsBlock
 
 	// 组合测试
 	void PhysicsDemo18(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+	void PhysicsDemo19(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+	void PhysicsDemo20(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+	void PhysicsDemo21(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
 
-
-	typedef void (*Funtypedef)(PhysicsWorld** myPhysicsWorld, Camera* mCamera);
-	static Funtypedef DemoFunS[] = { 
+	using DemoFunction = void (*)(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+	static DemoFunction DemoFunS[] = { 
 		PhysicsDemo0, 
 		PhysicsDemo1, 
 		PhysicsDemo2, 
@@ -83,7 +85,10 @@ namespace PhysicsBlock
 		PhysicsDemo15,
 		PhysicsDemo16,
 		PhysicsDemo17,
-		PhysicsDemo18
+		PhysicsDemo18,
+		PhysicsDemo19,
+		PhysicsDemo20,
+		PhysicsDemo21
 	 };
 	static const char* DemoNameS[] = { 
 		"外骨骼计算", 
@@ -104,7 +109,10 @@ namespace PhysicsBlock
 		"动态网格搜索测试",
 		"物理线段",
 		"线段绳子",
-		"组合测试"
+		"组合测试",
+		"碰撞回调系统",
+		"运动学物体",
+		"触发器系统"
 	 };
 
 }

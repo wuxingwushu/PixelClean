@@ -2,42 +2,59 @@
 #include "BaseStruct.hpp"
 #include <cmath>
 
+
+#ifndef M_PI_2
+#define M_PI_2 1.57079632679489661923
+#endif
+
 // 运算符优先级提示：移位 > 赋值 > 大小比较 > 加法 > 减法 > 乘法 > 取模 > 除法
 
 namespace PhysicsBlock
 {
 
 	/**
-	 * @brief   FLOAT_ 转 int，向下取整
-	 * @param   val 需要转换的 FLOAT_ 值
+	 * @brief   double 转 int，向下取整
+	 * @param   val 需要转换的 double 值
 	 * @return  返回转换结果
-	 * @note    不是直接丢弃小数点，而是向下取最大的整数（负数时会向更负的方向取整）
+	 * @details 正数直接截断小数部分，负数需要额外减 1（向更负方向取整）
 	 */
-	int ToInt(double val);
+	int inline ToInt(double val)
+	{
+		return val >= 0 ? static_cast<int>(val) : (static_cast<int>(val) - 1);
+	}
 
 	/**
 	 * @brief   float 转 int，向下取整
 	 * @param   val 需要转换的 float 值
 	 * @return  返回转换结果
-	 * @note    不是直接丢弃小数点，而是向下取最大的整数（负数时会向更负的方向取整）
+	 * @details 正数直接截断小数部分，负数需要额外减 1（向更负方向取整）
 	 */
-	int ToInt(float val);
+	int inline ToInt(float val)
+	{
+		return val >= 0 ? static_cast<int>(val) : (static_cast<int>(val) - 1);
+	}
 
 	/**
-	 * @brief   vec2 转 ivec2，正负都向下取整
+	 * @brief   vec2 转 ivec2，向下取整
 	 * @param   val 需要转换的 vec2 值
 	 * @return  返回转换结果
-	 * @note    不是直接丢弃小数点，而是向下取最大的整数
+	 * @details 分别对 x 和 y 分量调用 ToInt
 	 */
-	glm::ivec2 ToInt(glm::vec2 val);
+	glm::ivec2 inline ToInt(glm::vec2 val)
+	{
+		return {ToInt(val.x), ToInt(val.y)};
+	}
 
 	/**
-	 * @brief   dvec2 转 ivec2，正负都向下取整
+	 * @brief   dvec2 转 ivec2，向下取整
 	 * @param   val 需要转换的 dvec2 值
 	 * @return  返回转换结果
-	 * @note    不是直接丢弃小数点，而是向下取最大的整数
+	 * @details 分别对 x 和 y 分量调用 ToInt
 	 */
-	glm::ivec2 ToInt(glm::dvec2 val);
+	glm::ivec2 inline ToInt(glm::dvec2 val)
+	{
+		return {ToInt(val.x), ToInt(val.y)};
+	}
 
 	/**
 	 * @brief 快速平方根（牛顿迭代法近似）
@@ -56,41 +73,62 @@ namespace PhysicsBlock
 	double q_sqrt(double S);
 
 	/**
-	 * @brief   获取向量的模的平方（没有开方）
-	 * @param   Modulus 输入向量（表示 X,Y 的距离差）
-	 * @return  返回 x*x + y*y 的结果
-	 * @note    避免开方运算，用于比较距离时的优化
+	 * @brief   获取向量的模的平方
+	 * @param   Modulus 输入向量
+	 * @return  返回 x*x + y*y
+	 * @details 避免开方运算，用于比较距离时的优化
 	 */
-	FLOAT_ ModulusLength(const Vec2_ &Modulus);
+	FLOAT_ inline ModulusLength(const Vec2_ &Modulus)
+	{
+		return ((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
+	}
 
 	/**
 	 * @brief   获取向量的模的长度
-	 * @param   Modulus 输入向量（表示 X,Y 的距离差）
-	 * @return  返回 sqrt(x*x + y*y) 的结果
+	 * @param   Modulus 输入向量
+	 * @return  返回 sqrt(x*x + y*y)
 	 */
-	FLOAT_ Modulus(const Vec2_ &Modulus);
+	FLOAT_ inline Modulus(const Vec2_ &Modulus)
+	{
+		return SQRT_((Modulus.x * Modulus.x) + (Modulus.y * Modulus.y));
+	}
 
 	/**
 	 * @brief   根据角度计算对应的 cos 和 sin 值
 	 * @param   angle 角度（弧度）
 	 * @return  返回 Vec2_{cos(angle), sin(angle)}
 	 */
-	Vec2_ AngleFloatToAngleVec(FLOAT_ angle);
+	Vec2_ inline AngleFloatToAngleVec(FLOAT_ angle)
+	{
+		return {cos(angle), sin(angle)};
+	}
 
 	/**
 	 * @brief   根据向量计算与 X轴正向的夹角
-	 * @param   XYedge 输入向量（X,Y 位置）
+	 * @param   XYedge 输入向量
 	 * @return  返回向量与 X轴正向的夹角（弧度）
-	 * @note    使用 acos 计算，范围为 [-π, π]
+	 * @details 特殊处理 x=0 的情况，使用 acos 计算角度，范围为 [-π, π]
 	 */
-	FLOAT_ EdgeVecToCosAngleFloat(Vec2_ XYedge);
+	FLOAT_ inline EdgeVecToCosAngleFloat(Vec2_ XYedge)
+	{
+		if (XYedge.x == 0)
+		{
+			if (XYedge.y == 0)
+			{
+				return 0; // 分母不可以为零
+			}
+			return XYedge.y < 0 ? -M_PI_2 : M_PI_2;
+		}
+		FLOAT_ BeveledEdge = acos(XYedge.x / Modulus(XYedge));
+		return XYedge.y < 0 ? -BeveledEdge : BeveledEdge;
+	}
 
 	/**
 	 * @brief   vec2 基于原点旋转
 	 * @param   pos 需要旋转的坐标
-	 * @param   angle 旋转角度（弧度，2 * M_PI 为一圈）
+	 * @param   angle 旋转角度（弧度）
 	 * @return  返回旋转结果
-	 * @note    绕原点 (0, 0) 旋转
+	 * @details 先计算 cos 和 sin，然后调用重载版本
 	 */
 	Vec2_ vec2angle(Vec2_ pos, FLOAT_ angle);
 
@@ -99,9 +137,90 @@ namespace PhysicsBlock
 	 * @param   pos 需要旋转的坐标
 	 * @param   angle Vec2_ 格式，X=cos(angle), Y=sin(angle)
 	 * @return  返回旋转结果
-	 * @note    避免重复计算三角函数，提高性能
+	 * @details 实现旋转矩阵效果：x' = x*cos - y*sin, y' = x*sin + y*cos
 	 */
-	Vec2_ vec2angle(Vec2_ pos, Vec2_ angle);
+	Vec2_ inline vec2angle(Vec2_ pos, Vec2_ angle)
+	{
+		return Vec2_((pos.x * angle.x) - (pos.y * angle.y), (pos.x * angle.y) + (pos.y * angle.x));
+	}
+
+	/**
+	 * @brief   vec2 基于某个坐标旋转
+	 * @param   pos 需要旋转的点坐标
+	 * @param   lingdian 旋转中心的点坐标
+	 * @param   angle 旋转角度（弧度）
+	 * @return  返回旋转结果
+	 * @details 先平移到原点，旋转，再平移回去
+	 */
+	Vec2_ inline vec2PosAngle(Vec2_ pos, Vec2_ lingdian, FLOAT_ angle)
+	{
+		return vec2angle(pos - lingdian, angle) + lingdian;
+	}
+
+	/**
+	 * @brief   vec2 基于某个坐标旋转（使用预计算的 cos/sin）
+	 * @param   pos 需要旋转的点坐标
+	 * @param   lingdian 旋转中心的点坐标
+	 * @param   angle Vec2_ 格式，X=cos(angle), Y=sin(angle)
+	 * @return  返回旋转结果
+	 * @details 先平移到原点，旋转，再平移回去
+	 */
+	Vec2_ inline vec2PosAngle(Vec2_ pos, Vec2_ lingdian, Vec2_ angle)
+	{
+		return vec2angle(pos - lingdian, angle) + lingdian;
+	}
+
+	/**
+	 * @brief   坐标点转换坐标系后取整
+	 * @param   Pos 需要转换的点坐标
+	 * @param   xPos 两个坐标系的距离差
+	 * @param   angle 两个坐标系的角度差（弧度）
+	 * @return  返回转换后坐标系后的整数坐标
+	 */
+	glm::ivec2 inline ToIntPos(Vec2_ Pos, Vec2_ xPos, FLOAT_ angle)
+	{
+		return ToInt(vec2angle(xPos - Pos, angle));
+	}
+
+	/**
+	 * @brief   坐标点转换坐标系后取整（使用预计算的 cos/sin）
+	 * @param   sPos 需要转换的点坐标
+	 * @param   ePos 两个坐标系的距离差
+	 * @param   angle Vec2_ 格式，X=cos(angle), Y=sin(angle)
+	 * @return  返回转换后坐标系后的整数坐标
+	 */
+	glm::ivec2 inline ToIntPos(Vec2_ sPos, Vec2_ ePos, Vec2_ angle)
+	{
+		return ToInt(vec2angle(ePos - sPos, angle));
+	}
+
+	/**
+	 * @brief   求线段在 X 为某值处的交点
+	 * @param   Apos 线段上的任一点 A
+	 * @param   Bpos 线段上的任一点 B
+	 * @param   x 设置 X 值
+	 * @return  返回线段在 X=x 处的交点
+	 * @details 使用线性插值计算交点的 Y 坐标
+	 */
+	Vec2_ inline LineXToPos(Vec2_ Apos, Vec2_ Bpos, FLOAT_ x)
+	{
+		FLOAT_ bl = (Bpos.x - x) / (Bpos.x - Apos.x);
+		return {x, (Apos.y - Bpos.y) * bl + Bpos.y};
+	}
+
+	/**
+	 * @brief   求线段在 Y 为某值处的交点
+	 * @param   Apos 线段上的任一点 A
+	 * @param   Bpos 线段上的任一点 B
+	 * @param   y 设置 Y 值
+	 * @return  返回线段在 Y=y 处的交点
+	 * @details 使用线性插值计算交点的 X 坐标
+	 */
+	Vec2_ inline LineYToPos(Vec2_ Apos, Vec2_ Bpos, FLOAT_ y)
+	{
+		FLOAT_ bl = (Bpos.y - y) / (Apos.y - Bpos.y);
+		return {(Bpos.x - Apos.x) * bl + Bpos.x, y};
+	}
 
 	/**
 	 * @brief   角度矩阵旋转器
@@ -126,7 +245,7 @@ namespace PhysicsBlock
 		 * @brief 设置新的旋转角度
 		 * @param angle 角度（弧度）
 		 */
-		void SetAngle(FLOAT_ angle)
+		void inline SetAngle(FLOAT_ angle)
 		{
 			Cos = cos(angle);
 			Sin = sin(angle);
@@ -138,7 +257,7 @@ namespace PhysicsBlock
 		 * @return 旋转结果
 		 * @note 绕原点 (0, 0) 旋转
 		 */
-		Vec2_ Rotary(Vec2_ pos)
+		Vec2_ inline Rotary(Vec2_ pos)
 		{
 			return Vec2_((pos.x * Cos) - (pos.y * Sin), (pos.x * Sin) + (pos.y * Cos));
 		}
@@ -149,67 +268,11 @@ namespace PhysicsBlock
 		 * @return 旋转结果
 		 * @note 绕原点 (0, 0) 旋转，相当于旋转 -angle
 		 */
-		Vec2_ Anticlockwise(Vec2_ pos)
+		Vec2_ inline Anticlockwise(Vec2_ pos)
 		{
 			return Vec2_((pos.x * Cos) + (pos.y * Sin), -(pos.x * Sin) + (pos.y * Cos));
 		}
 	};
-
-	/**
-	 * @brief   vec2 基于某个坐标旋转
-	 * @param   pos 需要旋转的点坐标
-	 * @param   lingdian 旋转中心的点坐标
-	 * @param   angle 旋转角度（弧度，2 * M_PI 为一圈）
-	 * @return  返回旋转结果
-	 */
-	Vec2_ vec2PosAngle(Vec2_ pos, Vec2_ lingdian, FLOAT_ angle);
-
-	/**
-	 * @brief   vec2 基于某个坐标旋转（使用预计算的 cos/sin）
-	 * @param   pos 需要旋转的点坐标
-	 * @param   lingdian 旋转中心的点坐标
-	 * @param   angle Vec2_ 格式，X=cos(angle), Y=sin(angle)
-	 * @return  返回旋转结果
-	 */
-	Vec2_ vec2PosAngle(Vec2_ pos, Vec2_ lingdian, Vec2_ angle);
-
-	/**
-	 * @brief   坐标点转换坐标系后取整（向下）
-	 * @param   Pos 需要转换的点坐标
-	 * @param   xPos 两个坐标系的距离差
-	 * @param   angle 两个坐标系的角度差（弧度）
-	 * @return  返回转换后坐标系后的整数坐标
-	 */
-	glm::ivec2 ToIntPos(Vec2_ Pos, Vec2_ xPos, FLOAT_ angle);
-
-	/**
-	 * @brief   坐标点转换坐标系后取整（向下）
-	 * @param   Pos 需要转换的点坐标
-	 * @param   xPos 两个坐标系的距离差
-	 * @param   angle Vec2_ 格式，X=cos(angle), Y=sin(angle)
-	 * @return  返回转换后坐标系后的整数坐标
-	 */
-	glm::ivec2 ToIntPos(Vec2_ sPos, Vec2_ ePos, Vec2_ angle);
-
-	/**
-	 * @brief   求线段在 X 为某值处的交点
-	 * @param   Apos 线段上的任一点 A
-	 * @param   Bpos 线段上的任一点 B
-	 * @param   x 设置 X 值
-	 * @return  返回线段在 X=x 处的交点
-	 * @warning 求出的交点可能不在线段上，需要额外判断
-	 */
-	Vec2_ LineXToPos(Vec2_ Apos, Vec2_ Bpos, FLOAT_ x);
-
-	/**
-	 * @brief   求线段在 Y 为某值处的交点
-	 * @param   Apos 线段上的任一点 A
-	 * @param   Bpos 线段上的任一点 B
-	 * @param   y 设置 Y 值
-	 * @return  返回线段在 Y=y 处的交点
-	 * @warning 求出的交点可能不在线段上，需要额外判断
-	 */
-	Vec2_ LineYToPos(Vec2_ Apos, Vec2_ Bpos, FLOAT_ y);
 
 	/**
 	 * @brief   裁剪出被矩形覆盖的线段
@@ -355,7 +418,10 @@ namespace PhysicsBlock
 	 * @param   b 向量b
 	 * @return  返回 a · b = a.x*b.x + a.y*b.y
 	 */
-	FLOAT_ Dot(const Vec2_ &a, const Vec2_ &b);
+	FLOAT_ inline Dot(const Vec2_ &a, const Vec2_ &b)
+	{
+		return a.x * b.x + a.y * b.y;
+	}
 
 	/**
 	 * @brief   向量叉积（二维）
@@ -364,7 +430,10 @@ namespace PhysicsBlock
 	 * @return  返回 a × b = a.x*b.y - a.y*b.x
 	 * @note    结果的绝对值表示平行四边形的面积，符号表示方向
 	 */
-	FLOAT_ Cross(const Vec2_ &a, const Vec2_ &b);
+	FLOAT_ inline Cross(const Vec2_ &a, const Vec2_ &b)
+	{
+		return a.x * b.y - a.y * b.x;
+	}
 
 	/**
 	 * @brief   向量顺时针旋转90度并缩放
@@ -372,7 +441,10 @@ namespace PhysicsBlock
 	 * @param   s 缩放因子
 	 * @return  返回旋转并缩放后的向量
 	 */
-	Vec2_ Cross(const Vec2_ &a, FLOAT_ s);
+	Vec2_ inline Cross(const Vec2_ &a, FLOAT_ s)
+	{
+		return Vec2_(s * a.y, -s * a.x);
+	}
 
 	/**
 	 * @brief   向量逆时针旋转90度并缩放
@@ -380,7 +452,10 @@ namespace PhysicsBlock
 	 * @param   a 输入向量
 	 * @return  返回旋转并缩放后的向量
 	 */
-	Vec2_ Cross(FLOAT_ s, const Vec2_ &a);
+	Vec2_ inline Cross(FLOAT_ s, const Vec2_ &a)
+	{
+		return Vec2_(-s * a.y, s * a.x);
+	}
 
 	/**
 	 * @brief   将值限制在合理范围内
@@ -397,5 +472,11 @@ namespace PhysicsBlock
 	 * @param   hi 最大值
 	 * @return  返回 [lo, hi) 范围内的随机浮点数
 	 */
-	FLOAT_ Random(FLOAT_ lo, FLOAT_ hi);
+	FLOAT_ inline Random(FLOAT_ lo, FLOAT_ hi)
+	{
+		FLOAT_ r = (FLOAT_)rand();
+		r /= RAND_MAX;
+		r = (hi - lo) * r + lo;
+		return r;
+	}
 }

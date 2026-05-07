@@ -8,7 +8,10 @@
 #include "PhysicsJoint.hpp"     // 物理关节
 #include "PhysicsJunction.hpp"  // 物理连接
 #include "PhysicsAssembly.hpp"  // 物理组装体
-#include "GridSearch.hpp"       // 网格搜索
+#include "GridSearch.hpp"            // 网格搜索
+#include "PhysicsCollision.hpp"     // 碰撞回调系统
+#include "PhysicsKinematic.hpp"     // 运动学物体系统
+#include "PhysicsTrigger.hpp"       // 触发器系统
 #include <unordered_map>
 
 #define MemoryPoolBool 1
@@ -187,6 +190,10 @@ namespace PhysicsBlock
         std::vector<BaseArbiter *> CollideGroupVector;                               // 碰撞对数组
         std::vector<BaseArbiter *> NewCollideGroup;                                  // 新添加的碰撞对
         std::vector<ArbiterKey> DeleteCollideGroup;                                  // 删除的碰撞对
+
+        PhysicsCollision mCollision;   // 碰撞回调管理器
+        PhysicsKinematic mKinematic;   // 运动学物体管理器
+        PhysicsTrigger mTrigger;       // 触发器管理器
 
         unsigned int ObjectSize = 0;                             // 动态物理对象总数量
         unsigned int ApplyImpulseSize = PhysicsApplyImpulseSize; // 迭代次数

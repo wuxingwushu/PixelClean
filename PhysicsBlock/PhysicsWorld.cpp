@@ -489,6 +489,8 @@ namespace PhysicsBlock
         }
         xTn.clear();
 #else
+        mKinematic.UpdateKinematicMotion(time);
+
         // 预处理
         for (const auto i : CollideGroupVector)
         {
@@ -627,6 +629,17 @@ namespace PhysicsBlock
             i->PhysicsSpeed(time, GravityAcceleration);
         }
 #endif
+
+        mCollision.ProcessCollisions(CollideGroupVector);
+
+        {
+            std::vector<PhysicsFormwork *> allObjects;
+            for (auto s : PhysicsShapeS) allObjects.push_back(s);
+            for (auto p : PhysicsParticleS) allObjects.push_back(p);
+            for (auto c : PhysicsCircleS) allObjects.push_back(c);
+            for (auto l : PhysicsLineS) allObjects.push_back(l);
+            mTrigger.ProcessTriggers(allObjects);
+        }
 
         // 更新网格
         mGridSearch.UpData();

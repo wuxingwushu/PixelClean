@@ -64,6 +64,10 @@ namespace GAME
 		PhysicsBlock::PhysicsWorld *mPhysicsWorld = nullptr; // 物理世界
 		PhysicsBlock::MapStatic *mMapStatic;				 // 地图
 
+		bool ShowLogPanel = true;							 // 是否显示日志面板
+		bool AutoScrollLog = true;							 // 是否自动滚动日志
+		float LogPanelHeight = 200.0f;						 // 日志面板高度
+
 		PhysicsBlock::PhysicsFormwork *PhysicsFormworkPtr = nullptr; // 选择的物理对象
 
 		// 物理信息辅助视觉

@@ -9,6 +9,7 @@
 
 #include "../../ImGui/imgui_demo.cpp"
 #include "PhysicsDemo.h"
+#include "PhysicsLogBuffer.h"
 #include <fstream>
 #include <sstream>
 
@@ -251,6 +252,61 @@ namespace GAME
 				}
 			}
 		}
+
+		ImGui::End();
+
+		ImGui::Begin(u8"日志输出", &ShowLogPanel);
+		window_pos = ImGui::GetWindowPos();
+		window_size = ImGui::GetWindowSize();
+		if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
+			((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
+			Global::ClickWindow = true;
+		}
+
+		ImGui::SetWindowSize(ImVec2(Global::mWidth * 0.4f, LogPanelHeight), ImGuiCond_FirstUseEver);
+
+		ImGui::Checkbox(u8"自动滚动", &AutoScrollLog);
+		ImGui::SameLine();
+		if (ImGui::Button(u8"清空日志"))
+		{
+			PhysicsBlock::PhysicsLogBuffer::GetInstance().Clear();
+		}
+		ImGui::Separator();
+
+		static ImGuiTextFilter logFilter;
+		logFilter.Draw(u8"过滤");
+
+		const float footerHeightToReserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetStyle().ScrollbarSize;
+		ImGui::BeginChild("LogScrollRegion", ImVec2(0, -footerHeightToReserve), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+		auto& logBuffer = PhysicsBlock::PhysicsLogBuffer::GetInstance();
+		static std::vector<std::string> cachedLogs;
+		static size_t lastLogCount = 0;
+
+		if (logBuffer.GetLogCount() != lastLogCount)
+		{
+			cachedLogs.clear();
+			for (size_t i = 0; i < logBuffer.GetLogCount(); ++i)
+			{
+				cachedLogs.push_back(logBuffer.GetLog(i));
+			}
+			lastLogCount = cachedLogs.size();
+		}
+
+		for (const auto& log : cachedLogs)
+		{
+			if (logFilter.PassFilter(log.c_str()))
+			{
+				ImGui::TextUnformatted(log.c_str());
+			}
+		}
+
+		if (AutoScrollLog && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+		{
+			ImGui::SetScrollHereY(1.0f);
+		}
+
+		ImGui::EndChild();
 
 		ImGui::End();
 

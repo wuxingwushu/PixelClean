@@ -1,4 +1,5 @@
 #include "PhysicsDemo.h"
+#include "PhysicsLogBuffer.h"
 #include <cstdio>
 
 namespace PhysicsBlock
@@ -1328,14 +1329,14 @@ namespace PhysicsBlock
 			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(
 				(*myPhysicsWorld)->PhysicsShapeS[i],
 				[](const CollisionData &data) {
-					printf("[Collision Enter] Shape hit at (%.1f, %.1f) depth=%.2f\n",
+					PhysicsLog("[Collision Enter] Shape hit at (%.1f, %.1f) depth=%.2f\n",
 						data.ContactPoint.x, data.ContactPoint.y, data.PenetrationDepth);
 				});
-			(*myPhysicsWorld)->mCollision.AddCollisionExitListener(
-				(*myPhysicsWorld)->PhysicsShapeS[i],
-				[](const CollisionData &data) {
-					printf("[Collision Exit] Shape separated\n");
-				});
+				(*myPhysicsWorld)->mCollision.AddCollisionExitListener(
+					(*myPhysicsWorld)->PhysicsShapeS[i],
+					[](const CollisionData &data) {
+						PhysicsLog("[Collision Exit] Shape separated\n");
+					});
 		}
 
 		for (int i = 0; i < 3; ++i)
@@ -1344,7 +1345,7 @@ namespace PhysicsBlock
 			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(
 				(*myPhysicsWorld)->PhysicsCircleS[idx],
 				[](const CollisionData &data) {
-					printf("[Collision Enter] Circle hit at (%.1f, %.1f) vel=(%.1f, %.1f)\n",
+					PhysicsLog("[Collision Enter] Circle hit at (%.1f, %.1f) vel=(%.1f, %.1f)\n",
 						data.ContactPoint.x, data.ContactPoint.y,
 						data.RelativeVelocity.x, data.RelativeVelocity.y);
 				});
@@ -1491,11 +1492,11 @@ namespace PhysicsBlock
 
 		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj1, TriggerEventType::Enter,
 			[](PhysicsFormwork *other) {
-				printf("[Trigger Enter] Object entered Zone-1 at y=%.1f\n", other->PFGetPos().y);
+				PhysicsLog("[Trigger Enter] Object entered Zone-1 at y=%.1f\n", other->PFGetPos().y);
 			});
 		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj1, TriggerEventType::Exit,
 			[](PhysicsFormwork *other) {
-				printf("[Trigger Exit] Object left Zone-1 at y=%.1f\n", other->PFGetPos().y);
+				PhysicsLog("[Trigger Exit] Object left Zone-1 at y=%.1f\n", other->PFGetPos().y);
 			});
 
 		PhysicsBlock::PhysicsShape *triggerObj2 = new PhysicsBlock::PhysicsShape({6, -2}, {2, 2});
@@ -1515,14 +1516,14 @@ namespace PhysicsBlock
 
 		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj2, TriggerEventType::Enter,
 			[](PhysicsFormwork *other) {
-				printf("[Trigger Enter] Object entered Zone-2 (Layer-0 only) at y=%.1f\n",
+				PhysicsLog("[Trigger Enter] Object entered Zone-2 (Layer-0 only) at y=%.1f\n",
 					other->PFGetPos().y);
 			});
 		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj2, TriggerEventType::Stay,
 			[](PhysicsFormwork *other) {
 				static int frameCount = 0;
 				if (++frameCount % 30 == 0)
-					printf("[Trigger Stay] Object staying in Zone-2 at (%.1f, %.1f)\n",
+					PhysicsLog("[Trigger Stay] Object staying in Zone-2 at (%.1f, %.1f)\n",
 						other->PFGetPos().x, other->PFGetPos().y);
 			});
 
@@ -1542,12 +1543,12 @@ namespace PhysicsBlock
 
 		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj3, TriggerEventType::Enter,
 			[](PhysicsFormwork *other) {
-				printf("[Trigger Enter] Object entered Catch-Zone at (%.1f, %.1f)\n",
+				PhysicsLog("[Trigger Enter] Object entered Catch-Zone at (%.1f, %.1f)\n",
 					other->PFGetPos().x, other->PFGetPos().y);
 			});
 		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj3, TriggerEventType::Exit,
 			[](PhysicsFormwork *other) {
-				printf("[Trigger Exit] Object escaped Catch-Zone\n");
+				PhysicsLog("[Trigger Exit] Object escaped Catch-Zone\n");
 			});
 
 		for (int g = 0; g < 4; ++g)

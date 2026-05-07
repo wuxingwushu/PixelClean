@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // RadianceCascades.cpp — 2D 级联辐射度全局光照模块（实现）
 // ============================================================================
 // 基于 Shadertoy "Radiance Cascades" 参考实现。
@@ -131,7 +131,7 @@ void RadianceCascades::KeyDown(GameKeyEnum k) {
 // 级联 0..4 的数据紧密打包在一个大缓冲区中。
 int RadianceCascades::calculateTotalCascadeEntries() const {
     int total = 0;
-    for (int lv = 0; lv < N_CASCADES; ++lv) {
+    for (int lv = 0; lv < mNCascades; ++lv) {
         total += calculateCascadeLevelEntries(lv);
     }
     return total;
@@ -152,7 +152,7 @@ int RadianceCascades::calculateTotalCascadeEntries() const {
 int RadianceCascades::calculateCascadeLevelEntries(int lv) const {
     int sx = mCascadeResX >> lv;
     int sy = mCascadeResY >> lv;
-    int dn = (lv == 0) ? 1 : (C_DRES << (2 * (lv - 1)));
+    int dn = (lv == 0) ? 1 : (mCDres << (2 * (lv - 1)));
     return sx * sy * dn;
 }
 
@@ -172,7 +172,7 @@ void RadianceCascades::createBuffers() {
     // 级联分辨率：使用参考公式动态计算，最大化利用可用缓冲区空间
     // 参考：ivec2 c0_sRes = ivec2(sqrt(4.0*nPixels/(4.0+c_dRes*(nCascades-1))) * screenRes/screenRes.yx)
     int nPixels = sdfW * sdfH;
-    float denom = 4.0f + (float)(C_DRES * (N_CASCADES - 1));
+    float denom = 4.0f + (float)(mCDres * (mNCascades - 1));
     float ratio = (float)sdfW / (float)sdfH;
     mCascadeResX = (int)std::sqrt(4.0f * nPixels / denom * ratio);
     mCascadeResY = (int)std::sqrt(4.0f * nPixels / denom / ratio);
@@ -565,11 +565,7 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     bool realMouseDown = leftDown || rightDown;  // 任一按钮按下都算"绘制中"
 
     // ---- 鼠标平滑算法（Shadertoy Buffer A 精确对应） ----
-    // 使用摩擦 + 半径限制实现平滑的鼠标跟随，产生自然的画笔路径
-    // SMOOTH_RADIUS：鼠标 B 周围的"死区"，新位置在半径内不响应
-    // SMOOTH_FRICTION：平滑摩擦系数，值越小平滑越慢
-    const float SMOOTH_RADIUS = float(ext.height) * 0.015f;
-    const float SMOOTH_FRICTION = 0.05f;
+    const float smoothRadiusPx = mSmoothRadius * float(ext.height);
 
     float rawX = (float)mMouseX;
     float rawY = (float)mMouseY;
@@ -594,8 +590,8 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
             // B 按下且距离 > 0 → 平滑处理
             float ndx = (rawX - mMouseBX) / dist;  // 从 B 到 raw 的单位方向
             float ndy = (rawY - mMouseBY) / dist;
-            float len = std::max(dist - SMOOTH_RADIUS, 0.0f);  // 超出死区的距离
-            float ease = 1.0f - std::pow(SMOOTH_FRICTION, dt * 10.0f);  // 平滑缓动
+            float len = std::max(dist - smoothRadiusPx, 0.0f);
+            float ease = 1.0f - std::pow(mSmoothFriction, dt * 10.0f);  // 平滑缓动
             mMouseCX = mMouseBX + ndx * len * ease;  // 向鼠标位置插值
             mMouseCY = mMouseBY + ndy * len * ease;
             mMouseCZ = rawZ;
@@ -649,18 +645,16 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     p.mouseRawY         = rawY;
     p.frameCount        = mFrameCount;
     p.emissiveMode      = 0;
-    p.brushRadius       = BRUSH_RADIUS;
+    p.brushRadius       = mBrushRadius;
 
     p.c_sResX           = mCascadeResX;
     p.c_sResY           = mCascadeResY;
-    p.c_dRes            = C_DRES;
-    p.nCascades         = N_CASCADES;
+    p.c_dRes            = mCDres;
+    p.nCascades         = mNCascades;
 
-    // c_intervalLength = screenLen * 4 / (4^N_CASCADES - 1)
-    // 对于 N_CASCADES=5: 4^5=1024 → 1023 等分
-    // 例如 1920×1080 screenLen≈2203 → c_intervalLength≈8.6 像素
+    // c_intervalLength = screenLen * 4 / (4^mNCascades - 1)
     float screenLen = std::sqrt((float)(ext.width * ext.width + ext.height * ext.height));
-    p.c_intervalLength  = screenLen * 4.0f / float((1 << (2 * N_CASCADES)) - 1);
+    p.c_intervalLength  = screenLen * 4.0f / float((1 << (2 * mNCascades)) - 1);
 
     p.c_smoothDistScale = 0.0f;  // 已弃用，设为 0
     p.totalCascadeEntries = calculateTotalCascadeEntries();
@@ -684,8 +678,22 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     // 清屏标志
     p.clearScreen       = mNeedClear ? 1 : 0;
 
+    p.smoothRadius      = mSmoothRadius;
+    p.smoothFriction    = mSmoothFriction;
+    p.toneMappingExponent = mToneMappingExponent;
+    p.rayMarchMaxSteps  = mRayMarchMaxSteps;
+    p.cascadeIntervalScale = mCascadeIntervalScale;
+    p.emissivityHueSpeed   = mEmissivityHueSpeed;
+    p.emissivitySaturation = mEmissivitySaturation;
+    p.emissivityValue      = mEmissivityValue;
+    p.displayBlendRange    = mDisplayBlendRange;
+
     // ---- 写入 GPU 缓冲区 ----
     mParamBuffer->updateBufferByMap(&p, sizeof(p));
+
+    if (hasCascadeParamsChanged()) {
+        rebuildCascadeResources();
+    }
 
     // ---- 执行 GPU 计算 ----
     dispatchCompute();
@@ -748,8 +756,8 @@ void RadianceCascades::dispatchCompute() {
     //   n=1 (setIdx=1): read=B, write=A → A 有 level1+2+3+4 数据
     //   n=0 (setIdx=0): read=A, write=B → B 有全部 5 层数据
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mCascadePipeline);
-    for (int n = N_CASCADES - 1; n >= 0; --n) {
-        int setIdx = (N_CASCADES - 1 - n) % 2;
+    for (int n = mNCascades - 1; n >= 0; --n) {
+        int setIdx = (mNCascades - 1 - n) % 2;
         int entries = calculateCascadeLevelEntries(n);
         uint32_t groups = (uint32_t)((entries + 63) / 64);
 
@@ -775,7 +783,7 @@ void RadianceCascades::dispatchCompute() {
     //   N_CASCADES=5，n=4 时 setIdx=0 将 level4 写入 B
     //   n=0 时 setIdx=0 将 level0 写入 B
     //   所以最终结果在 B（mDisplayDescriptorSets[0] 从 B 读取）
-    int dispSet = (N_CASCADES - 1) % 2;  // = 0
+    int dispSet = (mNCascades - 1) % 2;
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mDisplayPipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mDisplayPipelineLayout,
         0, 1, &mDisplayDescriptorSets[dispSet], 0, nullptr);
@@ -867,21 +875,312 @@ void RadianceCascades::GameUI() {
     if (!mOutputImage || mImGuiDescriptorSet == VK_NULL_HANDLE) return;
 
     VkExtent2D ext = mSwapChain->getExtent();
+    float panelWidth = 320.0f;
 
-    // 全屏无边框窗口，完全覆盖显示区域
     ImGui::Begin(u8"Radiance Cascades GI", nullptr,
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
     ImGui::SetWindowPos(ImVec2(0, 0));
     ImGui::SetWindowSize(ImVec2((float)ext.width, (float)ext.height));
 
-    // 将纹理缩放至可用区域，保持宽高比
-    ImVec2 winsz = ImGui::GetContentRegionAvail();
+    ImVec2 avail = ImGui::GetContentRegionAvail();
+    float imgAreaWidth = avail.x - panelWidth - 8.0f;
+    if (imgAreaWidth < 200.0f) imgAreaWidth = 200.0f;
+
+    ImGui::BeginChild("ImageView", ImVec2(imgAreaWidth, avail.y), false,
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     float imgW = (float)mOutputImage->getWidth();
     float imgH = (float)mOutputImage->getHeight();
-    float scale = std::min(winsz.x / imgW, winsz.y / imgH);
+    float scale = std::min(ImGui::GetContentRegionAvail().x / imgW,
+                           ImGui::GetContentRegionAvail().y / imgH);
     ImVec2 sz(imgW * scale, imgH * scale);
     ImGui::Image((ImTextureID)(intptr_t)mImGuiDescriptorSet, sz);
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+    ImGui::BeginChild("SettingsPanel", ImVec2(panelWidth, avail.y), true);
+
+    ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), u8"Radiance Cascades GI");
+    ImGui::Separator();
+
+    // ================================================================
+    // 画笔参数
+    // ================================================================
+    if (ImGui::CollapsingHeader(u8"画笔参数", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::PushItemWidth(140.0f);
+        float brushMin = 0.001f, brushMax = 0.1f;
+        if (ImGui::SliderFloat(u8"画笔半径", &mBrushRadius, brushMin, brushMax, "%.4f")) {
+            mBrushRadius = std::clamp(mBrushRadius, brushMin, brushMax);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"归一化画笔半径，乘以窗口高度得像素值。\n默认: 0.01 (约10像素@1080p)");
+        }
+        ImGui::PopItemWidth();
+    }
+
+    // ================================================================
+    // 平滑参数
+    // ================================================================
+    if (ImGui::CollapsingHeader(u8"鼠标平滑", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::PushItemWidth(140.0f);
+        if (ImGui::SliderFloat(u8"平滑死区", &mSmoothRadius, 0.001f, 0.1f, "%.4f")) {
+            mSmoothRadius = std::clamp(mSmoothRadius, 0.001f, 0.1f);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"鼠标B周围的死区系数。\n默认: 0.015");
+        }
+        if (ImGui::SliderFloat(u8"摩擦系数", &mSmoothFriction, 0.001f, 0.5f, "%.4f")) {
+            mSmoothFriction = std::clamp(mSmoothFriction, 0.001f, 0.5f);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"平滑摩擦系数，值越小平滑越慢。\n默认: 0.05");
+        }
+        ImGui::PopItemWidth();
+    }
+
+    // ================================================================
+    // 发光颜色参数
+    // ================================================================
+    if (ImGui::CollapsingHeader(u8"发光颜色", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::PushItemWidth(140.0f);
+        if (ImGui::SliderFloat(u8"色相速度", &mEmissivityHueSpeed, 0.0f, 2.0f, "%.3f")) {
+            mEmissivityHueSpeed = std::clamp(mEmissivityHueSpeed, 0.0f, 2.0f);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"HSV色相随时间的旋转速度。\n设为0停止颜色循环。\n默认: 0.2");
+        }
+        if (ImGui::SliderFloat(u8"饱和度", &mEmissivitySaturation, 0.0f, 1.0f, "%.3f")) {
+            mEmissivitySaturation = std::clamp(mEmissivitySaturation, 0.0f, 1.0f);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"画笔发光颜色的HSV饱和度。\n默认: 1.0");
+        }
+        if (ImGui::SliderFloat(u8"明度", &mEmissivityValue, 0.0f, 2.0f, "%.3f")) {
+            mEmissivityValue = std::clamp(mEmissivityValue, 0.0f, 2.0f);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"画笔发光颜色的HSV明度。\n默认: 0.8");
+        }
+        ImGui::PopItemWidth();
+    }
+
+    // ================================================================
+    // 级联参数（需Apply）
+    // ================================================================
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), u8"级联参数（需应用）");
+    ImGui::PushItemWidth(140.0f);
+    if (ImGui::SliderInt(u8"级联层数", &mPendingNCascades, 1, 8)) {
+        mPendingNCascades = std::clamp(mPendingNCascades, 1, 8);
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(u8"级联层数，影响光线追踪精度和性能。\n默认: 5。修改后需点击应用。");
+    }
+    if (ImGui::SliderInt(u8"方向分辨率", &mPendingCDres, 4, 32)) {
+        mPendingCDres = std::clamp(mPendingCDres, 4, 32);
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(u8"基础方向采样数。值越大方向越精细。\n默认: 16。修改后需点击应用。");
+    }
+    ImGui::PopItemWidth();
+
+    if (ImGui::Button(u8"应用级联参数", ImVec2(140.0f, 0))) {
+        mNCascades = mPendingNCascades;
+        mCDres = mPendingCDres;
+        mNeedsCascadeRebuild = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(u8"重置", ImVec2(60.0f, 0))) {
+        mPendingNCascades = 5;
+        mPendingCDres = 16;
+    }
+
+    // ================================================================
+    // 显示参数
+    // ================================================================
+    ImGui::Separator();
+    if (ImGui::CollapsingHeader(u8"显示参数", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::PushItemWidth(140.0f);
+        if (ImGui::SliderFloat(u8"色调映射指数", &mToneMappingExponent, 0.5f, 10.0f, "%.2f")) {
+            mToneMappingExponent = std::clamp(mToneMappingExponent, 0.5f, 10.0f);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"Reinhard色调映射曲线指数。\n值越大整体越暗。\n默认: 2.5");
+        }
+        if (ImGui::SliderFloat(u8"SDF混合范围", &mDisplayBlendRange, 0.0f, 50.0f, "%.1f")) {
+            mDisplayBlendRange = std::clamp(mDisplayBlendRange, 0.0f, 50.0f);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"空空间与表面交界处的混合过渡距离（像素）。\n默认: 3.0");
+        }
+        if (ImGui::SliderFloat(u8"级联间隔缩放", &mCascadeIntervalScale, 0.1f, 5.0f, "%.2f")) {
+            mCascadeIntervalScale = std::clamp(mCascadeIntervalScale, 0.1f, 5.0f);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"级联探针间隔的缩放因子。\n值越大探针越稀疏。\n默认: 1.0");
+        }
+        ImGui::PopItemWidth();
+    }
+
+    // ================================================================
+    // 射线步进参数
+    // ================================================================
+    if (ImGui::CollapsingHeader(u8"射线步进")) {
+        ImGui::PushItemWidth(140.0f);
+        if (ImGui::SliderInt(u8"最大步数", &mRayMarchMaxSteps, 10, 500)) {
+            mRayMarchMaxSteps = std::clamp(mRayMarchMaxSteps, 10, 500);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(u8"球体步进最大迭代次数。\n值越大精度越高但性能越低。\n默认: 100");
+        }
+        ImGui::PopItemWidth();
+    }
+
+    // ================================================================
+    // 操作按钮
+    // ================================================================
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), u8"操作");
+
+    if (ImGui::Button(u8"重置所有参数", ImVec2(140.0f, 0))) {
+        mBrushRadius = 0.01f;
+        mSmoothRadius = 0.015f;
+        mSmoothFriction = 0.05f;
+        mToneMappingExponent = 2.5f;
+        mRayMarchMaxSteps = 100;
+        mCascadeIntervalScale = 1.0f;
+        mEmissivityHueSpeed = 0.2f;
+        mEmissivitySaturation = 1.0f;
+        mEmissivityValue = 0.8f;
+        mDisplayBlendRange = 3.0f;
+        mPendingNCascades = 5;
+        mPendingCDres = 16;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(u8"将所有参数恢复为默认值（不含级联参数，需单独应用）");
+    }
+
+    if (ImGui::Button(u8"清空画布 (C)", ImVec2(140.0f, 0))) {
+        mNeedClear = true;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(u8"清除所有绘制的SDF数据");
+    }
+
+    // ================================================================
+    // 信息面板
+    // ================================================================
+    ImGui::Separator();
+    if (ImGui::CollapsingHeader(u8"运行信息")) {
+        ImGui::Text(u8"帧数: %d", mFrameCount);
+        ImGui::Text(u8"时间: %.1f s", mTime);
+        ImGui::Text(u8"分辨率: %dx%d", ext.width, ext.height);
+        ImGui::Text(u8"级联分辨率: %dx%d", mCascadeResX, mCascadeResY);
+        ImGui::Text(u8"级联层数: %d", mNCascades);
+        ImGui::Text(u8"方向分辨率: %d", mCDres);
+        int totalEntries = calculateTotalCascadeEntries();
+        float memMB = (float)(totalEntries * sizeof(float) * 4) / (1024.0f * 1024.0f);
+        ImGui::Text(u8"级联内存: %.1f MB", memMB);
+        ImGui::Text(u8"级联条目: %d", totalEntries);
+
+        float fps = ImGui::GetIO().Framerate;
+        ImGui::Text(u8"FPS: %.1f", fps);
+    }
+
+    // ================================================================
+    // 键盘快捷键提示
+    // ================================================================
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), u8"快捷键:");
+    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), u8"C - 清空画布");
+    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), u8"1 - 直线段模式");
+    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), u8"空格 - 强制不发光");
+    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), u8"ESC - 返回主界面");
+
+    ImGui::EndChild();
     ImGui::End();
+}
+
+// ============================================================================
+// hasCascadeParamsChanged — 检测级联参数是否与当前不同
+// ============================================================================
+bool RadianceCascades::hasCascadeParamsChanged() const {
+    return mNeedsCascadeRebuild;
+}
+
+// ============================================================================
+// rebuildCascadeResources — 级联参数变更后重建缓冲区和描述符集
+// ============================================================================
+void RadianceCascades::rebuildCascadeResources() {
+    if (!mNeedsCascadeRebuild || !mDevice) return;
+    mNeedsCascadeRebuild = false;
+
+    VkDevice dev = mDevice->getDevice();
+    VkExtent2D ext = mSwapChain->getExtent();
+    int sdfW = (int)ext.width;
+    int sdfH = (int)ext.height;
+
+    int nPixels = sdfW * sdfH;
+    float denom = 4.0f + (float)(mCDres * (mNCascades - 1));
+    float ratio = (float)sdfW / (float)sdfH;
+    mCascadeResX = (int)std::sqrt(4.0f * nPixels / denom * ratio);
+    mCascadeResY = (int)std::sqrt(4.0f * nPixels / denom / ratio);
+
+    int cascadeTotal = calculateTotalCascadeEntries();
+    VkDeviceSize csize = (VkDeviceSize)cascadeTotal * sizeof(float) * 4;
+
+    delete mCascadeBufferA;
+    delete mCascadeBufferB;
+    mCascadeBufferA = new VulKan::Buffer(
+        mDevice, csize,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    mCascadeBufferB = new VulKan::Buffer(
+        mDevice, csize,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    auto writeBuf = [&](VkDescriptorSet set, uint32_t bind, VkBuffer buf, VkDeviceSize sz) {
+        VkDescriptorBufferInfo bi{};
+        bi.buffer = buf;
+        bi.offset = 0;
+        bi.range  = sz;
+        VkWriteDescriptorSet w{};
+        w.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        w.dstSet          = set;
+        w.dstBinding      = bind;
+        w.descriptorCount = 1;
+        w.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        w.pBufferInfo     = &bi;
+        vkUpdateDescriptorSets(dev, 1, &w, 0, nullptr);
+    };
+
+    VkDeviceSize sdfSz  = (VkDeviceSize)ext.width * ext.height * sizeof(float) * 4;
+    VkDeviceSize cascSz = csize;
+    VkDeviceSize outSz  = (VkDeviceSize)ext.width * ext.height * sizeof(uint32_t);
+
+    VkBuffer bufA = mCascadeBufferA->getBuffer();
+    VkBuffer bufB = mCascadeBufferB->getBuffer();
+    VkBuffer sdfB = mSDFBuffer->getBuffer();
+
+    writeBuf(mCascadeDescriptorSets[0], 0, mParamBuffer->getBuffer(), sizeof(GPUParams));
+    writeBuf(mCascadeDescriptorSets[0], 1, sdfB, sdfSz);
+    writeBuf(mCascadeDescriptorSets[0], 2, bufA, cascSz);
+    writeBuf(mCascadeDescriptorSets[0], 3, bufB, cascSz);
+
+    writeBuf(mCascadeDescriptorSets[1], 0, mParamBuffer->getBuffer(), sizeof(GPUParams));
+    writeBuf(mCascadeDescriptorSets[1], 1, sdfB, sdfSz);
+    writeBuf(mCascadeDescriptorSets[1], 2, bufB, cascSz);
+    writeBuf(mCascadeDescriptorSets[1], 3, bufA, cascSz);
+
+    writeBuf(mDisplayDescriptorSets[0], 0, mParamBuffer->getBuffer(), sizeof(GPUParams));
+    writeBuf(mDisplayDescriptorSets[0], 1, sdfB, sdfSz);
+    writeBuf(mDisplayDescriptorSets[0], 2, bufB, cascSz);
+    writeBuf(mDisplayDescriptorSets[0], 3, mOutputBuffer->getBuffer(), outSz);
+
+    writeBuf(mDisplayDescriptorSets[1], 0, mParamBuffer->getBuffer(), sizeof(GPUParams));
+    writeBuf(mDisplayDescriptorSets[1], 1, sdfB, sdfSz);
+    writeBuf(mDisplayDescriptorSets[1], 2, bufA, cascSz);
+    writeBuf(mDisplayDescriptorSets[1], 3, mOutputBuffer->getBuffer(), outSz);
 }
 
 // ============================================================================

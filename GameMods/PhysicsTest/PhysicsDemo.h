@@ -61,8 +61,14 @@ namespace PhysicsBlock
 
 	// 组合测试
 	void PhysicsDemo18(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+
+	// 碰撞回调系统
 	void PhysicsDemo19(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+
+	// 运动学物体
 	void PhysicsDemo20(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+
+	// 触发器系统
 	void PhysicsDemo21(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
 
 	using DemoFunction = void (*)(PhysicsWorld **myPhysicsWorld, Camera *mCamera);

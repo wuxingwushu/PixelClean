@@ -1,5 +1,6 @@
 #include "MapStatic.hpp"
 #include "BaseCalculate.hpp"
+#include <algorithm>
 
 namespace PhysicsBlock
 {
@@ -43,6 +44,15 @@ namespace PhysicsBlock
      * 4. 如果碰撞，将碰撞点转换回世界坐标
      * 5. 返回碰撞结果
      */
+    CollisionInfoI MapStatic::FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end)
+    {
+        start.x = std::max(0, std::min(start.x, (int)width - 1));
+        start.y = std::max(0, std::min(start.y, (int)height - 1));
+        end.x = std::max(0, std::min(end.x, (int)width - 1));
+        end.y = std::max(0, std::min(end.y, (int)height - 1));
+        return BresenhamDetection(start, end);
+    }
+
     CollisionInfoD MapStatic::FMBresenhamDetection(Vec2_ start, Vec2_ end)
     {
         // 偏移中心位置，对齐网格坐标系

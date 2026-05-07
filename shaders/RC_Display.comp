@@ -57,6 +57,15 @@ layout(std430, binding = 0) buffer Params {
     float mouseRawX;
     float mouseRawY;
     int clearScreen;
+    float smoothRadius;
+    float smoothFriction;
+    float toneMappingExponent;
+    int rayMarchMaxSteps;
+    float cascadeIntervalScale;
+    float emissivityHueSpeed;
+    float emissivitySaturation;
+    float emissivityValue;
+    float displayBlendRange;
 } params;
 
 // ---- SDF 缓冲区 (binding 1, 只读) ----
@@ -98,7 +107,7 @@ vec3 hsv2rgb(vec3 c) {
 // 用于直线段模式时的临时覆盖。
 vec3 getEmissivity() {
     if (params.keyToggledSpace != 0) return vec3(0.0);
-    return pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
+    return pow(hsv2rgb(vec3(params.time * params.emissivityHueSpeed, params.emissivitySaturation, params.emissivityValue)), vec3(2.2));
 }
 
 // ============================================================================
@@ -203,14 +212,14 @@ void main() {
     // clamp(3.0 - data.r, 0, 1) 将距离映射到 [0,1]：
     //   data.r >= 3  → weight = 0（空空间，用级联 fluence）
     //   data.r <= 0  → weight = 1（表面，用 SDF emissivity）
-    fluence = mix(fluence, data.gba * 2.0 * PI, clamp(3.0 - data.r, 0.0, 1.0));
+    fluence = mix(fluence, data.gba * 2.0 * PI, clamp(params.displayBlendRange - data.r, 0.0, 1.0));
 
     // ---- 色调映射 ----
     // 公式：mapped = 1 - 1/(1 + fluence)^2.5
     // 这是 Reinhard 变体，将 HDR 值映射到 [0,1]，并保持颜色饱和度
     // 对于低值 fluence≈0：mapped≈0（黑色）
     // 对于高值 fluence>>1：mapped≈1（白色）
-    vec3 mapped = vec3(1.0) - vec3(1.0) / pow(vec3(1.0) + fluence, vec3(2.5));
+    vec3 mapped = vec3(1.0) - vec3(1.0) / pow(vec3(1.0) + fluence, vec3(params.toneMappingExponent));
 
     // ---- RGBA8 打包 ----
     vec4 fc = clamp(vec4(mapped, 1.0), 0.0, 1.0);

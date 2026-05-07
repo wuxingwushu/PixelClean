@@ -63,6 +63,15 @@ layout(std430, binding = 0) buffer Params {
     float mouseRawX;
     float mouseRawY;
     int clearScreen;
+    float smoothRadius;
+    float smoothFriction;
+    float toneMappingExponent;
+    int rayMarchMaxSteps;
+    float cascadeIntervalScale;
+    float emissivityHueSpeed;
+    float emissivitySaturation;
+    float emissivityValue;
+    float displayBlendRange;
 } params;
 
 // ---- SDF 缓冲区 (binding 1, 只读) ----
@@ -112,7 +121,7 @@ vec3 hsv2rgb(vec3 c) {
 // 与 RC_SDF.comp 版本的区别：不检查 keyToggledSpace（级联 shader 中
 // keyToggledSpace 由 SDF shader 处理，级联只需读取最终 SDF 值）
 vec3 getEmissivity() {
-    return pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
+    return pow(hsv2rgb(vec3(params.time * params.emissivityHueSpeed, params.emissivitySaturation, params.emissivityValue)), vec3(2.2));
 }
 
 // ============================================================================
@@ -225,7 +234,7 @@ float intersect(vec2 ro, vec2 rd, float tMax) {
 
     // ---- 射线步进循环 ----
     float t = 0.0;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < params.rayMarchMaxSteps; i++) {
         float d = sdDrawing(ro + rd * t);
         t += abs(d);  // 保守步进：前进 SDF 报告的距离
         if (t >= tMax) break;
@@ -377,7 +386,7 @@ void main() {
     // tMin = t1 * 4^(n-1)  (n>0)  或 0  (n=0)
     // tMax = t1 * 4^n
     // 即每层的搜索范围是上一层的 4 倍
-    float t1 = params.c_intervalLength;
+    float t1 = params.c_intervalLength * params.cascadeIntervalScale;
     float tMin = (n == 0) ? 0.0 : t1 * float(1 << (2 * (n - 1)));
     float tMax = t1 * float(1 << (2 * n));
 

@@ -6,6 +6,12 @@
 namespace PhysicsBlock
 {
 
+    enum class KinematicMoveMode
+    {
+        Once,
+        PingPong
+    };
+
     /**
      * @brief 运动学运动状态
      * @details 存储一个运动学物体的目标移动/旋转数据，
@@ -38,6 +44,8 @@ namespace PhysicsBlock
          */
         FLOAT_ MoveElapsed = 0.0f;
 
+        KinematicMoveMode MoveMode = KinematicMoveMode::Once;
+
         /**
          * @brief 是否正在执行旋转动画
          */
@@ -62,6 +70,8 @@ namespace PhysicsBlock
          * @brief 旋转已用时间（秒）
          */
         FLOAT_ RotateElapsed = 0.0f;
+
+        KinematicMoveMode RotateMode = KinematicMoveMode::Once;
     };
 
     /**
@@ -191,6 +201,9 @@ namespace PhysicsBlock
          * @endcode
          */
         void RotateTo(PhysicsFormwork *object, FLOAT_ rotation, FLOAT_ duration);
+
+        void SetMoveMode(PhysicsFormwork *object, KinematicMoveMode mode);
+        void SetRotateMode(PhysicsFormwork *object, KinematicMoveMode mode);
 
         /**
          * @brief 同步运动学物体的物理引擎状态

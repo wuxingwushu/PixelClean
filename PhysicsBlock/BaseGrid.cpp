@@ -62,7 +62,7 @@ namespace PhysicsBlock
         const int h = height;
         while (true)
         {
-            if (start.x < w && start.y < h)
+            if (start.x >= 0 && start.y >= 0 && start.x < w && start.y < h)
             {
                 GridBlock& block = Grid[start.x * h + start.y];
                 if (block.Collision)

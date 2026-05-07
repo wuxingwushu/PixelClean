@@ -1401,7 +1401,8 @@ namespace PhysicsBlock
 		(*myPhysicsWorld)->AddObject(platform);
 
 		(*myPhysicsWorld)->mKinematic.SetIsKinematic(platform, true);
-		(*myPhysicsWorld)->mKinematic.MoveTo(platform, {-5, 0}, 3.0f);
+		(*myPhysicsWorld)->mKinematic.MoveTo(platform, {-5, 6}, 3.0f);
+		(*myPhysicsWorld)->mKinematic.SetMoveMode(platform, KinematicMoveMode::PingPong);
 
 		for (int i = 0; i < 4; ++i)
 		{
@@ -1423,7 +1424,8 @@ namespace PhysicsBlock
 		(*myPhysicsWorld)->AddObject(arm);
 
 		(*myPhysicsWorld)->mKinematic.SetIsKinematic(arm, true);
-		(*myPhysicsWorld)->mKinematic.RotateTo(arm, M_PI / 3, 4.0f);
+		(*myPhysicsWorld)->mKinematic.RotateTo(arm, M_PI / 3, 2.0f);
+		(*myPhysicsWorld)->mKinematic.SetRotateMode(arm, KinematicMoveMode::PingPong);
 
 		for (int i = 0; i < 3; ++i)
 		{

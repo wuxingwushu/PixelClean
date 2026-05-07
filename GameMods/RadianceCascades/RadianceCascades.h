@@ -49,41 +49,50 @@ namespace GAME {
 // 通过 mParamBuffer 每帧 map 更新，GPU 侧只读。
 // 字段顺序必须与 shader 中声明顺序严格一致，确保字节对齐。
 struct GPUParams {
-    float time;              // 程序运行时间（秒），控制 HSV 颜色循环
-    float timeDelta;         // 帧间隔（秒）
-    int sdfWidth;            // SDF 缓冲区宽度（像素）
-    int sdfHeight;           // SDF 缓冲区高度（像素）
-    float mouseX;            // 平滑鼠标 X（像素坐标）
-    float mouseY;            // 平滑鼠标 Y
-    float mousePrevX;        // 上一帧原始鼠标 X
-    float mousePrevY;        // 上一帧原始鼠标 Y
-    int mouseLeftDown;       // 平滑左键状态
-    int mouseRightDown;      // 右键状态（1=按下）
-    int frameCount;          // 帧计数（0=首帧）
-    int emissiveMode;        // 发光模式（当前未使用）
-    float brushRadius;       // 画笔半径（归一化值 BRUSH_RADIUS=0.01）
-    int c_sResX;             // 级联分辨率 X（=sdfWidth/4）
-    int c_sResY;             // 级联分辨率 Y（=sdfHeight/4）
-    int c_dRes;              // 级联基础方向分辨率 C_DRES=16
-    int nCascades;           // 级联层数 N_CASCADES=5
-    float c_intervalLength;  // 级联间隔长度（像素）
-    float c_smoothDistScale; // 平滑距离缩放（当前=0，已弃用）
-    int totalCascadeEntries; // 级联缓冲区总条目数
-    int cascadeLevel;        // 当前级联等级（SDF shader 不用）
-    float mouseSmoothAX;     // 画笔平滑历史 A X
-    float mouseSmoothAY;     // 画笔平滑历史 A Y
-    float mouseSmoothBX;     // 画笔平滑历史 B X
-    float mouseSmoothBY;     // 画笔平滑历史 B Y
-    int mouseSmoothADown;    // 历史 A 鼠标状态
-    int mouseSmoothBDown;    // 历史 B 鼠标状态
-    int mouseMagic;          // 魔法模式标记（当前未使用）
-    int keyToggledSpace;     // 空格键切换：强制不发光
-    int keyToggled1;         // 键 1 切换：直线段模式
-    float mouseClickStartX;  // 点击起始 X（直线段起点）
-    float mouseClickStartY;  // 点击起始 Y
-    float mouseRawX;         // 原始鼠标 X（未平滑）
-    float mouseRawY;         // 原始鼠标 Y
-    int clearScreen;         // 清屏标志（1=本帧清屏）
+    float time;
+    float timeDelta;
+    int sdfWidth;
+    int sdfHeight;
+    float mouseX;
+    float mouseY;
+    float mousePrevX;
+    float mousePrevY;
+    int mouseLeftDown;
+    int mouseRightDown;
+    int frameCount;
+    int emissiveMode;
+    float brushRadius;
+    int c_sResX;
+    int c_sResY;
+    int c_dRes;
+    int nCascades;
+    float c_intervalLength;
+    float c_smoothDistScale;
+    int totalCascadeEntries;
+    int cascadeLevel;
+    float mouseSmoothAX;
+    float mouseSmoothAY;
+    float mouseSmoothBX;
+    float mouseSmoothBY;
+    int mouseSmoothADown;
+    int mouseSmoothBDown;
+    int mouseMagic;
+    int keyToggledSpace;
+    int keyToggled1;
+    float mouseClickStartX;
+    float mouseClickStartY;
+    float mouseRawX;
+    float mouseRawY;
+    int clearScreen;
+    float smoothRadius;
+    float smoothFriction;
+    float toneMappingExponent;
+    int rayMarchMaxSteps;
+    float cascadeIntervalScale;
+    float emissivityHueSpeed;
+    float emissivitySaturation;
+    float emissivityValue;
+    float displayBlendRange;
 };
 
 // ============================================================================
@@ -113,15 +122,36 @@ public:
     void GameUI() override;  // ImGui 渲染：全屏显示级联光照纹理
 
 private:
-    // ---- 算法常量 ----
-    static constexpr int C_DRES = 16;           // 基础方向分辨率（每条射线 16 个方向采样）
-    static constexpr int N_CASCADES = 5;        // 级联层数（0..4，共 5 层）
-    static constexpr float BRUSH_RADIUS = 0.01f; // 归一化画笔半径（乘以 sdfHeight 得像素值）
-    static constexpr float MAGIC = 1e25f;        // 魔法模式标记值（当前未使用）
+    // ---- 算法参数（运行时可调） ----
+    static constexpr float MAGIC = 1e25f;
+
+    int mCDres = 16;
+    int mNCascades = 5;
+    float mBrushRadius = 0.01f;
+    float mSmoothRadius = 0.015f;
+    float mSmoothFriction = 0.05f;
+    float mToneMappingExponent = 2.5f;
+    int mRayMarchMaxSteps = 100;
+    float mCascadeIntervalScale = 1.0f;
+    float mEmissivityHueSpeed = 0.2f;
+    float mEmissivitySaturation = 1.0f;
+    float mEmissivityValue = 0.8f;
+    float mDisplayBlendRange = 3.0f;
+
+    int mPendingCDres = 16;
+    int mPendingNCascades = 5;
+    bool mNeedsCascadeRebuild = false;
+
+    bool mUIShowBrush = true;
+    bool mUIShowColor = true;
+    bool mUIShowCascade = true;
+    bool mUIShowDisplay = true;
+    bool mUIShowRayMarch = true;
+    bool mUIShowInfo = true;
 
     // ---- 级联尺寸 ----
-    int mCascadeResX = 320;  // 级联 X 分辨率（= sdfWidth / 4）
-    int mCascadeResY = 180;  // 级联 Y 分辨率（= sdfHeight / 4）
+    int mCascadeResX = 320;
+    int mCascadeResY = 180;
 
     // ---- GPU 缓冲区 ----
     VulKan::Buffer* mParamBuffer = nullptr;       // 统一参数缓冲区（CPU 可见，每帧 map 更新）
@@ -192,6 +222,8 @@ private:
     void createDescriptorSets();                 // 分配并绑定描述符集
     void createImGuiResources();                 // 创建 ImGui 显示所需资源
     void dispatchCompute();                      // 录制+提交完整 compute dispatch 序列
+    void rebuildCascadeResources();              // 级联参数变更后重建缓冲区和描述符集
+    bool hasCascadeParamsChanged() const;         // 检测级联参数是否与当前不同
     void cleanup();                              // 释放所有 Vulkan 资源（带防护卫）
 };
 

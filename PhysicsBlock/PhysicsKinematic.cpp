@@ -5,6 +5,7 @@
 #include "PhysicsCircle.hpp"
 #include "PhysicsLine.hpp"
 #include <cmath>
+#include <algorithm>
 
 namespace PhysicsBlock
 {
@@ -131,6 +132,26 @@ namespace PhysicsBlock
         data.Motion.RotateElapsed = 0.0f;
     }
 
+    void PhysicsKinematic::SetMoveMode(PhysicsFormwork *object, KinematicMoveMode mode)
+    {
+        if (object == nullptr)
+        {
+            throw ArgumentNullException("object");
+        }
+        std::lock_guard<std::mutex> lock(mMutex);
+        GetOrCreateData(object).Motion.MoveMode = mode;
+    }
+
+    void PhysicsKinematic::SetRotateMode(PhysicsFormwork *object, KinematicMoveMode mode)
+    {
+        if (object == nullptr)
+        {
+            throw ArgumentNullException("object");
+        }
+        std::lock_guard<std::mutex> lock(mMutex);
+        GetOrCreateData(object).Motion.RotateMode = mode;
+    }
+
     void PhysicsKinematic::SynchronizePhysicsState(PhysicsFormwork *object)
     {
         if (object == nullptr)
@@ -237,7 +258,16 @@ namespace PhysicsBlock
                 if (motion.MoveElapsed >= motion.MoveDuration)
                 {
                     motion.MoveElapsed = motion.MoveDuration;
-                    motion.IsMoving = false;
+
+                    if (motion.MoveMode == KinematicMoveMode::PingPong)
+                    {
+                        std::swap(motion.MoveStartPos, motion.MoveTargetPos);
+                        motion.MoveElapsed = 0.0f;
+                    }
+                    else
+                    {
+                        motion.IsMoving = false;
+                    }
                 }
 
                 FLOAT_ t = (motion.MoveDuration > 0.0f)
@@ -260,7 +290,16 @@ namespace PhysicsBlock
                 if (motion.RotateElapsed >= motion.RotateDuration)
                 {
                     motion.RotateElapsed = motion.RotateDuration;
-                    motion.IsRotating = false;
+
+                    if (motion.RotateMode == KinematicMoveMode::PingPong)
+                    {
+                        std::swap(motion.RotateStartAngle, motion.RotateTargetAngle);
+                        motion.RotateElapsed = 0.0f;
+                    }
+                    else
+                    {
+                        motion.IsRotating = false;
+                    }
                 }
 
                 FLOAT_ t = (motion.RotateDuration > 0.0f)

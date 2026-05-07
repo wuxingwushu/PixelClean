@@ -1,4 +1,5 @@
 #include "MapDynamic.hpp"
+#include <algorithm>
 
 namespace PhysicsBlock
 {
@@ -128,6 +129,15 @@ namespace PhysicsBlock
             }
         }
         return {false};
+    }
+
+    CollisionInfoI MapDynamic::FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end)
+    {
+        start.x = std::max(0, std::min(start.x, (int)width - 1));
+        start.y = std::max(0, std::min(start.y, (int)height - 1));
+        end.x = std::max(0, std::min(end.x, (int)width - 1));
+        end.y = std::max(0, std::min(end.y, (int)height - 1));
+        return BresenhamDetection(start, end);
     }
 
 }

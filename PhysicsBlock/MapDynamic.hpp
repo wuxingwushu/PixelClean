@@ -108,6 +108,8 @@ namespace PhysicsBlock
          * @param end 结束位置
          * @return 第一个碰撞的位置(准确位置) */
         virtual CollisionInfoD FMBresenhamDetection(Vec2_ start, Vec2_ end);
+
+        virtual CollisionInfoI FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end);
     };
 
 }

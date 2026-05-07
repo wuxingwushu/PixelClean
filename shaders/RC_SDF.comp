@@ -57,6 +57,15 @@ layout(std430, binding = 0) buffer Params {
     float mouseRawX;         // 原始鼠标 X（未平滑，直线模式终点）
     float mouseRawY;         // 原始鼠标 Y
     int clearScreen;         // 清屏标志（1=本帧清屏，CPU 在 dispatch 后清零）
+    float smoothRadius;      // 鼠标平滑死区系数（归一化，乘以 sdfHeight）
+    float smoothFriction;    // 鼠标平滑摩擦系数
+    float toneMappingExponent; // Reinhard 色调映射曲线指数
+    int rayMarchMaxSteps;    // 球体步进最大迭代次数
+    float cascadeIntervalScale; // 级联间隔缩放因子
+    float emissivityHueSpeed;   // HSV 色相旋转速度
+    float emissivitySaturation; // HSV 饱和度
+    float emissivityValue;      // HSV 明度
+    float displayBlendRange;    // 显示 shader 中 SDF 混合范围
 } params;
 
 // ---- SDF 缓冲区 (binding 1) ----
@@ -183,7 +192,7 @@ vec3 hsv2rgb(vec3 c) {
 // 如果空格键切换为开 (keyToggledSpace=1)，则返回纯黑色（不发光）。
 vec3 getEmissivity() {
     if (params.keyToggledSpace != 0) return vec3(0.0);
-    return pow(hsv2rgb(vec3(params.time * 0.2, 1.0, 0.8)), vec3(2.2));
+    return pow(hsv2rgb(vec3(params.time * params.emissivityHueSpeed, params.emissivitySaturation, params.emissivityValue)), vec3(2.2));
 }
 
 // ============================================================================

@@ -176,6 +176,8 @@ namespace PhysicsBlock
          * @note 实现了 MapFormwork 中的虚函数
          */
         virtual CollisionInfoD FMBresenhamDetection(Vec2_ start, Vec2_ end);
+
+        virtual CollisionInfoI FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end);
     };
 
 }

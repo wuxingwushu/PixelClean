@@ -147,16 +147,20 @@ namespace GAME {
 	{
 		//准备填写需要的信息
 		ImGui_ImplVulkan_InitInfo init_info = {};
+		init_info.ApiVersion = VK_API_VERSION_1_3;
 		init_info.Instance = mInstance->getInstance();
 		init_info.PhysicalDevice = mDevice->getPhysicalDevice();
 		init_info.Device = mDevice->getDevice();
 		init_info.QueueFamily = mDevice->getGraphicQueueFamily().value();
 		init_info.Queue = mDevice->getGraphicQueue();
-		init_info.PipelineCache = VK_NULL_HANDLE;
-		init_info.Subpass = 0;
+		init_info.DescriptorPool = VK_NULL_HANDLE;
+		init_info.MinImageCount = 3;
 		init_info.ImageCount = mSwapChain->getImageCount();
-		init_info.MSAASamples = mDevice->getMaxUsableSampleCount();
-		init_info.Allocator = nullptr;//内存分配器
+		init_info.PipelineCache = VK_NULL_HANDLE;
+		init_info.PipelineInfoMain.Subpass = 0;
+		init_info.PipelineInfoMain.MSAASamples = mDevice->getMaxUsableSampleCount();
+		init_info.UseDynamicRendering = false;
+		init_info.Allocator = nullptr;
 		init_info.CheckVkResultFn = check_vk_result;//错误处理
 		
 

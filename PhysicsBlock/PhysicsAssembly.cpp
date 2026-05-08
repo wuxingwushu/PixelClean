@@ -84,4 +84,33 @@ namespace PhysicsBlock
         std::cout << "[PhysicsAssembly] 组装体已从世界移除" << std::endl;
     }
 
+#if PhysicsBlock_Serialization
+    void PhysicsAssembly::JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+    {
+        data["childCount"] = mChildren.size();
+        nlohmann::json_abi_v3_12_0::basic_json<> &childArray = data["children"];
+        childArray = childArray.array();
+        for (size_t i = 0; i < mChildDescriptors.size(); ++i)
+        {
+            childArray[i]["type"] = mChildDescriptors[i].type;
+            childArray[i]["childIndex"] = mChildDescriptors[i].index;
+        }
+    }
+
+    void PhysicsAssembly::JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
+    {
+        mChildDescriptors.clear();
+        if (data.find("children") != data.end())
+        {
+            for (size_t i = 0; i < data["children"].size(); ++i)
+            {
+                ChildDescriptor desc;
+                desc.type = static_cast<PhysicsObjectEnum>(static_cast<int>(data["children"][i]["type"]));
+                desc.index = data["children"][i]["childIndex"];
+                mChildDescriptors.push_back(desc);
+            }
+        }
+    }
+#endif
+
 }

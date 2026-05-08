@@ -38,7 +38,7 @@
 #include "../../Vulkan/device.h"
 #include "../../Vulkan/image.h"
 #include "../../Vulkan/shader.h"
-#include "../../Imgui/imgui.h"
+#include "../../InterfaceUI/GUI.h"
 
 namespace GAME {
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "PhysicsFormwork.hpp"
+#include "BaseSerialization.hpp"
 
 namespace PhysicsBlock
 {
@@ -12,6 +13,7 @@ namespace PhysicsBlock
      * @details 将多个不同类型、不同数量的碰撞体（shape, particle, circle, line）
      *          组装成一个整体的碰撞体。组装体内部的碰撞体之间不进行碰撞检测。
      *          支持 PhysicsJoint 和 PhysicsJunction 连接。
+     *          支持 JSON 序列化与反序列化。
      * 
      * @note 使用方法：
      *   1. 创建 PhysicsAssembly 对象
@@ -19,11 +21,23 @@ namespace PhysicsBlock
      *   3. 使用 AddToWorld() 将组装体注册到物理世界
      *   4. 可以正常使用 PhysicsJoint / PhysicsJunction 连接内部的碰撞体
      */
-    class PhysicsAssembly
+    class PhysicsAssembly SerializationInherit_
     {
+#if PhysicsBlock_Serialization
+    public:
+        SerializationVirtualFunction;
+        PhysicsAssembly(const nlohmann::json_abi_v3_12_0::basic_json<> &data) { JsonContrarySerialization(data); }
+#endif
     private:
         std::vector<PhysicsFormwork *> mChildren;
         PhysicsWorld *mWorld = nullptr;
+
+        struct ChildDescriptor
+        {
+            PhysicsObjectEnum type;
+            unsigned int index;
+        };
+        std::vector<ChildDescriptor> mChildDescriptors;
 
     public:
         PhysicsAssembly();
@@ -68,6 +82,59 @@ namespace PhysicsBlock
          * @brief 获取所有子碰撞体的引用
          * @return 子碰撞体列表 */
         const std::vector<PhysicsFormwork *> &GetChildren() const { return mChildren; }
+
+        /**
+         * @brief 反序列化后解析子对象引用
+         * @param resolveFn 解析函数，接受 (PhysicsObjectEnum, unsigned int) 返回 PhysicsFormwork*
+         * @note 应在 PhysicsWorld 完成所有对象反序列化后调用此方法
+         */
+        template <typename Resolver>
+        void ResolveChildren(const Resolver &resolveFn)
+        {
+            mChildren.clear();
+            for (const auto &desc : mChildDescriptors)
+            {
+                PhysicsFormwork *child = resolveFn(desc.type, desc.index);
+                if (child)
+                {
+                    child->assembly = this;
+                    mChildren.push_back(child);
+                }
+            }
+            mChildDescriptors.clear();
+        }
+
+        /**
+         * @brief 获取子对象描述符（用于序列化时索引计算）
+         * @param getIndexFn 获取指针索引的函数，接受 PhysicsFormwork* 返回 unsigned int
+         */
+        template <typename IndexLookup>
+        void BuildChildDescriptors(const IndexLookup &getIndexFn)
+        {
+            mChildDescriptors.clear();
+            for (const auto &child : mChildren)
+            {
+                ChildDescriptor desc;
+                desc.type = child->PFGetType();
+                desc.index = getIndexFn(child);
+                mChildDescriptors.push_back(desc);
+            }
+        }
+
+        /**
+         * @brief 获取子对象描述符列表（只读）
+         * @return 描述符常量引用 */
+        const std::vector<ChildDescriptor> &GetChildDescriptors() const { return mChildDescriptors; }
+
+        /**
+         * @brief 设置所属物理世界
+         * @param world 物理世界指针 */
+        void SetWorld(PhysicsWorld *world) { mWorld = world; }
+
+        /**
+         * @brief 获取所属物理世界
+         * @return 物理世界指针 */
+        PhysicsWorld *GetWorld() const { return mWorld; }
     };
 
 }

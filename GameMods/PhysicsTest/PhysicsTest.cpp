@@ -7,7 +7,6 @@
 #include "../../PhysicsBlock/BaseCalculate.hpp"
 #include "../../PhysicsBlock/ImGuiPhysics.hpp"
 
-#include "../../ImGui/imgui_demo.cpp"
 #include "PhysicsDemo.h"
 #include "PhysicsLogBuffer.h"
 #include <fstream>

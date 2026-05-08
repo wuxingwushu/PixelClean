@@ -9,3 +9,5 @@ Environment/*
 !Environment/zlib/
 !Environment/libevent/
 !Environment/glfw/
+!Environment/imgui/
+!Environment/spdlog/

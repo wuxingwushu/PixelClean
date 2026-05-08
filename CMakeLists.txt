@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 project(PixelClean)
 
-# 查找并加载OpenMP模块
-find_package(OpenMP REQUIRED)
-
 # 查找 Vulkan SDK（自动搜索标准安装路径）
 if(NOT DEFINED ENV{VULKAN_SDK})
     # Windows 常见安装路径
@@ -52,8 +49,10 @@ include_directories(
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/libevent/include
 	${CMAKE_BINARY_DIR}/Environment/libevent/include  # libevent 的 event-config.h 生成在这里
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment  # zlib 源代码父目录，支持 #include "zlib/zlib.h"
-	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/include
+	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/spdlog/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/Soloud/include
+	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/imgui
+	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/imgui/backends
 )
 
 # Vulkan SDK configuration
@@ -66,23 +65,11 @@ if(DEFINED ENV{VULKAN_SDK})
 	endif()
 endif()
 
-# 设置 lib 的文件路径（区分 Debug / Release）
-if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
-	link_directories(
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/lib/Debug
-	)
-else()
-	link_directories(
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/SpdLog/lib/Release
-	)
-endif()
-
-
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/PhysicsBlock.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Info.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs.json ${PROJECT_SOURCE_DIR}/.vs)# 设置的DLL文件路径
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./SoundEffect/Resources ${CMAKE_CURRENT_BINARY_DIR}/Resources)# 拷贝音效
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ImGui/Minecraft_AE.ttf ${CMAKE_CURRENT_BINARY_DIR})# 字体
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/InterfaceUI/Minecraft_AE.ttf ${CMAKE_CURRENT_BINARY_DIR})# 字体
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource ${CMAKE_CURRENT_BINARY_DIR}/Resource)# 数字资源
 
 # 查找 Vulkan SDK 下的 glslangValidator
@@ -124,10 +111,12 @@ add_custom_target(compile_shaders ALL
 add_subdirectory(Environment/glfw)
 add_subdirectory(Environment/libevent)
 add_subdirectory(Environment/zlib)
+add_subdirectory(Environment/spdlog)
 add_subdirectory(Environment/Soloud)
+add_subdirectory(Environment/imgui)
 add_subdirectory(Vulkan)
 add_subdirectory(VulkanTool)
-add_subdirectory(ImGui)
+add_subdirectory(InterfaceUI)
 add_subdirectory(BlockS)
 add_subdirectory(SoundEffect)
 add_subdirectory(NetworkTCP)
@@ -166,7 +155,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		# 文件夹代码
 		vulkanLib
 		vulkanToolLib
-		imguiLib
+		InterfaceUI
 		BlockSLib
 		ToolLib
 		SoundEffectLib
@@ -185,6 +174,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		RadianceCascadesLib
 		glfw
 		libevent
+		imgui
 
 		# Soloud 音频库
 		soloud
@@ -196,10 +186,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		zlib
 
 		# SpdLog 日志库
-		spdlogd.lib
-
-		# 多线程
-		OpenMP::OpenMP_CXX
+		spdlog
 	)
 else()
 	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")#关闭控制台
@@ -212,7 +199,7 @@ else()
 		# 文件夹代码
 		vulkanLib
 		vulkanToolLib
-		imguiLib 
+		InterfaceUI 
 		BlockSLib 
 		ToolLib 
 		SoundEffectLib
@@ -231,6 +218,7 @@ else()
 		RadianceCascadesLib
 		glfw
 		libevent
+		imgui
 
 		# Soloud 音频库
 		soloud
@@ -242,10 +230,7 @@ else()
 		zlib
 
 		# SpdLog 日志库
-		spdlog.lib
-
-		# 多线程
-		OpenMP::OpenMP_CXX
+		spdlog
 	)
 endif()
 

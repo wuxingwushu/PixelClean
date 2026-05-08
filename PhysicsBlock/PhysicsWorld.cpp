@@ -1342,6 +1342,20 @@ namespace PhysicsBlock
                 ++dataIndex;
             }
         }
+        if (PhysicsAssemblyS.size() != 0)
+        {
+            dataIndex = 0;
+            nlohmann::json_abi_v3_12_0::basic_json<> &dataArray = data["PhysicsAssemblyS"];
+            dataArray = dataArray.array();
+            for (auto ass : PhysicsAssemblyS)
+            {
+                ass->BuildChildDescriptors([&](PhysicsFormwork *child) {
+                    return GetPtrIndex(child);
+                });
+                ass->JsonSerialization(dataArray[dataIndex]);
+                ++dataIndex;
+            }
+        }
         if (PhysicsJointS.size() != 0)
         {
             dataIndex = 0;
@@ -1483,6 +1497,18 @@ namespace PhysicsBlock
             for (size_t i = 0; i < data["PhysicsLineS"].size(); ++i)
             {
                 AddObject(new PhysicsLine(data["PhysicsLineS"][i]));
+            }
+        }
+        if (data.find("PhysicsAssemblyS") != data.end())
+        {
+            for (size_t i = 0; i < data["PhysicsAssemblyS"].size(); ++i)
+            {
+                PhysicsAssembly *ass = new PhysicsAssembly(data["PhysicsAssemblyS"][i]);
+                ass->ResolveChildren([&](PhysicsObjectEnum type, unsigned int idx) -> PhysicsFormwork * {
+                    return (PhysicsFormwork *)GetIndexPtr(type, idx);
+                });
+                ass->SetWorld(this);
+                PhysicsAssemblyS.push_back(ass);
             }
         }
         if (data.find("PhysicsJointS") != data.end())

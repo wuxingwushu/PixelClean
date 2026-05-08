@@ -1,7 +1,7 @@
 #pragma once
 #include "../Character/Crowd.h"
 #include "../Arms/Arms.h"
-#include "../ImGui/Interface.h"
+#include "../InterfaceUI/Interface.h"
 #include "../GameMods/MazeMods/Labyrinth.h"
 
 class SynchronizeClass

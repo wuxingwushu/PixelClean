@@ -1,6 +1,8 @@
 #pragma once
+#if defined(PIXEL_WINDOWS)
 #include "window.h"
 #include "windowSurface.h"
+#endif
 #include "renderPass.h"
 #include "image.h"
 #include "commandPool.h"
@@ -18,8 +20,10 @@ namespace VulKan {
 	public:
 		SwapChain(
 			Device* device, 
+#if defined(PIXEL_WINDOWS)
 			Window* window, 
 			WindowSurface* surface,
+#endif
 			CommandPool* commandPool
 		);
 
@@ -78,8 +82,10 @@ namespace VulKan {
 		std::vector<Image*> mMutiSampleImages{};
 
 		Device* mDevice{ nullptr };
+#if defined(PIXEL_WINDOWS)
 		Window* mWindow{ nullptr };
 		WindowSurface* mSurface{ nullptr };
+#endif
 		CommandPool* mCommandPool{ nullptr };
 	};
 }

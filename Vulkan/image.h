@@ -104,7 +104,9 @@ namespace VulKan {
 		size_t				mHeight{ 0 };
 		Device*			    mDevice{ nullptr };
 		VkImage				mImage{ VK_NULL_HANDLE };//CPU端的内存描述
+#if defined(PIXEL_WINDOWS)
 		VmaAllocation mAllocation;// vma 的GPU内存描述
+#endif
 		//VkDeviceMemory		mImageMemory{ VK_NULL_HANDLE };//GPU端的内存描述，（废弃，专用 vma）
 		VkImageView			mImageView{ VK_NULL_HANDLE };
 		VkFormat			mFormat;

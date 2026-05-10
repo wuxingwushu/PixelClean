@@ -127,7 +127,6 @@ elseif(WIN32)
     )
 
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
-        PIXEL_WINDOWS=1
         WIN32_LEAN_AND_MEAN
         NOMINMAX
     )

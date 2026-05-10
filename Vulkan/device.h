@@ -1,6 +1,6 @@
 #pragma once
 //#define VMA_DEBUG_MARGIN 16//边距（Margins）https://blog.csdn.net/weixin_50523841/article/details/122506850
-#if defined(PIXEL_WINDOWS)
+#if defined(_WIN32)
 #include <vma/vk_mem_alloc.h>
 #endif
 #include "instance.h"
@@ -42,7 +42,7 @@ namespace VulKan {
 
 		VkSampleCountFlagBits getMaxUsableSampleCount();
 
-		#if defined(PIXEL_WINDOWS)
+		#if defined(_WIN32)
 		[[nodiscard]] inline VmaAllocator getAllocator() const noexcept { return mAllocator; }//获取内存分配器
 #endif
 
@@ -72,7 +72,7 @@ namespace VulKan {
 		//逻辑设备
 		VkDevice mDevice{ VK_NULL_HANDLE };
 
-		#if defined(PIXEL_WINDOWS)
+		#if defined(_WIN32)
 		//创建的内存分配器
 		VmaAllocator mAllocator{ VK_NULL_HANDLE };
 		#endif

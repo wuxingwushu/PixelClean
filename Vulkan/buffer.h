@@ -82,7 +82,7 @@ namespace VulKan {
 
 	private:
 		VkBuffer mBuffer{ VK_NULL_HANDLE };//CPU端的内存描述
-#if defined(PIXEL_WINDOWS)
+#if defined(_WIN32)
 		VmaAllocation mAllocation{};// vma 的GPU内存描述
 #endif
 		//VkDeviceMemory mBufferMemory{ VK_NULL_HANDLE };//GPU端的内存描述，（废弃，专用 vma）

@@ -6,7 +6,7 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_android.h>
 #include <android/native_window.h>
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #endif
@@ -36,7 +36,7 @@ public:
     bool Initialize(
     #if defined(PIXEL_ANDROID)
         ANativeWindow* window
-    #elif defined(PIXEL_WINDOWS)
+    #elif defined(_WIN32)
         GLFWwindow* window
     #endif
     );
@@ -62,7 +62,7 @@ private:
 
 #if defined(PIXEL_ANDROID)
     ANativeWindow* mWindow = nullptr;
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
     GLFWwindow* mWindow = nullptr;
 #endif
 

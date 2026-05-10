@@ -12,7 +12,7 @@
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__)
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
 #include <iostream>
 #define LOGI(...) printf("[INFO] " __VA_ARGS__); printf("\n")
 #define LOGD(...) printf("[DEBUG] " __VA_ARGS__); printf("\n")
@@ -81,7 +81,7 @@ static bool CheckValidationLayerSupport()
 bool DemoApp::Initialize(
 #if defined(PIXEL_ANDROID)
     ANativeWindow* window
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
     GLFWwindow* window
 #endif
 )
@@ -92,7 +92,7 @@ bool DemoApp::Initialize(
     int32_t w = ANativeWindow_getWidth(mWindow);
     int32_t h = ANativeWindow_getHeight(mWindow);
     LOGI("Android window: %dx%d", w, h);
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
     int w = 0, h = 0;
     glfwGetFramebufferSize(mWindow, &w, &h);
     LOGI("GLFW window: %dx%d", w, h);
@@ -136,7 +136,7 @@ bool DemoApp::CreateInstance()
         VK_KHR_SURFACE_EXTENSION_NAME,
 #if defined(PIXEL_ANDROID)
         "VK_KHR_android_surface"
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
         "VK_KHR_win32_surface"
 #endif
     };
@@ -206,7 +206,7 @@ bool DemoApp::CreateSurface()
     surfaceInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     surfaceInfo.window = mWindow;
     VkResult result = vkCreateAndroidSurfaceKHR(mInstance, &surfaceInfo, nullptr, &mSurface);
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
     VkResult result = glfwCreateWindowSurface(mInstance, mWindow, nullptr, &mSurface);
 #endif
     if (result != VK_SUCCESS) { LOGE("CreateSurface failed: %d", result); return false; }
@@ -329,7 +329,7 @@ bool DemoApp::CreateDeviceAndSwapChain()
 #if defined(PIXEL_ANDROID)
         extent = {(uint32_t)ANativeWindow_getWidth(mWindow),
                   (uint32_t)ANativeWindow_getHeight(mWindow)};
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
         int w, h;
         glfwGetFramebufferSize(mWindow, &w, &h);
         extent = {(uint32_t)w, (uint32_t)h};
@@ -618,7 +618,7 @@ void DemoApp::RecreateSwapchain()
 #if defined(PIXEL_ANDROID)
         extent = {(uint32_t)ANativeWindow_getWidth(mWindow),
                   (uint32_t)ANativeWindow_getHeight(mWindow)};
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
         int w, h;
         glfwGetFramebufferSize(mWindow, &w, &h);
         extent = {(uint32_t)w, (uint32_t)h};
@@ -719,7 +719,7 @@ void DemoApp::RecordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex)
 
 #if defined(PIXEL_ANDROID)
             ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Platform: Android");
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
             ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Platform: Windows");
 #else
             ImGui::Text("Platform: Unknown");
@@ -758,7 +758,7 @@ void DemoApp::RecordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex)
                 ImGui::Text("Build: Android NDK");
                 ImGui::Text("Window: ANativeWindow");
                 ImGui::Text("Surface: VK_KHR_android_surface");
-#elif defined(PIXEL_WINDOWS)
+#elif defined(_WIN32)
                 ImGui::Text("Build: MSVC / MinGW");
                 ImGui::Text("Window: GLFW");
                 ImGui::Text("Surface: VK_KHR_win32_surface");

@@ -1,5 +1,5 @@
 #pragma once
-#if defined(PIXEL_WINDOWS)
+#if defined(_WIN32)
 #include "window.h"
 #include "windowSurface.h"
 #endif
@@ -20,7 +20,7 @@ namespace VulKan {
 	public:
 		SwapChain(
 			Device* device, 
-#if defined(PIXEL_WINDOWS)
+#if defined(_WIN32)
 			Window* window, 
 			WindowSurface* surface,
 #endif
@@ -82,7 +82,7 @@ namespace VulKan {
 		std::vector<Image*> mMutiSampleImages{};
 
 		Device* mDevice{ nullptr };
-#if defined(PIXEL_WINDOWS)
+#if defined(_WIN32)
 		Window* mWindow{ nullptr };
 		WindowSurface* mSurface{ nullptr };
 #endif

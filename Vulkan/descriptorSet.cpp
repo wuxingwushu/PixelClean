@@ -51,7 +51,7 @@ namespace VulKan {
 				if ((param->mDescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) || (param->mDescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)) {
 					descriptorSetWrite.pBufferInfo = &param->mBuffers[i]->getBufferInfo();
 				}
-				else if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+				else if ((param->mDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) || (param->mDescriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)) {
 					if (param->mTexture == nullptr) {
 						descriptorSetWrite.pImageInfo = &param->mPixelTexture->getImageInfo();
 					}
@@ -71,7 +71,7 @@ namespace VulKan {
 
 	void DescriptorSet::UpDataImagePicture(unsigned int Index, VkDescriptorImageInfo* ImageInfo) {
 		for (auto& DescriptorSetWrites : descriptorSetWrites) {
-			if (DescriptorSetWrites[Index].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+			if ((DescriptorSetWrites[Index].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) || (DescriptorSetWrites[Index].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)) {
 				DescriptorSetWrites[Index].pImageInfo = ImageInfo;
 			}
 			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(DescriptorSetWrites.size()), DescriptorSetWrites.data(), 0, nullptr);

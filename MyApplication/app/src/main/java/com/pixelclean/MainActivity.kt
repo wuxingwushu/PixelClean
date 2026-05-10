@@ -1,6 +1,7 @@
 package com.pixelclean
 
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
@@ -54,6 +55,11 @@ class MainActivity : AppCompatActivity() {
                     nativeSurfaceDestroy()
                 }
             })
+
+            setOnTouchListener { _, event ->
+                handleTouchEvent(event)
+                true
+            }
         }
 
         setContentView(surfaceView)
@@ -90,6 +96,31 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    private fun handleTouchEvent(event: MotionEvent) {
+        val actionMasked = event.actionMasked
+        val pointerIndex = event.actionIndex
+        val pointerId = event.getPointerId(pointerIndex)
+        val x = event.getX(pointerIndex)
+        val y = event.getY(pointerIndex)
+
+        when (actionMasked) {
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                nativeTouchEvent(0, x, y, pointerId)
+            }
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_POINTER_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                nativeTouchEvent(1, x, y, pointerId)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                for (i in 0 until event.pointerCount) {
+                    nativeTouchEvent(2, event.getX(i), event.getY(i), event.getPointerId(i))
+                }
+            }
+        }
+    }
+
     external fun stringFromJNI(): String
     external fun getPlatformInfo(): String
 
@@ -99,6 +130,7 @@ class MainActivity : AppCompatActivity() {
     private external fun enginePause()
     private external fun engineResume()
     private external fun isVulkanReady(): Boolean
+    private external fun nativeTouchEvent(action: Int, x: Float, y: Float, pointerId: Int)
 
     companion object {
         init {

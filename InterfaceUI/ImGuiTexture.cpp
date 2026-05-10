@@ -17,15 +17,15 @@ namespace GAME {
 		VulKan::UniformParameter* textureParam = new VulKan::UniformParameter();
 		textureParam->mBinding = 0;
 		textureParam->mCount = 1;
-		textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 		textureParam->mStage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		mUniformParameter.push_back(textureParam);
+	mUniformParameter.push_back(textureParam);
 
-		mDescriptorPool = new VulKan::DescriptorPool(device);
-		mDescriptorPool->build(mUniformParameter, swapChain->getImageCount(), mTextureLibrary->GetDataMap()->GetNumber() + FreeDescriptorSize);
+	mDescriptorPool = new VulKan::DescriptorPool(device);
+	mDescriptorPool->build(mUniformParameter, swapChain->getImageCount(), mTextureLibrary->GetDataMap()->GetNumber() + FreeDescriptorSize);
 
-		VkDescriptorSetLayoutBinding binding[1] = {};
-		binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	VkDescriptorSetLayoutBinding binding[1] = {};
+	binding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 		binding[0].descriptorCount = 1;
 		binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		VkDescriptorSetLayoutCreateInfo info = {};
@@ -59,11 +59,11 @@ namespace GAME {
 		VulKan::UniformParameter* textureParam = new VulKan::UniformParameter();
 		textureParam->mBinding = 0;
 		textureParam->mCount = 1;
-		textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		textureParam->mStage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		mUniformParameter.push_back(textureParam);
+		textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	textureParam->mStage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	mUniformParameter.push_back(textureParam);
 
-		textureParam->mPixelTexture = Texture;
+	textureParam->mPixelTexture = Texture;
 		VulKan::DescriptorSet** mDescriptorSet = mDescriptorSetMap->New(name);
 		(*mDescriptorSet) = new VulKan::DescriptorSet(wDevice, mUniformParameter,
 			mVkDescriptorSetLayout, mDescriptorPool, wSwapChain->getImageCount());

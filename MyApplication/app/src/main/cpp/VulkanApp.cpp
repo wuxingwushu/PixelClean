@@ -323,21 +323,27 @@ bool DemoApp::CreateDeviceAndSwapChain()
     mMinImageCount = (std::max)(caps.minImageCount + 1u, 3u);
 
     VkExtent2D extent;
+#if defined(PIXEL_ANDROID)
+    extent = {(uint32_t)ANativeWindow_getWidth(mWindow),
+              (uint32_t)ANativeWindow_getHeight(mWindow)};
+    extent.width  = (std::max)(caps.minImageExtent.width,  (std::min)(caps.maxImageExtent.width,  extent.width));
+    extent.height = (std::max)(caps.minImageExtent.height, (std::min)(caps.maxImageExtent.height, extent.height));
+#else
     if (caps.currentExtent.width != UINT32_MAX) {
         extent = caps.currentExtent;
     } else {
-#if defined(PIXEL_ANDROID)
-        extent = {(uint32_t)ANativeWindow_getWidth(mWindow),
-                  (uint32_t)ANativeWindow_getHeight(mWindow)};
-#elif defined(_WIN32)
         int w, h;
         glfwGetFramebufferSize(mWindow, &w, &h);
         extent = {(uint32_t)w, (uint32_t)h};
-#endif
         extent.width  = (std::max)(caps.minImageExtent.width,  (std::min)(caps.maxImageExtent.width,  extent.width));
         extent.height = (std::max)(caps.minImageExtent.height, (std::min)(caps.maxImageExtent.height, extent.height));
     }
+#endif
     mSurfaceExtent = extent;
+    LOGI("Swapchain extent: %dx%d (orig caps: %dx%d, transform: 0x%X)",
+         extent.width, extent.height,
+         caps.currentExtent.width, caps.currentExtent.height,
+         caps.currentTransform);
 
     VkSwapchainCreateInfoKHR scInfo{};
     scInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -358,7 +364,11 @@ bool DemoApp::CreateDeviceAndSwapChain()
         scInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
 
+    #if defined(PIXEL_ANDROID)
+    scInfo.preTransform   = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+#else
     scInfo.preTransform   = caps.currentTransform;
+#endif
     scInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     scInfo.presentMode    = VK_PRESENT_MODE_FIFO_KHR;
     scInfo.clipped        = VK_TRUE;
@@ -518,7 +528,11 @@ bool DemoApp::InitImGui()
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.DisplaySize = ImVec2((float)mSurfaceExtent.width, (float)mSurfaceExtent.height);
     io.IniFilename = nullptr;
+
     ImGui::StyleColorsDark();
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(2.0f);
+    io.FontGlobalScale = 2.0f;
 
     ImGui_ImplVulkan_InitInfo initInfo;
     memset(&initInfo, 0, sizeof(initInfo));
@@ -612,21 +626,25 @@ void DemoApp::RecreateSwapchain()
     mMinImageCount = (std::max)(caps.minImageCount + 1u, 3u);
 
     VkExtent2D extent;
+#if defined(PIXEL_ANDROID)
+    extent = {(uint32_t)ANativeWindow_getWidth(mWindow),
+              (uint32_t)ANativeWindow_getHeight(mWindow)};
+    extent.width  = (std::max)(caps.minImageExtent.width,  (std::min)(caps.maxImageExtent.width,  extent.width));
+    extent.height = (std::max)(caps.minImageExtent.height, (std::min)(caps.maxImageExtent.height, extent.height));
+#else
     if (caps.currentExtent.width != UINT32_MAX) {
         extent = caps.currentExtent;
     } else {
-#if defined(PIXEL_ANDROID)
-        extent = {(uint32_t)ANativeWindow_getWidth(mWindow),
-                  (uint32_t)ANativeWindow_getHeight(mWindow)};
-#elif defined(_WIN32)
         int w, h;
         glfwGetFramebufferSize(mWindow, &w, &h);
         extent = {(uint32_t)w, (uint32_t)h};
-#endif
         extent.width  = (std::max)(caps.minImageExtent.width,  (std::min)(caps.maxImageExtent.width,  extent.width));
         extent.height = (std::max)(caps.minImageExtent.height, (std::min)(caps.maxImageExtent.height, extent.height));
     }
+#endif
     mSurfaceExtent = extent;
+    LOGI("Recreate extent: %dx%d (transform: 0x%X)",
+         extent.width, extent.height, caps.currentTransform);
 
     VkSwapchainCreateInfoKHR scInfo{};
     scInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -638,7 +656,11 @@ void DemoApp::RecreateSwapchain()
     scInfo.imageArrayLayers = 1;
     scInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     scInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+#if defined(PIXEL_ANDROID)
+    scInfo.preTransform     = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+#else
     scInfo.preTransform     = caps.currentTransform;
+#endif
     scInfo.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     scInfo.presentMode      = VK_PRESENT_MODE_FIFO_KHR;
     scInfo.clipped          = VK_TRUE;
@@ -669,12 +691,19 @@ void DemoApp::RecreateSwapchain()
 
     CreateFramebuffers();
     mFramebufferResized = false;
-    LOGI("Swapchain recreated: %dx%d", extent.width, extent.height);
+    LOGI("Swapchain recreated: %dx%d", mSurfaceExtent.width, mSurfaceExtent.height);
 }
 
 void DemoApp::OnWindowResize()
 {
     mFramebufferResized = true;
+}
+
+void DemoApp::OnTouchEvent(int action, float x, float y, int pointerId)
+{
+    if (!mInitialized) return;
+    std::lock_guard<std::mutex> lock(mInputMutex);
+    mInputEvents.push_back({action, x, y, pointerId});
 }
 
 void DemoApp::RecordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex)
@@ -706,8 +735,11 @@ void DemoApp::RecordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex)
         static bool showDemo = false;
         static int counter = 0;
 
+        float winW = (std::min)((float)mSurfaceExtent.width * 0.55f, 620.0f);
+        float winH = (std::min)((float)mSurfaceExtent.height * 0.85f, 520.0f);
+
         ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(420, 380), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(winW, winH), ImGuiCond_Once);
         if (ImGui::Begin("PixelClean Cross-Platform Demo",
                          nullptr,
                          ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse))
@@ -795,6 +827,29 @@ void DemoApp::RecordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex)
 void DemoApp::DrawFrame()
 {
     if (!mInitialized) return;
+
+    {
+        std::lock_guard<std::mutex> lock(mInputMutex);
+        if (!mInputEvents.empty()) {
+            ImGuiIO& io = ImGui::GetIO();
+            for (const auto& ev : mInputEvents) {
+                switch (ev.action) {
+                case 0:
+                    io.AddMousePosEvent(ev.x, ev.y);
+                    io.AddMouseButtonEvent(0, true);
+                    break;
+                case 1:
+                    io.AddMousePosEvent(ev.x, ev.y);
+                    io.AddMouseButtonEvent(0, false);
+                    break;
+                case 2:
+                    io.AddMousePosEvent(ev.x, ev.y);
+                    break;
+                }
+            }
+            mInputEvents.clear();
+        }
+    }
 
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)mSurfaceExtent.width, (float)mSurfaceExtent.height);

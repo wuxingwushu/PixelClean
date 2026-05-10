@@ -14,6 +14,14 @@
 #include <vector>
 #include <string>
 #include <atomic>
+#include <mutex>
+
+struct TouchEvent {
+    int   action;
+    float x;
+    float y;
+    int   pointerId;
+};
 
 namespace VulKan {
     class Instance;
@@ -44,6 +52,8 @@ public:
     void DrawFrame();
     void OnWindowResize();
     bool IsInitialized() const { return mInitialized; }
+
+    void OnTouchEvent(int action, float x, float y, int pointerId);
 
 private:
     bool CreateInstance();
@@ -103,6 +113,9 @@ private:
     bool                     mInitialized = false;
 
     static bool              gVulkanEnableValidation;
+
+    std::vector<TouchEvent>  mInputEvents;
+    std::mutex               mInputMutex;
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT severity,

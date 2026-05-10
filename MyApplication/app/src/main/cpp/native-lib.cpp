@@ -237,4 +237,18 @@ Java_com_pixelclean_MainActivity_isVulkanReady(JNIEnv* env, jobject /* this */)
     return (gVulkanApp && gVulkanApp->IsInitialized()) ? JNI_TRUE : JNI_FALSE;
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_pixelclean_MainActivity_nativeTouchEvent(
+        JNIEnv* env,
+        jobject /* this */,
+        jint action,
+        jfloat x,
+        jfloat y,
+        jint pointerId)
+{
+    if (gVulkanApp && gVulkanApp->IsInitialized()) {
+        gVulkanApp->OnTouchEvent(action, x, y, pointerId);
+    }
+}
+
 #endif // PIXEL_ANDROID

@@ -260,7 +260,12 @@ namespace VulKan {
 
 		//由于高清屏幕情况下 ，比如苹果， 窗体的坐标大小，并不等于像素的长宽
 		int width = 0, height = 0;
+#if defined(_WIN32)
 		glfwGetFramebufferSize(mWindow->getWindow(), &width, &height);
+#elif defined(__ANDROID__)
+		width = mWindow->getWidth();
+		height = mWindow->getHeight();
+#endif
 
 		VkExtent2D actualExtent = {
 			static_cast<uint32_t>(width),

@@ -94,7 +94,7 @@ namespace PhysicsBlock
 #endif
 
 		unsigned char min = 0, max = 255;
-		ImGui::Text(name.c_str());
+		ImGui::Text("%s", name.c_str());
 		ImGui::DragScalar(("摩擦因数" + name).c_str(), MyImGuiDataType, &Grid->FrictionFactor, 0.0005f, NULL, NULL, "%.10f");
 		if (Grid->Entity)
 		{

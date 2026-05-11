@@ -1,6 +1,10 @@
 #include "instance.h"
 #include  "../Tool/Tool.h"
+#if defined(_WIN32)
 #include <GLFW/glfw3.h>
+#elif defined(__ANDROID__)
+#include <vulkan/vulkan_android.h>
+#endif
 
 namespace VulKan {
 	//validation layer 回调函数
@@ -121,12 +125,19 @@ namespace VulKan {
 	}
 
 	std::vector<const char*> Instance::getRequiredExtensions() {
+#if defined(_WIN32)
 		uint32_t glfwExtensionCount = 0;
 
 		//得到要求实例扩展
 		const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
 		std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+#elif defined(__ANDROID__)
+		std::vector<const char*> extensions = {
+			VK_KHR_SURFACE_EXTENSION_NAME,
+			"VK_KHR_android_surface"
+		};
+#endif
 
 		//添加校验层扩展
 		if (mEnableValidationLayer) {

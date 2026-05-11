@@ -2,6 +2,10 @@
 #include "NetworkTCP/Server.h"
 #include "NetworkTCP/Client.h"
 #include "Opcode/OpcodeFunction.h"
+#if defined(__ANDROID__)
+#include <android/native_window.h>
+#include <imgui/backends/imgui_impl_android.h>
+#endif
 
 
 namespace GAME {
@@ -541,8 +545,7 @@ namespace GAME {
 #if defined(_WIN32)
 			ImGui_ImplGlfw_NewFrame();
 #elif defined(__ANDROID__)
-			// Android: 使用 Android ImGui 后端注册触摸/按键事件
-			// ImGui::GetIO().DisplaySize = ImVec2((float)winwidth, (float)winheight);
+			ImGui_ImplAndroid_NewFrame();
 #endif
 			ImGui::NewFrame();
 
@@ -588,7 +591,7 @@ namespace GAME {
 #if defined(_WIN32)
 			ImGui_ImplGlfw_NewFrame();
 #elif defined(__ANDROID__)
-			// Android: 使用 Android ImGui 后端
+			ImGui_ImplAndroid_NewFrame();
 #endif
 			ImGui::NewFrame();
 			ImGui::PushFont(InterFace->Font);
@@ -697,6 +700,8 @@ namespace GAME {
 
 	//回收资源
 	void Application::cleanUp() {
+		mInitialized = false;
+		if (!mDevice) return;
 		vkDeviceWaitIdle(mDevice->getDevice());//等待命令执行完毕
 
 		delete mParticleSystem;
@@ -728,4 +733,86 @@ namespace GAME {
 		delete mWindowSurface;
 		delete mInstance;
 	}
+
+#if defined(__ANDROID__)
+	void Application::initBeforeSurface() {
+		TOOL::mTimer->MomentTiming(u8"总初始化 ");
+		TOOL::mTimer->MomentTiming(u8"初始化窗口 ");
+		initWindow();
+		TOOL::mTimer->MomentEnd();
+		TOOL::mTimer->MomentEnd();
+	}
+
+	void Application::initAfterSurface(ANativeWindow* nativeWindow) {
+		mWindow->setAndroidWindow(nativeWindow);
+
+		TOOL::mTimer->MomentTiming(u8"初始化Vulkan ");
+		initVulkan();
+		TOOL::mTimer->MomentEnd();
+		TOOL::mTimer->MomentTiming(u8"初始化ImGui ");
+		initImGui();
+		TOOL::mTimer->MomentEnd();
+		TOOL::mTimer->MomentTiming(u8"初始化游戏 ");
+		initGame();
+		TOOL::mTimer->MomentEnd();
+
+		mInitialized = true;
+		SoundEffect::SoundEffect::GetSoundEffect()->Play("夜に駆ける", MIDI, true, Global::MusicVolume);
+	}
+
+	void Application::frameStep() {
+		if (!mInitialized) return;
+		SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
+		PlayerForce = { 0,0 };
+		mWindow->pollEvents();
+		ImGuiIO& io = ImGui::GetIO();
+		io.MousePos.x = CursorPosX;
+		io.MousePos.y = CursorPosY;
+		io.MouseWheel = -mWindow->MouseScroll;
+		mWindow->MouseScroll = 0;
+
+		if (InterFace->GetInterFaceBool()) {
+			mWindow->ImGuiKeyBoardEvent();
+			InterFace->InterFace(mCurrentFrame);
+
+			if (Global::GameResourceLoadingBool) {
+				Global::GameResourceLoadingBool = false;
+				mGameMods = GetGame(Global::GameMode);
+				mWindow->setApp(mGameMods);
+			}
+
+			if (Global::GameResourceUninstallBool) {
+				Global::GameResourceUninstallBool = false;
+				DeleteGame(Global::GameMode);
+				mWindow->ReleaseApp();
+			}
+
+			if (mGameMods != nullptr) {
+				mGameMods->GameStopInterfaceLoop(mCurrentFrame);
+			}
+		}
+		else {
+			TOOL::mTimer->StartTiming(u8"游戏逻辑 ", true);
+			mWindow->processEvent();
+			GameLoop();
+			TOOL::mTimer->StartEnd();
+
+			TOOL::mTimer->RefreshTiming();
+		}
+
+
+		TOOL::mTimer->StartTiming(u8"TCP ");
+		if (mGameMods != nullptr) {
+			mGameMods->GameTCPLoop();
+		}
+		TOOL::mTimer->StartEnd();
+
+
+		TOOL::FPS();
+
+		TOOL::mTimer->StartTiming(u8"画面渲染 ");
+		Render();
+		TOOL::mTimer->StartEnd();
+	}
+#endif
 }

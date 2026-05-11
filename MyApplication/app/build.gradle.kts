@@ -74,8 +74,16 @@ android {
 
     sourceSets {
         getByName("main") {
-            assets.srcDirs("../../Resources")
+            assets.srcDirs("src/main/assets")
         }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    aaptOptions {
+        noCompress("spv", "png", "mp3", "mid", "sf2", "ttf", "ini", "ico", "wav", "ogg", "jpg")
     }
 
     packaging {
@@ -83,6 +91,111 @@ android {
             useLegacyPackaging = true
         }
     }
+}
+
+val spvOutputDir = layout.buildDirectory.dir("android_shaders")
+
+val compileShaders by tasks.registering(Exec::class) {
+    description = "Compile GLSL shaders to SPIR-V using Vulkan SDK"
+    group = "build"
+
+    val sourceRoot = rootProject.projectDir.parentFile
+    val shaderDir = file("${sourceRoot}/shaders")
+    val compileScript = file("${shaderDir}/compile.bat")
+    val outputDir = spvOutputDir.get().asFile
+
+    outputs.dir(outputDir)
+
+    workingDir = shaderDir
+
+    commandLine(
+        "cmd", "/c",
+        if (compileScript.exists()) compileScript.absolutePath else "",
+        outputDir.absolutePath,
+        findVulkanCompiler() ?: ""
+    )
+
+    onlyIf {
+        val compiler = findVulkanCompiler()
+        if (compiler == null) {
+            logger.warn("Vulkan SDK not found, skipping shader compilation. Install Vulkan SDK to compile shaders.")
+            return@onlyIf false
+        }
+        compileScript.exists()
+    }
+}
+
+val prepareAssets by tasks.registering(Copy::class) {
+    description = "Collects runtime resource files into assets directory"
+    group = "build"
+
+    dependsOn(compileShaders)
+
+    val sourceRoot = rootProject.projectDir.parentFile
+    val destDir = layout.projectDirectory.dir("src/main/assets")
+
+    includeEmptyDirs = true
+
+    from("${sourceRoot}/Info.ini") {
+        into("")
+    }
+
+    from("${sourceRoot}/PhysicsBlock.ini") {
+        into("")
+    }
+
+    from(spvOutputDir) {
+        include("*.spv")
+        into("shaders")
+    }
+
+    from("${sourceRoot}/Resource") {
+        include("**/*")
+        into("Resource")
+    }
+
+    from("${sourceRoot}/SoundEffect/Resources") {
+        include("**/*")
+        into("Resources")
+    }
+
+    from("${sourceRoot}/InterfaceUI") {
+        include("*.ttf")
+        into("InterfaceUI")
+    }
+
+    from("${sourceRoot}/BlockS/Pixel图片") {
+        include("*.png")
+        into("BlockS/Pixel图片")
+    }
+
+    into(destDir)
+}
+
+fun findVulkanCompiler(): String? {
+    val envSdk = System.getenv("VULKAN_SDK")
+    if (envSdk != null) {
+        val glslc = File("${envSdk}/Bin/glslc.exe")
+        if (glslc.exists()) return glslc.absolutePath
+        val glslang = File("${envSdk}/Bin/glslangValidator.exe")
+        if (glslang.exists()) return glslang.absolutePath
+    }
+
+    val vulkanDir = File("C:/VulkanSDK")
+    if (vulkanDir.isDirectory) {
+        vulkanDir.listFiles()?.sortedByDescending { it.name }?.forEach { versionDir ->
+            val glslc = File(versionDir, "Bin/glslc.exe")
+            if (glslc.exists()) return glslc.absolutePath
+            val glslang = File(versionDir, "Bin/glslangValidator.exe")
+            if (glslang.exists()) return glslang.absolutePath
+        }
+    }
+
+    return null
+}
+
+tasks.named("preBuild") {
+    dependsOn(prepareAssets)
 }
 
 dependencies {

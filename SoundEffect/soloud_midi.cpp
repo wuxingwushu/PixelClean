@@ -164,18 +164,20 @@ namespace SoLoud
 	}
 
 	SoundFont::SoundFont()
-	{
-		mData = 0;
-		mDataLen = 0;
-	}
+{
+    mData = 0;
+    mDataLen = 0;
+    mHandle = 0;
+}
 
-	SoundFont::~SoundFont()
-	{
-		tsf_close((tsf *)mHandle);
-		delete[] mData;
-		mData = 0;
-		mDataLen = 0;
-	}
+SoundFont::~SoundFont()
+{
+    if (mHandle)
+        tsf_close((tsf *)mHandle);
+    delete[] mData;
+    mData = 0;
+    mDataLen = 0;
+}
 
 	result Midi::loadMem(unsigned char *aMem, unsigned int aLength, SoundFont &sf, bool aCopy, bool aTakeOwnership)
 	{

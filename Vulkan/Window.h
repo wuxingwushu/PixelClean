@@ -1,6 +1,10 @@
 #pragma once
+#if defined(_WIN32)
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#elif defined(__ANDROID__)
+#include <android/native_window.h>
+#endif
 
 class GameMods;
 
@@ -26,7 +30,11 @@ namespace VulKan {
 
 		void SetWindow(bool FullScreen);
 
+#if defined(_WIN32)
 		[[nodiscard]] inline GLFWwindow* getWindow() const noexcept { return mWindow; }
+#elif defined(__ANDROID__)
+		[[nodiscard]] inline ANativeWindow* getWindow() const noexcept { return mWindow; }
+#endif
 
 		[[nodiscard]] inline int getWidth() const noexcept { return mWidth; }
 		[[nodiscard]] inline int getHeight() const noexcept { return mHeight; }
@@ -42,6 +50,11 @@ namespace VulKan {
 		//游戏中键盘事件
 		void processEvent();
 
+		// Android: 设置系统窗口引用
+#if defined(__ANDROID__)
+		void setAndroidWindow(ANativeWindow* nativeWindow);
+#endif
+
 	public:
 		bool mWindowResized{ false };//窗口大小是否发生改变
 		float MouseScroll; // 鼠标滚轮值
@@ -51,7 +64,11 @@ namespace VulKan {
 		bool MouseDisabled = false;//是否显示鼠标光标
 		int mWidth{ 0 };//储存窗口宽度
 		int mHeight{ 0 };//储存窗口高度
+#if defined(_WIN32)
 		GLFWwindow* mWindow{ NULL };//储存窗口指针
+#elif defined(__ANDROID__)
+		ANativeWindow* mWindow{ nullptr };
+#endif
 
 	private:
 		//按键上升沿触发（储存上一时刻的值）

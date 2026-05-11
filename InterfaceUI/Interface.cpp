@@ -3,6 +3,9 @@
 #include "../Opcode/Opcode.h"
 #include "../Tool/trie.h"
 #include "../GlobalStructural.h"
+#if defined(__ANDROID__)
+#include <imgui/backends/imgui_impl_android.h>
+#endif
 
 #include "../NetworkTCP/Server.h"
 #include "../NetworkTCP/Client.h"
@@ -53,6 +56,7 @@ namespace GAME {
 #if defined(_WIN32)
 		ImGui_ImplGlfw_InitForVulkan(mWindown->getWindow(), true);
 #elif defined(__ANDROID__)
+		ImGui_ImplAndroid_Init(mWindown->getWindow());
 		// Android: IO 显示器尺寸先设置，后续 JNI 触摸回调更新
 		io.DisplaySize = ImVec2((float)Global::mWidth, (float)Global::mHeight);
 		io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
@@ -142,7 +146,11 @@ namespace GAME {
 	ImGuiInterFace::~ImGuiInterFace()
 	{
 		ImGui_ImplVulkan_Shutdown();
+#if defined(_WIN32)
 		ImGui_ImplGlfw_Shutdown();
+#elif defined(__ANDROID__)
+		ImGui_ImplAndroid_Shutdown();
+#endif
 		ImGui::DestroyContext();
 
 		if (g_DescriptorPool != VK_NULL_HANDLE) {
@@ -162,7 +170,9 @@ namespace GAME {
 	{
 		mCurrentFrame = CurrentFrame;
 		ImGui_ImplVulkan_NewFrame();
+#if defined(_WIN32)
 		ImGui_ImplGlfw_NewFrame();
+#endif
 		ImGui::NewFrame();
 		mShaderTexture->CalculationScreen(TOOL::FPStime);
 		switch (InterfaceIndexes)
@@ -772,7 +782,7 @@ namespace GAME {
 				continue;
 			}
 			ImGui::SetCursorPos({ 30.0f * scale, LHeight });
-			ImGui::Text(LChatBoxStr->str.c_str());
+			ImGui::Text("%s", LChatBoxStr->str.c_str());
 			LHeight -= 20.0f * scale;
 		}
 
@@ -812,7 +822,7 @@ namespace GAME {
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
-				ImGui::Text(TOOL::mTimer->mTimerTimeS[i].Name);
+				ImGui::Text("%s", TOOL::mTimer->mTimerTimeS[i].Name);
 				ImGui::TableNextColumn();
 				if (TOOL::mTimer->mTimerTimeS[i].HeapBool) {
 					ImGui::PlotLines("",
@@ -835,7 +845,7 @@ namespace GAME {
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
-				ImGui::Text(TOOL::mTimer->mMomentS[i].Name);
+				ImGui::Text("%s", TOOL::mTimer->mMomentS[i].Name);
 				ImGui::TableNextColumn();
 				ImGui::Text(u8"%d", TOOL::mTimer->mMomentS[i].Timer);
 			}

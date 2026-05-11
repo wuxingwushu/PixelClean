@@ -4,11 +4,14 @@
 #if defined(_WIN32)
 #define _WINSOCKAPI_
 #include <Windows.h>
+#elif defined(__ANDROID__)
+#include <android/log.h>
 #endif
 #include <iostream>
 
 namespace VulKan {
 
+#if defined(_WIN32)
 	//获取窗口大小是否改变
 	static void windowResized(GLFWwindow* window, int width, int height) {
 		auto* win = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
@@ -35,6 +38,7 @@ namespace VulKan {
 			}
 		}
 	}
+#endif
 
 
 	Window::Window(const int& width, const int& height, bool MouseBool, bool FullScreen) {
@@ -42,6 +46,7 @@ namespace VulKan {
 		mHeight = height;
 		MouseDisabled = MouseBool;
 
+#if defined(_WIN32)
 		glfwInit();
 
 		//设置环境，关掉opengl API 并且禁止窗口改变大小
@@ -61,7 +66,6 @@ namespace VulKan {
 		
 
 		
-		
 		glfwSetFramebufferSizeCallback(mWindow, windowResized);//绑定窗口大小改变事件
 
 		//GLFW_CURSOR_DISABLED 禁用鼠标
@@ -71,8 +75,22 @@ namespace VulKan {
 		else {
 			glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
+#elif defined(__ANDROID__)
+		mWindow = nullptr;
+#endif
 	}
 
+#if defined(__ANDROID__)
+	void Window::setAndroidWindow(ANativeWindow* nativeWindow) {
+		mWindow = nativeWindow;
+		if (mWindow) {
+			mWidth = ANativeWindow_getWidth(mWindow);
+			mHeight = ANativeWindow_getHeight(mWindow);
+		}
+	}
+#endif
+
+#if defined(_WIN32)
 	void Window::setApp(GameMods* app) { 
 		mApp = app;
 		// 注册鼠标滚轮回调函数
@@ -87,11 +105,21 @@ namespace VulKan {
 		// 注册鼠标移动回调函数
 		glfwSetCursorPosCallback(mWindow, nullptr);
 	}
+#elif defined(__ANDROID__)
+	void Window::setApp(GameMods* app) { 
+		mApp = app;
+	}
+
+	void Window::ReleaseApp() {
+	}
+#endif
 
 	//销毁Window
 	Window::~Window() {
+#if defined(_WIN32)
 		glfwDestroyWindow(mWindow);//回收GLFW的API
 		glfwTerminate();
+#endif
 	}
 
 	void Window::SetWindow(bool FullScreen) {
@@ -104,10 +132,14 @@ namespace VulKan {
 #elif defined(__ANDROID__)
 			// Android 全屏尺寸由 SurfaceView 管理，mWidth/mHeight 由 JNI 层设置
 #endif
+#if defined(_WIN32)
 			glfwSetWindowMonitor(mWindow, glfwGetPrimaryMonitor(), 0, 0, mWidth, mHeight, GLFW_DONT_CARE);//全屏
+#endif
 		}
 		else {
+#if defined(_WIN32)
 			glfwSetWindowMonitor(mWindow, NULL, mWidth / 4, mHeight / 4, mWidth/2, mHeight/2, 0);
+#endif
 		}
 		mWindowResized = true;
 	}
@@ -119,15 +151,22 @@ namespace VulKan {
 
 	//判断窗口是否被关闭
 	bool Window::shouldClose() {
+#if defined(_WIN32)
 		return glfwWindowShouldClose(mWindow);
+#elif defined(__ANDROID__)
+		return false;
+#endif
 	}
 
 	//窗口获取事件
 	void Window::pollEvents() {
+#if defined(_WIN32)
 		glfwPollEvents();
+#endif
 	}
 
 	void Window::ImGuiKeyBoardEvent() {
+#if defined(_WIN32)
 		/*if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_ESCAPE) != KeysRisingEdgeTrigger_Esc) {
 			if (mApp->InterFace->GetInterfaceIndexes() == GAME::InterFaceEnum_::ViceInterface_Enum) {
 				mApp->InterFace->SetInterFaceBool();
@@ -147,11 +186,13 @@ namespace VulKan {
 			}
 		}
 		KeysRisingEdgeTrigger = glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT);
+#endif
 	}
 
 	//键盘事件
 	void Window::processEvent() {
 
+#if defined(_WIN32)
 		//控制鼠标显示和禁用
 		if (glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_GRAVE_ACCENT) != KeysRisingEdgeTrigger) {
 			if (MouseDisabled) {
@@ -210,5 +251,6 @@ namespace VulKan {
 			mApp->KeyDown(GameKeyEnum::SPACE);
 		}
 		KeysRisingEdgeTrigger_Space = glfwGetKey(mWindow, GLFW_KEY_SPACE);
+#endif
 	}
 }

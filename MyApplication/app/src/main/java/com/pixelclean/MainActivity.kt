@@ -1,136 +1,181 @@
 package com.pixelclean
 
+import android.app.Activity
 import android.os.Bundle
+import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import android.view.View
-import android.view.ViewGroup
-import android.view.WindowManager
-import android.widget.FrameLayout
-import androidx.appcompat.app.AppCompatActivity
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity(), SurfaceHolder.Callback {
 
-    private lateinit var surfaceView: SurfaceView
-    private var surfaceReady = false
+    private val TAG = "PixelClean"
+    private var nativeInitialized = false
+    private var renderThread: RenderThread? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        supportActionBar?.hide()
-
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window.decorView.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            or View.SYSTEM_UI_FLAG_FULLSCREEN
-            or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-        )
-
-        surfaceView = SurfaceView(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            holder.addCallback(object : SurfaceHolder.Callback {
-                override fun surfaceCreated(holder: SurfaceHolder) {
-                    surfaceReady = true
-                    nativeSurfaceCreate(holder.surface)
-                }
-
-                override fun surfaceChanged(
-                    holder: SurfaceHolder,
-                    format: Int,
-                    width: Int,
-                    height: Int
-                ) {
-                    nativeSurfaceChange(format, width, height)
-                }
-
-                override fun surfaceDestroyed(holder: SurfaceHolder) {
-                    surfaceReady = false
-                    nativeSurfaceDestroy()
-                }
-            })
-
-            setOnTouchListener { _, event ->
-                handleTouchEvent(event)
-                true
-            }
-        }
-
+        val surfaceView = SurfaceView(this)
+        surfaceView.holder.addCallback(this)
         setContentView(surfaceView)
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                or View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            )
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        engineResume()
     }
 
     override fun onPause() {
         super.onPause()
-        enginePause()
+        stopRenderThread()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startRenderThread()
     }
 
     override fun onDestroy() {
-        if (surfaceReady) {
-            nativeSurfaceDestroy()
-        }
+        stopRenderThread()
+        nativeDestroy()
         super.onDestroy()
     }
 
-    private fun handleTouchEvent(event: MotionEvent) {
-        val actionMasked = event.actionMasked
-        val pointerIndex = event.actionIndex
-        val pointerId = event.getPointerId(pointerIndex)
-        val x = event.getX(pointerIndex)
-        val y = event.getY(pointerIndex)
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (nativeInitialized) {
+            val pointerCount = event.pointerCount
+            for (i in 0 until pointerCount) {
+                val x = event.getX(i)
+                val y = event.getY(i)
+                nativeTouchEvent(
+                    event.actionMasked,
+                    x,
+                    y
+                )
+            }
+        }
+        return true
+    }
 
-        when (actionMasked) {
-            MotionEvent.ACTION_DOWN,
-            MotionEvent.ACTION_POINTER_DOWN -> {
-                nativeTouchEvent(0, x, y, pointerId)
-            }
-            MotionEvent.ACTION_UP,
-            MotionEvent.ACTION_POINTER_UP,
-            MotionEvent.ACTION_CANCEL -> {
-                nativeTouchEvent(1, x, y, pointerId)
-            }
-            MotionEvent.ACTION_MOVE -> {
-                for (i in 0 until event.pointerCount) {
-                    nativeTouchEvent(2, event.getX(i), event.getY(i), event.getPointerId(i))
-                }
-            }
+    override fun surfaceCreated(holder: SurfaceHolder) {
+        Log.d(TAG, "surfaceCreated")
+
+        if (!nativeInitialized) {
+            extractAssets()
+            nativeSetFilesDir(filesDir.absolutePath)
+            nativeInitBeforeSurface()
+            nativeInitialized = true
+        }
+
+        nativeInitSurface(holder.surface)
+        startRenderThread()
+    }
+
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        Log.d(TAG, "surfaceChanged: ${width}x${height}")
+        nativeResize(width, height)
+    }
+
+    override fun surfaceDestroyed(holder: SurfaceHolder) {
+        Log.d(TAG, "surfaceDestroyed")
+        stopRenderThread()
+    }
+
+    private fun extractAssets() {
+        val checkFile = File(filesDir, "Info.ini")
+        if (checkFile.exists() && checkFile.isFile) {
+            Log.d(TAG, "Assets already extracted (Info.ini exists), skipping")
+            return
+        }
+
+        if (checkFile.isDirectory) {
+            checkFile.deleteRecursively()
+        }
+
+        Log.d(TAG, "Extracting assets to ${filesDir.absolutePath}...")
+        try {
+            copyAssetDir("", filesDir)
+            Log.d(TAG, "Assets extracted successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to extract assets", e)
         }
     }
 
-    external fun stringFromJNI(): String
-    external fun getPlatformInfo(): String
+    private fun copyAssetDir(assetPath: String, targetDir: File) {
+        val assetManager = assets
+        val children = assetManager.list(assetPath)
 
-    private external fun nativeSurfaceCreate(surface: Any)
-    private external fun nativeSurfaceDestroy()
-    private external fun nativeSurfaceChange(format: Int, width: Int, height: Int)
-    private external fun enginePause()
-    private external fun engineResume()
-    private external fun isVulkanReady(): Boolean
-    private external fun nativeTouchEvent(action: Int, x: Float, y: Float, pointerId: Int)
+        if (children == null || children.isEmpty()) {
+            val targetFile = File(targetDir, assetPath)
+            if (targetFile.isDirectory) {
+                targetFile.deleteRecursively()
+            }
+            targetFile.parentFile?.mkdirs()
+            try {
+                assetManager.open(assetPath).use { input ->
+                    FileOutputStream(targetFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            } catch (e: FileNotFoundException) {
+                targetFile.mkdirs()
+            }
+            return
+        }
+
+        if (assetPath.isNotEmpty()) {
+            File(targetDir, assetPath).mkdirs()
+        }
+
+        for (child in children) {
+            val childPath = if (assetPath.isEmpty()) child else "$assetPath/$child"
+            copyAssetDir(childPath, targetDir)
+        }
+    }
+
+    private fun startRenderThread() {
+        if (renderThread == null || renderThread?.isRunning == false) {
+            renderThread = RenderThread()
+            renderThread?.start()
+        }
+    }
+
+    private fun stopRenderThread() {
+        renderThread?.stopRendering()
+        try {
+            renderThread?.join(1000)
+        } catch (e: InterruptedException) {
+            Log.e(TAG, "Failed to join render thread", e)
+        }
+        renderThread = null
+    }
+
+    private inner class RenderThread : Thread() {
+        @Volatile
+        var isRunning = false
+
+        override fun run() {
+            isRunning = true
+            while (isRunning && !isInterrupted) {
+                try {
+                    nativeRenderFrame()
+                } catch (e: Exception) {
+                    Log.e(TAG, "RenderFrame exception", e)
+                }
+            }
+        }
+
+        fun stopRendering() {
+            isRunning = false
+        }
+    }
+
+    private external fun nativeSetFilesDir(path: String)
+    private external fun nativeInitBeforeSurface()
+    private external fun nativeInitSurface(surface: Any)
+    private external fun nativeRenderFrame()
+    private external fun nativeDestroy()
+    private external fun nativeTouchEvent(action: Int, x: Float, y: Float)
+    private external fun nativeResize(width: Int, height: Int)
 
     companion object {
         init {

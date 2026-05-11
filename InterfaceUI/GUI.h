@@ -1,7 +1,9 @@
 #pragma once
 #include <imgui/imconfig.h>
 #include <imgui/imgui.h>
+#if defined(_WIN32)
 #include <imgui/backends/imgui_impl_glfw.h>
+#endif
 #include <imgui/backends/imgui_impl_vulkan.h>
 #include <imgui/imgui_internal.h>
 #include <imgui/imstb_rectpack.h>

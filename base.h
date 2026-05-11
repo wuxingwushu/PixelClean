@@ -39,14 +39,18 @@
 #include <Windows.h>
 #pragma comment(lib, "ws2_32.lib")
 #elif defined(__ANDROID__)
-#include <vulkan/vulkan_android.h>
 #include <android/log.h>
 #endif
 
+#if defined(_WIN32)
 //#define GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>//跨平台接口
 #include <vulkan/vulkan.h>//VulKan API
+#elif defined(__ANDROID__)
+#include <vulkan/vulkan.h>
+#include <GLFW/glfw3.h>//Android GLFW stub
+#endif
 
 
 //#define VLD_FORCE_ENABLE //VLD_FORCE_ENABLE宏定义是为了Release版本也能生成报告

@@ -1,254 +1,157 @@
-#include "Platform/PlatformDetection.h"
-#include "VulkanApp.h"
-
-#if defined(PIXEL_ANDROID)
-
+#include <jni.h>
 #include <android/log.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
-#include <jni.h>
-#include <string>
-#include <thread>
-#include <atomic>
-#include <mutex>
+
+#include "GlobalVariable.h"
+#include "Tool/Tool.h"
+#include "application.h"
+
+#include <unistd.h>
+#include <cerrno>
 
 #define LOG_TAG "PixelClean"
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-static DemoApp*                 gVulkanApp = nullptr;
-static std::thread*             gRenderThread = nullptr;
-static std::atomic<bool>        gRunning{false};
-static std::atomic<bool>        gPaused{false};
-static ANativeWindow*           gWindow = nullptr;
-static std::mutex               gWindowMutex;
-static bool                     gInitialized = false;
+static GAME::Application* gApplication = nullptr;
+static bool gInitialized = false;
+static std::string gFilesDir;
 
-static void RenderLoop()
-{
-    LOGD("Render thread started.");
+extern "C" JNIEXPORT void JNICALL
+Java_com_pixelclean_MainActivity_nativeSetFilesDir(
+    JNIEnv* env,
+    jobject /* this */,
+    jstring path) {
 
-    while (gRunning) {
-        if (gPaused) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-            continue;
-        }
+    const char* pathStr = env->GetStringUTFChars(path, nullptr);
+    gFilesDir = pathStr;
+    env->ReleaseStringUTFChars(path, pathStr);
 
-        {
-            std::lock_guard<std::mutex> lock(gWindowMutex);
-            if (gVulkanApp && gVulkanApp->IsInitialized()) {
-                gVulkanApp->DrawFrame();
-            }
-        }
+    if (chdir(gFilesDir.c_str()) != 0) {
+        LOGE("Failed to chdir to %s (errno=%d)", gFilesDir.c_str(), errno);
+    } else {
+        LOGD("Working directory changed to %s", gFilesDir.c_str());
     }
-
-    LOGD("Render thread exiting.");
 }
 
-static bool InitVulkan(ANativeWindow* window)
-{
-    if (gVulkanApp && gVulkanApp->IsInitialized()) {
-        LOGD("Vulkan already initialized.");
-        return true;
+extern "C" JNIEXPORT void JNICALL
+Java_com_pixelclean_MainActivity_nativeInitBeforeSurface(
+    JNIEnv* env,
+    jobject /* this */) {
+
+    if (gInitialized) {
+        LOGD("nativeInitBeforeSurface: already initialized");
+        return;
     }
 
-    if (gVulkanApp) {
-        delete gVulkanApp;
-        gVulkanApp = nullptr;
-    }
+    LOGD("PixelClean Android native init starting...");
 
-    gVulkanApp = new DemoApp();
-    if (!gVulkanApp->Initialize(window)) {
-        LOGE("Failed to initialize Vulkan.");
-        delete gVulkanApp;
-        gVulkanApp = nullptr;
-        return false;
-    }
+    Global::Read();
+    TOOL::InitThreadPool();
+    TOOL::InitPerlinNoise();
+    TOOL::InitSpdLog();
+    TOOL::InitTimer();
+
+    gApplication = new GAME::Application();
+    gApplication->initBeforeSurface();
 
     gInitialized = true;
-    LOGD("Vulkan initialized successfully.");
-    return true;
-}
-
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_pixelclean_MainActivity_stringFromJNI(
-        JNIEnv* env,
-        jobject /* this */)
-{
-#if PIXEL_PLATFORM_ANDROID
-    std::string hello = "PixelClean Vulkan Engine running on Android";
-#elif PIXEL_PLATFORM_WIN
-    std::string hello = "PixelClean Vulkan Engine running on Windows";
-#else
-    std::string hello = "PixelClean Vulkan Engine running on Unknown platform";
-#endif
-    return env->NewStringUTF(hello.c_str());
-}
-
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_pixelclean_MainActivity_getPlatformInfo(
-        JNIEnv* env,
-        jobject /* this */)
-{
-    std::string info;
-
-#if PIXEL_PLATFORM_ANDROID
-    info += "Android";
-    #if PIXEL_ARCH_ARM64
-    info += " / ARM64";
-    #elif PIXEL_ARCH_X64
-    info += " / x64";
-    #endif
-
-    #if PIXEL_BUILD_DEBUG
-    info += " / Debug";
-    #else
-    info += " / Release";
-    #endif
-#elif PIXEL_PLATFORM_WIN
-    info += "Windows";
-    #if PIXEL_ARCH_X64
-    info += " / x64";
-    #endif
-
-    #if PIXEL_BUILD_DEBUG
-    info += " / Debug";
-    #else
-    info += " / Release";
-    #endif
-#endif
-
-    if (gVulkanApp && gVulkanApp->IsInitialized()) {
-        info += " | Vulkan: ACTIVE";
-    } else {
-        info += " | Vulkan: INIT";
-    }
-
-    return env->NewStringUTF(info.c_str());
+    LOGD("PixelClean Android native init complete (before surface)");
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_pixelclean_MainActivity_nativeSurfaceCreate(
-        JNIEnv* env,
-        jobject /* this */,
-        jobject surface)
-{
-    if (!surface) {
-        LOGE("nativeSurfaceCreate: null surface.");
+Java_com_pixelclean_MainActivity_nativeInitSurface(
+    JNIEnv* env,
+    jobject /* this */,
+    jobject surface) {
+
+    if (!gApplication) {
+        LOGE("nativeInitSurface: Application not initialized");
         return;
     }
 
-    std::lock_guard<std::mutex> lock(gWindowMutex);
-
-    if (gWindow) {
-        ANativeWindow_release(gWindow);
-        gWindow = nullptr;
-    }
-
-    gWindow = ANativeWindow_fromSurface(env, surface);
-    if (!gWindow) {
-        LOGE("ANativeWindow_fromSurface failed.");
+    ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
+    if (!window) {
+        LOGE("nativeInitSurface: failed to get ANativeWindow from surface");
         return;
     }
 
-    int32_t w = ANativeWindow_getWidth(gWindow);
-    int32_t h = ANativeWindow_getHeight(gWindow);
-    int32_t fmt = ANativeWindow_getFormat(gWindow);
-    LOGD("Native surface created: %dx%d format=%d", w, h, fmt);
+    LOGD("nativeInitSurface: got ANativeWindow (%dx%d)",
+         ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 
-    if (!InitVulkan(gWindow)) {
-        LOGE("Vulkan init failed.");
+    try {
+        gApplication->initAfterSurface(window);
+    } catch (const std::exception& e) {
+        LOGE("initAfterSurface failed: %s", e.what());
+        TOOL::Error->error(e.what());
+    }
+
+    LOGD("PixelClean Android surface init complete");
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_pixelclean_MainActivity_nativeRenderFrame(
+    JNIEnv* env,
+    jobject /* this */) {
+
+    if (!gApplication) {
         return;
     }
 
-    gRunning = true;
-    gPaused = false;
-
-    if (!gRenderThread) {
-        gRenderThread = new std::thread(RenderLoop);
-        LOGD("Render thread launched.");
+    try {
+        gApplication->frameStep();
+    } catch (const std::exception& e) {
+        LOGE("frameStep failed: %s", e.what());
+        TOOL::Error->error(e.what());
     }
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_pixelclean_MainActivity_nativeSurfaceDestroy(
-        JNIEnv* env,
-        jobject /* this */)
-{
-    LOGD("nativeSurfaceDestroy.");
-    gRunning = false;
+Java_com_pixelclean_MainActivity_nativeDestroy(
+    JNIEnv* env,
+    jobject /* this */) {
 
-    if (gRenderThread) {
-        gRenderThread->join();
-        delete gRenderThread;
-        gRenderThread = nullptr;
+    LOGD("PixelClean Android native destroy starting...");
+
+    if (gApplication) {
+        gApplication->cleanUp();
+        delete gApplication;
+        gApplication = nullptr;
     }
 
-    std::lock_guard<std::mutex> lock(gWindowMutex);
-
-    if (gVulkanApp) {
-        gVulkanApp->Shutdown();
-        delete gVulkanApp;
-        gVulkanApp = nullptr;
-    }
-
-    if (gWindow) {
-        ANativeWindow_release(gWindow);
-        gWindow = nullptr;
-    }
+    TOOL::DeleteThreadPool();
+    TOOL::DeletePerlinNoise();
+    TOOL::DeleteSpdLog();
 
     gInitialized = false;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_pixelclean_MainActivity_nativeSurfaceChange(
-        JNIEnv* env,
-        jobject /* this */,
-        jint format,
-        jint width,
-        jint height)
-{
-    LOGD("nativeSurfaceChange: %dx%d format=%d", width, height, format);
-
-    std::lock_guard<std::mutex> lock(gWindowMutex);
-    if (gVulkanApp && gVulkanApp->IsInitialized()) {
-        gVulkanApp->OnWindowResize();
-    }
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_pixelclean_MainActivity_enginePause(JNIEnv* env, jobject /* this */)
-{
-    LOGD("enginePause.");
-    gPaused = true;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_pixelclean_MainActivity_engineResume(JNIEnv* env, jobject /* this */)
-{
-    LOGD("engineResume.");
-    gPaused = false;
-}
-
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_pixelclean_MainActivity_isVulkanReady(JNIEnv* env, jobject /* this */)
-{
-    std::lock_guard<std::mutex> lock(gWindowMutex);
-    return (gVulkanApp && gVulkanApp->IsInitialized()) ? JNI_TRUE : JNI_FALSE;
+    LOGD("PixelClean Android native destroy complete");
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_pixelclean_MainActivity_nativeTouchEvent(
-        JNIEnv* env,
-        jobject /* this */,
-        jint action,
-        jfloat x,
-        jfloat y,
-        jint pointerId)
-{
-    if (gVulkanApp && gVulkanApp->IsInitialized()) {
-        gVulkanApp->OnTouchEvent(action, x, y, pointerId);
+    JNIEnv* env,
+    jobject /* this */,
+    jint action,
+    jfloat x,
+    jfloat y) {
+
+    if (!gApplication) return;
+
+    if (action == 0 || action == 2) {
+        gApplication->CursorPosX = static_cast<double>(x);
+        gApplication->CursorPosY = static_cast<double>(y);
     }
 }
 
-#endif // PIXEL_ANDROID
+extern "C" JNIEXPORT void JNICALL
+Java_com_pixelclean_MainActivity_nativeResize(
+    JNIEnv* env,
+    jobject /* this */,
+    jint width,
+    jint height) {
+
+    if (gApplication && gApplication->mWindow) {
+        gApplication->mWindow->mWindowResized = true;
+    }
+}

@@ -12,6 +12,10 @@
 #include "GameMods/SoloudTest/SoloudTest.h"
 #include "GameMods/RadianceCascades/RadianceCascades.h"
 
+#if defined(__ANDROID__)
+struct ANativeWindow;
+#endif
+
 
 namespace GAME {
 	class Application : public Configuration {
@@ -23,6 +27,12 @@ namespace GAME {
 		//总初始化
 		void run();
 
+#if defined(__ANDROID__)
+		void initBeforeSurface();
+		void initAfterSurface(ANativeWindow* nativeWindow);
+		void frameStep();
+#endif
+
 		//获取对于游戏
 		GameMods* GetGame(GameModsEnum Game);
 
@@ -30,6 +40,9 @@ namespace GAME {
 
 		//重建交换链:  当窗口大小发生变化的时候，交换链也要发生变化，Frame View Pipeline RenderPass Sync
 		void recreateSwapChain();
+
+		//回收资源
+		void cleanUp();
 
 	private:
 		//窗口的初始化
@@ -54,9 +67,6 @@ namespace GAME {
 
 		//渲染一帧画面
 		void Render();
-
-		//回收资源
-		void cleanUp();
 
 	private:
 		//创建渲染管线
@@ -86,5 +96,6 @@ namespace GAME {
 		int mCurrentFrame{ 0 };//当前是渲染哪一张GPU画布
 		
 		GameMods* mGameMods = nullptr;
-	};
+	bool mInitialized = false;
+};
 }

@@ -1,6 +1,8 @@
 #include "GPU.h"
 #include "lodepng.h"
+#if defined(_WIN32)
 #include <intrin.h>
+#endif
 
 struct Pixel {
     float r, g, b, a;

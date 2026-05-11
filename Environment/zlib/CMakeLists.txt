@@ -29,6 +29,11 @@ target_include_directories(zlib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 # 编译定义
 target_compile_definitions(zlib PRIVATE -D_CRT_SECURE_NO_DEPRECATE)
 
+# Android NDK 需要 _GNU_SOURCE 来暴露 lseek 等 POSIX 函数声明
+if(ANDROID)
+    target_compile_definitions(zlib PRIVATE -D_GNU_SOURCE -DHAVE_UNISTD_H)
+endif()
+
 # 根据构建类型设置输出名称
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
     set_target_properties(zlib PROPERTIES OUTPUT_NAME "zlibd")

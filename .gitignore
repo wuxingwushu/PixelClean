@@ -11,3 +11,6 @@ Environment/*
 !Environment/glfw/
 !Environment/imgui/
 !Environment/spdlog/
+
+MyApplication/app/release/*
+MyApplication/app/src/main/assets/*

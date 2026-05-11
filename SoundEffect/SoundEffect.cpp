@@ -10,9 +10,10 @@ namespace GAME::SoundEffect {
 	SoundEffect::SoundEffect()
 	{
 		mSoloud.init();
-		MidiFont.load(TimGM6mb_sf2);
-		//gLPFilter.setParams(SoLoud::BiquadResonantFilter::LOWPASS, 10000, 0);//开启音效
-		//gWave.setFilter(0, &gLPFilter);//绑定音效
+
+		if (MidiFont.load(TimGM6mb_sf2) != 0) {
+			std::cerr << "[SoundEffect] Warning: failed to load SoundFont: " << TimGM6mb_sf2 << std::endl;
+		}
 
 		std::vector<std::string> SoundMp3;
 		TOOL::FilePath("./Resources", &SoundMp3, "mp3", "nullptr", nullptr);
@@ -22,7 +23,6 @@ namespace GAME::SoundEffect {
 		{
 			mWaveS[i] = new SoLoud::Wav;
 			mWaveS[i]->load(("./Resources/" + SoundMp3[i] + ".mp3").c_str());
-			//std::cout << SoundMp3[i] << std::endl;
 			SoundLibaryMap.insert(std::make_pair(SoundMp3[i], mWaveS[i]));
 		}
 
@@ -34,7 +34,6 @@ namespace GAME::SoundEffect {
 		{
 			mMidiS[i] = new SoLoud::Midi;
 			mMidiS[i]->load(("./Resources/" + SoundMidi[i] + ".mid").c_str(), MidiFont);
-			//std::cout << SoundMidi[i] << std::endl;
 			SoundLibaryMap.insert(std::make_pair(SoundMidi[i], mMidiS[i]));
 		}
 

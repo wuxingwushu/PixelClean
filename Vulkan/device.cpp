@@ -1,6 +1,9 @@
 #include "device.h"
 #if defined(_WIN32) || defined(__ANDROID__)
 #define VMA_DEBUG_MARGIN 16
+#if defined(__ANDROID__)
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#endif
 #define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 #endif

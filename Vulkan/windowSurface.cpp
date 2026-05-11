@@ -1,5 +1,9 @@
 #include "windowSurface.h"
 
+#if defined(__ANDROID__)
+#include <vulkan/vulkan_android.h>
+#endif
+
 namespace VulKan {
 
 WindowSurface::WindowSurface(Instance* instance, 
@@ -15,9 +19,12 @@ WindowSurface::WindowSurface(Instance* instance,
         throw std::runtime_error("Error: failed to create surface");
     }
 #elif defined(__ANDROID__)
-    // Android: 使用 vkCreateAndroidSurfaceKHR
-    // 需要从 JNI 层获取 ANativeWindow*，通过 VkAndroidSurfaceCreateInfoKHR 创建
-    throw std::runtime_error("Error: Android surface not yet supported in WindowSurface");
+    VkAndroidSurfaceCreateInfoKHR surfaceInfo{};
+    surfaceInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    surfaceInfo.window = window->getWindow();
+    if (vkCreateAndroidSurfaceKHR(instance->getInstance(), &surfaceInfo, nullptr, &mWindowSurface) != VK_SUCCESS) {
+        throw std::runtime_error("Error: failed to create Android surface");
+    }
 #endif
 }
 

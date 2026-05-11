@@ -1,6 +1,9 @@
 #pragma once
 //#define VMA_DEBUG_MARGIN 16//边距（Margins）https://blog.csdn.net/weixin_50523841/article/details/122506850
 #if defined(_WIN32) || defined(__ANDROID__)
+#if defined(__ANDROID__)
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#endif
 #include <vma/vk_mem_alloc.h>
 #endif
 #include "instance.h"
@@ -72,7 +75,7 @@ namespace VulKan {
 		//逻辑设备
 		VkDevice mDevice{ VK_NULL_HANDLE };
 
-		#if defined(_WIN32)
+		#if defined(_WIN32) || defined(__ANDROID__)
 		//创建的内存分配器
 		VmaAllocator mAllocator{ VK_NULL_HANDLE };
 		#endif

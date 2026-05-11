@@ -1,5 +1,6 @@
 #include "Tool.h"
 #include <iostream>
+#include <sstream>
 #include <filesystem>
 
 
@@ -145,8 +146,10 @@ namespace TOOL {
 	}
 
 	void FilePath(const char* path, std::vector<std::string>* strS, const char* Suffix, const char* Name, int* Index) {
+		std::error_code ec;
 		std::string ModelFileName;
-		for (const auto& entry : std::filesystem::directory_iterator(path)) {
+		for (const auto& entry : std::filesystem::directory_iterator(path, ec)) {
+			if (ec) return;
 			ModelFileName = entry.path().filename().u8string();//获取文件名字
 			for (size_t i = 0; i < ModelFileName.size(); ++i)
 			{

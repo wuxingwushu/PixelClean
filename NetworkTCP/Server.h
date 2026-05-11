@@ -13,6 +13,10 @@
 //#else
 //#include <signal.h>
 //#endif
+#if !defined(_WIN32)
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
 
 
 #include "../Tool/ContinuousMap.h"

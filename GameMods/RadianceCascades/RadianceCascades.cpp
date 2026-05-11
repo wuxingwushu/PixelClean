@@ -419,75 +419,20 @@ void RadianceCascades::createDescriptorSets() {
 }
 
 // ============================================================================
-// createImGuiResources — ImGui 显示输出纹理所需的 Sampler + DescriptorSet
+// createImGuiResources — ImGui 显示输出纹理所需的 DescriptorSet
 // ============================================================================
-// 创建：
-//   mImGuiSampler              : 线性过滤，边缘 clamp
-//   mImGuiDescriptorSetLayout  : combined image sampler（fragment shader）
-//   mImGuiDescriptorPool       : 用于分配 imgui descriptor set
-//   mImGuiDescriptorSet        : 绑定 mOutputImage + mImGuiSampler
+// 使用 ImGui 内置的 ImGui_ImplVulkan_AddTexture() 创建兼容的 descriptor set。
+// 新版 imgui_impl_vulkan 使用 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (set 0) +
+// VK_DESCRIPTOR_TYPE_SAMPLER (set 1) 的分离模式，不需要手动创建 sampler。
 //
 // 同时初始化输出图像的布局为 SHADER_READ_ONLY_OPTIMAL。
 void RadianceCascades::createImGuiResources() {
-    VkDevice dev = mDevice->getDevice();
+    // 使用 ImGui 内置 API 创建纹理 descriptor set，与 ImGui pipeline 完全兼容
+    mImGuiDescriptorSet = ImGui_ImplVulkan_AddTexture(
+        mOutputImage->getImageView(),
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    // ---- Sampler：线性过滤 + clamp 到边缘 ----
-    VkSamplerCreateInfo sci{};
-    sci.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sci.magFilter    = VK_FILTER_LINEAR;
-    sci.minFilter    = VK_FILTER_LINEAR;
-    sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    vkCreateSampler(dev, &sci, nullptr, &mImGuiSampler);
-
-    // ---- ImGui Descriptor Set Layout ----
-    VkDescriptorSetLayoutBinding lb{};
-    lb.binding         = 0;
-    lb.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    lb.descriptorCount = 1;
-    lb.stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
-    VkDescriptorSetLayoutCreateInfo lici{};
-    lici.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    lici.bindingCount = 1;
-    lici.pBindings    = &lb;
-    vkCreateDescriptorSetLayout(dev, &lici, nullptr, &mImGuiDescriptorSetLayout);
-
-    // ---- ImGui Descriptor Pool ----
-    VkDescriptorPoolSize psz{};
-    psz.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    psz.descriptorCount = 1;
-    VkDescriptorPoolCreateInfo pci{};
-    pci.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pci.maxSets       = 1;
-    pci.poolSizeCount = 1;
-    pci.pPoolSizes    = &psz;
-    vkCreateDescriptorPool(dev, &pci, nullptr, &mImGuiDescriptorPool);
-
-    // ---- 分配 + 更新 ImGui Descriptor Set ----
-    VkDescriptorSetAllocateInfo ai{};
-    ai.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    ai.descriptorPool     = mImGuiDescriptorPool;
-    ai.descriptorSetCount = 1;
-    ai.pSetLayouts        = &mImGuiDescriptorSetLayout;
-    vkAllocateDescriptorSets(dev, &ai, &mImGuiDescriptorSet);
-
-    VkDescriptorImageInfo ii{};
-    ii.imageView   = mOutputImage->getImageView();
-    ii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    ii.sampler     = mImGuiSampler;
-    VkWriteDescriptorSet w{};
-    w.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    w.dstSet          = mImGuiDescriptorSet;
-    w.dstBinding      = 0;
-    w.descriptorCount = 1;
-    w.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    w.pImageInfo      = &ii;
-    vkUpdateDescriptorSets(dev, 1, &w, 0, nullptr);
-
-    // ---- 初始化输出图像布局 ----
-    // 从 UNDEFINED 转到 SHADER_READ_ONLY_OPTIMAL，后续每帧在
-    // TRANSFER_DST 和 SHADER_READ_ONLY 之间切换
+    // 初始化输出图像布局：UNDEFINED → SHADER_READ_ONLY_OPTIMAL
     {
         mComputeCommandPool = new VulKan::CommandPool(mDevice);
         mComputeCommandBuffer = new VulKan::CommandBuffer(mDevice, mComputeCommandPool);
@@ -1234,27 +1179,21 @@ void RadianceCascades::rebuildCascadeResources() {
 // ============================================================================
 // 防护卫 mCleanedUp 确保即使在多次析构或接口调用中也不会重复销毁。
 // 销毁顺序：从创建的反序进行（先创建的依赖后创建的）。
-//   1. Sampler
-//   2. ImGui descriptor set layout + pool
-//   3. Compute descriptor pool
-//   4. Pipeline
-//   5. Pipeline layout
-//   6. Descriptor set layout
-//   7. Shader module
-//   8. Buffer + Image 对象（delete）
-//   9. Command buffer + pool
+//   1. Compute descriptor pool
+//   2. Pipeline
+//   3. Pipeline layout
+//   4. Descriptor set layout
+//   5. Shader module
+//   6. Buffer + Image 对象（delete）
+//   7. Command buffer + pool
+//
+// mImGuiDescriptorSet 由 ImGui_ImplVulkan_AddTexture() 分配，
+// 随 ImGui_ImplVulkan_Shutdown() 中的 descriptor pool 销毁自动释放。
 void RadianceCascades::cleanup() {
     if (mCleanedUp) return;  // 防止重复销毁
     mCleanedUp = true;
 
     VkDevice dev = mDevice ? mDevice->getDevice() : VK_NULL_HANDLE;
-
-    // ---- Sampler ----
-    if (mImGuiSampler)               { vkDestroySampler(dev, mImGuiSampler, nullptr); mImGuiSampler = VK_NULL_HANDLE; }
-
-    // ---- ImGui 描述符资源 ----
-    if (mImGuiDescriptorSetLayout)   { vkDestroyDescriptorSetLayout(dev, mImGuiDescriptorSetLayout, nullptr); mImGuiDescriptorSetLayout = VK_NULL_HANDLE; }
-    if (mImGuiDescriptorPool)        { vkDestroyDescriptorPool(dev, mImGuiDescriptorPool, nullptr); mImGuiDescriptorPool = VK_NULL_HANDLE; }
 
     // ---- Compute 描述符池 ----
     if (mDescriptorPool)             { vkDestroyDescriptorPool(dev, mDescriptorPool, nullptr); mDescriptorPool = VK_NULL_HANDLE; }
@@ -1290,6 +1229,9 @@ void RadianceCascades::cleanup() {
     // ---- Command Buffer / Pool ----
     delete mComputeCommandBuffer; mComputeCommandBuffer = nullptr;
     delete mComputeCommandPool;   mComputeCommandPool = nullptr;
+
+    // ImGui descriptor set 由 ImGui_ImplVulkan_AddTexture 分配，由 ImGui pool 管理生命周期
+    mImGuiDescriptorSet = VK_NULL_HANDLE;
 }
 
 } // namespace GAME

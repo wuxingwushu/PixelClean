@@ -196,10 +196,7 @@ private:
     VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
 
     // ---- ImGui 显示资源 ----
-    VkDescriptorSetLayout mImGuiDescriptorSetLayout = VK_NULL_HANDLE;
-    VkDescriptorPool mImGuiDescriptorPool = VK_NULL_HANDLE;
-    VkDescriptorSet mImGuiDescriptorSet = VK_NULL_HANDLE;  // 绑定 mOutputImage + sampler
-    VkSampler mImGuiSampler = VK_NULL_HANDLE;
+    VkDescriptorSet mImGuiDescriptorSet = VK_NULL_HANDLE;  // 由 ImGui_ImplVulkan_AddTexture() 创建，绑定 mOutputImage
 
     // ---- 运行时状态 ----
     int mFrameCount = 0;            // 帧计数（自初始化起）

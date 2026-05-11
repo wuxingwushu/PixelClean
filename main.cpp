@@ -1,14 +1,16 @@
 #include "application.h"
 #include "Vulkan/Window.h"
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <Windows.h>
 #endif
 
+#if defined(_WIN32)
 int main(int argc, char** argv) {
-#ifdef _WIN32
     // 设置 Windows 控制台输出编码为 UTF-8
     SetConsoleOutputCP(CP_UTF8);
+#elif defined(__ANDROID__)
+extern "C" int pixelclean_main(int argc, char** argv) {
 #endif
 	Global::Read();
 	TOOL::InitThreadPool();
@@ -21,7 +23,11 @@ int main(int argc, char** argv) {
 	GAME::Application* app = new GAME::Application();
 
 	try {
+#if defined(_WIN32)
 		app->run();
+#elif defined(__ANDROID__)
+		// Android: Surface 创建后由 JNI 层调用 app->runWithoutWindow()
+#endif
 	}
 	catch (const std::exception& e) {
 		std::cout << "main: " << e.what() << std::endl;

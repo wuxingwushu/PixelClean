@@ -408,11 +408,16 @@ namespace GAME {
 		TOOL::mTimer->MomentTiming(u8"窗口重构 ");
 
 		int width = 0, height = 0;
+#if defined(_WIN32)
 		glfwGetFramebufferSize(mWindow->getWindow(), &width, &height);
 		while (width == 0 || height == 0) {
 			glfwWaitEvents();
 			glfwGetFramebufferSize(mWindow->getWindow(), &width, &height);
 		}
+#elif defined(__ANDROID__)
+		width = mWindow->getWidth();
+		height = mWindow->getHeight();
+#endif
 		vkDeviceWaitIdle(mDevice->getDevice());
 
 		mSwapChain->~SwapChain();
@@ -451,7 +456,11 @@ namespace GAME {
 			mWindow->pollEvents();//GLFW轮询事件
 			// 更新 ImGui 的 MousePos
 			ImGuiIO& io = ImGui::GetIO();
+#if defined(_WIN32)
 			glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
+#elif defined(__ANDROID__)
+			// CursorPosX, CursorPosY 由 JNI 触摸事件填充
+#endif
 			io.MousePos.x = CursorPosX;
 			io.MousePos.y = CursorPosY;
 			// 更新 ImGui 的 鼠标滚轮的值
@@ -511,8 +520,13 @@ namespace GAME {
 		mGameMods->GameLoop(mCurrentFrame);
 
 		int winwidth, winheight;
+#if defined(_WIN32)
 		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
 		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
+#elif defined(__ANDROID__)
+		winwidth = mWindow->getWidth();
+		winheight = mWindow->getHeight();
+#endif
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 		huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
 		huoqdedian.x += mCamera->getCameraPos().x;
@@ -524,7 +538,12 @@ namespace GAME {
 		//ImGui显示录制
 		if (Global::Monitor) {
 			ImGui_ImplVulkan_NewFrame();
+#if defined(_WIN32)
 			ImGui_ImplGlfw_NewFrame();
+#elif defined(__ANDROID__)
+			// Android: 使用 Android ImGui 后端注册触摸/按键事件
+			// ImGui::GetIO().DisplaySize = ImVec2((float)winwidth, (float)winheight);
+#endif
 			ImGui::NewFrame();
 
 			ImGui::PushFont(InterFace->Font);
@@ -564,9 +583,13 @@ namespace GAME {
 			//ImGui::ShowDemoWindow();
 			ImGui::PopFont();
 			ImGui::Render();
-		}else if (Global::ConsoleBool) {
+		} else if (Global::ConsoleBool) {
 			ImGui_ImplVulkan_NewFrame();
+#if defined(_WIN32)
 			ImGui_ImplGlfw_NewFrame();
+#elif defined(__ANDROID__)
+			// Android: 使用 Android ImGui 后端
+#endif
 			ImGui::NewFrame();
 			ImGui::PushFont(InterFace->Font);
 			InterFace->ConsoleInterface();//控制台

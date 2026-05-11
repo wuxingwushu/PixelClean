@@ -1,16 +1,28 @@
-#include"windowSurface.h"
+#include "windowSurface.h"
 
 namespace VulKan {
-	//创建Surface，让VulKan和窗口链接起来（适配win,安卓,等等不同设备）
-	WindowSurface::WindowSurface(Instance* instance, Window* window) {
-		mInstance = instance;
-		if (glfwCreateWindowSurface(instance->getInstance(), window->getWindow(), nullptr, &mWindowSurface) != VK_SUCCESS) {
-			throw std::runtime_error("Error: failed to create surface");
-		}
-	}
 
-	WindowSurface::~WindowSurface() {
-		vkDestroySurfaceKHR(mInstance->getInstance(), mWindowSurface, nullptr);
-	}
+WindowSurface::WindowSurface(Instance* instance, 
+#if defined(_WIN32)
+    Window* window
+#elif defined(__ANDROID__)
+    Window* window
+#endif
+) {
+    mInstance = instance;
+#if defined(_WIN32)
+    if (glfwCreateWindowSurface(instance->getInstance(), window->getWindow(), nullptr, &mWindowSurface) != VK_SUCCESS) {
+        throw std::runtime_error("Error: failed to create surface");
+    }
+#elif defined(__ANDROID__)
+    // Android: 使用 vkCreateAndroidSurfaceKHR
+    // 需要从 JNI 层获取 ANativeWindow*，通过 VkAndroidSurfaceCreateInfoKHR 创建
+    throw std::runtime_error("Error: Android surface not yet supported in WindowSurface");
+#endif
+}
+
+WindowSurface::~WindowSurface() {
+    vkDestroySurfaceKHR(mInstance->getInstance(), mWindowSurface, nullptr);
+}
 
 }

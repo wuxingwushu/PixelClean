@@ -152,10 +152,15 @@ void client_read_cb(bufferevent* be, void* arg)
 }
 
 client::client(std::string IPV, unsigned int Duan) {
-#ifdef _WIN32 
+#if defined(_WIN32)
 	//初始化socket库
 	WSADATA wsa;
 	WSAStartup(MAKEWORD(2, 2), &wsa);
+#elif defined(__ANDROID__)
+	// Android 使用 Bionic libc，不需要 WSAStartup
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+		__android_log_print(ANDROID_LOG_ERROR, "PixelClean", "signal fail");
+	}
 #else
 	//忽略管道信号，发送数据给已关闭的socket
 	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
@@ -203,9 +208,10 @@ client::~client() {
 	delete mClientData;
 
 	event_base_free(client_base);
-#ifdef _WIN32 
+#if defined(_WIN32)
 	WSACleanup();
-#else
+#elif defined(__ANDROID__)
+	// Android: 不需要 WSACleanup
 #endif
 	mClient = nullptr;
 }

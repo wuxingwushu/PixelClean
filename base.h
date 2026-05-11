@@ -35,8 +35,13 @@
 #include <fstream>
 #include <thread>//多线程
 #define _WINSOCKAPI_
+#if defined(_WIN32)
 #include <Windows.h>
 #pragma comment(lib, "ws2_32.lib")
+#elif defined(__ANDROID__)
+#include <vulkan/vulkan_android.h>
+#include <android/log.h>
+#endif
 
 //#define GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_VULKAN

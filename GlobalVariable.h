@@ -28,6 +28,8 @@ namespace Global {
 
 	extern bool ClickWindow;// 鼠标是否 是点击窗口
 
+	extern TouchStateEnum TouchState;// Android 触摸状态
+
 	/***************************	INI	***************************/
 	void Read();//读取
 	void Storage();//储存

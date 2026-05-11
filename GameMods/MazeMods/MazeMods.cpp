@@ -289,8 +289,13 @@ namespace GAME
 		}
 
 		int winwidth, winheight;
+#if defined(_WIN32)
 		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
 		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
+#elif defined(__ANDROID__)
+		winwidth = mWindow->getWidth();
+		winheight = mWindow->getHeight();
+#endif
 		m_angle = std::atan2((winwidth / 2) - CursorPosX, (winheight / 2) - CursorPosY) + 1.57f; // 获取角度
 
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
@@ -328,7 +333,11 @@ namespace GAME
 		int Lzuojian;
 		if (!Global::ClickWindow)
 		{
+			#if defined(_WIN32)
 			Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+#elif defined(__ANDROID__)
+			Lzuojian = (Global::TouchState == TouchStateEnum::PrimaryDown) ? GLFW_PRESS : GLFW_RELEASE;
+#endif
 			if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || ((ArmsContinuityFire > mArms->IntervalTime) && LSObjectDecorator.Object == nullptr)))
 			{
 				ArmsContinuityFire = 0;
@@ -389,13 +398,21 @@ namespace GAME
 		if (!Global::ClickWindow)
 		{
 			// 点击左键
+#if defined(_WIN32)
 			if (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+#elif defined(__ANDROID__)
+			if (Global::TouchState == TouchStateEnum::SecondaryDown)
+#endif
 			{
 				beang = {huoqdedian.x, huoqdedian.y};
 			}
 			// 点击右键
 			static int fangzhifanfuvhufa;
+#if defined(_WIN32)
 			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+#elif defined(__ANDROID__)
+			int Leftan = (Global::TouchState == TouchStateEnum::TertiaryDown) ? GLFW_PRESS : GLFW_RELEASE;
+#endif
 			if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan)
 			{
 				end = {huoqdedian.x, huoqdedian.y};

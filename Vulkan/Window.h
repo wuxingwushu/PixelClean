@@ -28,6 +28,9 @@ namespace VulKan {
 
 		[[nodiscard]] inline GLFWwindow* getWindow() const noexcept { return mWindow; }
 
+		[[nodiscard]] inline int getWidth() const noexcept { return mWidth; }
+		[[nodiscard]] inline int getHeight() const noexcept { return mHeight; }
+
 		// 注册鼠标事件
 		void setApp(GameMods* app);
 

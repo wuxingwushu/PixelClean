@@ -1,6 +1,6 @@
 #pragma once
 #include "instance.h"
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__ANDROID__)
 #include "window.h"
 #endif
 
@@ -8,7 +8,7 @@ namespace VulKan {
 
 	class WindowSurface {
 	public:
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__ANDROID__)
 		//创建Surface，让VulKan和窗口链接起来（适配win,安卓,等等不同设备）
 		WindowSurface(Instance* instance, Window* window);
 #endif

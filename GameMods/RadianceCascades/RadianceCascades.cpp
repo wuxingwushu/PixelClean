@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // RadianceCascades.cpp — 2D 级联辐射度全局光照模块（实现）
 // ============================================================================
 // 基于 Shadertoy "Radiance Cascades" 参考实现。
@@ -558,8 +558,13 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     }
 
     // ---- 鼠标状态读取 ----
+#if defined(_WIN32)
     int leftState  = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
     int rightState = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+#elif defined(__ANDROID__)
+    int leftState  = (Global::TouchState == TouchStateEnum::PrimaryDown) ? GLFW_PRESS : GLFW_RELEASE;
+    int rightState = (Global::TouchState == TouchStateEnum::SecondaryDown) ? GLFW_PRESS : GLFW_RELEASE;
+#endif
     bool leftDown  = (leftState == GLFW_PRESS);
     bool rightDown = (rightState == GLFW_PRESS);
     bool realMouseDown = leftDown || rightDown;  // 任一按钮按下都算"绘制中"
@@ -648,13 +653,20 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     mMouseLeftDown  = leftDown;
     mMouseRightDown = rightDown;
 
-    // ---- C 键清屏（上升沿检测） ----
+    // C 键清屏（上升沿检测）
     // 仅在从未按变为按下时触发一次清屏
     // mNeedClear 在 dispatch 后重置
+#if defined(_WIN32)
     if (glfwGetKey(mWindow->getWindow(), GLFW_KEY_C) == GLFW_PRESS && mPrevCKey == 0) {
         mNeedClear = true;
     }
     mPrevCKey = glfwGetKey(mWindow->getWindow(), GLFW_KEY_C);
+#elif defined(__ANDROID__)
+    if (mPrevCKey == 0 && false) {
+        mNeedClear = true;
+    }
+    mPrevCKey = 0;
+#endif
 
     // ---- 打包 GPUParams ----
     GPUParams p{};

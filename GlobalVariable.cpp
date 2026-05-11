@@ -33,6 +33,8 @@ namespace Global {
 
 	bool ClickWindow = false;
 
+	TouchStateEnum TouchState = TouchStateEnum::None;
+
 	/***************************	INI	***************************/
 	void Read() {
 		inih::INIReader Ini{ IniPath_ini };

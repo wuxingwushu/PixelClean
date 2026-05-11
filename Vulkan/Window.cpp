@@ -1,8 +1,10 @@
 #include "window.h"
 #include "../GlobalVariable.h"
 #include "../GameMods/GameMods.h"
+#if defined(_WIN32)
 #define _WINSOCKAPI_
 #include <Windows.h>
+#endif
 #include <iostream>
 
 namespace VulKan {
@@ -94,10 +96,14 @@ namespace VulKan {
 
 	void Window::SetWindow(bool FullScreen) {
 		if (FullScreen) {
+#if defined(_WIN32)
 			RECT windowRect;
 			GetWindowRect(GetDesktopWindow(), &windowRect);
 			mWidth = windowRect.right;
 			mHeight = windowRect.bottom;
+#elif defined(__ANDROID__)
+			// Android 全屏尺寸由 SurfaceView 管理，mWidth/mHeight 由 JNI 层设置
+#endif
 			glfwSetWindowMonitor(mWindow, glfwGetPrimaryMonitor(), 0, 0, mWidth, mHeight, GLFW_DONT_CARE);//全屏
 		}
 		else {

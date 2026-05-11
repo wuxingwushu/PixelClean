@@ -7,10 +7,11 @@
 #include <cfloat>
 #include <limits>
 
-#define TimerWindowsTime
-#ifdef TimerWindowsTime
+#if defined(_WIN32)
 #include <Windows.h>
 #include <profileapi.h>
+#elif defined(__ANDROID__)
+#include <time.h>
 #else
 #include <time.h>
 #endif
@@ -107,10 +108,14 @@ private:
 	    其他平台回退到 clock() 函数。返回值统一为 int64_t 类型。
 	*/
 	int64_t GetTime() {
-#ifdef TimerWindowsTime
+#if defined(_WIN32)
 		LARGE_INTEGER t1;
 		QueryPerformanceCounter(&t1);
 		return t1.QuadPart;
+#elif defined(__ANDROID__)
+		struct timespec ts;
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+		return ts.tv_sec * 1000000000LL + ts.tv_nsec;
 #else
 		return static_cast<int64_t>(clock());
 #endif
@@ -122,10 +127,12 @@ private:
 	    其他平台使用 CLOCKS_PER_SEC。用于将时钟周期差转换为秒。
 	*/
 	int64_t GetClocks() {
-#ifdef TimerWindowsTime
+#if defined(_WIN32)
 		LARGE_INTEGER freq;
 		QueryPerformanceFrequency(&freq);
 		return freq.QuadPart;
+#elif defined(__ANDROID__)
+		return 1000000000LL;
 #else
 		return static_cast<int64_t>(CLOCKS_PER_SEC);
 #endif

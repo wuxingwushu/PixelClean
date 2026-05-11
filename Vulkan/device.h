@@ -1,6 +1,6 @@
 #pragma once
 //#define VMA_DEBUG_MARGIN 16//边距（Margins）https://blog.csdn.net/weixin_50523841/article/details/122506850
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__ANDROID__)
 #include <vma/vk_mem_alloc.h>
 #endif
 #include "instance.h"
@@ -42,7 +42,7 @@ namespace VulKan {
 
 		VkSampleCountFlagBits getMaxUsableSampleCount();
 
-		#if defined(_WIN32)
+		#if defined(_WIN32) || defined(__ANDROID__)
 		[[nodiscard]] inline VmaAllocator getAllocator() const noexcept { return mAllocator; }//获取内存分配器
 #endif
 

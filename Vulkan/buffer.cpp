@@ -74,8 +74,8 @@ namespace VulKan {
 		createInfo.usage = usage;//数据是干什么用的
 		createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;//专属显示队列
 		
+#if defined(_WIN32) || defined(__ANDROID__)
 		VmaAllocationCreateInfo VmaallocInfo = {};
-
 
 		if (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT & properties) {
 			VmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -84,12 +84,14 @@ namespace VulKan {
 			VmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		}
 
-		
-
-		//vkCreateBuffer(device->getDevice(), &createInfo, nullptr, &mBuffer)
 		if (vmaCreateBuffer(device->getAllocator(), &createInfo, &VmaallocInfo, &mBuffer, &mAllocation, nullptr) != VK_SUCCESS) {
 			throw std::runtime_error("Error:failed to create buffer");
 		}
+#else
+		if (vkCreateBuffer(device->getDevice(), &createInfo, nullptr, &mBuffer) != VK_SUCCESS) {
+			throw std::runtime_error("Error:failed to create buffer");
+		}
+#endif
 
 
 		/*
@@ -137,9 +139,12 @@ namespace VulKan {
 			BufferstageBuffer = nullptr;
 		}
 		if (mBuffer != VK_NULL_HANDLE) {
+#if defined(_WIN32) || defined(__ANDROID__)
 			vmaDestroyBuffer(mDevice->getAllocator(), mBuffer, mAllocation);
+#else
+			vkDestroyBuffer(mDevice->getDevice(), mBuffer, nullptr);
+#endif
 			mBuffer = VK_NULL_HANDLE;
-			//vkDestroyBuffer(mDevice->getDevice(), mBuffer, nullptr);
 		}
 		/*
 		if (mBufferMemory != VK_NULL_HANDLE) {
@@ -165,26 +170,41 @@ namespace VulKan {
 	void Buffer::updateBufferByMap(void* data, size_t size) {
 		void* memPtr = nullptr;
 
+#if defined(_WIN32) || defined(__ANDROID__)
 		VkResult result = vmaMapMemory(mDevice->getAllocator(), mAllocation, &memPtr);
+#else
+		VkResult result = vkMapMemory(mDevice->getDevice(), mBufferMemory, 0, VK_WHOLE_SIZE, 0, &memPtr);
+#endif
 		if (result != VK_SUCCESS || memPtr == nullptr) {
 			throw std::runtime_error("Error: failed to map buffer memory");
 		}
 		memcpy(memPtr, data, size);
+#if defined(_WIN32) || defined(__ANDROID__)
 		vmaUnmapMemory(mDevice->getAllocator(), mAllocation);
+#else
+		vkUnmapMemory(mDevice->getDevice(), mBufferMemory);
+#endif
 	}
 
 	void* Buffer::getupdateBufferByMap() {
 		void* memPtr = nullptr;
 
+#if defined(_WIN32) || defined(__ANDROID__)
 		VkResult result = vmaMapMemory(mDevice->getAllocator(), mAllocation, &memPtr);
+#else
+		VkResult result = vkMapMemory(mDevice->getDevice(), mBufferMemory, 0, VK_WHOLE_SIZE, 0, &memPtr);
+#endif
 		if (result != VK_SUCCESS || memPtr == nullptr) {
 			throw std::runtime_error("Error: failed to map buffer memory");
 		}
 		return memPtr;
 	}
 	void Buffer::endupdateBufferByMap() {
-		//vkUnmapMemory(mDevice->getDevice(), mBufferMemory);
+#if defined(_WIN32) || defined(__ANDROID__)
 		vmaUnmapMemory(mDevice->getAllocator(), mAllocation);
+#else
+		vkUnmapMemory(mDevice->getDevice(), mBufferMemory);
+#endif
 	}
 
 	void Buffer::updateImageByStage(const VkImage& dstImage, VkImageLayout dstImageLayout, uint32_t width, uint32_t height, void* data, size_t size) {

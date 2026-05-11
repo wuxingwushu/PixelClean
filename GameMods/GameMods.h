@@ -32,6 +32,15 @@ enum GameKeyEnum
 	SPACE,
 };
 
+enum TouchStateEnum
+{
+	None = 0,
+	PrimaryDown,	// 主触摸按下（对应鼠标左键）
+	SecondaryDown,	// 次触摸按下（对应鼠标右键）
+	TertiaryDown,	// 第三触摸按下（寻路右键）
+	MultiTouch,		// 多指触摸
+};
+
 class GameMods
 {
 public:

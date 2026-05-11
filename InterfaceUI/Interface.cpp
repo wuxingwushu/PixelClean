@@ -50,7 +50,13 @@ namespace GAME {
 		Font_cfg.FontDataOwnedByAtlas = false;
 		Font = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
 
+#if defined(_WIN32)
 		ImGui_ImplGlfw_InitForVulkan(mWindown->getWindow(), true);
+#elif defined(__ANDROID__)
+		// Android: IO 显示器尺寸先设置，后续 JNI 触摸回调更新
+		io.DisplaySize = ImVec2((float)Global::mWidth, (float)Global::mHeight);
+		io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+#endif
 
 		{
 			VkDescriptorPoolSize pool_sizes[] =

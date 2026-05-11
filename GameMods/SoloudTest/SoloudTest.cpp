@@ -3,6 +3,7 @@
 #include "../../PhysicsBlock/BaseCalculate.hpp"
 #include "../../NetworkTCP/Server.h"
 #include "../../NetworkTCP/Client.h"
+#include <chrono>
 
 namespace GAME
 {
@@ -968,7 +969,11 @@ namespace GAME
 		for (auto &src : mSoundSources) {
 			mAuxiliaryVision->Spot({src.position, 0}, 0.15f, src.color);
 
+#if defined(_WIN32)
 			float pulsePhase = fmod((float)glfwGetTime() * 2.0f, 1.0f);
+#elif defined(__ANDROID__)
+			float pulsePhase = fmod((float)std::chrono::duration<float>(std::chrono::steady_clock::now().time_since_epoch()).count() * 2.0f, 1.0f);
+#endif
 			glm::vec4 pulseColor = src.color * (0.5f + pulsePhase * 0.5f);
 			pulseColor.a = 0.5f;
 			mAuxiliaryVision->Circle({src.position, 0}, 0.3f, pulseColor);

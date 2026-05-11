@@ -317,8 +317,13 @@ namespace GAME
 	void PhysicsTest::GameLoop(unsigned int mCurrentFrame)
 	{
 		int winwidth, winheight;
+#if defined(_WIN32)
 		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
 		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
+#elif defined(__ANDROID__)
+		winwidth = mWindow->getWidth();
+		winheight = mWindow->getHeight();
+#endif
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 		huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
 		huoqdedian.x += mCamera->getCameraPos().x;
@@ -538,7 +543,12 @@ namespace GAME
 				}
 			}
 			int winwidth, winheight;
+#if defined(_WIN32)
 			glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
+#elif defined(__ANDROID__)
+			winwidth = mWindow->getWidth();
+			winheight = mWindow->getHeight();
+#endif
 			glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 			huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
 			huoqdedian.x += mCamera->getCameraPos().x;
@@ -625,7 +635,11 @@ namespace GAME
 			static glm::vec2 z1, z2, y1, y2;
 
 			static int Z_fangzhifanfuvhufa;
+#if defined(_WIN32)
 			int Z_Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+#elif defined(__ANDROID__)
+			int Z_Leftan = (Global::TouchState == TouchStateEnum::PrimaryDown) ? GLFW_PRESS : GLFW_RELEASE;
+#endif
 			if (Z_Leftan == GLFW_PRESS)
 			{
 				if (Z_fangzhifanfuvhufa != Z_Leftan)
@@ -652,7 +666,11 @@ namespace GAME
 			}
 
 			static int fangzhifanfuvhufa;
+#if defined(_WIN32)
 			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+#elif defined(__ANDROID__)
+			int Leftan = (Global::TouchState == TouchStateEnum::SecondaryDown) ? GLFW_PRESS : GLFW_RELEASE;
+#endif
 			if (Leftan == GLFW_PRESS)
 			{
 				if (fangzhifanfuvhufa != Leftan)
@@ -685,7 +703,11 @@ namespace GAME
 		static glm::vec2 z1, z2, y1, y2;
 
 		static int Z_fangzhifanfuvhufa; // 避免反复触发
+#if defined(_WIN32)
 		int Z_Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
+#elif defined(__ANDROID__)
+		int Z_Leftan = (Global::TouchState == TouchStateEnum::PrimaryDown) ? GLFW_PRESS : GLFW_RELEASE;
+#endif
 		if (Z_Leftan == GLFW_PRESS)
 		{
 			if (Z_fangzhifanfuvhufa != Z_Leftan)
@@ -705,7 +727,11 @@ namespace GAME
 		}
 		Z_fangzhifanfuvhufa = Z_Leftan;
 		static int fangzhifanfuvhufa; // 避免反复触发
+#if defined(_WIN32)
 		int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
+#elif defined(__ANDROID__)
+		int Leftan = (Global::TouchState == TouchStateEnum::SecondaryDown) ? GLFW_PRESS : GLFW_RELEASE;
+#endif
 		if (Leftan == GLFW_PRESS)
 		{
 			if (fangzhifanfuvhufa != Leftan)

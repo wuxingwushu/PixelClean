@@ -3,6 +3,7 @@
 #include "../../PhysicsBlock/BaseCalculate.hpp"
 #include "../../NetworkTCP/Server.h"
 #include "../../NetworkTCP/Client.h"
+#include "../../DebugLog.h"
 #include <chrono>
 
 namespace GAME
@@ -12,6 +13,7 @@ namespace GAME
 
 	SoloudTest::SoloudTest(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
+		LOGD("SoloudTest::SoloudTest constructor");
 		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 200000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
@@ -29,6 +31,7 @@ namespace GAME
 
 	SoloudTest::~SoloudTest()
 	{
+		LOGD("SoloudTest::~SoloudTest destructor");
 		if (mSoloud) {
 			mSoloud->stopAll();
 		}

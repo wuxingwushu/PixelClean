@@ -1,4 +1,5 @@
 #include "UVDynamicDiagram.h"
+#include "../DebugLog.h"
 #include "../GlobalStructural.h"
 
 
@@ -170,6 +171,7 @@ namespace GAME {
 
 	void UVDynamicDiagram::InitCommandBuffer()
 	{
+		LOGI("UVDynamicDiagram::InitCommandBuffer() called");
 		VkCommandBufferInheritanceInfo InheritanceInfo{};
 		InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 		InheritanceInfo.renderPass = wRenderPass->getRenderPass();

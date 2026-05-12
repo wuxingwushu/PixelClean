@@ -1,5 +1,6 @@
 #include "SoundEffect.h"
 #include "../Tool/Tool.h"
+#include "../DebugLog.h"
 #include <iostream>
 
 
@@ -9,10 +10,11 @@ namespace GAME::SoundEffect {
 
 	SoundEffect::SoundEffect()
 	{
+		LOGD("[SoundEffect] Constructor");
 		mSoloud.init();
 
 		if (MidiFont.load(TimGM6mb_sf2) != 0) {
-			std::cerr << "[SoundEffect] Warning: failed to load SoundFont: " << TimGM6mb_sf2 << std::endl;
+			LOGE("[SoundEffect] Warning: failed to load SoundFont: %s", TimGM6mb_sf2);
 		}
 
 		std::vector<std::string> SoundMp3;

@@ -1,9 +1,11 @@
 #include "PipelineS.h"
 #include "CreatePipeline.h"
+#include "../DebugLog.h"
 
 namespace VulKan {
 
 	PipelineS::PipelineS(Device* Device, RenderPass* RenderPass) {
+		LOGD("[PipelineS] Constructor");
 		mDevice = Device;
 		mRenderPass = RenderPass;
 

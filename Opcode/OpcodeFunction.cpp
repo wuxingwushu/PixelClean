@@ -9,6 +9,7 @@
 #include "../Character/Crowd.h"
 #include "../application.h"
 #include "../Arms/Arms.h"
+#include "../DebugLog.h"
 
 namespace Opcode {
 
@@ -28,6 +29,7 @@ namespace Opcode {
 	OpcodeMapping* OpcodeMapping::mOpcodeMapping = nullptr;
 	OpcodeMapping::OpcodeMapping()
 	{
+		LOGD("[OpcodeMapping] Constructor");
 		AddCommand(AddNPC, "AddNPC", "AddNPC() 随机位置生成一个 NPC ");
 		AddCommand(AddNPCPos, "AddNPCPos", "AddNPCPos(int, int) 设置位置生成一个 NPC ");
 		AddCommand(AddNPCS, "AddNPCS", "AddNPCS(int) 随机位置生成 N 个 NPC "); 

@@ -1,5 +1,6 @@
 #include "application.h"
 #include "Vulkan/Window.h"
+#include "../DebugLog.h"
 
 #if defined(_WIN32)
 #include <Windows.h>
@@ -12,11 +13,14 @@ int main(int argc, char** argv) {
 #elif defined(__ANDROID__)
 extern "C" int pixelclean_main(int argc, char** argv) {
 #endif
+	LOGI("PixelClean starting...");
 	Global::Read();
+	LOGD("Global config loaded");
 	TOOL::InitThreadPool();
 	TOOL::InitPerlinNoise();
 	TOOL::InitSpdLog();
 	TOOL::InitTimer();
+	LOGD("Tools initialized");
 	//TOOL::InitLog();
 
 
@@ -26,15 +30,19 @@ extern "C" int pixelclean_main(int argc, char** argv) {
 #if defined(_WIN32)
 		app->run();
 #elif defined(__ANDROID__)
-		// Android: Surface 创建后由 JNI 层调用 app->runWithoutWindow()
+		// Android: JNI 层按生命周期调用 initBeforeSurface() → initAfterSurface() → frameStep()
 #endif
 	}
 	catch (const std::exception& e) {
+		LOGE("main exception: %s", e.what());
 		std::cout << "main: " << e.what() << std::endl;
-		//log_error(e.what());
 		TOOL::Error->error(e.what());
 	}
+	catch (...) {
+		LOGE("main unknown exception");
+	}
 
+	LOGD("PixelClean shutting down...");
 	delete app;
 
 	TOOL::DeleteThreadPool();

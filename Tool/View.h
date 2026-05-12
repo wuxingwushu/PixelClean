@@ -309,7 +309,7 @@ public:
         {
             if (Sin > 0)
             {
-                for (int i = 0; i < DataDrop1.size(); ++i)
+                for (int i = 0; i < (int)DataDrop1.size(); ++i)
                 {
                     for (int ir = DataDrop1[i].x; ir <= DataDrop2[i].x; ++ir)
                     {
@@ -319,7 +319,7 @@ public:
             }
             else
             {
-                for (int i = 0; i < DataDrop1.size(); ++i)
+                for (int i = 0; i < (int)DataDrop1.size(); ++i)
                 {
                     for (int ir = DataDrop2[i].x; ir <= DataDrop1[i].x; ++ir)
                     {
@@ -332,7 +332,7 @@ public:
         {
             if (Cos > 0)
             {
-                for (int i = 0; i < DataDrop1.size(); ++i)
+                for (int i = 0; i < (int)DataDrop1.size(); ++i)
                 {
                     for (int ir = DataDrop2[i].y; ir <= DataDrop1[i].y; ++ir)
                     {
@@ -342,7 +342,7 @@ public:
             }
             else
             {
-                for (int i = 0; i < DataDrop1.size(); ++i)
+                for (int i = 0; i < (int)DataDrop1.size(); ++i)
                 {
                     for (int ir = DataDrop1[i].y; ir <= DataDrop2[i].y; ++ir)
                     {

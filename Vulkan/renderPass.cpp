@@ -1,9 +1,10 @@
 #include "renderPass.h"
+#include "../DebugLog.h"
 
 namespace VulKan {
 
 	SubPass::SubPass() {
-
+		LOGD("SubPass::SubPass()");
 	}
 
 	SubPass::~SubPass() {
@@ -28,6 +29,7 @@ namespace VulKan {
 	//构建子描述
 	void SubPass::buildSubPassDescription() {
 		if (mColorAttachmentReferences.empty()) {
+			LOGE("SubPass::buildSubPassDescription: color attachment group is empty");
 			throw std::runtime_error("Error: color attachment group is empty!");
 		}
 		mSubPassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -52,6 +54,7 @@ namespace VulKan {
 
 	
 	RenderPass::RenderPass(Device* &device) {
+		LOGD("RenderPass::RenderPass()");
 		mDevice = device;
 	}
 
@@ -72,7 +75,9 @@ namespace VulKan {
 	void RenderPass::addAttachment(const VkAttachmentDescription& attachmentDes) { mAttachmentDescriptions.push_back(attachmentDes); }
 	//构建渲染
 	void RenderPass::buildRenderPass() {
+		LOGD("RenderPass::buildRenderPass()");
 		if (mSubPasses.empty() || mAttachmentDescriptions.empty() || mDependencies.empty()) {
+			LOGE("RenderPass::buildRenderPass: not enough elements to build renderPass");
 			throw std::runtime_error("Error: not enough elements to build renderPass");
 		}
 
@@ -98,6 +103,7 @@ namespace VulKan {
 		createInfo.pSubpasses = subPasses.data();
 
 		if (vkCreateRenderPass(mDevice->getDevice(), &createInfo, nullptr, &mRenderPass) != VK_SUCCESS) {
+			LOGE("RenderPass::buildRenderPass: failed to create render pass");
 			throw std::runtime_error("Error: failed to create renderPass");
 		}
 	}

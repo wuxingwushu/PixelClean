@@ -30,6 +30,18 @@ namespace Global {
 
 	extern TouchStateEnum TouchState;// Android 触摸状态
 
+	// Android 虚拟按键（由 JNI 层设置）
+	extern bool AndroidRequestConsole;		// 请求打开控制台 (/)
+	extern bool AndroidRequestESC;			// 请求 ESC
+	extern bool AndroidRequestKey1;			// 请求按键 1
+	extern bool AndroidRequestKey2;			// 请求按键 2
+	extern bool AndroidRequestSpace;		// 请求空格
+	extern bool AndroidRequestToggleMouse;	// 请求切换鼠标模式 (~)
+	extern bool AndroidKey_W;				// W 键按下状态
+	extern bool AndroidKey_S;				// S 键按下状态
+	extern bool AndroidKey_A;				// A 键按下状态
+	extern bool AndroidKey_D;				// D 键按下状态
+
 	/***************************	INI	***************************/
 	void Read();//读取
 	void Storage();//储存

@@ -29,6 +29,7 @@ Rename this file to lodepng.cpp to use it for C++, or to lodepng.c to use it for
 */
 
 #include "lodepng.h"
+#include "../DebugLog.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -386,12 +387,19 @@ static unsigned lodepng_buffer_file(unsigned char* out, size_t size, const char*
 
 unsigned lodepng_load_file(unsigned char** out, size_t* outsize, const char* filename)
 {
+  LOGD("[lodepng] lodepng_load_file: %s", filename);
   long size = lodepng_filesize(filename);
-  if (size < 0) return 78;
+  if (size < 0) {
+    LOGE("[lodepng] Failed to get file size: %s", filename);
+    return 78;
+  }
   *outsize = (size_t)size;
 
   *out = (unsigned char*)lodepng_malloc((size_t)size);
-  if(!(*out) && size > 0) return 83; /*the above malloc failed*/
+  if(!(*out) && size > 0) {
+    LOGE("[lodepng] malloc failed for: %s", filename);
+    return 83;
+  }
 
   return lodepng_buffer_file(*out, (size_t)size, filename);
 }
@@ -399,9 +407,13 @@ unsigned lodepng_load_file(unsigned char** out, size_t* outsize, const char* fil
 /*write given buffer to the file, overwriting the file, it doesn't append to it.*/
 unsigned lodepng_save_file(const unsigned char* buffer, size_t buffersize, const char* filename)
 {
+  LOGD("[lodepng] lodepng_save_file: %s", filename);
   FILE* file;
   file = fopen(filename, "wb" );
-  if(!file) return 79;
+  if(!file) {
+    LOGE("[lodepng] Failed to open file for writing: %s", filename);
+    return 79;
+  }
   fwrite((char*)buffer , 1 , buffersize, file);
   fclose(file);
   return 0;

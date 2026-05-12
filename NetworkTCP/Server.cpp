@@ -1,4 +1,5 @@
 #include "Server.h"
+#include "../DebugLog.h"
 
 server* server::mServer = nullptr;
 
@@ -127,6 +128,7 @@ void server_listen_cb(evconnlistener* ev, evutil_socket_t s, sockaddr* sin, int 
 
 
 server::server(unsigned int Duan) {
+	LOGD("[Server] Constructor");
 #if defined(_WIN32)
 	//初始化socket库
 	WSADATA wsa;
@@ -134,7 +136,7 @@ server::server(unsigned int Duan) {
 #elif defined(__ANDROID__)
 	// Android 使用 Bionic libc，不需要 WSAStartup
 	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-		__android_log_print(ANDROID_LOG_ERROR, "PixelClean", "signal fail");
+		LOGE("[Server] signal fail");
 	}
 #else
 	//忽略管道信号，发送数据给已关闭的socket
@@ -299,7 +301,7 @@ bufferevent_filter_result server_filter_out(
 	int re = deflate(p, Z_SYNC_FLUSH);
 	if (re != Z_OK)
 	{
-		std::cerr << "out deflate failed!" << std::endl;
+		LOGE("[Server] deflate failed");
 	}
 
 

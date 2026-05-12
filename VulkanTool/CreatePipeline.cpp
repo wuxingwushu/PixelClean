@@ -1,12 +1,14 @@
 #include "CreatePipeline.h"
 #include "../GlobalVariable.h"
 #include "../FilePath.h"
+#include "../DebugLog.h"
 
 namespace VulKan
 {
 
 	Pipeline *MainPipeline(Pipeline *Pipeline, Device *Device)
 	{
+		LOGD("[CreatePipeline] MainPipeline");
 		// 设置视口
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
@@ -153,6 +155,7 @@ namespace VulKan
 
 		if (vkCreateDescriptorSetLayout(Device->getDevice(), &createInfo, nullptr, &Pipeline->DescriptorSetLayout) != VK_SUCCESS)
 		{
+			LOGE("[CreatePipeline] MainPipeline: failed to create descriptor set layout");
 			throw std::runtime_error("Error: failed to create descriptor set layout");
 		}
 
@@ -172,6 +175,7 @@ namespace VulKan
 
 	Pipeline *LinePipeline(Pipeline *Pipeline, Device *Device)
 	{
+		LOGD("[CreatePipeline] LinePipeline");
 		// 设置视口
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
@@ -306,6 +310,7 @@ namespace VulKan
 
 		if (vkCreateDescriptorSetLayout(Device->getDevice(), &createInfo, nullptr, &Pipeline->DescriptorSetLayout) != VK_SUCCESS)
 		{
+			LOGE("[CreatePipeline] LinePipeline: failed to create descriptor set layout");
 			throw std::runtime_error("Error: failed to create descriptor set layout");
 		}
 
@@ -466,6 +471,7 @@ namespace VulKan
 
 		if (vkCreateDescriptorSetLayout(Device->getDevice(), &createInfo, nullptr, &Pipeline->DescriptorSetLayout) != VK_SUCCESS)
 		{
+			LOGE("[CreatePipeline] SpotPipeline: failed to create descriptor set layout");
 			throw std::runtime_error("Error: failed to create descriptor set layout");
 		}
 
@@ -484,6 +490,7 @@ namespace VulKan
 
 	Pipeline *CirclePipeline(Pipeline *Pipeline, Device *Device)
 	{
+		LOGD("[CreatePipeline] CirclePipeline");
 		// 设置视口
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
@@ -626,6 +633,7 @@ namespace VulKan
 
 		if (vkCreateDescriptorSetLayout(Device->getDevice(), &createInfo, nullptr, &Pipeline->DescriptorSetLayout) != VK_SUCCESS)
 		{
+			LOGE("[CreatePipeline] CirclePipeline: failed to create descriptor set layout");
 			throw std::runtime_error("Error: failed to create descriptor set layout");
 		}
 
@@ -644,6 +652,7 @@ namespace VulKan
 
 	Pipeline *GIFPipeline(Pipeline *Pipeline, Device *Device)
 	{
+		LOGD("[CreatePipeline] GIFPipeline");
 		// 设置视口
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
@@ -790,6 +799,7 @@ namespace VulKan
 
 		if (vkCreateDescriptorSetLayout(Device->getDevice(), &createInfo, nullptr, &Pipeline->DescriptorSetLayout) != VK_SUCCESS)
 		{
+			LOGE("[CreatePipeline] GIFPipeline: failed to create descriptor set layout");
 			throw std::runtime_error("Error: failed to create descriptor set layout");
 		}
 
@@ -810,6 +820,7 @@ namespace VulKan
 	// 受伤渐消
 	Pipeline *DamagePromptPipeline(Pipeline *Pipeline, Device *Device)
 	{
+		LOGD("[CreatePipeline] DamagePromptPipeline");
 		// 设置视口
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
@@ -956,6 +967,7 @@ namespace VulKan
 
 		if (vkCreateDescriptorSetLayout(Device->getDevice(), &createInfo, nullptr, &Pipeline->DescriptorSetLayout) != VK_SUCCESS)
 		{
+			LOGE("[CreatePipeline] DamagePromptPipeline: failed to create descriptor set layout");
 			throw std::runtime_error("Error: failed to create descriptor set layout");
 		}
 
@@ -976,6 +988,7 @@ namespace VulKan
 	// 像素UV动画
 	Pipeline *UVDynamicDiagramPipeline(Pipeline *Pipeline, Device *Device)
 	{
+		LOGD("[CreatePipeline] UVDynamicDiagramPipeline");
 		// 设置视口
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
@@ -1130,6 +1143,7 @@ namespace VulKan
 
 		if (vkCreateDescriptorSetLayout(Device->getDevice(), &createInfo, nullptr, &Pipeline->DescriptorSetLayout) != VK_SUCCESS)
 		{
+			LOGE("[CreatePipeline] UVDynamicDiagramPipeline: failed to create descriptor set layout");
 			throw std::runtime_error("Error: failed to create descriptor set layout");
 		}
 

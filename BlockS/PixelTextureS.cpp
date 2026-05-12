@@ -1,4 +1,5 @@
 #include "PixelTextureS.h"
+#include "../DebugLog.h"
 
 namespace GAME {
 	PixelTextureS::PixelTextureS(
@@ -6,6 +7,7 @@ namespace GAME {
 		const VulKan::CommandPool* commandPool,
 		VulKan::Sampler* sampler
 	) {
+		LOGD("PixelTextureS::PixelTextureS() called");
 		mPixelTextureS = new VulKan::PixelTexture* [TextureNumber];
 
 		for (int i = 0; i < TextureNumber; i++)
@@ -15,9 +17,11 @@ namespace GAME {
 	}
 
 	PixelTextureS::~PixelTextureS() {
+		LOGD("PixelTextureS::~PixelTextureS() called");
 		for (int i = 0; i < TextureNumber; i++)
 		{
 			delete mPixelTextureS[i];
 		}
+		delete[] mPixelTextureS;
 	}
 }

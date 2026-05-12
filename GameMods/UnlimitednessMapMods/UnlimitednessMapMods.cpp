@@ -1,6 +1,7 @@
 #include "UnlimitednessMapMods.h"
 #include "../../Opcode/OpcodeFunction.h"
 #include "../../Physics/DestroyMode.h"
+#include "../../DebugLog.h"
 
 namespace GAME
 {
@@ -13,6 +14,7 @@ namespace GAME
 
 	UnlimitednessMapMods::UnlimitednessMapMods(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
+		LOGD("UnlimitednessMapMods::UnlimitednessMapMods constructor");
 		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
@@ -87,6 +89,7 @@ namespace GAME
 
 	UnlimitednessMapMods::~UnlimitednessMapMods()
 	{
+		LOGD("UnlimitednessMapMods::~UnlimitednessMapMods destructor");
 		delete JPSPathfinding;
 		delete AStarPathfinding;
 		delete mAuxiliaryVision;

@@ -1,23 +1,14 @@
 #include "VulkanApp.h"
 #include "Platform/PlatformDetection.h"
+#include "DebugLog.h"
 
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
 
 #if defined(PIXEL_ANDROID)
-#include <android/log.h>
 #include <android/native_window.h>
-#define LOG_TAG "PixelClean-Demo"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
-#define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__)
 #elif defined(_WIN32)
 #include <iostream>
-#define LOGI(...) printf("[INFO] " __VA_ARGS__); printf("\n")
-#define LOGD(...) printf("[DEBUG] " __VA_ARGS__); printf("\n")
-#define LOGE(...) fprintf(stderr, "[ERROR] " __VA_ARGS__); fprintf(stderr, "\n")
-#define LOGW(...) printf("[WARN] " __VA_ARGS__); printf("\n")
 #endif
 
 #include <cstring>
@@ -297,6 +288,10 @@ bool DemoApp::CreateDeviceAndSwapChain()
 
     uint32_t formatCount;
     vkGetPhysicalDeviceSurfaceFormatsKHR(mPhysicalDevice, mSurface, &formatCount, nullptr);
+    if (formatCount == 0) {
+        LOGE("No surface formats available");
+        return false;
+    }
     std::vector<VkSurfaceFormatKHR> formats(formatCount);
     vkGetPhysicalDeviceSurfaceFormatsKHR(mPhysicalDevice, mSurface, &formatCount, formats.data());
 
@@ -618,6 +613,20 @@ void DemoApp::CleanupSwapchain()
 void DemoApp::RecreateSwapchain()
 {
     vkDeviceWaitIdle(mDevice);
+
+    int32_t winW = 0, winH = 0;
+#if defined(PIXEL_ANDROID)
+    winW = ANativeWindow_getWidth(mWindow);
+    winH = ANativeWindow_getHeight(mWindow);
+#else
+    glfwGetFramebufferSize(mWindow, &winW, &winH);
+#endif
+    if (winW <= 0 || winH <= 0) {
+        LOGW("RecreateSwapchain: window has invalid size (%dx%d), deferring", winW, winH);
+        mFramebufferResized = true;
+        return;
+    }
+
     CleanupSwapchain();
 
     VkSurfaceCapabilitiesKHR caps;
@@ -627,21 +636,16 @@ void DemoApp::RecreateSwapchain()
 
     VkExtent2D extent;
 #if defined(PIXEL_ANDROID)
-    extent = {(uint32_t)ANativeWindow_getWidth(mWindow),
-              (uint32_t)ANativeWindow_getHeight(mWindow)};
-    extent.width  = (std::max)(caps.minImageExtent.width,  (std::min)(caps.maxImageExtent.width,  extent.width));
-    extent.height = (std::max)(caps.minImageExtent.height, (std::min)(caps.maxImageExtent.height, extent.height));
+    extent = {(uint32_t)winW, (uint32_t)winH};
 #else
     if (caps.currentExtent.width != UINT32_MAX) {
         extent = caps.currentExtent;
     } else {
-        int w, h;
-        glfwGetFramebufferSize(mWindow, &w, &h);
-        extent = {(uint32_t)w, (uint32_t)h};
-        extent.width  = (std::max)(caps.minImageExtent.width,  (std::min)(caps.maxImageExtent.width,  extent.width));
-        extent.height = (std::max)(caps.minImageExtent.height, (std::min)(caps.maxImageExtent.height, extent.height));
+        extent = {(uint32_t)winW, (uint32_t)winH};
     }
 #endif
+    extent.width  = (std::max)(caps.minImageExtent.width,  (std::min)(caps.maxImageExtent.width,  extent.width));
+    extent.height = (std::max)(caps.minImageExtent.height, (std::min)(caps.maxImageExtent.height, extent.height));
     mSurfaceExtent = extent;
     LOGI("Recreate extent: %dx%d (transform: 0x%X)",
          extent.width, extent.height, caps.currentTransform);
@@ -686,7 +690,11 @@ void DemoApp::RecreateSwapchain()
         ivInfo.subresourceRange.levelCount     = 1;
         ivInfo.subresourceRange.baseArrayLayer = 0;
         ivInfo.subresourceRange.layerCount     = 1;
-        vkCreateImageView(mDevice, &ivInfo, nullptr, &mSwapchainImageViews[i]);
+        VkResult ivResult = vkCreateImageView(mDevice, &ivInfo, nullptr, &mSwapchainImageViews[i]);
+        if (ivResult != VK_SUCCESS) {
+            LOGE("RecreateSwapchain: vkCreateImageView[%d] failed: %d", i, ivResult);
+            return;
+        }
     }
 
     CreateFramebuffers();
@@ -827,6 +835,10 @@ void DemoApp::RecordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex)
 void DemoApp::DrawFrame()
 {
     if (!mInitialized) return;
+
+    if (mSurfaceExtent.width == 0 || mSurfaceExtent.height == 0) {
+        return;
+    }
 
     {
         std::lock_guard<std::mutex> lock(mInputMutex);

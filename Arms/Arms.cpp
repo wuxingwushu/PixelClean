@@ -3,6 +3,7 @@
 #include "../GlobalVariable.h"
 #include "../Physics/DestroyMode.h"
 #include "../GlobalStructural.h"
+#include "../DebugLog.h"
 
 
 namespace GAME {
@@ -14,6 +15,7 @@ namespace GAME {
 
 	Arms::Arms(ParticleSystem* particleSystem, unsigned int size)
 	{
+		LOGD("Arms::Arms() called");
 		mParticleSystem = particleSystem;
 		mBullet = new ContinuousMap<SquarePhysics::PixelCollision*, Particle>(size, ContinuousMap_None);
 	}

@@ -1,4 +1,5 @@
 #include "PhysicsLogBuffer.h"
+#include "../../DebugLog.h"
 #include <cstdarg>
 #include <cstdio>
 
@@ -6,6 +7,7 @@ namespace PhysicsBlock
 {
 	PhysicsLogBuffer::PhysicsLogBuffer() : mMaxLogCount(1000)
 	{
+		LOGD("PhysicsLogBuffer::PhysicsLogBuffer constructor");
 	}
 
 	PhysicsLogBuffer& PhysicsLogBuffer::GetInstance()
@@ -54,6 +56,7 @@ namespace PhysicsBlock
 		std::lock_guard<std::mutex> lock(mMutex);
 		if (index >= mLogs.size())
 		{
+			LOGE("PhysicsLogBuffer::GetLog index %zu out of range (size %zu)", index, mLogs.size());
 			static const std::string empty;
 			return empty;
 		}

@@ -1,4 +1,5 @@
 #include "ShaderTexture.h"
+#include "../DebugLog.h"
 
 
 namespace VulKan {
@@ -15,6 +16,7 @@ namespace VulKan {
 		Sampler* sampler)
 		:wDevice(device)
 	{
+		LOGD("[ShaderTexture] Constructor");
 		mPixelTexture = new PixelTexture(device, commandPool, nullptr, texWidth, texHeight, ChannelsNumber, sampler);
 
 		mParameter = new VulKan::Buffer(device, sizeof(ShaderTextureParameter),

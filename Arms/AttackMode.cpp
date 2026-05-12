@@ -1,5 +1,6 @@
 #include "AttackMode.h"
 #include "Arms.h"
+#include "../DebugLog.h"
 
 namespace GAME {
 
@@ -20,16 +21,19 @@ namespace GAME {
 	}
 
 	void PistolMode(Arms* arms, float x, float y, float angle, float speed, unsigned int Type) {
+		LOGD("PistolMode() called");
 		arms->ShootBullets(x, y, angle, speed, Type);
 	}
 
 	void ShrapnelMode(Arms* arms, float x, float y, float angle, float speed, unsigned int Type) {
+		LOGD("ShrapnelMode() called");
 		arms->ShootBullets(x, y, angle + 0.1, speed, Type);
 		arms->ShootBullets(x, y, angle, speed, Type);
 		arms->ShootBullets(x, y, angle - 0.1, speed, Type);
 	}
 
 	void MachineGunMode(Arms* arms, float x, float y, float angle, float speed, unsigned int Type) {
+		LOGD("MachineGunMode() called");
 		arms->ShootBullets(x, y, angle, speed, Type);
 	}
 }

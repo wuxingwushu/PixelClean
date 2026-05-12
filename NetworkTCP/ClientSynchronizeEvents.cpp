@@ -2,9 +2,11 @@
 #include "StructTCP.h"
 #include "../GlobalStructural.h"
 #include "../Tool/LimitUse.h"
+#include "../DebugLog.h"
 
 //位置同步
 void CGamePlayerSynchronize(bufferevent* be, void* Data) {
+	LOGD("[ClientSynchronizeEvents] CGamePlayerSynchronize");
 	RoleSynchronizationData* px;
 	GAME::GamePlayer* LPlayer;
 	SynchronizeData* LD = (SynchronizeData*)Data;

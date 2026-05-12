@@ -1,7 +1,7 @@
 #define _USE_MATH_DEFINES // 这个要放在第一行
 #include <cmath>
 #include "PhysicsCalculate.h"
-
+#include "../DebugLog.h"
 
 namespace SquarePhysics {
 
@@ -100,6 +100,7 @@ namespace SquarePhysics {
 
 	//正方形和正方形的碰撞检测（A为静态刚体，B为动态刚体）
 	glm::dvec2 SquareToSquare(glm::dvec2 posA, unsigned int dA, double angleA, glm::dvec2 posB, unsigned int dB, double angleB) {
+		LOGD("[PhysicsCalculate] SquareToSquare");
 		double rA = dA / 2; // 边长的一半
 		double rB = dB / 2;
 		glm::dvec2 Pos{ posB - posA }; // 两个正方形的  X  Y  的间距

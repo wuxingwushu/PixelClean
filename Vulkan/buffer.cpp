@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "../DebugLog.h"
 
 
 namespace VulKan {
@@ -66,6 +67,7 @@ namespace VulKan {
 
 
 	Buffer::Buffer(Device* device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkSharingMode Mode) {
+		LOGD("Buffer::Buffer(size=%llu)", size);
 		mDevice = device;
 
 		VkBufferCreateInfo createInfo{};
@@ -85,10 +87,12 @@ namespace VulKan {
 		}
 
 		if (vmaCreateBuffer(device->getAllocator(), &createInfo, &VmaallocInfo, &mBuffer, &mAllocation, nullptr) != VK_SUCCESS) {
+			LOGE("Buffer::Buffer: failed to create buffer via VMA");
 			throw std::runtime_error("Error:failed to create buffer");
 		}
 #else
 		if (vkCreateBuffer(device->getDevice(), &createInfo, nullptr, &mBuffer) != VK_SUCCESS) {
+			LOGE("Buffer::Buffer: failed to create buffer");
 			throw std::runtime_error("Error:failed to create buffer");
 		}
 #endif

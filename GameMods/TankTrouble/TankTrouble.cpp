@@ -3,6 +3,7 @@
 #include "../../NetworkTCP/Client.h"
 #include "../../Opcode/OpcodeFunction.h"
 #include "../../Physics/DestroyMode.h"
+#include "../../DebugLog.h"
 
 namespace GAME
 {
@@ -37,6 +38,7 @@ namespace GAME
 
 	TankTrouble::TankTrouble(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
+		LOGD("TankTrouble::TankTrouble constructor");
 		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
@@ -140,6 +142,7 @@ namespace GAME
 
 	TankTrouble::~TankTrouble()
 	{
+		LOGD("TankTrouble::~TankTrouble destructor");
 		delete JPSPathfinding;
 		delete AStarPathfinding;
 		delete mAuxiliaryVision;

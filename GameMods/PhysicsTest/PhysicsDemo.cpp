@@ -1,5 +1,6 @@
 #include "PhysicsDemo.h"
 #include "PhysicsLogBuffer.h"
+#include "../../DebugLog.h"
 #include <cstdio>
 
 namespace PhysicsBlock

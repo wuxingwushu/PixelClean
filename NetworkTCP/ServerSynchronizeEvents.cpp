@@ -2,10 +2,12 @@
 #include "StructTCP.h"
 #include "../GlobalStructural.h"
 #include "../Tool/LimitUse.h"
+#include "../DebugLog.h"
 
 
 //位置同步
 void SGamePlayerSynchronize(bufferevent* be, void* Data) {
+	LOGD("[ServerSynchronizeEvents] SGamePlayerSynchronize");
 	evutil_socket_t fd = bufferevent_getfd(be);
 	SynchronizeData* LD = (SynchronizeData*)Data;
 	RoleSynchronizationData* PosData = (RoleSynchronizationData*)LD->Pointer;

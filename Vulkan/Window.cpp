@@ -8,6 +8,7 @@
 #include <android/log.h>
 #endif
 #include <iostream>
+#include "../DebugLog.h"
 
 namespace VulKan {
 
@@ -42,6 +43,7 @@ namespace VulKan {
 
 
 	Window::Window(const int& width, const int& height, bool MouseBool, bool FullScreen) {
+		LOGD("Window::Window(width=%d, height=%d, FullScreen=%d)", width, height, FullScreen);
 		mWidth = width;
 		mHeight = height;
 		MouseDisabled = MouseBool;
@@ -54,8 +56,9 @@ namespace VulKan {
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);//是否禁止窗口改变大小
 		GLFWmonitor* pMonitor = FullScreen ? glfwGetPrimaryMonitor() : NULL;
 		mWindow = glfwCreateWindow(mWidth, mHeight, "Game_Demo - VulKan", pMonitor, nullptr);//创建一个窗口
-		if (!mWindow) {//判断窗口是否创建成功
-			std::cerr << "Error: failed to create window" << std::endl;
+		if (!mWindow) {
+				LOGE("Window::Window: failed to create window");
+				std::cerr << "Error: failed to create window" << std::endl;
 		}
 		//glfwSetWindowAttrib(mWindow, GLFW_FLOATING, GLFW_TRUE);//窗口置顶
 		//glfwSetWindowOpacity(mWindow, 1.0f);//窗口透明度
@@ -154,7 +157,7 @@ namespace VulKan {
 #if defined(_WIN32)
 		return glfwWindowShouldClose(mWindow);
 #elif defined(__ANDROID__)
-		return false;
+		return mShouldClose;
 #endif
 	}
 
@@ -251,6 +254,58 @@ namespace VulKan {
 			mApp->KeyDown(GameKeyEnum::SPACE);
 		}
 		KeysRisingEdgeTrigger_Space = glfwGetKey(mWindow, GLFW_KEY_SPACE);
+#elif defined(__ANDROID__)
+		if (mApp == nullptr) return;
+
+		if (Global::AndroidRequestToggleMouse) {
+			MouseDisabled = !MouseDisabled;
+			Global::AndroidRequestToggleMouse = false;
+		}
+
+		if (Global::AndroidRequestConsole) {
+			Global::ConsoleBool = true;
+			Global::AndroidRequestConsole = false;
+		}
+
+		if (Global::AndroidRequestESC) {
+			mApp->KeyDown(GameKeyEnum::ESC);
+			Global::AndroidRequestESC = false;
+		}
+
+		if (Global::ConsoleBool) {
+			return;
+		}
+
+		if (Global::AndroidKey_W) {
+			mApp->KeyDown(GameKeyEnum::MOVE_FRONT);
+		}
+
+		if (Global::AndroidKey_S) {
+			mApp->KeyDown(GameKeyEnum::MOVE_BACK);
+		}
+
+		if (Global::AndroidKey_A) {
+			mApp->KeyDown(GameKeyEnum::MOVE_LEFT);
+		}
+
+		if (Global::AndroidKey_D) {
+			mApp->KeyDown(GameKeyEnum::MOVE_RIGHT);
+		}
+
+		if (Global::AndroidRequestKey1) {
+			mApp->KeyDown(GameKeyEnum::Key_1);
+			Global::AndroidRequestKey1 = false;
+		}
+
+		if (Global::AndroidRequestKey2) {
+			mApp->KeyDown(GameKeyEnum::Key_2);
+			Global::AndroidRequestKey2 = false;
+		}
+
+		if (Global::AndroidRequestSpace) {
+			mApp->KeyDown(GameKeyEnum::SPACE);
+			Global::AndroidRequestSpace = false;
+		}
 #endif
 	}
 }

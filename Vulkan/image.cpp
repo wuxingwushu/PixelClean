@@ -1,5 +1,6 @@
 #include "image.h"
 #include <assert.h>
+#include "../DebugLog.h"
 
 namespace VulKan {
 
@@ -73,6 +74,7 @@ namespace VulKan {
 		const VkMemoryPropertyFlags& properties,//显存访问权限
 		const VkImageAspectFlags& aspectFlags
 	) {
+		LOGD("Image::Image(width=%d, height=%d)", width, height);
 		mDevice = device;
 		mLayout = VK_IMAGE_LAYOUT_UNDEFINED;//VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL     VK_IMAGE_LAYOUT_UNDEFINED      VK_IMAGE_LAYOUT_GENERAL
 		mWidth = width;
@@ -101,6 +103,7 @@ namespace VulKan {
 
 		//vkCreateImage(mDevice->getDevice(), &imageCreateInfo, nullptr, &mImage)
 		if (vmaCreateImage(mDevice->getAllocator(), &imageCreateInfo, &VmaallocInfo, &mImage, &mAllocation, nullptr) != VK_SUCCESS) {
+			LOGE("Image::Image: failed to create image");
 			throw std::runtime_error("Error:failed to create image");
 		}
 
@@ -140,6 +143,7 @@ namespace VulKan {
 		
 
 		if (vkCreateImageView(mDevice->getDevice(), &imageViewCreateInfo, nullptr, &mImageView) != VK_SUCCESS) {
+			LOGE("Image::Image: failed to create image view");
 			throw std::runtime_error("Error: failed to create image view");
 		}
 		

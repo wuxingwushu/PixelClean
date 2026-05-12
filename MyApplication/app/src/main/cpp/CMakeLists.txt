@@ -145,6 +145,7 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     PIXEL_USE_VULKAN=1
     PIXEL_ANDROID=1
     ANDROID
+    PIXEL_ENABLE_LOG=1
 )
 
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE

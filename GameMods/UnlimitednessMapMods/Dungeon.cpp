@@ -2,6 +2,7 @@
 
 #include "../../VulkanTool/PixelTexture.h"
 #include "../../Tool/Tool.h"
+#include "../../DebugLog.h"
 
 namespace GAME {
 
@@ -78,6 +79,7 @@ namespace GAME {
 		mNumberY(Y),
 		wSquarePhysics(squarePhysics)
 	{
+		LOGD("Dungeon::Dungeon constructor");
 		mPerlinNoise = new PerlinNoise();
 
 		mMoveTerrain = new SquarePhysics::MoveTerrain<TextureAndBuffer>(mNumberX, mNumberY, mSquareSideLength, 1);
@@ -158,6 +160,7 @@ namespace GAME {
 
 	Dungeon::~Dungeon()
 	{
+		LOGD("Dungeon::~Dungeon destructor");
 		DeleteMist();
 
 		/******* GIF *******/

@@ -14,6 +14,7 @@
 // ============================================================================
 
 #include "RadianceCascades.h"
+#include "../../DebugLog.h"
 #include <fstream>
 #include <vector>
 #include <chrono>
@@ -37,6 +38,7 @@ static const char* kDisplaySpvPath = "./shaders/RC_Display.spv";
 static std::vector<char> readFile(const std::string& path) {
     std::ifstream f(path, std::ios::ate | std::ios::binary);
     if (!f.is_open()) {
+        LOGE("RadianceCascades::readFile cannot open: %s", path.c_str());
         throw std::runtime_error("Cannot open: " + path);
     }
     size_t sz = (size_t)f.tellg();
@@ -71,6 +73,7 @@ static VkShaderModule createShaderModule(VkDevice device, const std::string& pat
 // ============================================================================
 RadianceCascades::RadianceCascades(Configuration wCfg)
     : Configuration(wCfg) {
+    LOGD("RadianceCascades::RadianceCascades constructor");
     // 初始化所有运行时状态为默认值
     mTime = 0.0f;
     mMouseAX = 0; mMouseAY = 0; mMouseAZ = 0;
@@ -79,6 +82,7 @@ RadianceCascades::RadianceCascades(Configuration wCfg)
 }
 
 RadianceCascades::~RadianceCascades() {
+    LOGD("RadianceCascades::~RadianceCascades destructor");
     cleanup();  // 确保所有 Vulkan 资源被释放
 }
 
@@ -607,10 +611,10 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     }
     mPrevCKey = glfwGetKey(mWindow->getWindow(), GLFW_KEY_C);
 #elif defined(__ANDROID__)
-    if (mPrevCKey == 0 && false) {
+    if (mPrevCKey == 0 && Global::TouchState == TouchStateEnum::TertiaryDown) {
         mNeedClear = true;
     }
-    mPrevCKey = 0;
+    mPrevCKey = (Global::TouchState == TouchStateEnum::TertiaryDown) ? GLFW_PRESS : 0;
 #endif
 
     // ---- 打包 GPUParams ----
@@ -1190,7 +1194,10 @@ void RadianceCascades::rebuildCascadeResources() {
 // mImGuiDescriptorSet 由 ImGui_ImplVulkan_AddTexture() 分配，
 // 随 ImGui_ImplVulkan_Shutdown() 中的 descriptor pool 销毁自动释放。
 void RadianceCascades::cleanup() {
-    if (mCleanedUp) return;  // 防止重复销毁
+    if (mCleanedUp) {
+        LOGE("RadianceCascades::cleanup double destroy prevented");
+        return;
+    }
     mCleanedUp = true;
 
     VkDevice dev = mDevice ? mDevice->getDevice() : VK_NULL_HANDLE;

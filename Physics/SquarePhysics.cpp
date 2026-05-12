@@ -1,6 +1,7 @@
 #include "SquarePhysics.h"
 #include <iostream>
 #include <vector>
+#include "../DebugLog.h"
 
 //VoxelPhysics
 //CheckPhysics

@@ -1,4 +1,5 @@
 #include "GlobalVariable.h"
+#include "../DebugLog.h"
 #include "ini.h"
 #include "FilePath.h"
 
@@ -34,6 +35,18 @@ namespace Global {
 	bool ClickWindow = false;
 
 	TouchStateEnum TouchState = TouchStateEnum::None;
+
+	// Android 虚拟按键
+	bool AndroidRequestConsole = false;
+	bool AndroidRequestESC = false;
+	bool AndroidRequestKey1 = false;
+	bool AndroidRequestKey2 = false;
+	bool AndroidRequestSpace = false;
+	bool AndroidRequestToggleMouse = false;
+	bool AndroidKey_W = false;
+	bool AndroidKey_S = false;
+	bool AndroidKey_A = false;
+	bool AndroidKey_D = false;
 
 	/***************************	INI	***************************/
 	void Read() {

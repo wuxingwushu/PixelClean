@@ -1,5 +1,6 @@
 #include "BlockS.h"
 #include "../Tool/ThreadPool.h"
+#include "../DebugLog.h"
 
 
 namespace GAME {
@@ -123,6 +124,7 @@ namespace GAME {
 
 		//多线程录制指令
 		ThreadUpdateCommandBuffer();
+		LOGD("BlockS::BlockS() construction complete");
 	}
 
 	BlockS::~BlockS() {

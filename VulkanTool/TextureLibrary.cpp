@@ -2,6 +2,7 @@
 #include <regex>
 #include "../VulkanTool/stb_image.h"
 #include <sstream>
+#include "../DebugLog.h"
 
 namespace GAME {
 
@@ -59,6 +60,7 @@ namespace GAME {
 
 	TextureLibrary::TextureLibrary(VulKan::Device* device, VulKan::CommandPool* commandPool, VulKan::Sampler* sampler, std::string Path, bool UVbool)
 	{
+		LOGD("[TextureLibrary] Constructor");
 		std::vector<std::string> Texture;
 		TOOL::FilePath(Path.c_str(), &Texture, "png", "nullptr", nullptr);
 

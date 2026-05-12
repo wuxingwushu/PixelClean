@@ -1,4 +1,5 @@
 #include "FixedSizeTerrain.h"
+#include "../DebugLog.h"
 
 namespace SquarePhysics {
 
@@ -8,9 +9,11 @@ namespace SquarePhysics {
 		unsigned int SideLength
 	) : GridDecorator(x, y, SideLength)
 	{
+		LOGD("[FixedSizeTerrain] Constructor");
 	}
 
 	FixedSizeTerrain::~FixedSizeTerrain()
 	{
+		LOGD("[FixedSizeTerrain] Destructor");
 	}
 }

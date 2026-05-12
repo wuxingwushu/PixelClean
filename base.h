@@ -34,7 +34,9 @@
 #include <set>
 #include <fstream>
 #include <thread>//多线程
+#if defined(_WIN32)
 #define _WINSOCKAPI_
+#endif
 #if defined(_WIN32)
 #include <Windows.h>
 #pragma comment(lib, "ws2_32.lib")

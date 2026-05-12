@@ -5,6 +5,7 @@
 #elif defined(__ANDROID__)
 #include <vulkan/vulkan_android.h>
 #endif
+#include "../DebugLog.h"
 
 namespace VulKan {
 	//validation layer 回调函数
@@ -54,6 +55,7 @@ namespace VulKan {
 
 
 	Instance::Instance(bool enableValidationLayer) {
+		LOGD("Instance::Instance(enableValidationLayer=%d)", enableValidationLayer);
 		mEnableValidationLayer = enableValidationLayer;//存储当前是否开启验证层
 
 		if (mEnableValidationLayer) {//判断测试功能开启成功没
@@ -92,7 +94,8 @@ namespace VulKan {
 			instCreateInfo.enabledLayerCount = 0;//不开启测试
 		}
 
-		if (vkCreateInstance(&instCreateInfo, nullptr, &mInstance) != VK_SUCCESS) {//用上面信息创建VulKan的实例
+		if (vkCreateInstance(&instCreateInfo, nullptr, &mInstance) != VK_SUCCESS) {
+			LOGE("Instance::Instance: failed to create instance");
 			TOOL::VulKanError->error("Error:failed to create instance");
 			throw std::runtime_error("Error:failed to create instance");
 		}
@@ -187,7 +190,8 @@ namespace VulKan {
 		createInfo.pfnUserCallback = debugCallBack;//设置监听的回调函数
 		createInfo.pUserData = nullptr;
 
-		if (CreateDebugUtilsMessengerEXT(mInstance, &createInfo, nullptr, &mDebugger) != VK_SUCCESS) {//创建返回错误信息或警告的信使
+		if (CreateDebugUtilsMessengerEXT(mInstance, &createInfo, nullptr, &mDebugger) != VK_SUCCESS) {
+			LOGE("Instance::setupDebugger: failed to create debugger");
 			throw std::runtime_error("Error:VulKan Instance . failed to create debugger");
 		}
 	}

@@ -1,4 +1,5 @@
 #include "NPC.h"
+#include "../DebugLog.h"
 #include "../Tool/Tool.h"
 #include <functional>
 #include "../GlobalVariable.h"
@@ -106,6 +107,7 @@ namespace GAME {
 
 	NPC::~NPC()
 	{
+		LOGD("NPC::~NPC() called");
 		delete NPCFSM;
 		delete mNPC;
 		while (!mJPS->GetPathfindingCompleted()) {//等待多线程任务结束

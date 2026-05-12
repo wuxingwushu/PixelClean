@@ -1,11 +1,7 @@
 #include "PlatformAndroid.h"
+#include "DebugLog.h"
 #include <android_native_app_glue.h>
-#include <android/log.h>
 #include <android/configuration.h>
-
-#define LOG_TAG "PixelClean"
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 PlatformAndroid& PlatformAndroid::Instance()
 {

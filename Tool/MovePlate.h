@@ -210,11 +210,11 @@ public:
 					{
 						LPlate[ix] = at(ix, iy, iz);
 					}
-					for (int ix = 0; ix < (mNumberX - uX); ++ix)
+					for (int ix = 0; ix < (int)(mNumberX - uX); ++ix)
 					{
 						at(ix, iy, iz) = at(ix + uX, iy, iz);
 					}
-					for (int ix = (mNumberX - uX); ix < mNumberX; ++ix)
+					for (int ix = (int)(mNumberX - uX); ix < (int)mNumberX; ++ix)
 					{
 						at(ix, iy, iz) = LPlate[ix - (mNumberX - uX)];
 						mDeleteCallback(at(ix, iy, iz), mDeleteData);
@@ -233,7 +233,7 @@ public:
 					{
 						LPlate[ix] = at(mNumberX - ix - 1, iy, iz);
 					}
-					for (int ix = (mNumberX + uX - 1); ix >= 0; --ix)
+					for (int ix = (int)(mNumberX + uX - 1); ix >= 0; --ix)
 					{
 						at(ix - uX, iy, iz) = at(ix, iy, iz);
 					}
@@ -261,7 +261,7 @@ public:
 		}
 		if (uY > 0)
 		{
-			for (int ix = 0; ix < mNumberX; ++ix)
+			for (int ix = 0; ix < (int)mNumberX; ++ix)
 			{
 				for (int iz = sZ; iz < eZ; ++iz)
 				{
@@ -269,11 +269,11 @@ public:
 					{
 						LPlate[iy] = at(ix, iy, iz);
 					}
-					for (int iy = 0; iy < (mNumberY - uY); ++iy)
+					for (int iy = 0; iy < (int)(mNumberY - uY); ++iy)
 					{
 						at(ix, iy, iz) = at(ix, iy + uY, iz);
 					}
-					for (int iy = (mNumberY - uY); iy < mNumberY; ++iy)
+					for (int iy = (int)(mNumberY - uY); iy < (int)mNumberY; ++iy)
 					{
 						at(ix, iy, iz) = LPlate[iy - (mNumberY - uY)];
 						mDeleteCallback(at(ix, iy, iz), mDeleteData);
@@ -284,7 +284,7 @@ public:
 		}
 		else
 		{
-			for (int ix = 0; ix < mNumberY; ++ix)
+			for (int ix = 0; ix < (int)mNumberY; ++ix)
 			{
 				for (int iz = sZ; iz < eZ; ++iz)
 				{
@@ -292,7 +292,7 @@ public:
 					{
 						LPlate[iy] = at(ix, mNumberY - iy - 1, iz);
 					}
-					for (int iy = (mNumberY + uY - 1); iy >= 0; --iy)
+					for (int iy = (int)(mNumberY + uY - 1); iy >= 0; --iy)
 					{
 						at(ix, iy - uY, iz) = at(ix, iy, iz);
 					}
@@ -311,19 +311,19 @@ public:
 	{
 		if (uZ > 0)
 		{
-			for (int ix = 0; ix < mNumberX; ++ix)
+			for (int ix = 0; ix < (int)mNumberX; ++ix)
 			{
-				for (int iy = 0; iy < mNumberY; ++iy)
+				for (int iy = 0; iy < (int)mNumberY; ++iy)
 				{
 					for (int iz = 0; iz < uZ; ++iz)
 					{
 						LPlate[iz] = at(ix, iy, iz);
 					}
-					for (int iz = 0; iz < (mNumberZ - uZ); ++iz)
+					for (int iz = 0; iz < (int)(mNumberZ - uZ); ++iz)
 					{
 						at(ix, iy, iz) = at(ix, iy + uZ, iz);
 					}
-					for (int iz = (mNumberZ - uZ); iz < mNumberZ; ++iz)
+					for (int iz = (int)(mNumberZ - uZ); iz < (int)mNumberZ; ++iz)
 					{
 						at(ix, iy, iz) = LPlate[iz - (mNumberZ - uZ)];
 						mDeleteCallback(at(ix, iy, iz), mDeleteData);
@@ -334,15 +334,15 @@ public:
 		}
 		else
 		{
-			for (int ix = 0; ix < mNumberY; ++ix)
+			for (int ix = 0; ix < (int)mNumberY; ++ix)
 			{
-				for (int iy = 0; iy < mNumberY; ++iy)
+				for (int iy = 0; iy < (int)mNumberY; ++iy)
 				{
 					for (int iz = 0; iz < -uZ; ++iz)
 					{
 						LPlate[iz] = at(ix, iy, mNumberZ - iz - 1);
 					}
-					for (int iz = (mNumberZ + uZ - 1); iz >= 0; --iz)
+					for (int iz = (int)(mNumberZ + uZ - 1); iz >= 0; --iz)
 					{
 						at(ix, iy, iz - uZ) = at(ix, iy, iz);
 					}
@@ -501,7 +501,7 @@ private:
 				{
 					LPlate[ix] = *PlateAt(mNumberX - ix - 1, iy);
 				}
-				for (int ix = (mNumberX + uX - 1); ix >= 0; --ix)
+				for (int ix = (int)(mNumberX + uX - 1); ix >= 0; --ix)
 				{
 					*PlateAt(ix - uX, iy) = *PlateAt(ix, iy);
 				}
@@ -552,7 +552,7 @@ private:
 				{
 					LPlate[iy] = *PlateAt(ix, mNumberY - iy - 1);
 				}
-				for (int iy = (mNumberY + uY - 1); iy >= 0; --iy)
+				for (int iy = (int)(mNumberY + uY - 1); iy >= 0; --iy)
 				{
 					*PlateAt(ix, iy - uY) = *PlateAt(ix, iy);
 				}

@@ -1,5 +1,5 @@
 #include "IndexAnimationGrid.h"
-
+#include "../DebugLog.h"
 
 namespace SquarePhysics {
 
@@ -8,6 +8,7 @@ namespace SquarePhysics {
 	IndexAnimationGrid::IndexAnimationGrid(unsigned int x, unsigned int y, unsigned int SideLength, unsigned int Frames)
 		:ObjectCollision(x, y, SideLength), mFrames(Frames)
 	{
+		LOGD("[IndexAnimationGrid] Constructor");
 		OutlinePointSizeS = new unsigned int[Frames];
 		mOutlinePointSet = new glm::dvec2*[Frames];
 		for (size_t i = 0; i < Frames; i++)
@@ -26,8 +27,8 @@ namespace SquarePhysics {
 		delete mOutlinePointSet;
 	}
 
-	//计算当前碰撞体的 外骨架
 	void IndexAnimationGrid::OutlineCalculate() {
+		LOGD("[IndexAnimationGrid] OutlineCalculate");
 		int LSCurrentFrame = CurrentFrame;
 		for (size_t i = 0; i < mFrames; i++)
 		{

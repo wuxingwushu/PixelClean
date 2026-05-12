@@ -1,5 +1,5 @@
 #include "ObjectCollision.h"
-
+#include "../DebugLog.h"
 
 
 namespace SquarePhysics {
@@ -10,10 +10,12 @@ namespace SquarePhysics {
 		unsigned int SideLength
 	): GridDecorator(x, y, SideLength)
 	{
+		LOGD("[ObjectCollision] Constructor");
 	}
 
 	ObjectCollision::~ObjectCollision()
 	{
+		LOGD("[ObjectCollision] Destructor");
 	}
 
 	void ObjectCollision::OutlineCalculate() {

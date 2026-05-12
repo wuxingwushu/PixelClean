@@ -7,10 +7,12 @@
 #define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 #endif
+#include "../DebugLog.h"
 
 namespace VulKan {
 
 	Device::Device(Instance* instance, WindowSurface* surface) {
+		LOGD("Device::Device()");
 		mInstance = instance;
 		mSurface = surface;
 		pickPhysicalDevice();//给所以设备评分排序，获得性能最高的设备
@@ -28,6 +30,7 @@ namespace VulKan {
 		vkEnumeratePhysicalDevices(mInstance->getInstance(), &deviceCount, nullptr);//你有多少个显卡
 
 		if (deviceCount == 0) {
+			LOGE("Device::pickPhysicalDevice: no physical devices found");
 			throw std::runtime_error("Error:failed to enumeratePhysicalDevice");
 		}
 
@@ -44,7 +47,8 @@ namespace VulKan {
 			mPhysicalDevice = candidates.rbegin()->second;//获取那张显卡
 		}
 
-		if (mPhysicalDevice == VK_NULL_HANDLE) {//判断是否获取合适的显卡
+		if (mPhysicalDevice == VK_NULL_HANDLE) {
+			LOGE("Device::pickPhysicalDevice: no suitable physical device");
 			throw std::runtime_error("Error:failed to get physical device");
 		}
 	}
@@ -158,7 +162,8 @@ namespace VulKan {
 			deviceCreateInfo.enabledLayerCount = 0;
 		}
 
-		if (vkCreateDevice(mPhysicalDevice, &deviceCreateInfo, nullptr, &mDevice) != VK_SUCCESS) {//判断设备创建成功没有
+		if (vkCreateDevice(mPhysicalDevice, &deviceCreateInfo, nullptr, &mDevice) != VK_SUCCESS) {
+			LOGE("Device::createLogicalDevice: failed to create logical device");
 			throw std::runtime_error("Error:failed to create logical device");
 		}
 
@@ -179,6 +184,7 @@ namespace VulKan {
 
 
 		if (vmaCreateAllocator(&allocatorInfo, &mAllocator) != VK_SUCCESS) {
+			LOGE("Device::createLogicalDevice: failed to create VMA allocator");
 			throw std::runtime_error("Error: failed to create VMA allocator");
 		}
 

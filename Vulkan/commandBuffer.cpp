@@ -1,7 +1,9 @@
 #include "commandBuffer.h"
+#include "../DebugLog.h"
 
 namespace VulKan {
 	CommandBuffer::CommandBuffer(Device* device, const CommandPool* commandPool, bool asSecondary) {
+		LOGD("CommandBuffer::CommandBuffer(asSecondary=%d)", asSecondary);
 		mDevice = device;
 		mCommandPool = commandPool;
 
@@ -12,6 +14,7 @@ namespace VulKan {
 		allocInfo.level = asSecondary ? VK_COMMAND_BUFFER_LEVEL_SECONDARY : VK_COMMAND_BUFFER_LEVEL_PRIMARY;//是主指令缓存，还是二级指令缓存
 
 		if (vkAllocateCommandBuffers(mDevice->getDevice(), &allocInfo, &mCommandBuffer) != VK_SUCCESS) {
+			LOGE("CommandBuffer::CommandBuffer: failed to allocate command buffer");
 			throw std::runtime_error("Error: falied to create commandBuffer");
 		}
 	}
@@ -31,6 +34,7 @@ namespace VulKan {
 		
 
 		if (vkBeginCommandBuffer(mCommandBuffer, &beginInfo) != VK_SUCCESS) {
+			LOGE("CommandBuffer::begin: failed to begin command buffer");
 			throw std::runtime_error("Error:failed to begin commandBuffer");
 		}
 	}
@@ -75,6 +79,7 @@ namespace VulKan {
 
 	void CommandBuffer::end() {
 		if (vkEndCommandBuffer(mCommandBuffer) != VK_SUCCESS) {
+			LOGE("CommandBuffer::end: failed to end command buffer");
 			throw std::runtime_error("Error:failed to end Command Buffer");
 		}
 	}

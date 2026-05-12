@@ -1,4 +1,5 @@
 #include "Crowd.h"
+#include "../DebugLog.h"
 #include "../GlobalVariable.h"
 #include "../BlockS/PixelS.h"
 
@@ -59,6 +60,7 @@ namespace GAME {
 
 	Crowd::~Crowd()
 	{
+		LOGD("Crowd::~Crowd() called");
 		for (auto i : *MapPlayerS)
 		{
 			delete i;

@@ -1,4 +1,5 @@
 #include "Block.h"
+#include "../DebugLog.h"
 
 namespace GAME {
 
@@ -96,6 +97,7 @@ namespace GAME {
 		VulKan::Sampler* sampler
 	)
 	{
+		LOGI("Block::initUniformManager() called");
 		VulKan::UniformParameter* vpParam = new VulKan::UniformParameter();
 		vpParam->mBinding = 0;
 		vpParam->mCount = 1;

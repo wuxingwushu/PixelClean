@@ -64,7 +64,7 @@ void MinArea::addH(const int h, AreaData Data)
     else
     {
         // 找到比他大的第一個元素
-        for (int i = 0; i < mArea[h].size(); ++i)
+        for (int i = 0; i < (int)mArea[h].size(); ++i)
         {
             // 兩個元素之間
             if (mArea[h][i] > Data)
@@ -146,7 +146,7 @@ void MinArea::addBox(int x, int y, unsigned int w, unsigned int h)
 std::vector<vec2> MinArea::GetData()
 {
     std::vector<vec2> Data{};
-    for (int y = 0; y < mArea.size(); ++y)
+    for (int y = 0; y < (int)mArea.size(); ++y)
     {
         for (auto iD : mArea[y])
         {

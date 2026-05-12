@@ -9,6 +9,7 @@
 
 #include "PhysicsDemo.h"
 #include "PhysicsLogBuffer.h"
+#include "../../DebugLog.h"
 #include <fstream>
 #include <sstream>
 
@@ -17,6 +18,7 @@ namespace GAME
 
 	PhysicsTest::PhysicsTest(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
+		LOGD("PhysicsTest::PhysicsTest constructor");
 		// 添加视觉辅助
 		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 100000);
 		mAuxiliaryVision->initUniformManager(
@@ -42,6 +44,7 @@ namespace GAME
 
 	PhysicsTest::~PhysicsTest()
 	{
+		LOGD("PhysicsTest::~PhysicsTest destructor");
 		PhysicsBlock::AuxiliaryInfoStorage();
 		delete mAuxiliaryVision;
 		delete mPhysicsWorld;

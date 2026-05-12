@@ -4,7 +4,7 @@
 #include "../../SoundEffect/SoundEffect.h"
 #include "../../BlockS/PixelS.h"
 #include "../../Tool/GenerateMaze.h"
-
+#include "../../DebugLog.h"
 
 namespace GAME {
 
@@ -33,7 +33,7 @@ namespace GAME {
 	Labyrinth::Labyrinth(SquarePhysics::SquarePhysics* squarePhysics):
 		wSquarePhysics(squarePhysics)
 	{
-
+		LOGD("Labyrinth::Labyrinth constructor");
 	}
 
 	void Labyrinth::AgainGenerateLabyrinth(int X, int Y) {
@@ -239,6 +239,7 @@ namespace GAME {
 
 	Labyrinth::~Labyrinth()
 	{
+		LOGD("Labyrinth::~Labyrinth destructor");
 		//销毁是否是墙壁
 		for (size_t i = 0; i < numberX; ++i)
 		{

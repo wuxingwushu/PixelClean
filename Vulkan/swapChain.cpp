@@ -1,15 +1,17 @@
 #include "swapChain.h"
 #include "renderPass.h"
 #include <limits>
+#include "../DebugLog.h"
 
 namespace VulKan {
 
 	SwapChain::SwapChain(
-		Device* device, 
-		Window* window, 
+		Device* device,
+		Window* window,
 		WindowSurface* surface,
 		CommandPool* commandPool
 	) {
+		LOGD("SwapChain::SwapChain()");
 		mDevice = device;
 		mWindow = window;
 		mSurface = surface;
@@ -18,6 +20,7 @@ namespace VulKan {
 	}
 
 	void SwapChain::StructureSwapChain() {
+		LOGD("SwapChain::StructureSwapChain()");
 		SwapChainSupportInfo swapChainSupportInfo = querySwapChainSupportInfo();
 
 		//选择vkformat
@@ -80,6 +83,7 @@ namespace VulKan {
 		createInfo.clipped = VK_TRUE;
 
 		if (vkCreateSwapchainKHR(mDevice->getDevice(), &createInfo, nullptr, &mSwapChain) != VK_SUCCESS) {
+			LOGE("SwapChain::StructureSwapChain: failed to create swap chain");
 			throw std::runtime_error("Error: failed to create swapChain");
 		}
 
@@ -154,6 +158,7 @@ namespace VulKan {
 	}
 	
 	void SwapChain::createFrameBuffers(const RenderPass* renderPass) {
+		LOGD("SwapChain::createFrameBuffers()");
 		//创建FrameBuffer
 		mSwapChainFrameBuffers.resize(mImageCount);
 		for (uint32_t i = 0; i < mImageCount; ++i) {
@@ -173,6 +178,7 @@ namespace VulKan {
 			frameBufferCreateInfo.layers = 1;
 
 			if (vkCreateFramebuffer(mDevice->getDevice(), &frameBufferCreateInfo, nullptr, &mSwapChainFrameBuffers[i]) != VK_SUCCESS) {
+				LOGE("SwapChain::createFrameBuffers: failed to create framebuffer %d", i);
 				throw std::runtime_error("Error:Failed to create frameBuffer");
 			}
 		}
@@ -297,6 +303,7 @@ namespace VulKan {
 
 		VkImageView imageView{ VK_NULL_HANDLE };
 		if (vkCreateImageView(mDevice->getDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+			LOGE("SwapChain::createImageView: failed to create image view");
 			throw std::runtime_error("Error: failed to create image view in swapchain");
 		}
 

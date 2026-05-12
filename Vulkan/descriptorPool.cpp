@@ -1,8 +1,10 @@
 #include "descriptorPool.h"
+#include "../DebugLog.h"
 
 namespace VulKan {
 
 	DescriptorPool::DescriptorPool(Device* device) {
+		LOGD("DescriptorPool::DescriptorPool()");
 		mDevice = device;
 	}
 
@@ -13,6 +15,7 @@ namespace VulKan {
 	} 
 
 	void DescriptorPool::build(std::vector<UniformParameter*>& params, const int& frameCount, unsigned int shuliang) {
+		LOGD("DescriptorPool::build(frameCount=%d)", frameCount);
 		//decriptor
 		//descriptorSet(decriptorA(Buffer), decriptorA, decriptorB)
 		//descriptorSet * N 因为描述符集当中，绑定了buffer,当前一帧提交的时候，其他的帧正在绘制当中，
@@ -67,6 +70,7 @@ namespace VulKan {
 		createInfo.maxSets = static_cast<uint32_t>(frameCount * shuliang);
 
 		if (vkCreateDescriptorPool(mDevice->getDevice(), &createInfo, nullptr, &mPool) != VK_SUCCESS) {
+			LOGE("DescriptorPool::build: failed to create descriptor pool");
 			throw std::runtime_error("Error: failed to create Descriptor pool");
 		}
 	}

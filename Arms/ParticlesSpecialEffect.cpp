@@ -1,4 +1,5 @@
 #include "ParticlesSpecialEffect.h"
+#include "../DebugLog.h"
 #include "../GlobalStructural.h"
 
 
@@ -12,6 +13,7 @@ namespace GAME {
 
 	ParticlesSpecialEffect::~ParticlesSpecialEffect()
 	{
+		LOGD("ParticlesSpecialEffect::~ParticlesSpecialEffect() called");
 		for (auto& i : *mSpecialEffects)
 		{
 			mParticleSystem->mParticle->add(Particle{ i.Pixel, i.Buffer });

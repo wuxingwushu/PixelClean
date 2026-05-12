@@ -1,6 +1,7 @@
 #include "DestroyMode.h"
 #include "ObjectCollision.h"
 #include "FixedSizeTerrain.h"
+#include "../DebugLog.h"
 #include <map>
 
 namespace SquarePhysics {
@@ -14,6 +15,7 @@ namespace SquarePhysics {
 
 	_DestroyModeCallback GetDestroyMode(DestroyModeEnum Enum) {
 		if (DestroyModeMap.find(Enum) == DestroyModeMap.end()) {
+			LOGE("[DestroyMode] Unknown DestroyModeEnum: %d", (int)Enum);
 			return DestroyModePixel;
 		}
 		else {

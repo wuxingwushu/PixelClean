@@ -1,13 +1,15 @@
 #include "texture.h"
 
-#define STB_IMAGE_IMPLEMENTATION//stb_image.h �ĺ궨��
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "../DebugLog.h"
 
 namespace VulKan {
 
 	Texture::Texture(Device* device, const CommandPool* commandPool, const std::string& imageFilePath, Sampler* sampler)
 		:wDevice(device), wCommandPool(commandPool)
 	{
+		LOGD("[Texture] Constructor (file)");
 		int texWidth, texHeight, texChannles;
 		stbi_uc* pixels = stbi_load(imageFilePath.c_str(), &texWidth, &texHeight, &texChannles, STBI_rgb_alpha);
 
@@ -38,6 +40,7 @@ namespace VulKan {
 	Texture::Texture(Device* device, const CommandPool* commandPool, Sampler* sampler, void* imageData, int Width, int Height)
 		:wDevice(device), wCommandPool(commandPool)
 	{
+		LOGD("[Texture] Constructor (data)");
 
 		mImage = new VulKan::Image(
 			wDevice, Width, Height,

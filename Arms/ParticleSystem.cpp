@@ -1,4 +1,5 @@
 #include "ParticleSystem.h"
+#include "../DebugLog.h"
 #include "../BlockS/PixelS.h"
 #include "../GlobalStructural.h"
 
@@ -95,6 +96,7 @@ namespace GAME {
 		VulKan::Sampler* sampler
 	)
 	{
+		LOGI("ParticleSystem::initUniformManager() called");
 		ThreadS = frameCount;
 		mThreadCommandPoolS = new VulKan::CommandPool * [ThreadS];
 		mThreadCommandBufferS = new VulKan::CommandBuffer * [ThreadS];

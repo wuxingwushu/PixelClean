@@ -1,5 +1,6 @@
 #include "descriptorSet.h"
 #include <mutex>
+#include "../DebugLog.h"
 
 namespace VulKan {
 
@@ -15,6 +16,7 @@ namespace VulKan {
 		mDescriptorPool(pool),
 		wFrameCount(frameCount)
 	{
+		LOGD("DescriptorSet::DescriptorSet(frameCount=%d)", frameCount);
 		std::vector<VkDescriptorSetLayout> layouts(frameCount, layout);
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -26,11 +28,13 @@ namespace VulKan {
 		if (wMutex != nullptr) {
 			std::lock_guard<std::mutex> lock(*wMutex);
 			if (vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data()) != VK_SUCCESS) {
+				LOGE("DescriptorSet::DescriptorSet: failed to allocate descriptor sets (mutex)");
 				throw std::runtime_error("Error: failed to allocate descriptor sets");
 			}
 		}
 		else {
 			if (vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data()) != VK_SUCCESS) {
+				LOGE("DescriptorSet::DescriptorSet: failed to allocate descriptor sets");
 				throw std::runtime_error("Error: failed to allocate descriptor sets");
 			}
 		}

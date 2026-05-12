@@ -1,5 +1,6 @@
 #include "Opcode.h"
 #include "OpcodeFunction.h"
+#include "../DebugLog.h"
 
 namespace Opcode {
 
@@ -40,6 +41,7 @@ namespace Opcode {
 
 	//操作码读取
 	void Opcode(std::string Code) {
+		LOGD("[Opcode] Opcode");
 		if (Code.size() != 0) {//判断存在指令
 			std::vector<std::string> CodeBuffer;
 			Queue<const char*> CodeS(10);

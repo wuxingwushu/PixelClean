@@ -134,6 +134,12 @@ val prepareAssets by tasks.registering(Copy::class) {
     val sourceRoot = rootProject.projectDir.parentFile
     val destDir = layout.projectDirectory.dir("src/main/assets")
 
+    doFirst {
+        delete(fileTree(destDir.dir("shaders")) {
+            exclude("*.spv")
+        })
+    }
+
     includeEmptyDirs = true
 
     from("${sourceRoot}/Info.ini") {
@@ -175,19 +181,19 @@ val prepareAssets by tasks.registering(Copy::class) {
 fun findVulkanCompiler(): String? {
     val envSdk = System.getenv("VULKAN_SDK")
     if (envSdk != null) {
-        val glslc = File("${envSdk}/Bin/glslc.exe")
-        if (glslc.exists()) return glslc.absolutePath
         val glslang = File("${envSdk}/Bin/glslangValidator.exe")
         if (glslang.exists()) return glslang.absolutePath
+        val glslc = File("${envSdk}/Bin/glslc.exe")
+        if (glslc.exists()) return glslc.absolutePath
     }
 
     val vulkanDir = File("C:/VulkanSDK")
     if (vulkanDir.isDirectory) {
         vulkanDir.listFiles()?.sortedByDescending { it.name }?.forEach { versionDir ->
-            val glslc = File(versionDir, "Bin/glslc.exe")
-            if (glslc.exists()) return glslc.absolutePath
             val glslang = File(versionDir, "Bin/glslangValidator.exe")
             if (glslang.exists()) return glslang.absolutePath
+            val glslc = File(versionDir, "Bin/glslc.exe")
+            if (glslc.exists()) return glslc.absolutePath
         }
     }
 

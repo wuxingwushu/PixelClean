@@ -1,4 +1,5 @@
 #include "PerlinNoise.h"
+#include "../DebugLog.h"
 #include <cmath>
 #include <random>
 #include <algorithm>
@@ -12,7 +13,7 @@
 
 // Initialize with the reference values for the permutation vector
 PerlinNoise::PerlinNoise() {
-	
+	LOGI("PerlinNoise::PerlinNoise()");
 	// Initialize the permutation vector with the reference values
 	p = {
 		151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,
@@ -33,6 +34,7 @@ PerlinNoise::PerlinNoise() {
 
 // Generate a new permutation vector based on the value of seed
 PerlinNoise::PerlinNoise(unsigned int seed) {
+	LOGI("PerlinNoise::PerlinNoise(seed)");
 	p.resize(256);
 
 	// Fill p with values from 0 to 255
@@ -49,6 +51,7 @@ PerlinNoise::PerlinNoise(unsigned int seed) {
 }
 
 double PerlinNoise::noise(double x, double y, double z) {
+	LOGD("PerlinNoise::noise");
 	// Find the unit cube that contains the point
 	int X = (int) floor(x) & 255;
 	int Y = (int) floor(y) & 255;
@@ -78,14 +81,17 @@ double PerlinNoise::noise(double x, double y, double z) {
 }
 
 double PerlinNoise::fade(double t) { 
+	LOGD("PerlinNoise::fade");
 	return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
 double PerlinNoise::lerp(double t, double a, double b) { 
+	LOGD("PerlinNoise::lerp");
 	return a + t * (b - a); 
 }
 
 double PerlinNoise::grad(int hash, double x, double y, double z) {
+	LOGD("PerlinNoise::grad");
 	int h = hash & 15;
 	// Convert lower 4 bits of hash into 12 gradient directions
 	double u = h < 8 ? x : y,

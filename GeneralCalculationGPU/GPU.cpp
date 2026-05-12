@@ -1,5 +1,6 @@
 #include "GPU.h"
 #include "lodepng.h"
+#include "../DebugLog.h"
 #if defined(_WIN32)
 #include <intrin.h>
 #endif
@@ -12,7 +13,7 @@ uint32_t* readFile(uint32_t& length, const char* filename) {
 
     FILE* fp = fopen(filename, "rb");
     if (fp == NULL) {
-        printf("Could not find or open file: %s\n", filename);
+        LOGE("[GPU] Could not find or open file: %s", filename);
         length = 0;
         return nullptr;
     }
@@ -22,6 +23,7 @@ uint32_t* readFile(uint32_t& length, const char* filename) {
     fseek(fp, 0, SEEK_SET);
 
     if (filesize <= 0) {
+        LOGE("[GPU] File is empty: %s", filename);
         fclose(fp);
         length = 0;
         return nullptr;
@@ -44,6 +46,7 @@ uint32_t* readFile(uint32_t& length, const char* filename) {
 
 
 void Mandelbrot(VulKan::Device* device) {
+    LOGD("[GPU] Mandelbrot");
     //GAME::VulKan::Instance* mInstance = new GAME::VulKan::Instance(true);
     //unsigned int w = 100, h = 100;
     //GAME::VulKan::Window* mWin = new GAME::VulKan::Window(w, h, 0, 0);

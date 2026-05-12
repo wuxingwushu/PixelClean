@@ -1,4 +1,5 @@
 #include "GamePlayer.h"
+#include "../DebugLog.h"
 #include "../BlockS/PixelS.h"
 #include "../GlobalVariable.h"
 #include "../NetworkTCP/Server.h"
@@ -188,6 +189,7 @@ namespace GAME {
 		VulKan::Sampler* sampler
 	)
 	{
+		LOGI("GamePlayer::initUniformManager() called");
 		mPixelTexture = new VulKan::PixelTexture(device, commandPool, pixelS[textureID],16,16,4, sampler);
 		unsigned char* LTexturePointer = (unsigned char*)mPixelTexture->getHOSTImagePointer();
 		unsigned char Lcolor[4] = { 255,0,0,255 };

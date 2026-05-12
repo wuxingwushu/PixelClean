@@ -1,4 +1,5 @@
 #include "ImGuiTexture.h"
+#include "../DebugLog.h"
 
 namespace GAME {
 	
@@ -10,6 +11,7 @@ namespace GAME {
 		unsigned int FreeDescriptorSize)
 		:wDevice(device), wSwapChain(swapChain)
 	{
+		LOGD("ImGuiTexture::ImGuiTexture() called");
 		mTextureLibrary = new TextureLibrary(device, commandPool, sampler, "./Resource/ImGuiImage/", false);
 		mDescriptorSetMap = new ContinuousMap<std::string, VulKan::DescriptorSet*>(mTextureLibrary->GetDataMap()->GetNumber() + FreeDescriptorSize + 1);
 
@@ -46,6 +48,7 @@ namespace GAME {
 
 	ImGuiTexture::~ImGuiTexture()
 	{
+		LOGD("ImGuiTexture::~ImGuiTexture() called");
 		delete mTextureLibrary;
 		for (auto i : *mDescriptorSetMap) {
 			delete i;

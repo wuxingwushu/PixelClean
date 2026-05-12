@@ -1,4 +1,5 @@
 #include "Client.h"
+#include "../DebugLog.h"
 
 client* client::mClient = nullptr;
 clock_t Ctime = 0;
@@ -152,6 +153,7 @@ void client_read_cb(bufferevent* be, void* arg)
 }
 
 client::client(std::string IPV, unsigned int Duan) {
+	LOGD("[Client] Constructor");
 #if defined(_WIN32)
 	//初始化socket库
 	WSADATA wsa;
@@ -159,7 +161,7 @@ client::client(std::string IPV, unsigned int Duan) {
 #elif defined(__ANDROID__)
 	// Android 使用 Bionic libc，不需要 WSAStartup
 	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-		__android_log_print(ANDROID_LOG_ERROR, "PixelClean", "signal fail");
+		LOGE("[Client] signal fail");
 	}
 #else
 	//忽略管道信号，发送数据给已关闭的socket
@@ -322,7 +324,7 @@ bufferevent_filter_result client_filter_out(
 	int re = deflate(p, Z_SYNC_FLUSH);
 	if (re != Z_OK)
 	{
-		std::cerr << "deflate failed! : " << re << std::endl;
+		LOGE("[Client] deflate failed: %d", re);
 	}
 
 

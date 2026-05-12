@@ -1,5 +1,6 @@
 #include "AuxiliaryVision.h"
 #include "../GlobalStructural.h"
+#include "../DebugLog.h"
 
 namespace VulKan {
 
@@ -8,6 +9,7 @@ namespace VulKan {
 		wPipelineS(P),
 		Number(number)
 	{
+		LOGD("[AuxiliaryVision] Constructor");
 		//线段
 		AuxiliaryLineS = new Buffer(
 			wDevice, sizeof(AuxiliaryLineSpot) * Number * 2,

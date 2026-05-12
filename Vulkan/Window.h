@@ -53,6 +53,7 @@ namespace VulKan {
 		// Android: 设置系统窗口引用
 #if defined(__ANDROID__)
 		void setAndroidWindow(ANativeWindow* nativeWindow);
+		void setShouldClose(bool close) { mShouldClose = close; }
 #endif
 
 	public:
@@ -69,6 +70,7 @@ namespace VulKan {
 #elif defined(__ANDROID__)
 		ANativeWindow* mWindow{ nullptr };
 #endif
+		bool mShouldClose{ false };
 
 	private:
 		//按键上升沿触发（储存上一时刻的值）

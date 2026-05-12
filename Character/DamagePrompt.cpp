@@ -1,4 +1,5 @@
 #include "DamagePrompt.h"
+#include "../DebugLog.h"
 
 
 namespace GAME {
@@ -135,6 +136,7 @@ namespace GAME {
 
 	void DamagePrompt::initCommandBuffer()
 	{
+		LOGI("DamagePrompt::initCommandBuffer() called");
 		VkCommandBufferInheritanceInfo InheritanceInfo{};
 		InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 		InheritanceInfo.renderPass = wRenderPass->getRenderPass();

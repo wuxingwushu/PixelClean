@@ -1,4 +1,5 @@
 #include "Tool.h"
+#include "../DebugLog.h"
 #include <iostream>
 #include <sstream>
 #include <filesystem>
@@ -7,6 +8,7 @@
 namespace TOOL {
 	Timer* mTimer = nullptr;
 	void InitTimer() {
+		LOGI("InitTimer");
 		if (mTimer == nullptr)
 		{
 			mTimer = new Timer();
@@ -20,6 +22,7 @@ namespace TOOL {
 	unsigned int mThreadCount;
 
 	void InitThreadPool(unsigned int ThreadCount) {
+		LOGI("InitThreadPool");
 		if (mThreadPool == nullptr) {
 			if (ThreadCount == 0)
 			{
@@ -35,6 +38,7 @@ namespace TOOL {
 	}
 
 	void DeleteThreadPool() {
+		LOGI("DeleteThreadPool");
 		if (mThreadPool != nullptr) {
 			delete mThreadPool;
 		}
@@ -46,6 +50,7 @@ namespace TOOL {
 	spdlog::logger* VulKanError = nullptr;
 
 	void InitSpdLog() {
+		LOGI("InitSpdLog");
 		if (Error == nullptr) {
 			auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 			console_sink->set_level(spdlog::level::warn);//设置警报等级
@@ -72,6 +77,7 @@ namespace TOOL {
 	}
 
 	void DeleteSpdLog() {
+		LOGI("DeleteSpdLog");
 		if (Error != nullptr) {
 			Error = nullptr;
 			delete Error;
@@ -88,6 +94,7 @@ namespace TOOL {
 	FILE* fpVulKanError;
 
 	void InitLog() {
+		LOGI("InitLog");
 		log_set_level(0);
 		log_set_quiet(0);//是否打印到控制台
 
@@ -99,6 +106,7 @@ namespace TOOL {
 	}
 
 	void DeleteLog() {
+		LOGI("DeleteLog");
 		fclose(fpError);
 		fclose(fpVulKanError);
 	}
@@ -108,11 +116,13 @@ namespace TOOL {
 	PerlinNoise* mPerlinNoise = nullptr;
 
 	void InitPerlinNoise() {
+		LOGI("InitPerlinNoise");
 		if (mPerlinNoise == nullptr) {
 			mPerlinNoise = new PerlinNoise();
 		}
 	}
 	void DeletePerlinNoise() {
+		LOGI("DeletePerlinNoise");
 		if (mPerlinNoise != nullptr) {
 			delete mPerlinNoise;
 		}
@@ -121,6 +131,7 @@ namespace TOOL {
 
 #ifdef TOOL_Convert
 	std::string StrTolower(std::string Str) {
+		LOGD("StrTolower");
 		std::string str;
 		for (size_t i = 0; i < Str.size(); ++i)
 		{
@@ -130,6 +141,7 @@ namespace TOOL {
 	}
 
 	std::string StrName(std::string Str) {
+		LOGD("StrName");
 		size_t dianI = Str.size();
 		size_t xieI = 0;
 		for (size_t i = Str.size() - 1; i > 0; --i) {
@@ -146,6 +158,7 @@ namespace TOOL {
 	}
 
 	void FilePath(const char* path, std::vector<std::string>* strS, const char* Suffix, const char* Name, int* Index) {
+		LOGI("FilePath");
 		std::error_code ec;
 		std::string ModelFileName;
 		for (const auto& entry : std::filesystem::directory_iterator(path, ec)) {
@@ -207,6 +220,7 @@ namespace TOOL {
 	//string 转 wstring
 	std::string ws2s(const std::wstring& ws)
 	{
+		LOGD("ws2s");
 		std::string curLocale = setlocale(LC_ALL, NULL);
 		setlocale(LC_ALL, "chs");
 		const wchar_t* _source = ws.c_str();
@@ -228,6 +242,7 @@ namespace TOOL {
 	//wstring 转 string
 	std::wstring s2ws(const std::string& s)
 	{
+		LOGD("s2ws");
 		std::string curLocale = setlocale(LC_ALL, NULL);
 		setlocale(LC_ALL, "chs");
 		const char* _source = s.c_str();
@@ -278,6 +293,7 @@ namespace TOOL {
 
 	//utf8 转到 Unicode
 	std::string Utf8ToUnicode(const std::string& utf8_str) {
+		LOGD("Utf8ToUnicode");
 		std::wstring result;
 		int i = 0;
 
@@ -439,6 +455,7 @@ namespace TOOL {
 
 	void StartTiming(char* name, bool RecordBool)
 	{
+		LOGD("StartTiming");
 		if (DetectionQuantityName) {
 			SecondVectorBool[Quantity] = RecordBool;//这个检测对象是否开启了记录
 			if ((Quantity != 0) && (name == Consume_name[0])) {
@@ -466,6 +483,7 @@ namespace TOOL {
 
 	void StartEnd()
 	{
+		LOGD("StartEnd");
 		TemporaryConsume_time[TemporaryConsumeName[TemporaryTimeQuantity]] += (clock() - TemporaryConsumetime[TemporaryTimeQuantity]);
 		TemporaryTimeQuantity--;//堆载指针出载
 		DetectionCount++;
@@ -473,6 +491,7 @@ namespace TOOL {
 
 	void RefreshTiming()
 	{
+		LOGD("RefreshTiming");
 		if (DetectionSwitch) {
 			CycleTime = clock() - TemporaryCycleTime;//Interval 个轮回，结束计时，得出时间
 			for (int i = 0; i < ConsumeNumber; i++) {
@@ -514,6 +533,7 @@ namespace TOOL {
 
 	void MomentTiming(char* name, int* Index)
 	{
+		LOGD("MomentTiming");
 		if (Index[0] == NULL) {
 			Index[0] = MomentQuantity;
 			MomentConsume_name[MomentQuantity] = name;
@@ -527,6 +547,7 @@ namespace TOOL {
 
 	void MomentEnd()
 	{
+		LOGD("MomentEnd");
 		MomentConsume_Second[TemporaryConsumeName[TemporaryTimeQuantity]] = double(clock() - TemporaryConsumetime[TemporaryTimeQuantity]) / CLOCKS_PER_SEC;
 		TemporaryTimeQuantity--;//堆载指针出载
 	}

@@ -3,6 +3,7 @@
 #include "../../NetworkTCP/Client.h"
 #include "../../Opcode/OpcodeFunction.h"
 #include "../../Physics/DestroyMode.h"
+#include "../../DebugLog.h"
 
 namespace GAME
 {
@@ -15,6 +16,7 @@ namespace GAME
 
 	MazeMods::MazeMods(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
+		LOGD("MazeMods::MazeMods constructor");
 		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
@@ -122,6 +124,7 @@ namespace GAME
 
 	MazeMods::~MazeMods()
 	{
+		LOGD("MazeMods::~MazeMods destructor");
 		delete JPSPathfinding;
 		delete AStarPathfinding;
 		delete mAuxiliaryVision;

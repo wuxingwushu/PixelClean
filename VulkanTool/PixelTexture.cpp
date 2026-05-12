@@ -1,4 +1,5 @@
 #include "PixelTexture.h"
+#include "../DebugLog.h"
 
 namespace VulKan {
 	PixelTexture::PixelTexture(
@@ -10,6 +11,7 @@ namespace VulKan {
 		unsigned int ChannelsNumber,
 		Sampler* sampler
 	) {
+		LOGD("[PixelTexture] Constructor");
 		mDevice = device;
 		mCommandPool = commandPool;
 		mCommandBuffer = new CommandBuffer(mDevice, mCommandPool);

@@ -4,6 +4,7 @@
 #include "../../SoundEffect/SoundEffect.h"
 #include "../../BlockS/PixelS.h"
 #include "../../Tool/GenerateMaze.h"
+#include "../../DebugLog.h"
 
 
 namespace GAME {
@@ -33,7 +34,7 @@ namespace GAME {
 	FixedMaze::FixedMaze(SquarePhysics::SquarePhysics* squarePhysics):
 		wSquarePhysics(squarePhysics)
 	{
-
+		LOGD("FixedMaze::FixedMaze constructor");
 	}
 
 	void FixedMaze::AgainGenerateLabyrinth(int X, int Y) {
@@ -140,6 +141,7 @@ namespace GAME {
 
 	FixedMaze::~FixedMaze()
 	{
+		LOGD("FixedMaze::~FixedMaze destructor");
 		delete[] BlockPixelS;
 		delete mGridNavigation;
 

@@ -1,8 +1,10 @@
 #include "GIF.h"
+#include "../DebugLog.h"
 
 namespace GAME {
 	GIF::GIF(VulKan::Device* device, GifPipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* RenderPass, unsigned int FrameS)
 	{
+		LOGD("GIF::GIF() called");
 		mGifPipeline = pipeline;
 		mSwapChain = swapChain;
 		mDevice = device;
@@ -348,6 +350,7 @@ namespace GAME {
 
 	GifPipeline::~GifPipeline()
 	{
+		LOGD("GifPipeline::~GifPipeline() called");
 		delete mPipeline;
 	}
 }

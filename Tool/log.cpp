@@ -21,6 +21,7 @@
  */
 
 #include "log.h"
+#include "../DebugLog.h"
 
 #define MAX_CALLBACKS 32
 
@@ -92,17 +93,20 @@ static void unlock(void) {
 
 
 const char* log_level_string(int level) {
+  LOGD("log_level_string");
   return level_strings[level];
 }
 
 
 void log_set_lock(log_LockFn fn, void *udata) {
+  LOGD("log_set_lock");
   L.lock = fn;
   L.udata = udata;
 }
 
 
 void log_set_level(int level) {
+  LOGD("log_set_level");
   L.level = level;
 }
 
@@ -126,6 +130,7 @@ int log_add_callback(log_LogFn fn, void *udata, int level) {
 
 
 int log_add_fp(FILE *fp, int level) {
+  LOGD("log_add_fp");
   return log_add_callback(file_callback, fp, level);
 }
 
@@ -140,6 +145,7 @@ static void init_event(log_Event *ev, void *udata) {
 
 
 void log_log(int level, const char *file, int line, const char *fmt, ...) {
+    LOGD("log_log");
     log_Event ev = {};
     ev.fmt = fmt;
     ev.file = file;

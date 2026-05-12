@@ -1,8 +1,10 @@
 #include "sampler.h"
+#include "../DebugLog.h"
 
 namespace VulKan {
 
 	Sampler::Sampler(Device* device) {
+		LOGD("Sampler::Sampler()");
 		mDevice = device;
 
 		VkSamplerCreateInfo createInfo{};
@@ -31,6 +33,7 @@ namespace VulKan {
 		createInfo.maxLod = 0.0f;
 
 		if (vkCreateSampler(mDevice->getDevice(), &createInfo, nullptr, &mSampler) != VK_SUCCESS) {
+			LOGE("Sampler::Sampler: failed to create sampler");
 			throw std::runtime_error("Error: failed to create sampler");
 		}
 	}

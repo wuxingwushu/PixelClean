@@ -1,4 +1,5 @@
 #include "VisualEffect.h"
+#include "../DebugLog.h"
 
 const unsigned char VisualPixelS[1024]{
    77, 201, 46, 255, 77, 201, 46, 255, 77, 201, 46, 255, 77, 201, 46, 255,
@@ -72,6 +73,7 @@ namespace VulKan {
 	VisualEffect::VisualEffect(VulKan::Device* device)
 		:wDevice(device)
 	{
+		LOGD("[VisualEffect] Constructor");
 		const float Positions[] = {
 			-8.0f, -8.0f, 0.0f,
 			 8.0f, -8.0f, 0.0f,

@@ -9,6 +9,7 @@
 
 #include "../NetworkTCP/Server.h"
 #include "../NetworkTCP/Client.h"
+#include "../DebugLog.h"
 
 namespace GAME {
 	ImGuiInterFace::ImGuiInterFace(
@@ -38,6 +39,7 @@ namespace GAME {
 	}
 
 	void ImGuiInterFace::StructureImGuiInterFace() {
+		LOGI("ImGuiInterFace::StructureImGuiInterFace() called");
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -172,6 +174,8 @@ namespace GAME {
 		ImGui_ImplVulkan_NewFrame();
 #if defined(_WIN32)
 		ImGui_ImplGlfw_NewFrame();
+#elif defined(__ANDROID__)
+		ImGui_ImplAndroid_NewFrame();
 #endif
 		ImGui::NewFrame();
 		mShaderTexture->CalculationScreen(TOOL::FPStime);
@@ -666,7 +670,7 @@ namespace GAME {
 		ImGui::SetWindowFontScale(Global::FontZoomRatio * scale);
 
 		if (PromptBool && ImGui::BeginListBox(" ", OpBoxsize)) {
-			for (int n = 0; n < Vvector.size(); ++n)
+			for (int n = 0; n < (int)Vvector.size(); ++n)
 			{
 				if (ImGui::Selectable(Vvector[n]->c_str(), PromptSelected == n)) {
 					PromptSelected = n;
@@ -818,7 +822,7 @@ namespace GAME {
 			ImGui::Text(u8"帧时间 ");
 			ImGui::TableNextColumn();
 			ImGui::Text(u8"%f", TOOL::FPStime);
-			for (int i = 0; i < TOOL::mTimer->mTimerTimeS.size(); ++i)
+			for (int i = 0; i < (int)TOOL::mTimer->mTimerTimeS.size(); ++i)
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
@@ -841,7 +845,7 @@ namespace GAME {
 				ImGui::TableNextColumn();
 				ImGui::Text("%3.3f %%", TOOL::mTimer->mTimerTimeS[i].Percentage);
 			}
-			for (int i = 0; i < TOOL::mTimer->mMomentS.size(); ++i)
+			for (int i = 0; i < (int)TOOL::mTimer->mMomentS.size(); ++i)
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();

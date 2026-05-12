@@ -1,4 +1,5 @@
 #include "application.h"
+#include "../DebugLog.h"
 #include "NetworkTCP/Server.h"
 #include "NetworkTCP/Client.h"
 #include "Opcode/OpcodeFunction.h"
@@ -21,23 +22,29 @@ namespace GAME {
 	}
 
 	Application::Application() {
+		LOGD("Application constructed");
 	}
 
 	//总初始化
 	void Application::run() {
+		LOGI("Application::run started");
 		TOOL::mTimer->MomentTiming(u8"总初始化 ");
 		TOOL::mTimer->MomentTiming(u8"初始化窗口 ");
 		initWindow();//初始化窗口
 		TOOL::mTimer->MomentEnd();
+		LOGD("Window initialized");
 		TOOL::mTimer->MomentTiming(u8"初始化Vulkan ");
 		initVulkan();//初始化Vulkan
 		TOOL::mTimer->MomentEnd();
+		LOGD("Vulkan initialized");
 		TOOL::mTimer->MomentTiming(u8"初始化ImGui ");
 		initImGui();//初始化ImGui
 		TOOL::mTimer->MomentEnd();
+		LOGD("ImGui initialized");
 		TOOL::mTimer->MomentTiming(u8"初始化游戏 ");
 		initGame();//初始化游戏
 		TOOL::mTimer->MomentEnd();
+		LOGI("All initialization complete");
 		TOOL::mTimer->MomentEnd();
 		mainLoop();//开启主循环main
 		Global::Storage();
@@ -45,6 +52,7 @@ namespace GAME {
 	}
 
 	GameMods* Application::GetGame(GameModsEnum Game) {
+		LOGI("GetGame: mode=%d", (int)Game);
 		GameMods* GamePtr = nullptr;
 		switch (Game)
 		{
@@ -74,6 +82,7 @@ namespace GAME {
 	}
 
 	void Application::DeleteGame(GameModsEnum Game) {
+		LOGD("DeleteGame: mode=%d", (int)Game);
 		switch (Game)
 		{
 		case Maze_:
@@ -102,6 +111,7 @@ namespace GAME {
 
 	//窗口的初始化
 	void Application::initWindow() {
+		LOGD("initWindow: %dx%d fullscreen=%d", Global::mWidth, Global::mHeight, Global::FullScreen);
 		mWindow = new VulKan::Window(Global::mWidth, Global::mHeight, false, Global::FullScreen);
 		//mWindow->setApp(shared_from_this());//把 application 本体指针传给 Window ，便于调用 Camera
 		//设置摄像机   位置，朝向（后面两个 vec3 来决定）
@@ -114,6 +124,7 @@ namespace GAME {
 	//初始化Vulkan
 	//1 rendePass 加入pipeline 2 生成FrameBuffer
 	void Application::initVulkan() {
+		LOGD("initVulkan: validationLayer=%d", Global::VulKanValidationLayer);
 		mInstance = new VulKan::Instance(Global::VulKanValidationLayer);//实列化需要的VulKan功能APi
 		if (Global::VulKanValidationLayer && !mInstance->getEnableValidationLayer()) {//如果设备不支持，强制性修改设置信息，关闭验证层
 			Global::VulKanValidationLayer = false;
@@ -149,6 +160,7 @@ namespace GAME {
 	
 	void GAME::Application::initImGui()
 	{
+		LOGD("initImGui started");
 		//准备填写需要的信息
 		ImGui_ImplVulkan_InitInfo init_info = {};
 		init_info.ApiVersion = VK_API_VERSION_1_3;
@@ -181,6 +193,7 @@ namespace GAME {
 
 	//初始化游戏
 	void Application::initGame() {
+		LOGD("initGame started");
 		//生成Camera Buffer
 		mCameraVPMatricesBuffer.resize(mSwapChain->getImageCount());//每个GPU画布都要分配单独的 VkBuffer
 		for (auto i = 0; i < mCameraVPMatricesBuffer.size(); ++i) {
@@ -409,6 +422,7 @@ namespace GAME {
 	}
 
 	void Application::recreateSwapChain() {
+		LOGD("recreateSwapChain started");
 		TOOL::mTimer->MomentTiming(u8"窗口重构 ");
 
 		int width = 0, height = 0;
@@ -421,6 +435,9 @@ namespace GAME {
 #elif defined(__ANDROID__)
 		width = mWindow->getWidth();
 		height = mWindow->getHeight();
+		if (width == 0 || height == 0) {
+			return;
+		}
 #endif
 		vkDeviceWaitIdle(mDevice->getDevice());
 
@@ -453,6 +470,7 @@ namespace GAME {
 
 	//主循环main
 	void Application::mainLoop() {
+		LOGD("mainLoop started");
 		SoundEffect::SoundEffect::GetSoundEffect()->Play("夜に駆ける", MIDI, true, Global::MusicVolume);
 		while (!mWindow->shouldClose()) {//窗口被关闭结束循环
 			SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
@@ -700,6 +718,7 @@ namespace GAME {
 
 	//回收资源
 	void Application::cleanUp() {
+		LOGI("cleanUp started");
 		mInitialized = false;
 		if (!mDevice) return;
 		vkDeviceWaitIdle(mDevice->getDevice());//等待命令执行完毕
@@ -736,6 +755,7 @@ namespace GAME {
 
 #if defined(__ANDROID__)
 	void Application::initBeforeSurface() {
+		LOGD("initBeforeSurface started");
 		TOOL::mTimer->MomentTiming(u8"总初始化 ");
 		TOOL::mTimer->MomentTiming(u8"初始化窗口 ");
 		initWindow();
@@ -744,6 +764,7 @@ namespace GAME {
 	}
 
 	void Application::initAfterSurface(ANativeWindow* nativeWindow) {
+		LOGD("initAfterSurface: window=%p", nativeWindow);
 		mWindow->setAndroidWindow(nativeWindow);
 
 		TOOL::mTimer->MomentTiming(u8"初始化Vulkan ");
@@ -761,7 +782,11 @@ namespace GAME {
 	}
 
 	void Application::frameStep() {
-		if (!mInitialized) return;
+		if (!mInitialized) {
+			LOGW("frameStep: not initialized yet");
+			return;
+		}
+		if (mWindow->shouldClose()) return;
 		SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
 		PlayerForce = { 0,0 };
 		mWindow->pollEvents();

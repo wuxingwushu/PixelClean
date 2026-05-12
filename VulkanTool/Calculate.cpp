@@ -1,10 +1,12 @@
 #include "Calculate.h"
 #include "../GeneralCalculationGPU/GPU.h"
+#include "../DebugLog.h"
 
 namespace VulKan {
 
 	Calculate::Calculate(Device* Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp)
 	{
+		LOGD("[Calculate] Constructor");
 		wDevice = Device;
 
 		mCommandPool = new CommandPool(wDevice);
@@ -79,6 +81,7 @@ namespace VulKan {
 		uint32_t filelength;
 		uint32_t* code = readFile(filelength, Comp);
 		if (code == nullptr || filelength == 0) {
+			LOGE("[Calculate] Failed to read compute shader file: %s", Comp);
 			throw std::runtime_error("Error: failed to read compute shader file");
 		}
 

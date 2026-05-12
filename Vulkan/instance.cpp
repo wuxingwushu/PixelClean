@@ -1,11 +1,25 @@
 #include "instance.h"
 #include  "../Tool/Tool.h"
+#include <algorithm>
+#include <cstring>
 #if defined(_WIN32)
 #include <GLFW/glfw3.h>
 #elif defined(__ANDROID__)
 #include <vulkan/vulkan_android.h>
 #endif
 #include "../DebugLog.h"
+
+#ifndef VK_API_VERSION_1_1
+#define VK_API_VERSION_1_1 VK_MAKE_API_VERSION(0, 1, 1, 0)
+#endif
+
+#ifndef VK_API_VERSION_1_2
+#define VK_API_VERSION_1_2 VK_MAKE_API_VERSION(0, 1, 2, 0)
+#endif
+
+#ifndef VK_API_VERSION_1_3
+#define VK_API_VERSION_1_3 VK_MAKE_API_VERSION(0, 1, 3, 0)
+#endif
 
 namespace VulKan {
 	//validation layer 回调函数
@@ -16,11 +30,11 @@ namespace VulKan {
 		void* pUserData) {
 
 		if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-			std::cout << "ValidationLayer: " << pMessageData->pMessage << std::endl;
+			LOGW("ValidationLayer: %s", pMessageData->pMessage);
 			if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-				TOOL::VulKanError->warn(pMessageData->pMessage);
+				if (TOOL::VulKanError) TOOL::VulKanError->warn(pMessageData->pMessage);
 			}else if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-				TOOL::VulKanError->error(pMessageData->pMessage);
+				if (TOOL::VulKanError) TOOL::VulKanError->error(pMessageData->pMessage);
 			}
 		}
 		
@@ -56,47 +70,112 @@ namespace VulKan {
 
 	Instance::Instance(bool enableValidationLayer) {
 		LOGD("Instance::Instance(enableValidationLayer=%d)", enableValidationLayer);
-		mEnableValidationLayer = enableValidationLayer;//存储当前是否开启验证层
+		mEnableValidationLayer = enableValidationLayer;
 
-		if (mEnableValidationLayer) {//判断测试功能开启成功没
-			if (!checkValidationLayerSupport()) {
-				mEnableValidationLayer = false;
-				TOOL::VulKanError->error("Error: validation layer is not supported");
+		uint32_t instanceVersion = VK_API_VERSION_1_0;
+		PFN_vkEnumerateInstanceVersion pfnEnumerateInstanceVersion = 
+			reinterpret_cast<PFN_vkEnumerateInstanceVersion>(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceVersion"));
+		if (pfnEnumerateInstanceVersion) {
+			if (pfnEnumerateInstanceVersion(&instanceVersion) == VK_SUCCESS) {
+				LOGI("Vulkan instance version: %u.%u.%u",
+					VK_VERSION_MAJOR(instanceVersion),
+					VK_VERSION_MINOR(instanceVersion),
+					VK_VERSION_PATCH(instanceVersion));
 			}
 		}
 
-		//打印所有扩展名字
+		if (mEnableValidationLayer) {
+			if (!checkValidationLayerSupport()) {
+				mEnableValidationLayer = false;
+				LOGW("Validation layer is not supported, disabled");
+			}
+		}
+
 		printAvailableExtensions();
 
-		VkApplicationInfo appInfo = {};
-		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;//sType 成员变量来显式指定结构体类型
-		appInfo.pApplicationName = "vulkanLession";//名字
-		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);//版本
-		appInfo.pEngineName = "NO ENGINE";//是否有引擎，对引擎优化
-		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);//引擎版本
-		appInfo.apiVersion = VK_API_VERSION_1_3;//API 版本
+		std::vector<const char*> availableExtNames = getAvailableExtensionNames();
 
-		VkInstanceCreateInfo instCreateInfo = {}; 
-		instCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		instCreateInfo.pApplicationInfo = &appInfo;
+		extensions = getRequiredExtensions();
+		std::vector<const char*> filteredExtensions = filterExtensions(extensions, availableExtNames);
 
-		//扩展相关
-		extensions = getRequiredExtensions();//根据返回来的扩展
-		instCreateInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());//设置扩展字符串大小
-		instCreateInfo.ppEnabledExtensionNames = extensions.data();//传递需要开启的扩展
+		uint32_t apiVersions[] = {
+			(instanceVersion < VK_API_VERSION_1_3) ? instanceVersion : VK_API_VERSION_1_3,
+			VK_API_VERSION_1_2,
+			VK_API_VERSION_1_1,
+			VK_API_VERSION_1_0
+		};
 
-		//layer相关
-		if (mEnableValidationLayer) {//判断是否开启检测（主要是在写代码是测试用的）
-			instCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());//获取字符串长度
-			instCreateInfo.ppEnabledLayerNames = validationLayers.data();//开启对应测试功能
+		struct RetryConfig {
+			uint32_t apiVersion;
+			std::vector<const char*> exts;
+			bool useValidation;
+			const char* desc;
+		};
+
+		std::vector<RetryConfig> retryConfigs;
+
+		retryConfigs.push_back({apiVersions[0], extensions, mEnableValidationLayer, "detected API + all required extensions"});
+		retryConfigs.push_back({apiVersions[0], filteredExtensions, mEnableValidationLayer, "detected API + filtered extensions"});
+		retryConfigs.push_back({VK_API_VERSION_1_0, extensions, mEnableValidationLayer, "API 1.0 + all required extensions"});
+		retryConfigs.push_back({VK_API_VERSION_1_0, filteredExtensions, mEnableValidationLayer, "API 1.0 + filtered extensions"});
+		retryConfigs.push_back({VK_API_VERSION_1_0, filteredExtensions, false, "API 1.0 + filtered extensions + no validation"});
+
+		VkResult result = VK_ERROR_INITIALIZATION_FAILED;
+		bool created = false;
+
+		for (size_t attempt = 0; attempt < retryConfigs.size(); attempt++) {
+			const auto& cfg = retryConfigs[attempt];
+			LOGI("Attempt %zu: %s (apiVersion=%u.%u.%u, %u extensions, validation=%d)",
+				attempt, cfg.desc,
+				VK_VERSION_MAJOR(cfg.apiVersion),
+				VK_VERSION_MINOR(cfg.apiVersion),
+				VK_VERSION_PATCH(cfg.apiVersion),
+				(uint32_t)cfg.exts.size(), cfg.useValidation);
+
+			VkApplicationInfo appInfo = {};
+			appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+			appInfo.pApplicationName = "vulkanLession";
+			appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+			appInfo.pEngineName = "NO ENGINE";
+			appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+			appInfo.apiVersion = cfg.apiVersion;
+
+			VkInstanceCreateInfo instCreateInfo = {};
+			instCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+			instCreateInfo.pApplicationInfo = &appInfo;
+			instCreateInfo.enabledExtensionCount = static_cast<uint32_t>(cfg.exts.size());
+			instCreateInfo.ppEnabledExtensionNames = cfg.exts.data();
+
+			if (cfg.useValidation) {
+				instCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+				instCreateInfo.ppEnabledLayerNames = validationLayers.data();
+			}
+			else {
+				instCreateInfo.enabledLayerCount = 0;
+			}
+
+			result = vkCreateInstance(&instCreateInfo, nullptr, &mInstance);
+			if (result == VK_SUCCESS) {
+				LOGI("vkCreateInstance succeeded on attempt %zu: %s", attempt, cfg.desc);
+				extensions = cfg.exts;
+				if (!cfg.useValidation) {
+					mEnableValidationLayer = false;
+				}
+				created = true;
+				break;
+			}
+			else {
+				LOGW("Attempt %zu failed: VkResult = %d", attempt, (int)result);
+			}
 		}
-		else {
-			instCreateInfo.enabledLayerCount = 0;//不开启测试
-		}
 
-		if (vkCreateInstance(&instCreateInfo, nullptr, &mInstance) != VK_SUCCESS) {
-			LOGE("Instance::Instance: failed to create instance");
-			TOOL::VulKanError->error("Error:failed to create instance");
+		if (!created) {
+			LOGE("All vkCreateInstance attempts failed. Vulkan is not available on this device.");
+			LOGE("  VK_ERROR_INCOMPATIBLE_DRIVER=%d, VK_ERROR_EXTENSION_NOT_PRESENT=%d, "
+				 "VK_ERROR_LAYER_NOT_PRESENT=%d, VK_ERROR_INITIALIZATION_FAILED=%d",
+				(int)VK_ERROR_INCOMPATIBLE_DRIVER, (int)VK_ERROR_EXTENSION_NOT_PRESENT,
+				(int)VK_ERROR_LAYER_NOT_PRESENT, (int)VK_ERROR_INITIALIZATION_FAILED);
+			if (TOOL::VulKanError) TOOL::VulKanError->error("Error:failed to create instance, Vulkan not available");
 			throw std::runtime_error("Error:failed to create instance");
 		}
 
@@ -115,16 +194,65 @@ namespace VulKan {
 
 	void Instance::printAvailableExtensions() {
 		uint32_t extensionCount = 0;
-		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);//获取可以扩展的数量
-
-		std::vector<VkExtensionProperties> extensions(extensionCount);//创建储存扩展名的数组
-		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());//获取扩展名数组
-
-		std::cout << "Available extensions:" << std::endl;
-
-		for (const auto& extension : extensions) {//遍历数组
-			std::cout << extension.extensionName << std::endl;//打印所以扩展名
+		VkResult enumResult = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+		if (enumResult != VK_SUCCESS) {
+			LOGE("printAvailableExtensions: vkEnumerateInstanceExtensionProperties failed, VkResult=%d", (int)enumResult);
+			return;
 		}
+
+		std::vector<VkExtensionProperties> extensions(extensionCount);
+		enumResult = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+		if (enumResult != VK_SUCCESS) {
+			LOGE("printAvailableExtensions: vkEnumerateInstanceExtensionProperties(2nd call) failed, VkResult=%d", (int)enumResult);
+			return;
+		}
+
+		LOGI("Available instance extensions (%u):", extensionCount);
+		for (uint32_t i = 0; i < extensionCount; i++) {
+			LOGI("  [%u] %s (spec %u.%u.%u)", i, extensions[i].extensionName,
+				VK_VERSION_MAJOR(extensions[i].specVersion),
+				VK_VERSION_MINOR(extensions[i].specVersion),
+				VK_VERSION_PATCH(extensions[i].specVersion));
+		}
+	}
+
+	std::vector<const char*> Instance::getAvailableExtensionNames() {
+		std::vector<const char*> names;
+		uint32_t extensionCount = 0;
+		VkResult enumResult = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+		if (enumResult != VK_SUCCESS || extensionCount == 0) {
+			return names;
+		}
+		std::vector<VkExtensionProperties> props(extensionCount);
+		enumResult = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, props.data());
+		if (enumResult != VK_SUCCESS) {
+			return names;
+		}
+		names.reserve(extensionCount);
+		for (uint32_t i = 0; i < extensionCount; i++) {
+			names.push_back(props[i].extensionName);
+		}
+		return names;
+	}
+
+	std::vector<const char*> Instance::filterExtensions(const std::vector<const char*>& required, const std::vector<const char*>& available) {
+		std::vector<const char*> filtered;
+		for (const auto& req : required) {
+			bool found = false;
+			for (const auto& avail : available) {
+				if (strcmp(req, avail) == 0) {
+					found = true;
+					break;
+				}
+			}
+			if (found) {
+				filtered.push_back(req);
+			}
+			else {
+				LOGW("Extension '%s' not available, skipping", req);
+			}
+		}
+		return filtered;
 	}
 
 	std::vector<const char*> Instance::getRequiredExtensions() {

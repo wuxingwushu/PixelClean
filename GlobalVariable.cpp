@@ -50,23 +50,48 @@ namespace Global {
 
 	/***************************	INI	***************************/
 	void Read() {
-		inih::INIReader Ini{ IniPath_ini };
-		mWidth = Ini.Get<unsigned int>("Window", "Width");
-		mHeight = Ini.Get<unsigned int>("Window", "Height");
-		ServerPort = Ini.Get<int>("ServerTCP", "Port");
-		ClientPort = Ini.Get<int>("ClientTCP", "Port");
-		ClientIP = Ini.Get<std::string>("ClientTCP", "IP");
-		VulKanValidationLayer = Ini.Get<bool>("Set", "VulKanValidationLayer");
-		Monitor = Ini.Get<bool>("Set", "Monitor");
-		MonitorCompatibleMode = Ini.Get<bool>("Set", "MonitorCompatibleMode");
-		FullScreen = Ini.Get<bool>("Set", "FullScreen");
-		MusicVolume = Ini.Get<float>("Set", "MusicVolume");
-		SoundEffectsVolume = Ini.Get<float>("Set", "SoundEffectsVolume");
-		FontZoomRatio = Ini.Get<float>("Set", "FontZoomRatio");
-		KeyW = Ini.Get<unsigned char>("Key", "KeyW");
-		KeyS = Ini.Get<unsigned char>("Key", "KeyS");
-		KeyA = Ini.Get<unsigned char>("Key", "KeyA");
-		KeyD = Ini.Get<unsigned char>("Key", "KeyD");
+		LOGI("Global::Read() starting");
+		try {
+			inih::INIReader Ini{ IniPath_ini };
+			
+			// 提供默认值，防止 Ini 读取失败导致崩溃
+			mWidth = Ini.Get<unsigned int>("Window", "Width", 800);
+			mHeight = Ini.Get<unsigned int>("Window", "Height", 600);
+			ServerPort = Ini.Get<int>("ServerTCP", "Port", 8888);
+			ClientPort = Ini.Get<int>("ClientTCP", "Port", 8888);
+			ClientIP = Ini.Get<std::string>("ClientTCP", "IP", "127.0.0.1");
+			VulKanValidationLayer = Ini.Get<bool>("Set", "VulKanValidationLayer", false);
+			Monitor = Ini.Get<bool>("Set", "Monitor", false);
+			MonitorCompatibleMode = Ini.Get<bool>("Set", "MonitorCompatibleMode", true);
+			FullScreen = Ini.Get<bool>("Set", "FullScreen", false);
+			MusicVolume = Ini.Get<float>("Set", "MusicVolume", 0.5f);
+			SoundEffectsVolume = Ini.Get<float>("Set", "SoundEffectsVolume", 0.5f);
+			FontZoomRatio = Ini.Get<float>("Set", "FontZoomRatio", 1.0f);
+			KeyW = Ini.Get<unsigned char>("Key", "KeyW", 'W');
+			KeyS = Ini.Get<unsigned char>("Key", "KeyS", 'S');
+			KeyA = Ini.Get<unsigned char>("Key", "KeyA", 'A');
+			KeyD = Ini.Get<unsigned char>("Key", "KeyD", 'D');
+			LOGI("Global::Read() completed successfully");
+		} catch (const std::exception& e) {
+			LOGE("Global::Read() failed: %s", e.what());
+			// 设置安全默认值
+			mWidth = 800;
+			mHeight = 600;
+			ServerPort = 8888;
+			ClientPort = 8888;
+			ClientIP = "127.0.0.1";
+			VulKanValidationLayer = false;
+			Monitor = false;
+			MonitorCompatibleMode = true;
+			FullScreen = false;
+			MusicVolume = 0.5f;
+			SoundEffectsVolume = 0.5f;
+			FontZoomRatio = 1.0f;
+			KeyW = 'W';
+			KeyS = 'S';
+			KeyA = 'A';
+			KeyD = 'D';
+		}
 	}
 
 	void Storage() {

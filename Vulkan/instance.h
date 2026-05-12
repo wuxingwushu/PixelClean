@@ -45,8 +45,9 @@ namespace VulKan {
 		
 
 	private:
-		//打印所以扩展名
 		void printAvailableExtensions();
+		std::vector<const char*> getAvailableExtensionNames();
+		std::vector<const char*> filterExtensions(const std::vector<const char*>& required, const std::vector<const char*>& available);
 
 	private:
 		VkInstance mInstance{ VK_NULL_HANDLE };//实列指针

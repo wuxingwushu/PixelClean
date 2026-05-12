@@ -12,6 +12,20 @@
 #include <cmath>
 #include <mutex>
 #include <atomic>
+#include <chrono>
+#include <thread>
+
+extern "C" JNIEXPORT jint JNICALL
+JNI_OnLoad(JavaVM* vm, void* reserved) {
+    LOGI("========== PixelClean JNI_OnLoad called ==========");
+    JNIEnv* env;
+    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        LOGE("Failed to get JNIEnv");
+        return -1;
+    }
+    LOGI("PixelClean JNI_OnLoad successful");
+    return JNI_VERSION_1_6;
+}
 
 enum AndroidKeyCode {
     AKC_ESC           = 0,
@@ -71,6 +85,8 @@ Java_com_pixelclean_MainActivity_nativeInitBeforeSurface(
     JNIEnv* env,
     jobject /* this */) {
 
+    LOGD("========== nativeInitBeforeSurface called ==========");
+    
     if (gInitialized) {
         LOGD("nativeInitBeforeSurface: already initialized");
         return;
@@ -81,19 +97,44 @@ Java_com_pixelclean_MainActivity_nativeInitBeforeSurface(
         return;
     }
 
-    LOGD("PixelClean Android native init starting...");
+    LOGI("PixelClean Android native init starting...");
 
-    Global::Read();
-    TOOL::InitThreadPool();
-    TOOL::InitPerlinNoise();
-    TOOL::InitSpdLog();
-    TOOL::InitTimer();
+    try {
+        LOGD("Calling Global::Read()...");
+        Global::Read();
+        LOGD("Global::Read() completed");
 
-    gApplication = new GAME::Application();
-    gApplication->initBeforeSurface();
+        LOGD("Calling TOOL::InitThreadPool()...");
+        TOOL::InitThreadPool();
+        LOGD("TOOL::InitThreadPool() completed");
 
-    gInitialized = true;
-    LOGD("PixelClean Android native init complete (before surface)");
+        LOGD("Calling TOOL::InitPerlinNoise()...");
+        TOOL::InitPerlinNoise();
+        LOGD("TOOL::InitPerlinNoise() completed");
+
+        LOGD("Calling TOOL::InitSpdLog()...");
+        TOOL::InitSpdLog();
+        LOGD("TOOL::InitSpdLog() completed");
+
+        LOGD("Calling TOOL::InitTimer()...");
+        TOOL::InitTimer();
+        LOGD("TOOL::InitTimer() completed");
+
+        LOGD("Creating Application instance...");
+        gApplication = new GAME::Application();
+        LOGD("Application instance created");
+
+        LOGD("Calling gApplication->initBeforeSurface()...");
+        gApplication->initBeforeSurface();
+        LOGD("initBeforeSurface() completed");
+
+        gInitialized = true;
+        LOGI("PixelClean Android native init complete (before surface)");
+    } catch (const std::exception& e) {
+        LOGE("nativeInitBeforeSurface exception: %s", e.what());
+    } catch (...) {
+        LOGE("nativeInitBeforeSurface unknown exception");
+    }
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -136,9 +177,23 @@ Java_com_pixelclean_MainActivity_nativeInitSurface(
         gSurfaceInitialized = true;
     } catch (const std::exception& e) {
         LOGE("initAfterSurface failed: %s", e.what());
-        TOOL::Error->error(e.what());
+        if (TOOL::Error) TOOL::Error->error(e.what());
         releaseNativeWindow();
         gSurfaceInitialized = false;
+
+        gApplication->cleanUp();
+        delete gApplication;
+        gApplication = nullptr;
+        gInitialized = false;
+    } catch (...) {
+        LOGE("initAfterSurface failed: unknown exception");
+        releaseNativeWindow();
+        gSurfaceInitialized = false;
+
+        gApplication->cleanUp();
+        delete gApplication;
+        gApplication = nullptr;
+        gInitialized = false;
     }
 
     LOGD("PixelClean Android surface init complete");
@@ -153,11 +208,16 @@ Java_com_pixelclean_MainActivity_nativeRenderFrame(
         return;
     }
 
+    if (!gApplication->isInitialized()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        return;
+    }
+
     try {
         gApplication->frameStep();
     } catch (const std::exception& e) {
         LOGE("frameStep failed: %s", e.what());
-        TOOL::Error->error(e.what());
+        if (TOOL::Error) TOOL::Error->error(e.what());
     }
 }
 

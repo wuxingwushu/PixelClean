@@ -35,8 +35,7 @@ extern "C" int pixelclean_main(int argc, char** argv) {
 	}
 	catch (const std::exception& e) {
 		LOGE("main exception: %s", e.what());
-		std::cout << "main: " << e.what() << std::endl;
-		TOOL::Error->error(e.what());
+		if (TOOL::Error) TOOL::Error->error(e.what());
 	}
 	catch (...) {
 		LOGE("main unknown exception");

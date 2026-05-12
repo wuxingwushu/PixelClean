@@ -96,7 +96,7 @@ namespace GAME {
 		VulKan::Sampler* sampler
 	)
 	{
-		LOGI("ParticleSystem::initUniformManager() called");
+		LOGI("ParticleSystem::initUniformManager() called, mNumber=%d, frameCount=%d", mNumber, frameCount);
 		ThreadS = frameCount;
 		mThreadCommandPoolS = new VulKan::CommandPool * [ThreadS];
 		mThreadCommandBufferS = new VulKan::CommandBuffer * [ThreadS];
@@ -105,6 +105,7 @@ namespace GAME {
 			mThreadCommandBufferS[i] = new VulKan::CommandBuffer(device, mThreadCommandPoolS[i], true);
 		}
 
+		LOGI("ParticleSystem: creating %d PixelTextures + UniformParams...", mNumber);
 		ObjectUniform mUniform;
 		for (int x = 0; x < mNumber; ++x)
 		{
@@ -146,20 +147,53 @@ namespace GAME {
 			mUniformParams[x].push_back(textureParam);
 
 			mParticle->add(Particle{ PixelTextureS[x], &objectParam->mBuffers });
+
+			if (x % 100 == 0) {
+				LOGI("ParticleSystem: PixelTexture+UniformParams progress: %d/%d", x, mNumber);
+			}
 		}
+		LOGI("ParticleSystem: all PixelTextures + UniformParams created");
 
-
-		//各种类型申请多少个
+		LOGI("ParticleSystem: creating DescriptorPool...");
 		mDescriptorPool = new VulKan::DescriptorPool(device);
 		mDescriptorPool->build(mUniformParams[0], frameCount, (mNumber));
+		LOGI("ParticleSystem: DescriptorPool created, now creating %d DescriptorSets...", mNumber);
 		for (size_t x = 0; x < mNumber; ++x)
 		{
-			//将申请的各种类型按照Layout绑定起来
 			mDescriptorSet[x] = new VulKan::DescriptorSet(device, mUniformParams[x], mDescriptorSetLayout, mDescriptorPool, frameCount);
+			if (x % 100 == 0) {
+				LOGI("ParticleSystem: DescriptorSet progress: %zu/%d", x, mNumber);
+			}
 		}
+		LOGI("ParticleSystem: all DescriptorSets created");
 	}
 
 	void ParticleSystem::ThreadUpdateCommandBuffer() {
+#if defined(__ANDROID__)
+		LOGI("ParticleSystem::ThreadUpdateCommandBuffer() - Android synchronous path, ThreadS=%d, mNumber=%d", ThreadS, mNumber);
+		for (unsigned int frame = 0; frame < ThreadS; ++frame) {
+			LOGI("ParticleSystem: recording command buffer for frame %u/%u", frame, ThreadS);
+			unsigned int mFrameBufferCount = frame;
+			VulKan::CommandBuffer* commandbuffer = mThreadCommandBufferS[mFrameBufferCount];
+
+			VkCommandBufferInheritanceInfo InheritanceInfo{};
+			InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+			InheritanceInfo.renderPass = mRenderPass->getRenderPass();
+			InheritanceInfo.framebuffer = mSwapChain->getFrameBuffer(frame);
+
+			commandbuffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);
+			commandbuffer->bindGraphicPipeline(mPipeline->getPipeline());
+			commandbuffer->bindVertexBuffer(getVertexBuffers());
+			commandbuffer->bindIndexBuffer(getIndexBuffer()->getBuffer());
+			for (int i = 0; i < mNumber; ++i) {
+				commandbuffer->bindDescriptorSet(mPipeline->getLayout(), mDescriptorSet[i]->getDescriptorSet(frame));
+				commandbuffer->drawIndex(getIndexCount());
+			}
+			commandbuffer->end();
+			LOGI("ParticleSystem: frame %u command buffer recorded (%d draw calls)", frame, mNumber);
+		}
+		LOGI("ParticleSystem::ThreadUpdateCommandBuffer() - Android synchronous path DONE");
+#else
 		std::vector<std::future<void>> pool;
 		int UpdateNumber = (mNumber) / (ThreadS / 3);
 		int UpdateNumber_yu = (mNumber) % (ThreadS / 3);
@@ -171,9 +205,10 @@ namespace GAME {
 				pool.push_back(TOOL::mThreadPool->enqueue(&ParticleSystem::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + UpdateNumber_yu), UpdateNumber));
 			}
 		}
-		for (int i = 0; i < (ThreadS); ++i) {
+		for (size_t i = 0; i < pool.size(); ++i) {
 			pool[i].wait();
 		}
+#endif
 	}
 
 	void ParticleSystem::ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count)

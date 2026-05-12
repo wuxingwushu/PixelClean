@@ -5,20 +5,20 @@
     #if defined(__ANDROID__)
         #include <android/log.h>
         #define PC_LOG_TAG "PixelClean"
-        #define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, PC_LOG_TAG, __VA_ARGS__)
-        #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG,   PC_LOG_TAG, __VA_ARGS__)
-        #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,    PC_LOG_TAG, __VA_ARGS__)
-        #define LOGW(...) __android_log_print(ANDROID_LOG_WARN,    PC_LOG_TAG, __VA_ARGS__)
-        #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR,   PC_LOG_TAG, __VA_ARGS__)
-        #define LOGF(...) __android_log_print(ANDROID_LOG_FATAL,   PC_LOG_TAG, __VA_ARGS__)
+        #define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, PC_LOG_TAG, ##__VA_ARGS__)
+        #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG,   PC_LOG_TAG, ##__VA_ARGS__)
+        #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,    PC_LOG_TAG, ##__VA_ARGS__)
+        #define LOGW(...) __android_log_print(ANDROID_LOG_WARN,    PC_LOG_TAG, ##__VA_ARGS__)
+        #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR,   PC_LOG_TAG, ##__VA_ARGS__)
+        #define LOGF(...) __android_log_print(ANDROID_LOG_FATAL,   PC_LOG_TAG, ##__VA_ARGS__)
     #elif defined(_WIN32)
         #include <cstdio>
-        #define LOGV(...) printf("[VERBOSE] " __VA_ARGS__); printf("\n")
-        #define LOGD(...) printf("[DEBUG] "   __VA_ARGS__); printf("\n")
-        #define LOGI(...) printf("[INFO] "    __VA_ARGS__); printf("\n")
-        #define LOGW(...) printf("[WARN] "    __VA_ARGS__); printf("\n")
-        #define LOGE(...) fprintf(stderr, "[ERROR] " __VA_ARGS__); fprintf(stderr, "\n")
-        #define LOGF(...) fprintf(stderr, "[FATAL] " __VA_ARGS__); fprintf(stderr, "\n")
+        #define LOGV(...) do { printf("[VERBOSE] "); printf(__VA_ARGS__); printf("\n"); } while(0)
+        #define LOGD(...) do { printf("[DEBUG] ");   printf(__VA_ARGS__); printf("\n"); } while(0)
+        #define LOGI(...) do { printf("[INFO] ");    printf(__VA_ARGS__); printf("\n"); } while(0)
+        #define LOGW(...) do { printf("[WARN] ");    printf(__VA_ARGS__); printf("\n"); } while(0)
+        #define LOGE(...) do { fprintf(stderr, "[ERROR] "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)
+        #define LOGF(...) do { fprintf(stderr, "[FATAL] "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)
     #endif
 
 #else

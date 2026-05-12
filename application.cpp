@@ -8,6 +8,10 @@
 #include <imgui/backends/imgui_impl_android.h>
 #endif
 
+#ifndef VK_API_VERSION_1_1
+#define VK_API_VERSION_1_1 VK_MAKE_API_VERSION(0, 1, 1, 0)
+#endif
+
 
 namespace GAME {
 
@@ -163,7 +167,7 @@ namespace GAME {
 		LOGD("initImGui started");
 		//准备填写需要的信息
 		ImGui_ImplVulkan_InitInfo init_info = {};
-		init_info.ApiVersion = VK_API_VERSION_1_3;
+		init_info.ApiVersion = VK_API_VERSION_1_1;
 		init_info.Instance = mInstance->getInstance();
 		init_info.PhysicalDevice = mDevice->getPhysicalDevice();
 		init_info.Device = mDevice->getDevice();
@@ -193,18 +197,23 @@ namespace GAME {
 
 	//初始化游戏
 	void Application::initGame() {
-		LOGD("initGame started");
-		//生成Camera Buffer
-		mCameraVPMatricesBuffer.resize(mSwapChain->getImageCount());//每个GPU画布都要分配单独的 VkBuffer
+		LOGI("initGame: step 1 - creating Camera Buffers");
+		mCameraVPMatricesBuffer.resize(mSwapChain->getImageCount());
 		for (auto i = 0; i < mCameraVPMatricesBuffer.size(); ++i) {
 			mCameraVPMatricesBuffer[i] = VulKan::Buffer::createUniformBuffer(mDevice, sizeof(VPMatrices), nullptr);
 			VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[i]->getupdateBufferByMap();
-			mVPMatrices->mProjectionMatrix = mCamera->getProjectMatrix();//获取ProjectionMatrix数据
+			mVPMatrices->mProjectionMatrix = mCamera->getProjectMatrix();
 			mCameraVPMatricesBuffer[i]->endupdateBufferByMap();
 		}
 
-		//创建粒子系统
-		mParticleSystem = new ParticleSystem(mDevice, 1000);
+		LOGI("initGame: step 2 - creating ParticleSystem");
+#if defined(__ANDROID__)
+		const int particleCount = 100;
+#else
+		const int particleCount = 1000;
+#endif
+		LOGI("initGame: step 2 - particleCount=%d (reduced on Android for mobile GPU compatibility)", particleCount);
+		mParticleSystem = new ParticleSystem(mDevice, particleCount);
 		mParticleSystem->initUniformManager(
 			mDevice,
 			mCommandPool,
@@ -214,25 +223,28 @@ namespace GAME {
 			mSampler
 		);
 		mParticleSystem->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
+		LOGI("initGame: step 2 - ParticleSystem done");
 
-		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleSystem, 1000);
+		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleSystem, particleCount);
 
-
-		//创建物理系统
+		LOGI("initGame: step 3 - creating SquarePhysics");
 		mSquarePhysics = new SquarePhysics::SquarePhysics(400, 400);
 
-		//创建武器系统
-		mArms = new Arms(mParticleSystem, 1000);
+		LOGI("initGame: step 4 - creating Arms");
+		mArms = new Arms(mParticleSystem, particleCount);
 		mArms->SetSpecialEffect(mParticlesSpecialEffect);
-		mArms->SetSquarePhysics(mSquarePhysics);//武器系统导入物理系统
+		mArms->SetSquarePhysics(mSquarePhysics);
 
-		//GIF库
+		LOGI("initGame: step 5 - creating GIF TextureLibrary");
 		mGIFTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Resource/GifTexture/");
-		//素材库
-		mTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Resource/Material/", false);
+		LOGI("initGame: step 5 - GIF TextureLibrary done");
 
+		LOGI("initGame: step 6 - creating Material TextureLibrary");
+		mTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Resource/Material/", false);
+		LOGI("initGame: step 6 - Material TextureLibrary done");
 
 		Opcode::OpApplication = this;
+		LOGI("initGame: ALL DONE");
 	}
 
 	void Application::createRenderPass() {
@@ -621,11 +633,8 @@ namespace GAME {
 	}
 
 	void Application::Render() {
-		//等待当前要提交的CommandBuffer执行完毕
 		mFences[mCurrentFrame]->block();
 		
-
-		//获取交换链当中的下一帧
 		uint32_t imageIndex{ 0 };
 		VkResult result = vkAcquireNextImageKHR(
 			mDevice->getDevice(),
@@ -634,6 +643,12 @@ namespace GAME {
 			mImageAvailableSemaphores[mCurrentFrame]->getSemaphore(),
 			VK_NULL_HANDLE,
 			&imageIndex);
+
+		static int renderLogCount = 0;
+		if (renderLogCount < 5) {
+			LOGI("Render: vkAcquireNextImageKHR result=%d, imageIndex=%u", (int)result, imageIndex);
+			renderLogCount++;
+		}
 
 	
 		//窗体发生了尺寸变化 （窗口大小改变了话，指令要全部重新录制）
@@ -720,37 +735,66 @@ namespace GAME {
 	void Application::cleanUp() {
 		LOGI("cleanUp started");
 		mInitialized = false;
-		if (!mDevice) return;
-		vkDeviceWaitIdle(mDevice->getDevice());//等待命令执行完毕
 
-		delete mParticleSystem;
-		delete mSquarePhysics;
-		delete mParticlesSpecialEffect;
-		delete mArms;
-		
-
-		for (int i = 0; i < mSwapChain->getImageCount(); ++i) {
-			delete mCameraVPMatricesBuffer[i];
-			delete mCommandBuffers[i];//必须先销毁 CommandBuffer ，才可以销毁绑定的 CommandPool。
-			delete mImageAvailableSemaphores[i];
-			delete mRenderFinishedSemaphores[i];
-			delete mFences[i];
+		if (mDevice) {
+			vkDeviceWaitIdle(mDevice->getDevice());
 		}
 
+		delete mParticleSystem;
+		mParticleSystem = nullptr;
+		delete mSquarePhysics;
+		mSquarePhysics = nullptr;
+		delete mParticlesSpecialEffect;
+		mParticlesSpecialEffect = nullptr;
+		delete mArms;
+		mArms = nullptr;
+
+		if (mSwapChain) {
+			for (int i = 0; i < mSwapChain->getImageCount(); ++i) {
+				delete mCameraVPMatricesBuffer[i];
+				delete mCommandBuffers[i];
+				delete mImageAvailableSemaphores[i];
+				delete mRenderFinishedSemaphores[i];
+				delete mFences[i];
+			}
+		}
+		mCameraVPMatricesBuffer.clear();
+		mCommandBuffers.clear();
+		mImageAvailableSemaphores.clear();
+		mRenderFinishedSemaphores.clear();
+		mFences.clear();
+
 		delete mImGuuiCommandBuffers;
+		mImGuuiCommandBuffers = nullptr;
 		delete mImGuuiCommandPool;
+		mImGuuiCommandPool = nullptr;
 		delete mImGuuiFence;
+		mImGuuiFence = nullptr;
 		delete mImGuuiRenderPass;
+		mImGuuiRenderPass = nullptr;
 		delete InterFace;
+		InterFace = nullptr;
 
 		delete mSampler;
+		mSampler = nullptr;
 		delete mPipelineS;
+		mPipelineS = nullptr;
 		delete mRenderPass;
+		mRenderPass = nullptr;
 		delete mSwapChain;
+		mSwapChain = nullptr;
 		delete mCommandPool;
+		mCommandPool = nullptr;
 		delete mDevice;
+		mDevice = nullptr;
 		delete mWindowSurface;
+		mWindowSurface = nullptr;
 		delete mInstance;
+		mInstance = nullptr;
+		delete mCamera;
+		mCamera = nullptr;
+		delete mWindow;
+		mWindow = nullptr;
 	}
 
 #if defined(__ANDROID__)
@@ -764,29 +808,41 @@ namespace GAME {
 	}
 
 	void Application::initAfterSurface(ANativeWindow* nativeWindow) {
-		LOGD("initAfterSurface: window=%p", nativeWindow);
+		LOGI("initAfterSurface: START (window=%p)", nativeWindow);
 		mWindow->setAndroidWindow(nativeWindow);
 
 		TOOL::mTimer->MomentTiming(u8"初始化Vulkan ");
 		initVulkan();
 		TOOL::mTimer->MomentEnd();
+		LOGI("initAfterSurface: initVulkan done");
+
 		TOOL::mTimer->MomentTiming(u8"初始化ImGui ");
 		initImGui();
 		TOOL::mTimer->MomentEnd();
+		LOGI("initAfterSurface: initImGui done");
+
 		TOOL::mTimer->MomentTiming(u8"初始化游戏 ");
 		initGame();
 		TOOL::mTimer->MomentEnd();
+		LOGI("initAfterSurface: initGame done");
 
 		mInitialized = true;
+		LOGI("initAfterSurface: mInitialized = true, initialization COMPLETE!");
 		SoundEffect::SoundEffect::GetSoundEffect()->Play("夜に駆ける", MIDI, true, Global::MusicVolume);
 	}
 
 	void Application::frameStep() {
 		if (!mInitialized) {
-			LOGW("frameStep: not initialized yet");
 			return;
 		}
 		if (mWindow->shouldClose()) return;
+
+		static bool firstFrame = true;
+		if (firstFrame) {
+			LOGI("frameStep: first frame rendering");
+			firstFrame = false;
+		}
+
 		SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
 		PlayerForce = { 0,0 };
 		mWindow->pollEvents();

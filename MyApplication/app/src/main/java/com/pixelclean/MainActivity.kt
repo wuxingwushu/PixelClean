@@ -225,9 +225,18 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
         if (holder.surface.isValid) {
-            nativeInitSurface(holder.surface)
-            surfaceInitialized = true
-            startRenderThread()
+            val surface = holder.surface
+            Thread({
+                Log.d(TAG, "initSurface thread started")
+                try {
+                    nativeInitSurface(surface)
+                    surfaceInitialized = true
+                    Log.d(TAG, "initSurface thread completed, starting render thread")
+                    startRenderThread()
+                } catch (e: Exception) {
+                    Log.e(TAG, "initSurface thread failed", e)
+                }
+            }, "PixelClean-InitSurface").start()
         } else {
             Log.w(TAG, "surfaceCreated: surface is not valid, deferring init")
         }

@@ -51,40 +51,42 @@ namespace TOOL {
 
 	void InitSpdLog() {
 		LOGI("InitSpdLog");
-		if (Error == nullptr) {
-			auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-			console_sink->set_level(spdlog::level::warn);//设置警报等级
-			console_sink->set_pattern("[Error] [%^%l%$] %v");//打印显示
+		try {
+			if (Error == nullptr) {
+				std::error_code ec;
+				std::filesystem::create_directories("Logs", ec);
 
-			auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("Logs/Error.txt", false);//日志文件路径，是否覆写
-			file_sink->set_level(spdlog::level::trace);//设置警报等级
+				auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("Logs/Error.txt", false);
+				file_sink->set_level(spdlog::level::trace);
 
-			Error = new spdlog::logger("Error", { console_sink, file_sink }); // 日志保存
-			Error->set_level(spdlog::level::debug);//设置日志警报保存等级
-		}
-		
-		if (VulKanError == nullptr) {
-			auto VulKanconsole_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-			VulKanconsole_sink->set_level(spdlog::level::warn);//设置警报等级
-			VulKanconsole_sink->set_pattern("[VulKanError] [%^%l%$] %v");//打印显示
+				Error = new spdlog::logger("Error", { file_sink });
+				Error->set_level(spdlog::level::debug);
+			}
+			
+			if (VulKanError == nullptr) {
+				std::error_code ec;
+				std::filesystem::create_directories("Logs", ec);
 
-			auto VulKanfile_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("Logs/VulKanError.txt", false);//日志文件路径，是否覆写
-			VulKanfile_sink->set_level(spdlog::level::trace);//设置警报等级
+				auto VulKanfile_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("Logs/VulKanError.txt", false);
+				VulKanfile_sink->set_level(spdlog::level::trace);
 
-			VulKanError = new spdlog::logger("VulKanError", { VulKanconsole_sink, VulKanfile_sink }); // 日志保存
-			VulKanError->set_level(spdlog::level::debug);//设置日志警报保存等级
+				VulKanError = new spdlog::logger("VulKanError", { VulKanfile_sink });
+				VulKanError->set_level(spdlog::level::debug);
+			}
+		} catch (const std::exception& e) {
+			LOGE("InitSpdLog failed: %s", e.what());
 		}
 	}
 
 	void DeleteSpdLog() {
 		LOGI("DeleteSpdLog");
 		if (Error != nullptr) {
-			Error = nullptr;
 			delete Error;
+			Error = nullptr;
 		}
 		if (VulKanError != nullptr) {
-			VulKanError = nullptr;
 			delete VulKanError;
+			VulKanError = nullptr;
 		}
 	}
 #endif

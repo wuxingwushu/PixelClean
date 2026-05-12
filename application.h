@@ -31,6 +31,7 @@ namespace GAME {
 		void initBeforeSurface();
 		void initAfterSurface(ANativeWindow* nativeWindow);
 		void frameStep();
+		bool isInitialized() const { return mInitialized; }
 #endif
 
 		//获取对于游戏

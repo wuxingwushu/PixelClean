@@ -27,14 +27,16 @@ namespace VulKan {
 		mDescriptorSets.resize(frameCount);
 		if (wMutex != nullptr) {
 			std::lock_guard<std::mutex> lock(*wMutex);
-			if (vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data()) != VK_SUCCESS) {
-				LOGE("DescriptorSet::DescriptorSet: failed to allocate descriptor sets (mutex)");
+			VkResult result = vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data());
+			if (result != VK_SUCCESS) {
+				LOGE("DescriptorSet::DescriptorSet: failed to allocate descriptor sets (mutex), VkResult=%d", result);
 				throw std::runtime_error("Error: failed to allocate descriptor sets");
 			}
 		}
 		else {
-			if (vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data()) != VK_SUCCESS) {
-				LOGE("DescriptorSet::DescriptorSet: failed to allocate descriptor sets");
+			VkResult result = vkAllocateDescriptorSets(mDevice->getDevice(), &allocInfo, mDescriptorSets.data());
+			if (result != VK_SUCCESS) {
+				LOGE("DescriptorSet::DescriptorSet: failed to allocate descriptor sets, VkResult=%d", result);
 				throw std::runtime_error("Error: failed to allocate descriptor sets");
 			}
 		}

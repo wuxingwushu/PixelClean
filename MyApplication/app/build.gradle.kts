@@ -32,7 +32,7 @@ android {
         }
 
         ndk {
-            abiFilters += listOf("arm64-v8a")
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
     }
 
@@ -95,6 +95,28 @@ android {
 
 val spvOutputDir = layout.buildDirectory.dir("android_shaders")
 
+fun findVulkanCompiler(): String? {
+    val envSdk = System.getenv("VULKAN_SDK")
+    if (envSdk != null) {
+        val glslang = File("${envSdk}/Bin/glslangValidator.exe")
+        if (glslang.exists()) return glslang.absolutePath
+        val glslc = File("${envSdk}/Bin/glslc.exe")
+        if (glslc.exists()) return glslc.absolutePath
+    }
+
+    val vulkanDir = File("C:/VulkanSDK")
+    if (vulkanDir.isDirectory) {
+        vulkanDir.listFiles()?.sortedByDescending { it.name }?.forEach { versionDir ->
+            val glslang = File(versionDir, "Bin/glslangValidator.exe")
+            if (glslang.exists()) return glslang.absolutePath
+            val glslc = File(versionDir, "Bin/glslc.exe")
+            if (glslc.exists()) return glslc.absolutePath
+        }
+    }
+
+    return null
+}
+
 val compileShaders by tasks.registering(Exec::class) {
     description = "Compile GLSL shaders to SPIR-V using Vulkan SDK"
     group = "build"
@@ -129,8 +151,6 @@ val prepareAssets by tasks.registering(Copy::class) {
     description = "Collects runtime resource files into assets directory"
     group = "build"
 
-    dependsOn(compileShaders)
-
     val sourceRoot = rootProject.projectDir.parentFile
     val destDir = layout.projectDirectory.dir("src/main/assets")
 
@@ -150,11 +170,6 @@ val prepareAssets by tasks.registering(Copy::class) {
         into("")
     }
 
-    from(spvOutputDir) {
-        include("*.spv")
-        into("shaders")
-    }
-
     from("${sourceRoot}/Resource") {
         include("**/*")
         into("Resource")
@@ -167,7 +182,7 @@ val prepareAssets by tasks.registering(Copy::class) {
 
     from("${sourceRoot}/InterfaceUI") {
         include("*.ttf")
-        into("InterfaceUI")
+        into("")
     }
 
     from("${sourceRoot}/BlockS/Pixel图片") {
@@ -178,30 +193,26 @@ val prepareAssets by tasks.registering(Copy::class) {
     into(destDir)
 }
 
-fun findVulkanCompiler(): String? {
-    val envSdk = System.getenv("VULKAN_SDK")
-    if (envSdk != null) {
-        val glslang = File("${envSdk}/Bin/glslangValidator.exe")
-        if (glslang.exists()) return glslang.absolutePath
-        val glslc = File("${envSdk}/Bin/glslc.exe")
-        if (glslc.exists()) return glslc.absolutePath
+val copyShaders by tasks.registering(Copy::class) {
+    description = "Copy compiled SPIR-V shaders to assets"
+    group = "build"
+
+    dependsOn(compileShaders)
+
+    from(spvOutputDir) {
+        include("*.spv")
     }
 
-    val vulkanDir = File("C:/VulkanSDK")
-    if (vulkanDir.isDirectory) {
-        vulkanDir.listFiles()?.sortedByDescending { it.name }?.forEach { versionDir ->
-            val glslang = File(versionDir, "Bin/glslangValidator.exe")
-            if (glslang.exists()) return glslang.absolutePath
-            val glslc = File(versionDir, "Bin/glslc.exe")
-            if (glslc.exists()) return glslc.absolutePath
-        }
-    }
+    into(layout.projectDirectory.dir("src/main/assets/shaders"))
 
-    return null
+    onlyIf {
+        findVulkanCompiler() != null
+    }
 }
 
 tasks.named("preBuild") {
     dependsOn(prepareAssets)
+    dependsOn(copyShaders)
 }
 
 dependencies {

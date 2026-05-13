@@ -1,5 +1,6 @@
 #include "PlatformAndroid.h"
 #include "DebugLog.h"
+#include "GlobalVariable.h"
 #include <android_native_app_glue.h>
 #include <android/configuration.h>
 
@@ -184,7 +185,8 @@ int32_t PlatformAndroid::HandleInputEvent(struct android_app* app, struct AInput
         int32_t keyAction = AKeyEvent_getAction(inputEvent);
 
         if (keyCode == AKEYCODE_BACK && keyAction == AKEY_EVENT_ACTION_UP) {
-            LOGD("Back key pressed");
+            LOGD("Back key pressed, requesting ESC");
+            Global::AndroidRequestESC = true;
             return 1;
         }
     }

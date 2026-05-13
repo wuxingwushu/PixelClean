@@ -832,13 +832,13 @@ namespace GAME
 			mPlayer->AddForce({-PLAYER_FORCE, 0});
 			break;
 		case GameKeyEnum::MOVE_RIGHT:
-			mPlayer->AddForce({PLAYER_FORCE, 0});
+			mPlayer->AddForce({ PLAYER_FORCE, 0});
 			break;
 		case GameKeyEnum::MOVE_FRONT:
-			mPlayer->AddForce({0, PLAYER_JUMP_FORCE});
+			mPlayer->AddForce({0, PLAYER_FORCE });
 			break;
 		case GameKeyEnum::MOVE_BACK:
-			mPlayer->AddForce({0, -PLAYER_FORCE});
+			mPlayer->AddForce({0, -PLAYER_FORCE });
 			break;
 		case GameKeyEnum::ESC:
 			if (Global::ConsoleBool) {

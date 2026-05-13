@@ -33,8 +33,11 @@ namespace GAME {
 		StructureImGuiInterFace();
 		VulKan::CommandPool* commandPool = new VulKan::CommandPool(mDevice);
 		VulKan::Sampler* sampler = new VulKan::Sampler(device);
+#if defined(_WIN32)
 		mShaderTexture = new VulKan::ShaderTexture(_2D_GI_spv, mDevice, commandPool, 1920, 1080, 4, sampler);
-
+#elif defined(__ANDROID__)
+		mShaderTexture = new VulKan::ShaderTexture(GridBackground_spv, mDevice, commandPool, 1920, 1080, 4, sampler);
+#endif 
 		mImGuiTexture->AddTexture("Shader", mShaderTexture->getTexture());
 	}
 

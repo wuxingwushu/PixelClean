@@ -521,11 +521,26 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     // ---- 鼠标平滑算法（Shadertoy Buffer A 精确对应） ----
     const float smoothRadiusPx = mSmoothRadius * float(ext.height);
 
-    float rawX = (float)mMouseX;
-    float rawY = (float)mMouseY;
+    float rawX, rawY, prevRawX, prevRawY;
 
-    float prevRawX = (float)mMousePrevX;
-    float prevRawY = (float)mMousePrevY;
+#if defined(__ANDROID__)
+    {
+        ImVec2 mp = ImGui::GetIO().MousePos;
+        rawX = mp.x;
+        rawY = mp.y;
+        prevRawX = mMousePrevX;
+        prevRawY = mMousePrevY;
+        mMousePrevX = rawX;
+        mMousePrevY = rawY;
+        mMouseX = rawX;
+        mMouseY = rawY;
+    }
+#else
+    rawX = (float)mMouseX;
+    rawY = (float)mMouseY;
+    prevRawX = (float)mMousePrevX;
+    prevRawY = (float)mMousePrevY;
+#endif
 
     if (mImageViewDisplayScale > 0.0f && mImageViewSize.x > 0.0f && mImageViewSize.y > 0.0f) {
         auto toImgX = [&](float wx) {

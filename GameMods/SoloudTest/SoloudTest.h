@@ -196,8 +196,7 @@ namespace GAME
 		glm::vec3 mCameraTarget = {0, 0, 40}; // 相机目标位置（Z 分量控制缩放）
 
 		// ==================== 常量 ====================
-		static constexpr float PLAYER_FORCE = 30.0f;        // 玩家水平移动施力大小
-		static constexpr float PLAYER_JUMP_FORCE = 250.0f;  // 玩家跳跃施力大小
+		static constexpr float PLAYER_FORCE = 100.0f;        // 玩家水平移动施力大小
 		static constexpr float SOUND_MAX_DISTANCE = 30.0f;  // 默认声源最大可听距离
 		static constexpr int MAP_WIDTH = 64;                 // 地图宽度（格子数）
 		static constexpr int MAP_HEIGHT = 40;                // 地图高度（格子数）

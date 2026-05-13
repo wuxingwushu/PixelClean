@@ -6,12 +6,16 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.widget.FrameLayout
 import java.io.File
 import java.io.FileNotFoundException
@@ -33,6 +37,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        setupFullScreen()
+
         containerLayout = FrameLayout(this)
 
         surfaceView = SurfaceView(this)
@@ -52,6 +58,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         ))
 
         setContentView(containerLayout)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (nativeInitialized) {
+            nativeKeyRequest(0)
+        }
     }
 
     override fun onPause() {
@@ -79,6 +92,57 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             surfaceInitialized = false
         }
         super.onDestroy()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            hideSystemUI()
+        }
+    }
+
+    private fun setupFullScreen() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.let { controller ->
+                controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                controller.systemBarsBehavior =
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN
+                )
+        }
+    }
+
+    private fun hideSystemUI() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.hide(
+                WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars()
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN
+                )
+        }
     }
 
     private var joystickPointerId = -1
@@ -410,14 +474,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             val btnW = screenWidth.toFloat()
             val btnH = screenHeight.toFloat()
             val gap = 140f
-
-            val escX = pad + buttonRadius
             val escY = btnH - pad - 140f - buttonRadius
 
-            buttons.add(ButtonDef("ESC", escX, escY, buttonRadius,
-                Color.argb(120, 200, 60, 60), 0))
-
-            buttons.add(ButtonDef("`", escX + gap, escY, buttonRadius * 0.8f,
+            buttons.add(ButtonDef("`", pad + buttonRadius, escY, buttonRadius * 0.8f,
                 Color.argb(120, 100, 100, 200), 5))
 
             val spaceX = btnW / 2f

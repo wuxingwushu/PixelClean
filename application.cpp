@@ -505,6 +505,14 @@ namespace GAME {
 
 			if (InterFace->GetInterFaceBool()) {
 				mWindow->ImGuiKeyBoardEvent();//监听键盘
+#if defined(__ANDROID__)
+				io.AddMousePosEvent((float)CursorPosX, (float)CursorPosY);
+				if (mPendingMouseDown.exchange(false)) {
+					io.AddMouseButtonEvent(0, true);
+				} else if (mPendingMouseUp.exchange(false)) {
+					io.AddMouseButtonEvent(0, false);
+				}
+#endif
 				InterFace->InterFace(mCurrentFrame);
 				
 				if (Global::GameResourceLoadingBool) {
@@ -578,6 +586,15 @@ namespace GAME {
 			ImGui_ImplGlfw_NewFrame();
 #elif defined(__ANDROID__)
 			ImGui_ImplAndroid_NewFrame();
+			{
+				ImGuiIO& io = ImGui::GetIO();
+				io.AddMousePosEvent((float)CursorPosX, (float)CursorPosY);
+				if (mPendingMouseDown.exchange(false)) {
+					io.AddMouseButtonEvent(0, true);
+				} else if (mPendingMouseUp.exchange(false)) {
+					io.AddMouseButtonEvent(0, false);
+				}
+			}
 #endif
 			ImGui::NewFrame();
 
@@ -624,6 +641,15 @@ namespace GAME {
 			ImGui_ImplGlfw_NewFrame();
 #elif defined(__ANDROID__)
 			ImGui_ImplAndroid_NewFrame();
+			{
+				ImGuiIO& io = ImGui::GetIO();
+				io.AddMousePosEvent((float)CursorPosX, (float)CursorPosY);
+				if (mPendingMouseDown.exchange(false)) {
+					io.AddMouseButtonEvent(0, true);
+				} else if (mPendingMouseUp.exchange(false)) {
+					io.AddMouseButtonEvent(0, false);
+				}
+			}
 #endif
 			ImGui::NewFrame();
 			ImGui::PushFont(InterFace->Font);
@@ -863,6 +889,14 @@ namespace GAME {
 
 		if (InterFace->GetInterFaceBool()) {
 			mWindow->ImGuiKeyBoardEvent();
+#if defined(__ANDROID__)
+			io.AddMousePosEvent((float)CursorPosX, (float)CursorPosY);
+			if (mPendingMouseDown.exchange(false)) {
+				io.AddMouseButtonEvent(0, true);
+			} else if (mPendingMouseUp.exchange(false)) {
+				io.AddMouseButtonEvent(0, false);
+			}
+#endif
 			InterFace->InterFace(mCurrentFrame);
 
 			if (Global::GameResourceLoadingBool) {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include "Camera.h"
 
 #include "SoundEffect/SoundEffect.h"
@@ -44,6 +46,10 @@ namespace GAME {
 
 		//回收资源
 		void cleanUp();
+
+		// Android 输入事件标志（跨线程安全）
+		std::atomic<bool> mPendingMouseDown{false};
+		std::atomic<bool> mPendingMouseUp{false};
 
 	private:
 		//窗口的初始化

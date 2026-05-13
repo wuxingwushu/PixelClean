@@ -258,10 +258,13 @@ Java_com_pixelclean_MainActivity_nativeTouchEvent(
     if (!gApplication || gDestroying.load()) return;
 
     if (action == 0 || action == 2) {
-        std::lock_guard<std::mutex> lock(gTouchMutex);
-        gApplication->CursorPosX = static_cast<double>(x);
-        gApplication->CursorPosY = static_cast<double>(y);
-    }
+		std::lock_guard<std::mutex> lock(gTouchMutex);
+		gApplication->CursorPosX = static_cast<double>(x);
+		gApplication->CursorPosY = static_cast<double>(y);
+	}
+	if (action == 0) {
+		gApplication->mPendingMouseDown.store(true);
+	}
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -381,6 +384,7 @@ Java_com_pixelclean_MainActivity_nativeUpdateTouchState(
 
     if (actionMasked == 1) {
         Global::TouchState = TouchStateEnum::None;
+        gApplication->mPendingMouseUp.store(true);
         return;
     }
 

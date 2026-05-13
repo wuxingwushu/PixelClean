@@ -61,6 +61,12 @@ namespace GAME {
 		void ThreadUpdateCommandBuffer();
 		void ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count);
 
+		void resetThreadCommandPools() {
+			for (unsigned int i = 0; i < ThreadS; ++i) {
+				mThreadCommandPoolS[i]->reset();
+			}
+		}
+
 		~ParticleSystem();
 
 		int mNumber;//Particle 多少个

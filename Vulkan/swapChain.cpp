@@ -72,7 +72,11 @@ namespace VulKan {
 		}
 
 		//交换链的图像初始变化，比如是否需要反转
+#if defined(__ANDROID__)
+		createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+#else
 		createInfo.preTransform = swapChainSupportInfo.mCapabilities.currentTransform;
+#endif
 
 		//不与原来窗体当中的内容混合
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;

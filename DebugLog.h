@@ -1,6 +1,7 @@
 #pragma once
+#define PIXEL_ENABLE_LOG 0
 
-#ifdef PIXEL_ENABLE_LOG
+#if PIXEL_ENABLE_LOG
 
     #if defined(__ANDROID__)
         #include <android/log.h>

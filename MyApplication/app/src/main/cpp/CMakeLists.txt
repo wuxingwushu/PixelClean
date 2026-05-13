@@ -6,9 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# 开启日志
-add_compile_definitions(PIXEL_ENABLE_LOG=0)
-
 set(PIXEL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../..)
 set(PIXEL_ENV_DIR  ${PIXEL_ROOT_DIR}/Environment)
 
@@ -148,7 +145,6 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     PIXEL_USE_VULKAN=1
     PIXEL_ANDROID=1
     ANDROID
-    PIXEL_ENABLE_LOG=1
 )
 
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE

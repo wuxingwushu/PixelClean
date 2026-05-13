@@ -11,6 +11,12 @@ namespace VulKan {
 
 		[[nodiscard]] inline VkCommandPool getCommandPool() const noexcept { return mCommandPool; }
 
+		void reset() {
+			if (mCommandPool != VK_NULL_HANDLE) {
+				vkResetCommandPool(mDevice->getDevice(), mCommandPool, 0);
+			}
+		}
+
 	private:
 		VkCommandPool mCommandPool{ VK_NULL_HANDLE };
 		Device* mDevice{ nullptr };

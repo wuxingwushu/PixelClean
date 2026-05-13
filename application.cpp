@@ -140,6 +140,7 @@ namespace GAME {
 		mSwapChain = new VulKan::SwapChain(mDevice, mWindow, mWindowSurface, mCommandPool);//设置VulKan的工作细节
 		Global::mWidth = mSwapChain->getExtent().width;
 		Global::mHeight = mSwapChain->getExtent().height;
+		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
 		mRenderPass = new VulKan::RenderPass(mDevice);//创建GPU画布描述
 		mImGuuiRenderPass = new VulKan::RenderPass(mDevice);
 		mSampler = new VulKan::Sampler(mDevice);//采样器
@@ -472,6 +473,7 @@ namespace GAME {
 		if (mGameMods != nullptr) {
 			mGameMods->GameRecordCommandBuffers();
 		}
+		mParticleSystem->resetThreadCommandPools();
 		mParticleSystem->ThreadUpdateCommandBuffer();
 		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
 		{
@@ -720,6 +722,12 @@ namespace GAME {
 		TOOL::mTimer->StartEnd();
 
 		//由于驱动程序不一定精准，所以我们还需要用自己的标志位判断
+#if defined(__ANDROID__)
+		if (mWindow->mWindowResized) {
+			recreateSwapChain();
+			mWindow->mWindowResized = false;
+		}
+#else
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || mWindow->mWindowResized) {
 			recreateSwapChain();
 			mWindow->mWindowResized = false;
@@ -727,6 +735,7 @@ namespace GAME {
 		else if (result != VK_SUCCESS) {
 			throw std::runtime_error("Error: failed to present");
 		}
+#endif
 
 		mCurrentFrame = (mCurrentFrame + 1) % mSwapChain->getImageCount();
 	}

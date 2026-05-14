@@ -59,16 +59,6 @@ endif()
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384")
 set(CMAKE_ANDROID_STL_TYPE c++_static)
 
-set(PLATFORM_DETECTION_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
-file(MAKE_DIRECTORY ${PLATFORM_DETECTION_DIR}/Platform)
-
-set(PIXEL_HAS_GLFW 0)
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/Platform/PlatformDetection.h.in
-    ${PLATFORM_DETECTION_DIR}/Platform/PlatformDetection.h
-    @ONLY
-)
-
 file(GLOB_RECURSE VULKAN_SOURCES           ${PIXEL_VULKAN_DIR}/*.cpp)
 file(GLOB_RECURSE VULKANTOOL_SOURCES       ${PIXEL_VULKANTOOL_DIR}/*.cpp)
 file(GLOB_RECURSE TOOL_SOURCES             ${PIXEL_TOOL_DIR}/*.cpp)
@@ -120,7 +110,6 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
 
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PLATFORM_DETECTION_DIR}
     ${PIXEL_ROOT_DIR}
     ${PIXEL_VULKAN_DIR}
     ${PIXEL_VULKANTOOL_DIR}
@@ -137,9 +126,10 @@ if(VULKAN_SDK_PATH)
     message(STATUS "Added Vulkan SDK include: ${VULKAN_SDK_PATH}/Include")
 endif()
 
-target_include_directories(${CMAKE_PROJECT_NAME} BEFORE PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/Platform/Android/glfw_stub
-)
+if(VULKAN_SDK_PATH)
+    target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${VULKAN_SDK_PATH}/Include)
+    message(STATUS "Added Vulkan SDK include: ${VULKAN_SDK_PATH}/Include")
+endif()
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     PIXEL_USE_VULKAN=1

@@ -22,6 +22,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 class MainActivity : Activity(), SurfaceHolder.Callback {
 
@@ -34,6 +35,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private lateinit var containerLayout: FrameLayout
     private lateinit var surfaceView: SurfaceView
     private lateinit var controlOverlay: ControlOverlayView
+
+    private val currentGameMode = AtomicInteger(-1)
+    private val currentInGame = AtomicBoolean(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -161,7 +165,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private var joystickBaseY = 0f
     private var joystickCurrDirX = 0f
     private var joystickCurrDirY = 0f
+    private var prevPinchDistance = 0f
     private val activePointers = mutableSetOf<Int>()
+    private val buttonPointerIds = mutableSetOf<Int>()
+    private val gameTouchPointerIds = mutableSetOf<Int>()
 
     @SuppressLint("ClickableViewAccessibility")
     private fun handleControlTouch(event: MotionEvent): Boolean {
@@ -178,7 +185,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             MotionEvent.ACTION_POINTER_DOWN -> {
                 activePointers.add(pointerId)
 
-                if (isInJoystickZone(rawX, rawY)) {
+                if (controlOverlay.showJoystick && isInJoystickZone(rawX, rawY)) {
                     joystickPointerId = pointerId
                     joystickBaseX = rawX
                     joystickBaseY = rawY
@@ -186,20 +193,40 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     joystickCurrDirY = rawY
                 } else if (isInButtonZone(rawX, rawY)) {
                     handleButtonPress(rawX, rawY)
+                    buttonPointerIds.add(pointerId)
                 } else {
+                    gameTouchPointerIds.add(pointerId)
                     nativeTouchEvent(0, rawX, rawY)
                 }
-                updateTouchState(event.pointerCount)
+
+                if (activePointers.size == 2) {
+                    prevPinchDistance = pinchDist(event)
+                }
+
+                updateTouchStateForGame()
             }
 
             MotionEvent.ACTION_MOVE -> {
                 val pointerCount = event.pointerCount
+                if (pointerCount == 2) {
+                    val curDist = pinchDist(event)
+                    if (prevPinchDistance > 0f) {
+                        val delta = curDist - prevPinchDistance
+                        if (kotlin.math.abs(delta) > 12f) {
+                            nativeMouseScroll(if (delta > 0) -1 else 1)
+                            prevPinchDistance = curDist
+                        }
+                    } else {
+                        prevPinchDistance = curDist
+                    }
+                }
                 if (pointerCount == 1) {
                     val px = event.getX(0)
                     val py = event.getY(0)
-                    if (joystickPointerId == event.getPointerId(0)) {
+                    val pid = event.getPointerId(0)
+                    if (pid == joystickPointerId) {
                         updateJoystick(px, py)
-                    } else {
+                    } else if (pid !in buttonPointerIds) {
                         nativeTouchEvent(2, px, py)
                     }
                 } else {
@@ -207,34 +234,44 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                         val pid = event.getPointerId(i)
                         if (pid == joystickPointerId) {
                             updateJoystick(event.getX(i), event.getY(i))
-                        } else if (!isInJoystickZone(event.getX(i), event.getY(i))
+                        } else if (pid !in buttonPointerIds
+                            && !isInJoystickZone(event.getX(i), event.getY(i))
                             && !isInButtonZone(event.getX(i), event.getY(i))) {
                             nativeTouchEvent(2, event.getX(i), event.getY(i))
                         }
                     }
                 }
-                updateTouchState(event.pointerCount)
+                updateTouchStateForGame()
             }
 
             MotionEvent.ACTION_UP,
             MotionEvent.ACTION_POINTER_UP -> {
                 activePointers.remove(pointerId)
+                buttonPointerIds.remove(pointerId)
+                val hadGameTouch = gameTouchPointerIds.isNotEmpty()
+                gameTouchPointerIds.remove(pointerId)
+
+                if (activePointers.size < 2) {
+                    prevPinchDistance = 0f
+                }
 
                 if (pointerId == joystickPointerId) {
                     joystickPointerId = -1
                     nativeJoystickRelease()
                 }
 
-                val remaining = activePointers.size
-                if (remaining == 0) {
+                if (hadGameTouch && gameTouchPointerIds.isEmpty()) {
                     nativeUpdateTouchState(1, 0)
-                } else {
-                    updateTouchState(remaining)
+                } else if (gameTouchPointerIds.isNotEmpty()) {
+                    updateTouchStateForGame()
                 }
             }
 
             MotionEvent.ACTION_CANCEL -> {
                 activePointers.clear()
+                buttonPointerIds.clear()
+                gameTouchPointerIds.clear()
+                prevPinchDistance = 0f
                 if (joystickPointerId != -1) {
                     joystickPointerId = -1
                     nativeJoystickRelease()
@@ -267,8 +304,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         nativeJoystick(dirX, dirY)
     }
 
-    private fun updateTouchState(pointerCount: Int) {
-        nativeUpdateTouchState(0, pointerCount)
+    private fun updateTouchStateForGame() {
+        nativeUpdateTouchState(0, gameTouchPointerIds.size)
     }
 
     private fun handleButtonPress(x: Float, y: Float) {
@@ -278,7 +315,14 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
     }
 
+    private fun pinchDist(event: MotionEvent): Float {
+        val dx = event.getX(0) - event.getX(1)
+        val dy = event.getY(0) - event.getY(1)
+        return kotlin.math.sqrt(dx * dx + dy * dy)
+    }
+
     private fun isInJoystickZone(x: Float, y: Float): Boolean {
+        if (!controlOverlay.showJoystick) return false
         val h = controlOverlay.height.toFloat()
         val w = controlOverlay.width.toFloat()
         return x < w * 0.33f && y > h * 0.4f
@@ -330,6 +374,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         stopRenderThread()
         surfaceInitialized = false
         activePointers.clear()
+        buttonPointerIds.clear()
+        gameTouchPointerIds.clear()
         joystickPointerId = -1
         nativeUpdateTouchState(1, 0)
         nativeJoystickRelease()
@@ -420,6 +466,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private inner class RenderThread : Thread("PixelClean-Render") {
         private val running = AtomicBoolean(false)
         val isRunning: AtomicBoolean get() = running
+        private var pollCounter = 0
 
         override fun run() {
             running.set(true)
@@ -430,6 +477,12 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 } catch (e: Exception) {
                     Log.e(TAG, "RenderFrame exception", e)
                 }
+
+                pollCounter++
+                if (pollCounter >= 15) {
+                    pollCounter = 0
+                    syncGameMode()
+                }
             }
             running.set(false)
             Log.d(TAG, "Render thread exiting")
@@ -439,6 +492,79 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             running.set(false)
         }
     }
+
+    private fun syncGameMode() {
+        if (!nativeInitialized || destroyed.get()) return
+        try {
+            val mode = nativeGetGameMode()
+            val inGame = nativeIsInGame()
+            val oldMode = currentGameMode.getAndSet(mode)
+            val oldInGame = currentInGame.getAndSet(inGame)
+            if (oldMode != mode || oldInGame != inGame) {
+                Log.d(TAG, "Game mode changed: $oldMode -> $mode, inGame: $oldInGame -> $inGame")
+                controlOverlay.onGameModeChanged(mode, inGame)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "syncGameMode failed", e)
+        }
+    }
+
+    private data class ButtonSpec(
+        val label: String,
+        val keyCode: Int,
+        val color: Int
+    )
+
+    private data class ModeConfig(
+        val showJoystick: Boolean,
+        val buttons: List<ButtonSpec>
+    )
+
+    private val modeConfigs: Map<Int, ModeConfig> = mapOf(
+        -1 to ModeConfig(
+            showJoystick = false,
+            buttons = emptyList()
+        ),
+        0 to ModeConfig(
+            showJoystick = true,
+            buttons = listOf(
+                ButtonSpec("SP", 4, Color.argb(120, 60, 140, 200)),
+                ButtonSpec("1", 2, Color.argb(120, 180, 100, 60)),
+                ButtonSpec("2", 3, Color.argb(120, 180, 140, 60)),
+                ButtonSpec("/", 1, Color.argb(120, 100, 180, 100)),
+                ButtonSpec("`", 5, Color.argb(120, 100, 100, 200))
+            )
+        ),
+        1 to ModeConfig(
+            showJoystick = true,
+            buttons = listOf(
+                ButtonSpec("SP", 4, Color.argb(120, 60, 140, 200)),
+                ButtonSpec("/", 1, Color.argb(120, 100, 180, 100))
+            )
+        ),
+        2 to ModeConfig(
+            showJoystick = false,
+            buttons = emptyList()
+        ),
+        3 to ModeConfig(
+            showJoystick = true,
+            buttons = emptyList()
+        ),
+        4 to ModeConfig(
+            showJoystick = false,
+            buttons = emptyList()
+        ),
+        5 to ModeConfig(
+            showJoystick = true,
+            buttons = listOf(
+                ButtonSpec("SP", 4, Color.argb(120, 60, 140, 200)),
+                ButtonSpec("1", 2, Color.argb(120, 180, 100, 60)),
+                ButtonSpec("2", 3, Color.argb(120, 180, 140, 60)),
+                ButtonSpec("/", 1, Color.argb(120, 100, 180, 100)),
+                ButtonSpec("`", 5, Color.argb(120, 100, 100, 200))
+            )
+        )
+    )
 
     private data class ButtonDef(
         val label: String,
@@ -454,19 +580,22 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         var screenWidth = 0
         var screenHeight = 0
 
+        var showJoystick = false
+            private set
+
+        private var activeButtons = mutableListOf<ButtonDef>()
+        private var gameModeIndex = -1
+        private var inGame = false
+
         val joystickRadius get() = (screenHeight * 0.07f)
 
-        private val buttonRadius = 55f
         private val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-
-        private val buttons = mutableListOf<ButtonDef>()
 
         init {
             circlePaint.style = Paint.Style.FILL
             circlePaint.alpha = 120
 
-            textPaint.textSize = 28f
             textPaint.color = Color.WHITE
             textPaint.textAlign = Paint.Align.CENTER
             textPaint.alpha = 180
@@ -475,35 +604,95 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         fun setScreenSize(w: Int, h: Int) {
             screenWidth = w
             screenHeight = h
-            buildButtons()
+            applyModeConfig()
             invalidate()
         }
 
-        private fun buildButtons() {
-            buttons.clear()
+        fun onGameModeChanged(mode: Int, inGame: Boolean) {
+            if (gameModeIndex == mode && this.inGame == inGame) return
+            gameModeIndex = mode
+            this.inGame = inGame
+            applyModeConfig()
+            post { invalidate() }
+        }
+
+        private fun applyModeConfig() {
+            showJoystick = false
+            activeButtons.clear()
+            if (!inGame || screenWidth == 0 || screenHeight == 0) return
+
+            val config = modeConfigs[gameModeIndex] ?: modeConfigs[-1]!!
+
+            showJoystick = config.showJoystick
+
+            activeButtons.clear()
+            if (config.buttons.isEmpty()) return
+
+            val btnCount = config.buttons.size
             val pad = 80f
             val btnW = screenWidth.toFloat()
             val btnH = screenHeight.toFloat()
-            val gap = 140f
-            val escY = btnH - pad - 140f - buttonRadius
 
-            buttons.add(ButtonDef("`", pad + buttonRadius, escY, buttonRadius * 0.8f,
-                Color.argb(120, 100, 100, 200), 5))
+            val baseRadius = when {
+                btnCount <= 2 -> 65f
+                btnCount <= 4 -> 55f
+                else -> 48f
+            }
 
-            val spaceX = btnW / 2f
-            val spaceY = btnH - pad - buttonRadius * 1.3f
-
-            buttons.add(ButtonDef("SP", spaceX, spaceY, buttonRadius * 1.4f,
-                Color.argb(120, 60, 140, 200), 4))
-
-            buttons.add(ButtonDef("/", spaceX + gap * 1.5f, escY, buttonRadius * 0.8f,
-                Color.argb(120, 100, 180, 100), 1))
-
-            buttons.add(ButtonDef("1", btnW - pad - gap * 2f, escY, buttonRadius,
-                Color.argb(120, 180, 100, 60), 2))
-
-            buttons.add(ButtonDef("2", btnW - pad - gap, escY, buttonRadius,
-                Color.argb(120, 180, 140, 60), 3))
+            when {
+                btnCount == 1 -> {
+                    val cx = btnW - pad - baseRadius
+                    val cy = btnH - pad - baseRadius * 2.5f
+                    activeButtons.add(ButtonDef(
+                        config.buttons[0].label, cx, cy,
+                        baseRadius * 1.3f, config.buttons[0].color, config.buttons[0].keyCode
+                    ))
+                }
+                btnCount == 2 -> {
+                    val cx = btnW - pad - baseRadius
+                    val gapY = baseRadius * 3.5f
+                    for (i in 0 until btnCount) {
+                        val cy = btnH - pad - baseRadius * (2.5f - i * 2.0f)
+                        activeButtons.add(ButtonDef(
+                            config.buttons[i].label, cx, cy,
+                            baseRadius, config.buttons[i].color, config.buttons[i].keyCode
+                        ))
+                    }
+                }
+                btnCount == 3 -> {
+                    val gapX = baseRadius * 2.8f
+                    for (i in 0 until btnCount) {
+                        val cx = btnW - pad - (btnCount - 1 - i) * gapX
+                        val cy = btnH - pad - baseRadius * 2f
+                        activeButtons.add(ButtonDef(
+                            config.buttons[i].label, cx, cy,
+                            baseRadius, config.buttons[i].color, config.buttons[i].keyCode
+                        ))
+                    }
+                }
+                btnCount == 4 -> {
+                    val gapX = baseRadius * 2.4f
+                    for (i in 0 until btnCount) {
+                        val cx = btnW - pad - (btnCount - 1 - i) * gapX
+                        val cy = btnH - pad - baseRadius * 2f
+                        activeButtons.add(ButtonDef(
+                            config.buttons[i].label, cx, cy,
+                            baseRadius, config.buttons[i].color, config.buttons[i].keyCode
+                        ))
+                    }
+                }
+                else -> {
+                    val gapX = baseRadius * 2.2f
+                    for (i in 0 until btnCount) {
+                        val cx = btnW - pad - (btnCount - 1 - i) * gapX
+                        val cy = btnH - pad - baseRadius * 2f
+                        activeButtons.add(ButtonDef(
+                            config.buttons[i].label, cx, cy,
+                            baseRadius, config.buttons[i].color, config.buttons[i].keyCode
+                        ))
+                    }
+                }
+            }
         }
 
         override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -512,7 +701,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
         fun getButtonAt(x: Float, y: Float): Int {
-            for (btn in buttons) {
+            for (btn in activeButtons) {
                 val dx = x - btn.cx
                 val dy = y - btn.cy
                 if (dx * dx + dy * dy <= btn.radius * btn.radius) {
@@ -525,7 +714,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
 
-            drawJoystick(canvas)
+            if (showJoystick) {
+                drawJoystick(canvas)
+            }
             drawButtons(canvas)
         }
 
@@ -562,7 +753,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         }
 
         private fun drawButtons(canvas: Canvas) {
-            for (btn in buttons) {
+            for (btn in activeButtons) {
                 circlePaint.color = btn.color
                 canvas.drawCircle(btn.cx, btn.cy, btn.radius, circlePaint)
 
@@ -589,6 +780,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private external fun nativeJoystickRelease()
     private external fun nativeUpdateTouchState(actionMasked: Int, pointerCount: Int)
     private external fun nativeRequestExit()
+    private external fun nativeGetGameMode(): Int
+    private external fun nativeIsInGame(): Boolean
+    private external fun nativeMouseScroll(delta: Int)
 
     companion object {
         init {

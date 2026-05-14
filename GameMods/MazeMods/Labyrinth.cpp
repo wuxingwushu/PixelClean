@@ -420,7 +420,7 @@ namespace GAME {
 				pool.push_back(TOOL::mThreadPool->enqueue(&Labyrinth::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + UpdateNumber_yu), UpdateNumber));
 			}
 		}
-		for (int i = 0; i < (mFrameCount); ++i) {
+		for (size_t i = 0; i < pool.size(); ++i) {
 			pool[i].wait();
 		}
 	}

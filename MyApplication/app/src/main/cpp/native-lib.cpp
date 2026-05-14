@@ -402,6 +402,37 @@ Java_com_pixelclean_MainActivity_nativeUpdateTouchState(
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_pixelclean_MainActivity_nativeMouseScroll(
+	JNIEnv* env,
+	jobject /* this */,
+	jint delta) {
+
+	if (!gApplication || gDestroying.load()) return;
+	int prev = gApplication->mPendingScroll.exchange(delta);
+	if (prev != 0) {
+		gApplication->mPendingScroll.store(prev + delta);
+	}
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_pixelclean_MainActivity_nativeGetGameMode(
+    JNIEnv* env,
+    jobject /* this */) {
+
+    if (!gApplication || gDestroying.load()) return -1;
+    return static_cast<jint>(Global::GameMode);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_pixelclean_MainActivity_nativeIsInGame(
+    JNIEnv* env,
+    jobject /* this */) {
+
+    if (!gApplication || gDestroying.load()) return JNI_FALSE;
+    return gApplication->InterFace ? !gApplication->InterFace->GetInterFaceBool() : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_pixelclean_MainActivity_nativeRequestExit(
     JNIEnv* env,
     jobject /* this */) {

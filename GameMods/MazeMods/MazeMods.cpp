@@ -151,7 +151,34 @@ namespace GAME
 
 	void MazeMods::MouseMove(double xpos, double ypos)
 	{
-		// mCamera->onMouseMove(xpos, ypos);
+		CursorPosX = xpos;
+		CursorPosY = ypos;
+#if defined(__ANDROID__)
+		mWinWidth = mWindow->getWidth();
+		mWinHeight = mWindow->getHeight();
+#else
+		glfwGetWindowSize(mWindow->getWindow(), &mWinWidth, &mWinHeight);
+#endif
+	}
+
+	void MazeMods::MouseButton(MouseBtn button, InputState State)
+	{
+		switch (button) {
+		case MouseBtn::Left:
+			if (State == InputState::Down || State == InputState::Hold)
+				mLeftMouseDown = true;
+			else
+				mLeftMouseDown = false;
+			break;
+		case MouseBtn::Right:
+			if (State == InputState::Down || State == InputState::Hold)
+				mRightMouseDown = true;
+			else
+				mRightMouseDown = false;
+			break;
+		default:
+			break;
+		}
 	}
 
 	void MazeMods::MouseRoller(int z)
@@ -291,15 +318,8 @@ namespace GAME
 			mCrowd->NPCEvent(mCurrentFrame, TOOL::FPStime);
 		}
 
-		int winwidth, winheight;
-#if defined(_WIN32)
-		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
-		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
-#elif defined(__ANDROID__)
-		winwidth = mWindow->getWidth();
-		winheight = mWindow->getHeight();
-#endif
-		m_angle = std::atan2((winwidth / 2) - CursorPosX, (winheight / 2) - CursorPosY) + 1.57f; // 获取角度
+		int winwidth = mWinWidth, winheight = mWinHeight;
+		m_angle = std::atan2((winwidth / 2) - CursorPosX, (winheight / 2) - CursorPosY) + 1.57f;
 
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 		huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
@@ -333,15 +353,9 @@ namespace GAME
 		ArmsContinuityFire += TOOL::FPStime;
 		static int zuojian;
 		static SquarePhysics::ObjectSufferForce LSObjectDecorator{nullptr, {0, 0}};
-		int Lzuojian;
 		if (!Global::ClickWindow)
 		{
-			#if defined(_WIN32)
-			Lzuojian = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-#elif defined(__ANDROID__)
-			Lzuojian = (Global::TouchState == TouchStateEnum::PrimaryDown) ? GLFW_PRESS : GLFW_RELEASE;
-#endif
-			if ((Lzuojian == GLFW_PRESS) && ((zuojian != Lzuojian) || ((ArmsContinuityFire > mArms->IntervalTime) && LSObjectDecorator.Object == nullptr)))
+			if ((mLeftMouseDown) && ((zuojian != (mLeftMouseDown ? 1 : 0)) || ((ArmsContinuityFire > mArms->IntervalTime) && LSObjectDecorator.Object == nullptr)))
 			{
 				ArmsContinuityFire = 0;
 				LSObjectDecorator = mSquarePhysics->GetGoods({huoqdedian.x, huoqdedian.y});
@@ -368,7 +382,7 @@ namespace GAME
 					}
 				}
 			}
-			zuojian = Lzuojian;
+			zuojian = mLeftMouseDown ? 1 : 0;
 		}
 
 		// 是否有受力对象
@@ -389,7 +403,7 @@ namespace GAME
 				0.25f,
 				{0, 0, 1.0f, 1.0f});
 			mVisualEffect->SetPosAngle(LSObjectDecorator.Object->GetPosX(), LSObjectDecorator.Object->GetPosY(), 0, LSObjectDecorator.Object->GetAngleFloat(), mCurrentFrame);
-			if (Lzuojian != GLFW_PRESS)
+			if (!mLeftMouseDown)
 			{
 				LSObjectDecorator.Object = nullptr;
 			}
@@ -400,23 +414,12 @@ namespace GAME
 		static std::vector<AStarVec2> AStarPath;
 		if (!Global::ClickWindow)
 		{
-			// 点击左键
-#if defined(_WIN32)
-			if (glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-#elif defined(__ANDROID__)
-			if (Global::TouchState == TouchStateEnum::SecondaryDown)
-#endif
+			if (mLeftMouseDown)
 			{
 				beang = {huoqdedian.x, huoqdedian.y};
 			}
-			// 点击右键
 			static int fangzhifanfuvhufa;
-#if defined(_WIN32)
-			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
-#elif defined(__ANDROID__)
-			int Leftan = (Global::TouchState == TouchStateEnum::TertiaryDown) ? GLFW_PRESS : GLFW_RELEASE;
-#endif
-			if (Leftan == GLFW_PRESS && fangzhifanfuvhufa != Leftan)
+			if (mRightMouseDown && fangzhifanfuvhufa != (mRightMouseDown ? 1 : 0))
 			{
 				end = {huoqdedian.x, huoqdedian.y};
 				AStarPath.clear();
@@ -467,7 +470,7 @@ namespace GAME
 				};
 				mAuxiliaryVision->OpenStaticLineUpData();
 			}
-			fangzhifanfuvhufa = Leftan;
+			fangzhifanfuvhufa = mRightMouseDown ? 1 : 0;
 		}
 		mAuxiliaryVision->Spot(
 			{beang, 0},

@@ -109,6 +109,7 @@ public:
     // ---- 输入事件（GameMods 接口） ----
     void MouseMove(double xpos, double ypos) override;   // 跟踪鼠标位置
     void MouseRoller(int z) override;                     // 滚轮（当前不处理）
+    void MouseButton(MouseBtn button, InputState State) override; // 鼠标按键
     void KeyDown(GameKeyEnum moveDirection) override;     // 按键处理（ESC/1/SPACE）
 
     // ---- 帧循环（GameMods 接口） ----
@@ -203,7 +204,8 @@ private:
     double mMouseX = 0, mMouseY = 0;          // 当前原始鼠标位置（从 GLFW）
     double mMousePrevX = 0, mMousePrevY = 0;  // 上一帧原始鼠标位置
     bool mMouseLeftDown = false;    // 当前帧左键状态
-    bool mMouseRightDown = false;   // 当前帧右键状态
+	bool mMouseRightDown = false;   // 当前帧右键状态
+	bool mMouseMiddleDown = false;  // 当前帧中键状态
     float mTime = 0.0f;            // 累计运行时间（秒）
     float mMouseAX = 0.0f, mMouseAY = 0.0f, mMouseAZ = 0.0f; // 平滑历史 A
     float mMouseBX = 0.0f, mMouseBY = 0.0f, mMouseBZ = 0.0f; // 平滑历史 B

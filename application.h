@@ -50,6 +50,7 @@ namespace GAME {
 		// Android 输入事件标志（跨线程安全）
 		std::atomic<bool> mPendingMouseDown{false};
 		std::atomic<bool> mPendingMouseUp{false};
+		std::atomic<int>  mPendingScroll{0};
 
 	private:
 		//窗口的初始化

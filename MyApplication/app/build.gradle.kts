@@ -18,8 +18,6 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++17"
@@ -78,12 +76,12 @@ android {
         }
     }
 
-    buildFeatures {
-        buildConfig = true
+    androidResources {
+        noCompress += listOf("spv", "png", "mp3", "mid", "sf2", "ttf", "ini", "ico", "wav", "ogg", "jpg")
     }
 
-    aaptOptions {
-        noCompress("spv", "png", "mp3", "mid", "sf2", "ttf", "ini", "ico", "wav", "ogg", "jpg")
+    buildFeatures {
+        buildConfig = true
     }
 
     packaging {
@@ -117,25 +115,44 @@ fun findVulkanCompiler(): String? {
     return null
 }
 
-val compileShaders by tasks.registering(Exec::class) {
+val compileShaders by tasks.registering {
     description = "Compile GLSL shaders to SPIR-V using Vulkan SDK"
     group = "build"
 
     val sourceRoot = rootProject.projectDir.parentFile
     val shaderDir = file("${sourceRoot}/shaders")
-    val compileScript = file("${shaderDir}/compile.bat")
     val outputDir = spvOutputDir.get().asFile
 
-    outputs.dir(outputDir)
-
-    workingDir = shaderDir
-
-    commandLine(
-        "cmd", "/c",
-        if (compileScript.exists()) compileScript.absolutePath else "",
-        outputDir.absolutePath,
-        findVulkanCompiler() ?: ""
+    val shaders = mapOf(
+        "lessionShader.vert" to "vs.spv",
+        "lessionShader.frag" to "fs.spv",
+        "GifFragShader.vert" to "GifFragShaderV.spv",
+        "GifFragShader.frag" to "GifFragShaderF.spv",
+        "WarfareMist.comp" to "WarfareMist.spv",
+        "DungeonWarfareMist.comp" to "DungeonWarfareMist.spv",
+        "LineShader.vert" to "LineShaderV.spv",
+        "LineShader.frag" to "LineShaderF.spv",
+        "SpotShader.vert" to "SpotShaderV.spv",
+        "SpotShader.frag" to "SpotShaderF.spv",
+        "SpotNormal.geom" to "SpotNormal.spv",
+        "DamagePrompt.vert" to "DamagePromptV.spv",
+        "DamagePrompt.frag" to "DamagePromptF.spv",
+        "UVDynamicDiagram.vert" to "UVDynamicDiagramV.spv",
+        "UVDynamicDiagram.frag" to "UVDynamicDiagramF.spv",
+        "UVDynamicDiagram.geom" to "UVDynamicDiagramG.spv",
+        "Background.comp" to "Background.spv",
+        "GridBackground.comp" to "GridBackground.spv",
+        "CircleShader.vert" to "CircleShaderV.spv",
+        "CircleShader.frag" to "CircleShaderF.spv",
+        "CircleNormal.geom" to "CircleNormal.spv",
+        "2D_GI.comp" to "2D_GI.spv",
+        "RC_SDF.comp" to "RC_SDF.spv",
+        "RC_Cascade.comp" to "RC_Cascade.spv",
+        "RC_Display.comp" to "RC_Display.spv"
     )
+
+    inputs.files(shaders.map { file("${shaderDir}/${it.key}") })
+    outputs.dir(outputDir)
 
     onlyIf {
         val compiler = findVulkanCompiler()
@@ -143,7 +160,34 @@ val compileShaders by tasks.registering(Exec::class) {
             logger.warn("Vulkan SDK not found, skipping shader compilation. Install Vulkan SDK to compile shaders.")
             return@onlyIf false
         }
-        compileScript.exists()
+        true
+    }
+
+    doLast {
+        val compiler = findVulkanCompiler()!!
+        val vulkanBinDir = File(compiler).parentFile!!
+        outputDir.mkdirs()
+
+        shaders.forEach { (srcFile, dstFile) ->
+            val cmd = listOf(
+                compiler, "-V",
+                file("${shaderDir}/${srcFile}").absolutePath,
+                "-o", file("${outputDir}/${dstFile}").absolutePath
+            )
+            val pb = ProcessBuilder(cmd)
+                .directory(vulkanBinDir)
+                .redirectErrorStream(true)
+
+            val existingPath = pb.environment()["PATH"] ?: pb.environment()["Path"] ?: ""
+            pb.environment()["PATH"] = "${vulkanBinDir.absolutePath};${existingPath}"
+
+            val process = pb.start()
+            val output = process.inputStream.bufferedReader().readText()
+            val exitCode = process.waitFor()
+            if (exitCode != 0) {
+                throw GradleException("Shader compilation failed for $srcFile (exit code: $exitCode)\n$output")
+            }
+        }
     }
 }
 
@@ -216,11 +260,6 @@ tasks.named("preBuild") {
 }
 
 dependencies {
-    implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.junit)
 }

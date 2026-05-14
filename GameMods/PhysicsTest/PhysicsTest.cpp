@@ -52,7 +52,34 @@ namespace GAME
 
 	void PhysicsTest::MouseMove(double xpos, double ypos)
 	{
-		// mCamera->onMouseMove(xpos, ypos);
+		CursorPosX = xpos;
+		CursorPosY = ypos;
+#if defined(__ANDROID__)
+		mWinWidth = mWindow->getWidth();
+		mWinHeight = mWindow->getHeight();
+#else
+		glfwGetWindowSize(mWindow->getWindow(), &mWinWidth, &mWinHeight);
+#endif
+	}
+
+	void PhysicsTest::MouseButton(MouseBtn button, InputState State)
+	{
+		switch (button) {
+		case MouseBtn::Left:
+			if (State == InputState::Down || State == InputState::Hold)
+				mLeftMouseDown = true;
+			else
+				mLeftMouseDown = false;
+			break;
+		case MouseBtn::Right:
+			if (State == InputState::Down || State == InputState::Hold)
+				mRightMouseDown = true;
+			else
+				mRightMouseDown = false;
+			break;
+		default:
+			break;
+		}
 	}
 
 	void PhysicsTest::MouseRoller(int z)
@@ -319,14 +346,7 @@ namespace GAME
 
 	void PhysicsTest::GameLoop(unsigned int mCurrentFrame)
 	{
-		int winwidth, winheight;
-#if defined(_WIN32)
-		glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
-		glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
-#elif defined(__ANDROID__)
-		winwidth = mWindow->getWidth();
-		winheight = mWindow->getHeight();
-#endif
+		int winwidth = mWinWidth, winheight = mWinHeight;
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 		huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
 		huoqdedian.x += mCamera->getCameraPos().x;
@@ -346,8 +366,8 @@ namespace GAME
 			if (AddUpTime > PhysicsTick) {
 				AddUpTime -= PhysicsTick;
 				mPhysicsWorld->PhysicsEmulator(PhysicsTick);
-				if (AddUpTime > 1.0) {
-					AddUpTime = 0.1;
+				if (AddUpTime > 0.02) {
+					AddUpTime = 0.01;
 				}
 			}
 		}
@@ -545,13 +565,7 @@ namespace GAME
 					mAuxiliaryVision->Line({cellPos.x + jiao3.x, cellPos.y + jiao3.y, 0.0}, lineColor, {cellPos.x + jiao2.x, cellPos.y + jiao2.y, 0.0}, lineColor);
 				}
 			}
-			int winwidth, winheight;
-#if defined(_WIN32)
-			glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
-#elif defined(__ANDROID__)
-			winwidth = mWindow->getWidth();
-			winheight = mWindow->getHeight();
-#endif
+			int winwidth = mWinWidth, winheight = mWinHeight;
 			glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 			huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
 			huoqdedian.x += mCamera->getCameraPos().x;
@@ -638,11 +652,7 @@ namespace GAME
 			static glm::vec2 z1, z2, y1, y2;
 
 			static int Z_fangzhifanfuvhufa;
-#if defined(_WIN32)
-			int Z_Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-#elif defined(__ANDROID__)
-			int Z_Leftan = (Global::TouchState == TouchStateEnum::PrimaryDown) ? GLFW_PRESS : GLFW_RELEASE;
-#endif
+			int Z_Leftan = mLeftMouseDown ? 1 : 0;
 			if (Z_Leftan == GLFW_PRESS)
 			{
 				if (Z_fangzhifanfuvhufa != Z_Leftan)
@@ -669,11 +679,7 @@ namespace GAME
 			}
 
 			static int fangzhifanfuvhufa;
-#if defined(_WIN32)
-			int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
-#elif defined(__ANDROID__)
-			int Leftan = (Global::TouchState == TouchStateEnum::SecondaryDown) ? GLFW_PRESS : GLFW_RELEASE;
-#endif
+			int Leftan = mRightMouseDown ? 1 : 0;
 			if (Leftan == GLFW_PRESS)
 			{
 				if (fangzhifanfuvhufa != Leftan)
@@ -706,11 +712,7 @@ namespace GAME
 		static glm::vec2 z1, z2, y1, y2;
 
 		static int Z_fangzhifanfuvhufa; // 避免反复触发
-#if defined(_WIN32)
-		int Z_Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-#elif defined(__ANDROID__)
-		int Z_Leftan = (Global::TouchState == TouchStateEnum::PrimaryDown) ? GLFW_PRESS : GLFW_RELEASE;
-#endif
+		int Z_Leftan = mLeftMouseDown ? 1 : 0;
 		if (Z_Leftan == GLFW_PRESS)
 		{
 			if (Z_fangzhifanfuvhufa != Z_Leftan)
@@ -730,11 +732,7 @@ namespace GAME
 		}
 		Z_fangzhifanfuvhufa = Z_Leftan;
 		static int fangzhifanfuvhufa; // 避免反复触发
-#if defined(_WIN32)
-		int Leftan = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
-#elif defined(__ANDROID__)
-		int Leftan = (Global::TouchState == TouchStateEnum::SecondaryDown) ? GLFW_PRESS : GLFW_RELEASE;
-#endif
+		int Leftan = mRightMouseDown ? 1 : 0;
 		if (Leftan == GLFW_PRESS)
 		{
 			if (fangzhifanfuvhufa != Leftan)

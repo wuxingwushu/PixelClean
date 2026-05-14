@@ -3,6 +3,7 @@
 #include "NetworkTCP/Server.h"
 #include "NetworkTCP/Client.h"
 #include "Opcode/OpcodeFunction.h"
+#include "GameMods/FruitNinja/FruitNinja.h"
 #if defined(__ANDROID__)
 #include <android/native_window.h>
 #include <imgui/backends/imgui_impl_android.h>
@@ -78,6 +79,9 @@ namespace GAME {
 		case RadianceCascades_:
 			GamePtr = new RadianceCascades(*this);
 			break;
+		case FruitNinja_:
+			GamePtr = new FruitNinja(*this);
+			break;
 		default:
 			break;
 		}
@@ -106,6 +110,9 @@ namespace GAME {
 			break;
 		case RadianceCascades_:
 			delete (RadianceCascades*)mGameMods;
+			break;
+		case FruitNinja_:
+			delete (FruitNinja*)mGameMods;
 			break;
 		default:
 			break;
@@ -534,6 +541,30 @@ namespace GAME {
 			else {
 				TOOL::mTimer->StartTiming(u8"游戏逻辑 ", true);
 				mWindow->processEvent();//监听键盘
+			if (mGameMods != nullptr) {
+				mGameMods->MouseMove(CursorPosX, CursorPosY);
+#if defined(_WIN32)
+				mGameMods->MouseButton(MouseBtn::Left,
+					glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS
+						? InputState::Down : InputState::Up);
+				mGameMods->MouseButton(MouseBtn::Right,
+					glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS
+						? InputState::Down : InputState::Up);
+				mGameMods->MouseButton(MouseBtn::Middle,
+					glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS
+						? InputState::Down : InputState::Up);
+#elif defined(__ANDROID__)
+				mGameMods->MouseButton(MouseBtn::Left,
+					Global::TouchState == TouchStateEnum::PrimaryDown
+						? InputState::Down : InputState::Up);
+				mGameMods->MouseButton(MouseBtn::Right,
+					Global::TouchState == TouchStateEnum::SecondaryDown
+						? InputState::Down : InputState::Up);
+				mGameMods->MouseButton(MouseBtn::Middle,
+					Global::TouchState == TouchStateEnum::TertiaryDown
+						? InputState::Down : InputState::Up);
+#endif
+			}
 				GameLoop();
 				TOOL::mTimer->StartEnd();
 
@@ -546,7 +577,6 @@ namespace GAME {
 				mGameMods->GameTCPLoop();
 			}
 			TOOL::mTimer->StartEnd();
-
 
 			TOOL::FPS();//刷新帧数
 
@@ -918,6 +948,22 @@ namespace GAME {
 		else {
 			TOOL::mTimer->StartTiming(u8"游戏逻辑 ", true);
 			mWindow->processEvent();
+			if (mGameMods != nullptr) {
+				mGameMods->MouseMove(CursorPosX, CursorPosY);
+				mGameMods->MouseButton(MouseBtn::Left,
+					Global::TouchState == TouchStateEnum::PrimaryDown
+						? InputState::Down : InputState::Up);
+				mGameMods->MouseButton(MouseBtn::Right,
+					Global::TouchState == TouchStateEnum::SecondaryDown
+						? InputState::Down : InputState::Up);
+				mGameMods->MouseButton(MouseBtn::Middle,
+					Global::TouchState == TouchStateEnum::TertiaryDown
+						? InputState::Down : InputState::Up);
+				int scrollDelta = mPendingScroll.exchange(0);
+				if (scrollDelta != 0) {
+					mGameMods->MouseRoller(scrollDelta > 0 ? 1 : -1);
+				}
+			}
 			GameLoop();
 			TOOL::mTimer->StartEnd();
 
@@ -930,7 +976,6 @@ namespace GAME {
 			mGameMods->GameTCPLoop();
 		}
 		TOOL::mTimer->StartEnd();
-
 
 		TOOL::FPS();
 

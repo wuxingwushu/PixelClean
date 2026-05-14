@@ -21,6 +21,7 @@ set(CMAKE_CXX_STANDARD 17)
 if(MSVC)
     add_compile_options(/wd4201)  # 禁用警告：非标准扩展使用了无名结构体/联合体
     add_compile_options(/utf-8)   # 设置源文件和执行字符集为UTF-8
+    add_compile_definitions(WIN32_LEAN_AND_MEAN NOMINMAX)  # Windows 宏 + GLM 全局一致配置
 endif()
 
 aux_source_directory(. DIRSRCS)
@@ -133,6 +134,7 @@ add_subdirectory(GameMods/UnlimitednessMapMods)
 add_subdirectory(GameMods/PhysicsTest)
 add_subdirectory(GameMods/SoloudTest)
 add_subdirectory(GameMods/RadianceCascades)
+add_subdirectory(GameMods/FruitNinja)
 add_subdirectory(Tool)#文件夹里面要有代码文件，不可以是空的，会报错
 
 
@@ -172,6 +174,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		PhysicsBlockLib
 		SoloudTestLib
 		RadianceCascadesLib
+		FruitNinjaLib
 		glfw
 		libevent
 		imgui
@@ -216,6 +219,7 @@ else()
 		PhysicsBlockLib
 		SoloudTestLib
 		RadianceCascadesLib
+		FruitNinjaLib
 		glfw
 		libevent
 		imgui

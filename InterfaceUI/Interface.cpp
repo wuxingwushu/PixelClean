@@ -52,11 +52,18 @@ namespace GAME {
 		ImGui::StyleColorsDark();
 
 		ImGuiStyle& Style = ImGui::GetStyle();
+#if defined(__ANDROID__)
+		Style.ScaleAllSizes(1.5f);
+#endif
 
 		ImFontConfig Font_cfg;
 		Font_cfg.OversampleH = 1;
 		Font_cfg.FontDataOwnedByAtlas = false;
+#if defined(_WIN32)
 		Font = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+#elif defined(__ANDROID__)
+		Font = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 28.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+#endif
 
 #if defined(_WIN32)
 		ImGui_ImplGlfw_InitForVulkan(mWindown->getWindow(), true);
@@ -230,7 +237,11 @@ namespace GAME {
 	static float GetUIScale() {
 		float sx = Global::mWidth / 1920.0f;
 		float sy = Global::mHeight / 1080.0f;
-		return sx < sy ? sx : sy;
+		float s = sx < sy ? sx : sy;
+#if defined(__ANDROID__)
+		if (s < 0.75f) s = 0.75f;
+#endif
+		return s;
 	}
 
 	void ImGuiInterFace::MainInterface()

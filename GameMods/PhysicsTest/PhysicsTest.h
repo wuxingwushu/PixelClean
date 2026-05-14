@@ -18,8 +18,11 @@ namespace GAME
 		// 鼠标移动事件
 		virtual void MouseMove(double xpos, double ypos);
 
-		// 鼠标移动事件
+		// 鼠标滚轮事件
 		virtual void MouseRoller(int z);
+
+		// 鼠标按键事件
+		virtual void MouseButton(MouseBtn button, InputState State);
 
 		// 键盘事件
 		virtual void KeyDown(GameKeyEnum moveDirection);
@@ -63,6 +66,11 @@ namespace GAME
 		bool PhysicsSwitch = true;							 // 物理世界的开关
 		PhysicsBlock::PhysicsWorld *mPhysicsWorld = nullptr; // 物理世界
 		PhysicsBlock::MapStatic *mMapStatic;				 // 地图
+
+		bool mLeftMouseDown = false;
+		bool mRightMouseDown = false;
+		int mWinWidth = 0;
+		int mWinHeight = 0;
 
 		bool ShowLogPanel = true;							 // 是否显示日志面板
 		bool AutoScrollLog = true;							 // 是否自动滚动日志

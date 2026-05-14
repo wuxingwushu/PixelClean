@@ -100,6 +100,22 @@ void RadianceCascades::MouseMove(double x, double y) {
 
 void RadianceCascades::MouseRoller(int) {}  // 滚轮事件当前不处理
 
+void RadianceCascades::MouseButton(MouseBtn button, InputState State) {
+	switch (button) {
+	case MouseBtn::Left:
+		mMouseLeftDown = (State == InputState::Down || State == InputState::Hold);
+		break;
+	case MouseBtn::Right:
+		mMouseRightDown = (State == InputState::Down || State == InputState::Hold);
+		break;
+	case MouseBtn::Middle:
+		mMouseMiddleDown = (State == InputState::Down || State == InputState::Hold);
+		break;
+	default:
+		break;
+	}
+}
+
 // KeyDown — 按键处理
 void RadianceCascades::KeyDown(GameKeyEnum k) {
     if (k == GameKeyEnum::ESC) {
@@ -507,42 +523,21 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     }
 
     // ---- 鼠标状态读取 ----
-#if defined(_WIN32)
-    int leftState  = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_LEFT);
-    int rightState = glfwGetMouseButton(mWindow->getWindow(), GLFW_MOUSE_BUTTON_RIGHT);
-#elif defined(__ANDROID__)
-    int leftState  = (Global::TouchState == TouchStateEnum::PrimaryDown) ? GLFW_PRESS : GLFW_RELEASE;
-    int rightState = (Global::TouchState == TouchStateEnum::SecondaryDown) ? GLFW_PRESS : GLFW_RELEASE;
-#endif
-    bool leftDown  = (leftState == GLFW_PRESS);
-    bool rightDown = (rightState == GLFW_PRESS);
-    bool realMouseDown = leftDown || rightDown;  // 任一按钮按下都算"绘制中"
+	bool leftDown  = mMouseLeftDown;
+	bool rightDown = mMouseRightDown;
+	bool realMouseDown = leftDown || rightDown;  // 任一按钮按下都算"绘制中"
 
     // ---- 鼠标平滑算法（Shadertoy Buffer A 精确对应） ----
     const float smoothRadiusPx = mSmoothRadius * float(ext.height);
 
     float rawX, rawY, prevRawX, prevRawY;
 
-#if defined(__ANDROID__)
-    {
-        ImVec2 mp = ImGui::GetIO().MousePos;
-        rawX = mp.x;
-        rawY = mp.y;
-        prevRawX = mMousePrevX;
-        prevRawY = mMousePrevY;
-        mMousePrevX = rawX;
-        mMousePrevY = rawY;
-        mMouseX = rawX;
-        mMouseY = rawY;
-    }
-#else
-    rawX = (float)mMouseX;
-    rawY = (float)mMouseY;
-    prevRawX = (float)mMousePrevX;
-    prevRawY = (float)mMousePrevY;
-#endif
+rawX = (float)mMouseX;
+	rawY = (float)mMouseY;
+	prevRawX = (float)mMousePrevX;
+	prevRawY = (float)mMousePrevY;
 
-    if (mImageViewDisplayScale > 0.0f && mImageViewSize.x > 0.0f && mImageViewSize.y > 0.0f) {
+	if (mImageViewDisplayScale > 0.0f && mImageViewSize.x > 0.0f && mImageViewSize.y > 0.0f) {
         auto toImgX = [&](float wx) {
             return (wx - mImageViewScreenPos.x) / mImageViewDisplayScale;
         };
@@ -626,10 +621,10 @@ void RadianceCascades::GameLoop(unsigned int /*currentFrame*/) {
     }
     mPrevCKey = glfwGetKey(mWindow->getWindow(), GLFW_KEY_C);
 #elif defined(__ANDROID__)
-    if (mPrevCKey == 0 && Global::TouchState == TouchStateEnum::TertiaryDown) {
-        mNeedClear = true;
-    }
-    mPrevCKey = (Global::TouchState == TouchStateEnum::TertiaryDown) ? GLFW_PRESS : 0;
+    if (mPrevCKey == 0 && mMouseMiddleDown) {
+		mNeedClear = true;
+	}
+	mPrevCKey = mMouseMiddleDown ? GLFW_PRESS : 0;
 #endif
 
     // ---- 打包 GPUParams ----

@@ -1,63 +1,81 @@
 #pragma once
 
+
+enum class InputState {
+	None = 0,
+	Down,
+	Hold,
+	Up
+};
+
 enum GameModsEnum
 {
-	Maze_,
+	Maze_ = 0,
 	TankTrouble_,
 	PhysicsTest_,
 	SoloudTest_,
 	RadianceCascades_,
-	Infinite_//作为截至符号
+	FruitNinja_,
+	Infinite_,
 };
 
-static const char* GameModsEnumName[]{
+static const char* GameModsEnumName[] = {
 	u8"迷宫",
 	u8"坦克动荡",
-	u8"物理",
+	u8"物理测试",
 	u8"SoLoud音效",
 	u8"辐射级联GI",
-	u8"无限"
+	u8"水果忍者",
+	u8"无限",
 };
 
-enum GameKeyEnum
+enum class GameKeyEnum : unsigned
 {
 	MOVE_LEFT = 0,
 	MOVE_RIGHT,
 	MOVE_FRONT,
 	MOVE_BACK,
-
 	ESC,
 	Key_1,
 	Key_2,
 	SPACE,
 };
 
-enum TouchStateEnum
+enum class MouseBtn : unsigned
 {
+	Left = 0,
+	Right,
+	Middle,
+};
+
+enum class TouchStateEnum {
 	None = 0,
-	PrimaryDown,	// 主触摸按下（对应鼠标左键）
-	SecondaryDown,	// 次触摸按下（对应鼠标右键）
-	TertiaryDown,	// 第三触摸按下（寻路右键）
-	MultiTouch,		// 多指触摸
+	PrimaryDown,
+	SecondaryDown,
+	TertiaryDown,
+	MultiTouch,
 };
 
 class GameMods
 {
 public:
-	//鼠标移动事件
-	virtual void MouseMove(double xpos, double ypos) = 0;
+	//每帧调用：鼠标位置（屏幕坐标）
+	virtual void MouseMove(double xpos, double ypos) {};
 
-	//鼠标移动事件
-	virtual void MouseRoller(int z) = 0;
+	//鼠标滚轮
+	virtual void MouseRoller(int z) {};
+
+	//鼠标按键
+	virtual void MouseButton(MouseBtn button, InputState State) {};
 
 	//键盘事件
-	virtual void KeyDown(GameKeyEnum moveDirection) = 0;
-
-	//获取 CommandBuffer
-	virtual void GameCommandBuffers(unsigned int Format_i) = 0;
+	virtual void KeyDown(GameKeyEnum moveDirection) {};
 
 	//游戏循环
 	virtual void GameLoop(unsigned int mCurrentFrame) = 0;
+
+	//获取 CommandBuffer
+	virtual void GameCommandBuffers(unsigned int Format_i) = 0;
 
 	//录制 CommandBuffer
 	virtual void GameRecordCommandBuffers() = 0;
@@ -68,6 +86,6 @@ public:
 	//游戏 TCP事件
 	virtual void GameTCPLoop() = 0;
 
-	//游戏 UI
+	//游戏界面
 	virtual void GameUI() {};
 };

@@ -26,6 +26,7 @@ namespace GAME
 		CreateScene();
 		InitAudio();
 
+		mLastFrameTime = std::chrono::steady_clock::now();
 		mCamera->setCameraPos({0, 0, 40});
 	}
 
@@ -829,16 +830,16 @@ namespace GAME
 		switch (moveDirection)
 		{
 		case GameKeyEnum::MOVE_LEFT:
-			mPlayer->AddForce({-PLAYER_FORCE, 0});
+			mMoveLeft = true;
 			break;
 		case GameKeyEnum::MOVE_RIGHT:
-			mPlayer->AddForce({ PLAYER_FORCE, 0});
+			mMoveRight = true;
 			break;
 		case GameKeyEnum::MOVE_FRONT:
-			mPlayer->AddForce({0, PLAYER_FORCE });
+			mMoveUp = true;
 			break;
 		case GameKeyEnum::MOVE_BACK:
-			mPlayer->AddForce({0, -PLAYER_FORCE });
+			mMoveDown = true;
 			break;
 		case GameKeyEnum::ESC:
 			if (Global::ConsoleBool) {
@@ -872,14 +873,20 @@ namespace GAME
 		mAuxiliaryVision->Begin();
 
 		if (mPhysicsSwitch) {
-			#define PhysicsTick (1.0 / 100.0)
-			static float AddUpTime = 0;
-			AddUpTime += TOOL::FPStime;
-			if (AddUpTime > PhysicsTick) {
-				AddUpTime -= PhysicsTick;
-				mPhysicsWorld->PhysicsEmulator(PhysicsTick);
-				if (AddUpTime > 1.0) AddUpTime = 0.1;
-			}
+			auto now = std::chrono::steady_clock::now();
+			float dt = std::chrono::duration<float>(now - mLastFrameTime).count();
+			mLastFrameTime = now;
+			dt = glm::clamp(dt, 0.005f, 0.05f);
+
+			if (mMoveLeft)       mPlayer->speed.x = -PLAYER_SPEED;
+			else if (mMoveRight) mPlayer->speed.x =  PLAYER_SPEED;
+			else                 mPlayer->speed.x = 0;
+
+			if (mMoveUp)         mPlayer->speed.y =  PLAYER_SPEED;
+			else if (mMoveDown)  mPlayer->speed.y = -PLAYER_SPEED;
+			else                 mPlayer->speed.y = 0;
+
+			mPhysicsWorld->PhysicsEmulator(dt);
 		}
 		else {
 			mPhysicsWorld->PhysicsInformationUpdate();
@@ -891,17 +898,15 @@ namespace GAME
 		mAuxiliaryVision->End();
 
 		if (mPlayer) {
-			glm::vec3 currentPos = mCamera->getCameraPos();
-			glm::vec3 targetPos = {(float)mPlayer->pos.x, (float)mPlayer->pos.y, mCameraTarget.z};
-			float cameraBlendFactor = (float)glm::min((double)(TOOL::FPStime * 5.0f), 1.0);
-			glm::vec3 newPos = glm::mix(currentPos, targetPos, cameraBlendFactor);
-			mCamera->setCameraPos(newPos);
+			mCamera->setCameraPos({(float)mPlayer->pos.x, (float)mPlayer->pos.y, mCameraTarget.z});
 		}
 
 		mCamera->update();
 		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
 		mVPMatrices->mViewMatrix = mCamera->getViewMatrix();
 		mCameraVPMatricesBuffer[mCurrentFrame]->endupdateBufferByMap();
+
+		mMoveLeft = mMoveRight = mMoveUp = mMoveDown = false;
 	}
 
 	// ==================== 渲染 ====================

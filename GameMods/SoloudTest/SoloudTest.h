@@ -61,6 +61,7 @@
 #include "soloud_lofifilter.h"
 #include "soloud_sfxr.h"
 #include <vector>
+#include <chrono>
 
 namespace GAME
 {
@@ -195,8 +196,17 @@ namespace GAME
 		bool mShowOcclusionRays = true;        // 是否显示遮挡检测射线
 		glm::vec3 mCameraTarget = {0, 0, 40}; // 相机目标位置（Z 分量控制缩放）
 
+		// 移动方向标记（避免在渲染帧率下施力导致物理 tick 受力不均）
+		bool mMoveUp = false;
+		bool mMoveDown = false;
+		bool mMoveLeft = false;
+		bool mMoveRight = false;
+
+		std::chrono::steady_clock::time_point mLastFrameTime;
+
 		// ==================== 常量 ====================
 		static constexpr float PLAYER_FORCE = 100.0f;        // 玩家水平移动施力大小
+		static constexpr float PLAYER_SPEED = 15.0f;         // 玩家匀速移动速度
 		static constexpr float SOUND_MAX_DISTANCE = 30.0f;  // 默认声源最大可听距离
 		static constexpr int MAP_WIDTH = 64;                 // 地图宽度（格子数）
 		static constexpr int MAP_HEIGHT = 40;                // 地图高度（格子数）

@@ -36,8 +36,6 @@
 #include <thread>//多线程
 #if defined(_WIN32)
 #define _WINSOCKAPI_
-#endif
-#if defined(_WIN32)
 #include <Windows.h>
 #pragma comment(lib, "ws2_32.lib")
 #elif defined(__ANDROID__)
@@ -51,7 +49,8 @@
 #include <vulkan/vulkan.h>//VulKan API
 #elif defined(__ANDROID__)
 #include <vulkan/vulkan.h>
-#include <GLFW/glfw3.h>//Android GLFW stub
+#define GLFW_PRESS   1
+#define GLFW_RELEASE 0
 #endif
 
 

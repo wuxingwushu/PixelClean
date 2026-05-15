@@ -10,6 +10,8 @@
 #include "../NetworkTCP/Server.h"
 #include "../NetworkTCP/Client.h"
 #include "../DebugLog.h"
+#include <fstream>
+#include <sstream>
 
 namespace GAME {
 	ImGuiInterFace::ImGuiInterFace(
@@ -249,9 +251,14 @@ namespace GAME {
 		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
 
 		float scale = GetUIScale();
-		float btnW = 420.0f * scale;
-		float btnH = 60.0f * scale;
-		float arrowBtn = 60.0f * scale;
+#if defined(__ANDROID__)
+		float btnScale = 1.5f;
+#else
+		float btnScale = 1.0f;
+#endif
+		float btnW = 420.0f * scale * btnScale;
+		float btnH = 60.0f * scale * btnScale;
+		float arrowBtn = 60.0f * scale * btnScale;
 		float spacing = 16.0f * scale;
 		float titleFontScale = 3.0f * scale;
 		float normalFontScale = Global::FontZoomRatio * scale;
@@ -341,7 +348,23 @@ namespace GAME {
 			mWindown->WindowClose();
 		}
 
+		float logBtnW = 280.0f * scale;
+		float logBtnH = 72.0f * scale;
+		float margin = 36.0f * scale;
+		ImGui::SetCursorPos(ImVec2(Global::mWidth - logBtnW - margin, Global::mHeight - logBtnH - margin));
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.2f, 0.85f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 0.95f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.5f, 0.1f, 0.1f, 1.0f));
+		if (ImGui::Button(u8"错误日志", ImVec2(logBtnW, logBtnH))) {
+			ShowLogViewer = true;
+		}
+		ImGui::PopStyleColor(3);
+
 		ImGui::End();
+
+		if (ShowLogViewer) {
+			LogViewerInterface();
+		}
 	}
 
 	void ImGuiInterFace::ViceInterface()
@@ -349,8 +372,13 @@ namespace GAME {
 		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
 
 		float scale = GetUIScale();
-		float btnW = 420.0f * scale;
-		float btnH = 60.0f * scale;
+#if defined(__ANDROID__)
+		float btnScale = 1.5f;
+#else
+		float btnScale = 1.0f;
+#endif
+		float btnW = 420.0f * scale * btnScale;
+		float btnH = 60.0f * scale * btnScale;
 		float spacing = 16.0f * scale;
 		float normalFontScale = Global::FontZoomRatio * scale;
 
@@ -409,8 +437,13 @@ namespace GAME {
 		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
 
 		float scale = GetUIScale();
-		float btnW = 420.0f * scale;
-		float btnH = 60.0f * scale;
+#if defined(__ANDROID__)
+		float btnScale = 1.5f;
+#else
+		float btnScale = 1.0f;
+#endif
+		float btnW = 420.0f * scale * btnScale;
+		float btnH = 60.0f * scale * btnScale;
 		float spacing = 16.0f * scale;
 		float normalFontScale = Global::FontZoomRatio * scale;
 
@@ -642,11 +675,125 @@ namespace GAME {
 			InterfaceIndexes = PreviousLayerInterface;
 		}
 
+		ImGui::Text(u8"_");
+
 		ImGui::PopStyleVar();
 		ImGui::End();
 
 		ImGui::PopStyleColor();
 		ImGui::PopStyleVar(4);
+	}
+
+	std::string ImGuiInterFace::ReadLogFile(const std::string& filePath) {
+		try {
+			std::ifstream file(filePath);
+			if (!file.is_open()) {
+				return u8"[无法打开文件: " + filePath + u8"]\n请确认文件是否存在。";
+			}
+			std::stringstream buffer;
+			buffer << file.rdbuf();
+			std::string content = buffer.str();
+			if (content.empty()) {
+				return u8"[文件为空: " + filePath + u8"]";
+			}
+			return content;
+		} catch (const std::exception& e) {
+			return u8"[读取文件异常: " + std::string(e.what()) + u8"]";
+		}
+	}
+
+	void ImGuiInterFace::LogViewerInterface() {
+		float scale = GetUIScale();
+		float panelW = 1000.0f * scale;
+		float panelH = 700.0f * scale;
+		float btnW = 120.0f * scale;
+		float btnH = 40.0f * scale;
+		float spacing = 10.0f * scale;
+		float fontScale = Global::FontZoomRatio * scale;
+
+		float panelX = (Global::mWidth - panelW) * 0.5f;
+		float panelY = (Global::mHeight - panelH) * 0.5f;
+
+		ImGui::SetNextWindowBgAlpha(1.0f);
+		ImGui::SetNextWindowPos(ImVec2(panelX, panelY));
+		ImGui::SetNextWindowSize(ImVec2(panelW, panelH));
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16 * scale, 12 * scale));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(22.0f / 255.0f, 22.0f / 255.0f, 22.0f / 255.0f, 245.0f / 255.0f));
+		ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
+
+		ImGui::Begin(u8"错误日志查看器", &ShowLogViewer,
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoCollapse
+		);
+		ImGui::SetWindowFontScale(fontScale);
+
+		ImGui::Spacing();
+
+		static int selectedTab = 0;
+		if (ImGui::Button(u8"Error 日志", ImVec2((panelW - 32 * scale - spacing) * 0.5f, btnH))) {
+			selectedTab = 0;
+		}
+		ImGui::SameLine(0.0f, spacing);
+		if (ImGui::Button(u8"VulKanError 日志", ImVec2((panelW - 32 * scale - spacing) * 0.5f, btnH))) {
+			selectedTab = 1;
+		}
+
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
+
+		static std::string errorContent;
+		static std::string vulkanErrorContent;
+		static bool errorLoaded = false;
+		static bool vulkanLoaded = false;
+
+		if (selectedTab == 0) {
+			if (!errorLoaded) {
+				errorContent = ReadLogFile("Logs/Error.txt");
+				errorLoaded = true;
+			}
+		} else {
+			if (!vulkanLoaded) {
+				vulkanErrorContent = ReadLogFile("Logs/VulKanError.txt");
+				vulkanLoaded = true;
+			}
+		}
+
+		float childH = panelH - 140.0f * scale;
+		ImGui::BeginChild("LogContent", ImVec2(0, childH), true, ImGuiWindowFlags_HorizontalScrollbar);
+		ImGui::PushTextWrapPos();
+		ImGui::TextUnformatted(selectedTab == 0 ? errorContent.c_str() : vulkanErrorContent.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::EndChild();
+
+		ImGui::Spacing();
+
+		float btnCenterX = (panelW - btnW * 2 - spacing - 16 * scale) * 0.5f;
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + btnCenterX);
+
+		if (ImGui::Button(u8"刷新", ImVec2(btnW, btnH))) {
+			errorLoaded = false;
+			vulkanLoaded = false;
+			if (selectedTab == 0) {
+				errorContent = ReadLogFile("Logs/Error.txt");
+				errorLoaded = true;
+			} else {
+				vulkanErrorContent = ReadLogFile("Logs/VulKanError.txt");
+				vulkanLoaded = true;
+			}
+		}
+		ImGui::SameLine(0.0f, spacing);
+		if (ImGui::Button(u8"关闭", ImVec2(btnW, btnH))) {
+			ShowLogViewer = false;
+			errorLoaded = false;
+			vulkanLoaded = false;
+		}
+
+		ImGui::End();
+		ImGui::PopStyleVar(2);
+		ImGui::PopStyleColor(2);
 	}
 
 	int InputTextCallbackData(ImGuiInputTextCallbackData* data){

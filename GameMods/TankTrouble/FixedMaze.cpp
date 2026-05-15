@@ -105,10 +105,10 @@ namespace GAME {
 
 
 		float mPositions[12] = {
-			(float)Ax, (float)Ay, 0.0f,
-			(float)Bx, (float)Ay, 0.0f,
-			(float)Bx, (float)By, 0.0f,
-			(float)Ax, (float)By, 0.0f,
+			(float)Ax, (float)Ay, -0.001f,
+			(float)Bx, (float)Ay, -0.001f,
+			(float)Bx, (float)By, -0.001f,
+			(float)Ax, (float)By, -0.001f,
 		};
 
 		float mUVs[8] = {

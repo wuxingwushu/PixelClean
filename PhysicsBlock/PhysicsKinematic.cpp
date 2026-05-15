@@ -110,19 +110,12 @@ namespace PhysicsBlock
         }
 
         FLOAT_ currentAngle = 0.0f;
-        switch (object->PFGetType())
+        PhysicsObjectEnum objType = object->PFGetType();
+        if (objType == PhysicsObjectEnum::shape ||
+            objType == PhysicsObjectEnum::circle ||
+            objType == PhysicsObjectEnum::line)
         {
-        case PhysicsObjectEnum::shape:
-        case PhysicsObjectEnum::circle:
-        case PhysicsObjectEnum::line:
-        {
-            auto *pa = static_cast<PhysicsAngle *>(object);
-            currentAngle = pa->angle;
-            break;
-        }
-        default:
-            currentAngle = 0.0f;
-            break;
+            currentAngle = static_cast<PhysicsAngle *>(object)->angle;
         }
 
         data.Motion.IsRotating = true;
@@ -172,47 +165,35 @@ namespace PhysicsBlock
         }
 
         const bool isKinematic = it->second.IsKinematic;
+        PhysicsObjectEnum objType = object->PFGetType();
 
         if (isKinematic)
         {
-            switch (object->PFGetType())
+            if (objType == PhysicsObjectEnum::particle)
             {
-            case PhysicsObjectEnum::particle:
-            {
-                auto *p = static_cast<PhysicsParticle *>(object);
-                p->invMass = 0.0f;
-                break;
+                static_cast<PhysicsParticle *>(object)->invMass = 0.0f;
             }
-            case PhysicsObjectEnum::shape:
-            case PhysicsObjectEnum::circle:
-            case PhysicsObjectEnum::line:
+            else if (objType == PhysicsObjectEnum::shape ||
+                     objType == PhysicsObjectEnum::circle ||
+                     objType == PhysicsObjectEnum::line)
             {
-                auto *p = static_cast<PhysicsParticle *>(object);
-                p->invMass = 0.0f;
-                auto *pa = static_cast<PhysicsAngle *>(object);
-                pa->invMomentInertia = 0.0f;
-                break;
-            }
-            default:
-                break;
+                static_cast<PhysicsParticle *>(object)->invMass = 0.0f;
+                static_cast<PhysicsAngle *>(object)->invMomentInertia = 0.0f;
             }
         }
         else
         {
-            switch (object->PFGetType())
-            {
-            case PhysicsObjectEnum::particle:
+            if (objType == PhysicsObjectEnum::particle)
             {
                 auto *p = static_cast<PhysicsParticle *>(object);
                 if (p->mass > 0.0f)
                 {
                     p->invMass = 1.0f / p->mass;
                 }
-                break;
             }
-            case PhysicsObjectEnum::shape:
-            case PhysicsObjectEnum::circle:
-            case PhysicsObjectEnum::line:
+            else if (objType == PhysicsObjectEnum::shape ||
+                     objType == PhysicsObjectEnum::circle ||
+                     objType == PhysicsObjectEnum::line)
             {
                 auto *p = static_cast<PhysicsParticle *>(object);
                 if (p->mass > 0.0f)
@@ -224,10 +205,6 @@ namespace PhysicsBlock
                 {
                     pa->invMomentInertia = 1.0f / pa->MomentInertia;
                 }
-                break;
-            }
-            default:
-                break;
             }
         }
     }
@@ -275,12 +252,9 @@ namespace PhysicsBlock
                                : 1.0f;
                 t = (t > 1.0f) ? 1.0f : ((t < 0.0f) ? 0.0f : t);
 
-                Vec2_ newPos;
-                newPos.x = Lerp(motion.MoveStartPos.x, motion.MoveTargetPos.x, t);
-                newPos.y = Lerp(motion.MoveStartPos.y, motion.MoveTargetPos.y, t);
-
                 auto *pp = static_cast<PhysicsParticle *>(object);
-                pp->pos = newPos;
+                pp->pos.x = motion.MoveStartPos.x + (motion.MoveTargetPos.x - motion.MoveStartPos.x) * t;
+                pp->pos.y = motion.MoveStartPos.y + (motion.MoveTargetPos.y - motion.MoveStartPos.y) * t;
             }
 
             if (motion.IsRotating)
@@ -307,10 +281,8 @@ namespace PhysicsBlock
                                : 1.0f;
                 t = (t > 1.0f) ? 1.0f : ((t < 0.0f) ? 0.0f : t);
 
-                FLOAT_ newAngle = Lerp(motion.RotateStartAngle, motion.RotateTargetAngle, t);
-
-                auto *pa = static_cast<PhysicsAngle *>(object);
-                pa->angle = newAngle;
+                static_cast<PhysicsAngle *>(object)->angle =
+                    motion.RotateStartAngle + (motion.RotateTargetAngle - motion.RotateStartAngle) * t;
             }
         }
     }

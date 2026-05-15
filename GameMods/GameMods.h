@@ -29,6 +29,19 @@ static const char* GameModsEnumName[] = {
 	u8"无限",
 };
 
+inline int GetGameModeStableId(GameModsEnum mode) {
+	switch (mode) {
+		case Maze_:             return 0;
+		case TankTrouble_:      return 1;
+		case PhysicsTest_:      return 2;
+		case SoloudTest_:       return 3;
+		case RadianceCascades_: return 4;
+		case FruitNinja_:       return 5;
+		case Infinite_:         return 100;
+	}
+	return -1;
+}
+
 enum class GameKeyEnum : unsigned
 {
 	MOVE_LEFT = 0,

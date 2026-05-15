@@ -96,5 +96,9 @@ namespace GAME {
 		bool SetBool;
 		InterFaceEnum_ PreviousLayerInterface = MainInterface_Enum;//储存上一层界面
 		void SetInterface();//设置界面
+
+		bool ShowLogViewer = false;
+		void LogViewerInterface();//错误日志查看器
+		std::string ReadLogFile(const std::string& filePath);//读取日志文件
 	};
 }

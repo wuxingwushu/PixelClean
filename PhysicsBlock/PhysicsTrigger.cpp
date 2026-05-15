@@ -131,6 +131,7 @@ namespace PhysicsBlock
             struct TriggerEvent
             {
                 PhysicsFormwork *triggerOwner;
+                TriggerConfig *config;
                 PhysicsFormwork *targetObject;
                 TriggerEventType eventType;
             };
@@ -153,9 +154,7 @@ namespace PhysicsBlock
                         continue;
                     }
 
-                    Vec2_ objPos = obj->PFGetPos();
-
-                    if (!config.TriggerBounds.Contains(objPos))
+                    if (!config.TriggerBounds.Contains(obj->PFGetPos()))
                     {
                         continue;
                     }
@@ -168,13 +167,13 @@ namespace PhysicsBlock
                     {
                         if (config.OnTriggerEnter)
                         {
-                            events.push_back({triggerObj, obj, TriggerEventType::Enter});
+                            events.push_back({triggerObj, &config, obj, TriggerEventType::Enter});
                         }
                     }
 
                     if (config.OnTriggerStay)
                     {
-                        events.push_back({triggerObj, obj, TriggerEventType::Stay});
+                        events.push_back({triggerObj, &config, obj, TriggerEventType::Stay});
                     }
                 }
 
@@ -184,7 +183,7 @@ namespace PhysicsBlock
                     {
                         if (config.OnTriggerExit)
                         {
-                            events.push_back({triggerObj, obj, TriggerEventType::Exit});
+                            events.push_back({triggerObj, &config, obj, TriggerEventType::Exit});
                         }
                     }
                 }
@@ -194,8 +193,7 @@ namespace PhysicsBlock
 
             for (const auto &event : events)
             {
-                auto it = mConfigs.find(event.triggerOwner);
-                if (it == mConfigs.end())
+                if (event.config == nullptr)
                 {
                     continue;
                 }
@@ -204,13 +202,13 @@ namespace PhysicsBlock
                 switch (event.eventType)
                 {
                 case TriggerEventType::Enter:
-                    callback = it->second.OnTriggerEnter;
+                    callback = event.config->OnTriggerEnter;
                     break;
                 case TriggerEventType::Stay:
-                    callback = it->second.OnTriggerStay;
+                    callback = event.config->OnTriggerStay;
                     break;
                 case TriggerEventType::Exit:
-                    callback = it->second.OnTriggerExit;
+                    callback = event.config->OnTriggerExit;
                     break;
                 }
 

@@ -1,6 +1,5 @@
 #include "PhysicsCollision.hpp"
 #include "PhysicsWorld.hpp"
-#include <sstream>
 
 namespace PhysicsBlock
 {
@@ -119,33 +118,31 @@ namespace PhysicsBlock
 
     void PhysicsCollision::ProcessCollisions(const std::vector<BaseArbiter *> &collideGroupVector)
     {
-        struct DeferredEnter
-        {
-            CollisionCallback callback;
-            CollisionData data;
-        };
-        struct DeferredStay
-        {
-            CollisionCallback callback;
-            CollisionData data;
-        };
-        struct DeferredExit
+        struct DeferredEvent
         {
             CollisionCallback callback;
             CollisionData data;
         };
 
-        std::vector<DeferredEnter> enterQueue;
-        std::vector<DeferredStay> stayQueue;
-        std::vector<DeferredExit> exitQueue;
+        std::vector<DeferredEvent> deferredEvents;
 
         {
             std::lock_guard<std::mutex> lock(mMutex);
 
-            std::unordered_set<std::string> currentPairs;
-            std::vector<std::pair<BaseArbiter *, CollisionBinding *>> enterCallbacks;
-            std::vector<std::pair<BaseArbiter *, CollisionBinding *>> stayCallbacks;
-            std::vector<std::pair<BaseArbiter *, CollisionBinding *>> exitCallbacks;
+            std::unordered_set<PairKey, PairKeyHash> currentPairs;
+            currentPairs.reserve(collideGroupVector.size());
+
+            struct CallbackEntry
+            {
+                BaseArbiter *arbiter;
+                CollisionBinding *binding;
+            };
+            std::vector<CallbackEntry> enterEntries;
+            std::vector<CallbackEntry> stayEntries;
+            std::vector<CallbackEntry> exitEntries;
+
+            enterEntries.reserve(collideGroupVector.size() * 2);
+            stayEntries.reserve(collideGroupVector.size() * 2);
 
             for (const auto &arbiter : collideGroupVector)
             {
@@ -167,7 +164,7 @@ namespace PhysicsBlock
                     continue;
                 }
 
-                std::string pairKey = MakePairKey(obj1, obj2);
+                PairKey pairKey(obj1, obj2);
                 currentPairs.insert(pairKey);
 
                 bool isNew = (mActivePairs.find(pairKey) == mActivePairs.end());
@@ -182,21 +179,21 @@ namespace PhysicsBlock
                 {
                     if (bind1 && bind1->OnEnter)
                     {
-                        enterCallbacks.push_back({arbiter, bind1});
+                        enterEntries.push_back({arbiter, bind1});
                     }
                     if (bind2 && bind2->OnEnter)
                     {
-                        enterCallbacks.push_back({arbiter, bind2});
+                        enterEntries.push_back({arbiter, bind2});
                     }
                 }
 
                 if (bind1 && bind1->OnStay)
                 {
-                    stayCallbacks.push_back({arbiter, bind1});
+                    stayEntries.push_back({arbiter, bind1});
                 }
                 if (bind2 && bind2->OnStay)
                 {
-                    stayCallbacks.push_back({arbiter, bind2});
+                    stayEntries.push_back({arbiter, bind2});
                 }
             }
 
@@ -204,86 +201,72 @@ namespace PhysicsBlock
             {
                 if (currentPairs.find(oldPair) == currentPairs.end())
                 {
-                    size_t sepPos = oldPair.find('|');
-                    if (sepPos == std::string::npos)
-                    {
-                        continue;
-                    }
-
-                    void *ptr1 = reinterpret_cast<void *>(std::stoull(oldPair.substr(0, sepPos)));
-                    void *ptr2 = reinterpret_cast<void *>(std::stoull(oldPair.substr(sepPos + 1)));
-
-                    PhysicsFormwork *obj1 = static_cast<PhysicsFormwork *>(ptr1);
-                    PhysicsFormwork *obj2 = static_cast<PhysicsFormwork *>(ptr2);
+                    PhysicsFormwork *obj1 = oldPair.a;
+                    PhysicsFormwork *obj2 = oldPair.b;
 
                     auto it1 = mBindings.find(obj1);
                     auto it2 = mBindings.find(obj2);
 
                     if (it1 != mBindings.end() && it1->second.OnExit)
                     {
-                        CollisionData data;
-                        data.Self = obj1;
-                        data.Other = obj2;
-                        exitCallbacks.push_back({nullptr, &it1->second});
+                        exitEntries.push_back({nullptr, &it1->second});
                     }
                     if (it2 != mBindings.end() && it2->second.OnExit)
                     {
-                        CollisionData data;
-                        data.Self = obj2;
-                        data.Other = obj1;
-                        exitCallbacks.push_back({nullptr, &it2->second});
+                        exitEntries.push_back({nullptr, &it2->second});
                     }
                 }
             }
 
-            auto sortByPriority = [](const std::pair<BaseArbiter *, CollisionBinding *> &a,
-                                      const std::pair<BaseArbiter *, CollisionBinding *> &b)
+            auto sortByPriority = [](const CallbackEntry &a, const CallbackEntry &b)
             {
-                return a.second->Priority > b.second->Priority;
+                return a.binding->Priority > b.binding->Priority;
             };
 
-            std::sort(enterCallbacks.begin(), enterCallbacks.end(), sortByPriority);
-            std::sort(stayCallbacks.begin(), stayCallbacks.end(), sortByPriority);
-            std::sort(exitCallbacks.begin(), exitCallbacks.end(), sortByPriority);
+            std::sort(enterEntries.begin(), enterEntries.end(), sortByPriority);
+            std::sort(stayEntries.begin(), stayEntries.end(), sortByPriority);
+            std::sort(exitEntries.begin(), exitEntries.end(), sortByPriority);
 
-            for (auto &[arbiter, binding] : exitCallbacks)
+            deferredEvents.reserve(enterEntries.size() + stayEntries.size() + exitEntries.size());
+
+            for (auto &entry : exitEntries)
             {
-                if (binding && binding->OnExit)
+                if (entry.binding && entry.binding->OnExit)
                 {
                     CollisionData data;
-                    if (arbiter != nullptr)
+                    if (entry.arbiter != nullptr)
                     {
-                        PhysicsFormwork *self = static_cast<PhysicsFormwork *>(arbiter->key.object1);
-                        data = BuildCollisionData(arbiter, 0, self, nullptr);
+                        PhysicsFormwork *self = static_cast<PhysicsFormwork *>(entry.arbiter->key.object1);
+                        data = BuildCollisionData(entry.arbiter, 0, self, nullptr);
                     }
-                    exitQueue.push_back({binding->OnExit, data});
+                    deferredEvents.push_back({entry.binding->OnExit, data});
                 }
             }
 
-            for (auto &[arbiter, binding] : enterCallbacks)
+            for (auto &entry : enterEntries)
             {
-                if (binding && binding->OnEnter)
+                if (entry.binding && entry.binding->OnEnter)
                 {
-                    for (int ci = 0; ci < arbiter->numContacts; ++ci)
+                    for (int ci = 0; ci < entry.arbiter->numContacts; ++ci)
                     {
-                        PhysicsFormwork *self = static_cast<PhysicsFormwork *>(arbiter->key.object1);
-                        PhysicsFormwork *other = static_cast<PhysicsFormwork *>(arbiter->key.object2);
-                        CollisionData data = BuildCollisionData(arbiter, ci, self, other);
-                        enterQueue.push_back({binding->OnEnter, data});
+                        PhysicsFormwork *self = static_cast<PhysicsFormwork *>(entry.arbiter->key.object1);
+                        PhysicsFormwork *other = static_cast<PhysicsFormwork *>(entry.arbiter->key.object2);
+                        CollisionData data = BuildCollisionData(entry.arbiter, ci, self, other);
+                        deferredEvents.push_back({entry.binding->OnEnter, data});
                     }
                 }
             }
 
-            for (auto &[arbiter, binding] : stayCallbacks)
+            for (auto &entry : stayEntries)
             {
-                if (binding && binding->OnStay)
+                if (entry.binding && entry.binding->OnStay)
                 {
-                    for (int ci = 0; ci < arbiter->numContacts; ++ci)
+                    for (int ci = 0; ci < entry.arbiter->numContacts; ++ci)
                     {
-                        PhysicsFormwork *self = static_cast<PhysicsFormwork *>(arbiter->key.object1);
-                        PhysicsFormwork *other = static_cast<PhysicsFormwork *>(arbiter->key.object2);
-                        CollisionData data = BuildCollisionData(arbiter, ci, self, other);
-                        stayQueue.push_back({binding->OnStay, data});
+                        PhysicsFormwork *self = static_cast<PhysicsFormwork *>(entry.arbiter->key.object1);
+                        PhysicsFormwork *other = static_cast<PhysicsFormwork *>(entry.arbiter->key.object2);
+                        CollisionData data = BuildCollisionData(entry.arbiter, ci, self, other);
+                        deferredEvents.push_back({entry.binding->OnStay, data});
                     }
                 }
             }
@@ -291,15 +274,7 @@ namespace PhysicsBlock
             mActivePairs = std::move(currentPairs);
         }
 
-        for (auto &deferred : exitQueue)
-        {
-            deferred.callback(deferred.data);
-        }
-        for (auto &deferred : enterQueue)
-        {
-            deferred.callback(deferred.data);
-        }
-        for (auto &deferred : stayQueue)
+        for (auto &deferred : deferredEvents)
         {
             deferred.callback(deferred.data);
         }
@@ -378,21 +353,6 @@ namespace PhysicsBlock
         }
 
         return data;
-    }
-
-    std::string PhysicsCollision::MakePairKey(PhysicsFormwork *a, PhysicsFormwork *b) const
-    {
-        void *pa = static_cast<void *>(a);
-        void *pb = static_cast<void *>(b);
-
-        if (pa > pb)
-        {
-            std::swap(pa, pb);
-        }
-
-        std::ostringstream oss;
-        oss << reinterpret_cast<uintptr_t>(pa) << '|' << reinterpret_cast<uintptr_t>(pb);
-        return oss.str();
     }
 
 }

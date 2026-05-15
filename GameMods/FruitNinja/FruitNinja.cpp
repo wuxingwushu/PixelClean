@@ -24,7 +24,7 @@ namespace GAME
 		InitGame();
 		RenderBoundary();
 
-		mCamera->setCameraPos({0, 0, 28});
+		mCamera->setCameraPos({0, 0, 200});
 		mCamera->update();
 
 		mLastFrameTime = std::chrono::steady_clock::now();
@@ -66,13 +66,19 @@ namespace GAME
 				mPhysicsWorld->RemoveObject(f.body);
 			}
 		}
-		for (auto& frag : mFragments) {
-			if (frag.body) {
-				mPhysicsWorld->RemoveObject(frag.body);
+		for (auto& hf : mHalfFruits) {
+			if (hf.body) {
+				mPhysicsWorld->RemoveObject(hf.body);
+			}
+		}
+		for (auto& d : mDebris) {
+			if (d.body) {
+				mPhysicsWorld->RemoveObject(d.body);
 			}
 		}
 		mFruits.clear();
-		mFragments.clear();
+		mHalfFruits.clear();
+		mDebris.clear();
 		mParticles.clear();
 		mScorePopups.clear();
 		mSwipeTrail.clear();
@@ -114,6 +120,14 @@ namespace GAME
 		ray *= -mCamera->getCameraPos().z / ray.z;
 		glm::vec2 worldPos(ray.x + mCamera->getCameraPos().x, ray.y + mCamera->getCameraPos().y);
 
+		if (!mIsSwiping && mLeftMouseDown) {
+			mIsSwiping = true;
+			mSwipeTrail.clear();
+			mLastCheckedTrailIndex = 0;
+			mSwipeTrail.push_back({worldPos, (float)std::chrono::duration<float>(
+				std::chrono::steady_clock::now().time_since_epoch()).count()});
+		}
+
 		if (mIsSwiping) {
 			mSwipeTrail.push_back({worldPos, (float)std::chrono::duration<float>(
 				std::chrono::steady_clock::now().time_since_epoch()).count()});
@@ -132,6 +146,7 @@ namespace GAME
 				mLeftMouseDown = true;
 				mIsSwiping = true;
 				mSwipeTrail.clear();
+				mLastCheckedTrailIndex = 0;
 				mSwipeTrail.push_back({mLastMouseWorldPos, (float)std::chrono::duration<float>(
 					std::chrono::steady_clock::now().time_since_epoch()).count()});
 			}
@@ -165,7 +180,7 @@ namespace GAME
 			camPos.z += z * 5;
 		}
 		if (camPos.z <= 0.1f) camPos.z = 0.1f;
-		if (camPos.z > 80.0f) camPos.z = 80.0f;
+		if (camPos.z > 200.0f) camPos.z = 200.0f;
 		mCamera->setCameraPos(camPos);
 		mCamera->update();
 	}
@@ -220,7 +235,7 @@ namespace GAME
 			}
 
 			UpdateFruits(dt);
-			UpdateFragments(dt);
+			UpdateHalfFruits(dt);
 			UpdateParticles(dt);
 			UpdateScorePopups(dt);
 
@@ -234,12 +249,16 @@ namespace GAME
 					std::chrono::steady_clock::now().time_since_epoch()).count();
 				while (!mSwipeTrail.empty() && (nowTime - mSwipeTrail.front().time) > SwipeTrailMaxAge) {
 					mSwipeTrail.erase(mSwipeTrail.begin());
+					if (mLastCheckedTrailIndex > 0) --mLastCheckedTrailIndex;
 				}
+
+				TryCutDuringSwipe();
 			}
 
 			CheckMissedFruits();
 			RenderFruits();
-			RenderFragments();
+			RenderHalfFruits();
+			RenderDebris();
 			RenderSwipeTrail();
 			RenderParticles();
 			RenderScorePopups();
@@ -253,10 +272,11 @@ namespace GAME
 			mPhysicsWorld->PhysicsInformationUpdate();
 			UpdateParticles(dt);
 			UpdateScorePopups(dt);
-			UpdateFragments(dt);
+			UpdateHalfFruits(dt);
 			RenderParticles();
 			RenderScorePopups();
-			RenderFragments();
+			RenderHalfFruits();
+			RenderDebris();
 		}
 
 		mAuxiliaryVision->End();
@@ -288,44 +308,49 @@ namespace GAME
 		}
 	}
 
-	void FruitNinja::SpawnFruit()
+	void FruitNinja::SpawnFruit(float dt)
 	{
 		float spawnRate = 0.8f;
-		float velYMin = 18.0f;
-		float velYMax = 28.0f;
+		float velYMin = 36.0f;
+		float velYMax = 58.0f;
 		switch (mDifficulty) {
 		case Difficulty::Easy:
 			spawnRate = 1.5f;
-			velYMin = 14.0f;
-			velYMax = 22.0f;
+			velYMin = 29.0f;
+			velYMax = 50.0f;
 			break;
 		case Difficulty::Normal:
 			spawnRate = 0.8f;
-			velYMin = 18.0f;
-			velYMax = 28.0f;
+			velYMin = 36.0f;
+			velYMax = 58.0f;
 			break;
 		case Difficulty::Hard:
 			spawnRate = 0.4f;
-			velYMin = 22.0f;
-			velYMax = 35.0f;
+			velYMin = 43.0f;
+			velYMax = 72.0f;
 			break;
 		}
 
-		mFruitSpawnTimer -= spawnRate;
+		mFruitSpawnTimer -= dt;
 
 		if (mFruitSpawnTimer > 0) return;
 		mFruitSpawnTimer = spawnRate * (0.6f + ((float)rand() / RAND_MAX) * 0.8f);
 
 		FruitType type = (FruitType)(rand() % (int)FruitType::Count);
-		float radius = GetFruitRadius(type);
-		float x = (VisibleHalfWidth - radius) * (2.0f * (float)rand() / RAND_MAX - 1.0f);
-		float y = SpawnY;
-		float velX = 4.0f * (2.0f * (float)rand() / RAND_MAX - 1.0f);
+
+		PhysicsBlock::PhysicsShape* body = new PhysicsBlock::PhysicsShape({0, 0}, {PixelSize, PixelSize});
+		SetupFruitShape(body, type);
+		body->UpdateAll();
+
+		float x = (VisibleHalfWidth - (float)body->radius) * (2.0f * (float)rand() / RAND_MAX - 1.0f);
+		float velX = 11.0f * (2.0f * (float)rand() / RAND_MAX - 1.0f);
 		float velY = velYMin + (velYMax - velYMin) * (float)rand() / RAND_MAX;
 
-		FLOAT_ mass = 3.14159f * radius * radius;
-		PhysicsBlock::PhysicsCircle* body = new PhysicsBlock::PhysicsCircle({x, y}, radius, mass, 0.3f);
+		body->pos = {x, SpawnY};
+		body->OldPos = body->pos;
 		body->speed = {velX, velY};
+		body->angle = ((float)rand() / RAND_MAX) * 0.5f - 0.25f;
+		body->angleSpeed = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
 		mPhysicsWorld->AddObject(body);
 
 		FruitData fruit;
@@ -334,20 +359,51 @@ namespace GAME
 		fruit.cut = false;
 		mFruits.push_back(fruit);
 
+		int activeCount = 0;
+		for (const auto& f : mFruits) {
+			if (!f.cut) ++activeCount;
+		}
 		int maxActive = (mDifficulty == Difficulty::Hard) ? 8 : ((mDifficulty == Difficulty::Easy) ? 3 : 5);
-		if ((int)mFruits.size() > maxActive) {
-			size_t extraCount = mFruits.size() - maxActive;
-			float nowTime = (float)std::chrono::duration<float>(
-				std::chrono::steady_clock::now().time_since_epoch()).count();
-			for (size_t i = 0; i < extraCount; ++i) {
-				mFruitSpawnTimer += spawnRate * 0.5f;
-			}
+		if (activeCount > maxActive) {
+			mFruitSpawnTimer += spawnRate * 0.5f;
 		}
 	}
 
 	void FruitNinja::UpdateFruits(float dt)
 	{
-		SpawnFruit();
+		SpawnFruit(dt);
+	}
+
+	void FruitNinja::TryCutDuringSwipe()
+	{
+		if (mSwipeTrail.size() < 3) return;
+
+		size_t checkStart = mLastCheckedTrailIndex;
+		if (checkStart < 1) checkStart = 1;
+
+		for (size_t si = checkStart; si < mSwipeTrail.size(); ++si) {
+			glm::vec2 segA = mSwipeTrail[si - 1].pos;
+			glm::vec2 segB = mSwipeTrail[si].pos;
+			float segLen = glm::length(segB - segA);
+			if (segLen < 0.5f) continue;
+			float segDt = mSwipeTrail[si].time - mSwipeTrail[si - 1].time;
+			float segSpeed = segDt > 0.0005f ? segLen / segDt : 40.0f;
+
+			for (size_t fi = 0; fi < mFruits.size(); ++fi) {
+				if (mFruits[fi].cut) continue;
+				glm::vec2 fruitPos(mFruits[fi].body->pos.x, mFruits[fi].body->pos.y);
+				float radius = (float)mFruits[fi].body->radius;
+
+				if (LineCircleIntersect(segA, segB, fruitPos, radius)) {
+					glm::vec2 cutDir = segB - segA;
+					if (segLen > 0.001f) cutDir /= segLen;
+					else cutDir = {1.0f, 0.0f};
+					CutFruit(fi, fruitPos, cutDir, segSpeed);
+				}
+			}
+		}
+
+		mLastCheckedTrailIndex = mSwipeTrail.size();
 	}
 
 	void FruitNinja::CheckCutting(float dt)
@@ -359,9 +415,9 @@ namespace GAME
 			totalDist += glm::length(mSwipeTrail[i].pos - mSwipeTrail[i-1].pos);
 		}
 		float dtSwipe = mSwipeTrail.back().time - mSwipeTrail.front().time;
-		float cutSpeed = dtSwipe > 0.001f ? totalDist / dtSwipe : 10.0f;
+		float cutSpeed = dtSwipe > 0.001f ? totalDist / dtSwipe : 20.0f;
 
-		if (cutSpeed < 3.0f || totalDist < 0.5f) return;
+		if (cutSpeed < 14.0f || totalDist < 3.5f) return;
 
 		glm::vec2 cutDir = glm::normalize(mSwipeTrail.back().pos - mSwipeTrail.front().pos);
 
@@ -395,15 +451,13 @@ namespace GAME
 		for (size_t i = 0; i < mFruits.size(); ) {
 			FruitData& f = mFruits[i];
 			if (f.cut) {
-				++i;
+				mFruits.erase(mFruits.begin() + i);
 				continue;
 			}
 			bool missed = (f.body->pos.y < SpawnY - 1.0f && f.body->speed.y < -0.5f);
 			bool outOfBounds = (f.body->pos.y < DeathY);
 			if (missed || outOfBounds) {
-				if (!f.cut) {
-					LoseLife();
-				}
+				LoseLife();
 				mPhysicsWorld->RemoveObject(f.body);
 				mFruits.erase(mFruits.begin() + i);
 				continue;
@@ -424,48 +478,97 @@ namespace GAME
 		int score = CalculateScore(f.type, cutSpeed, isCombo);
 		AddScore(score, cutPoint);
 
-		SpawnCutFragments(cutPoint, cutDirection, f, cutSpeed);
-		SpawnExplosionParticles(cutPoint, GetFruitColor(f.type), 20, 8.0f);
-		SpawnFruitJuiceParticles(cutPoint, GetFruitColor(f.type), 15);
+		SpawnHalfFruits(f, cutPoint, cutDirection, cutSpeed);
+		SpawnExplosionParticles(cutPoint, GetFruitColor(f.type), 40, 20.0f);
+		SpawnFruitJuiceParticles(cutPoint, GetFruitColor(f.type), 30);
 
 		mPhysicsWorld->RemoveObject(f.body);
+		f.body = nullptr;
 	}
 
-	void FruitNinja::SpawnCutFragments(glm::vec2 pos, glm::vec2 direction, const FruitData& fruit, float cutSpeed)
+	void FruitNinja::SpawnHalfFruits(const FruitData& fruit, glm::vec2 cutPoint, glm::vec2 cutDirection, float cutSpeed)
 	{
-		float radius = GetFruitRadius(fruit.type);
-		float halfR = radius * 0.65f;
-		glm::vec4 color = GetFruitColor(fruit.type);
+		PhysicsBlock::PhysicsShape* srcBody = fruit.body;
+		FruitType type = fruit.type;
 
-		glm::vec2 perpDir(-direction.y, direction.x);
+		float cosA = cosf(-srcBody->angle);
+		float sinA = sinf(-srcBody->angle);
+		glm::vec2 localPt = cutPoint - glm::vec2(srcBody->pos.x, srcBody->pos.y);
+		glm::vec2 localCP(
+			localPt.x * cosA - localPt.y * sinA,
+			localPt.x * sinA + localPt.y * cosA
+		);
+		glm::vec2 localCPGrid = localCP + glm::vec2(srcBody->CentreMass.x, srcBody->CentreMass.y);
 
-		for (int half = 0; half < 2; ++half) {
-			FLOAT_ fragR = halfR * (0.7f + 0.3f * (float)rand() / RAND_MAX);
-			FLOAT_ fragMass = 3.14159f * fragR * fragR;
-			glm::vec2 offset = perpDir * (half == 0 ? halfR * 0.5f : -halfR * 0.5f);
-			glm::vec2 fragVel = direction * cutSpeed * (0.3f + 0.4f * (float)rand() / RAND_MAX)
-				+ offset * (0.5f + 1.5f * (float)rand() / RAND_MAX);
+		glm::vec2 localDir(
+			cutDirection.x * cosA - cutDirection.y * sinA,
+			cutDirection.x * sinA + cutDirection.y * cosA
+		);
 
-			PhysicsBlock::PhysicsCircle* frag = new PhysicsBlock::PhysicsCircle(
-				{pos.x + offset.x, pos.y + offset.y}, fragR, fragMass, 0.3f);
-			frag->speed = {fragVel.x, fragVel.y};
-			mPhysicsWorld->AddObject(frag);
+		float len = glm::length(localDir);
+		if (len < 0.0001f) localDir = {1.0f, 0.0f};
+		else localDir /= len;
 
-			CutFragment cf;
-			cf.body = frag;
-			cf.lifetime = 0.8f;
-			cf.color = color;
-			mFragments.push_back(cf);
+		PhysicsBlock::PhysicsShape* halfA = new PhysicsBlock::PhysicsShape({0, 0}, {PixelSize, PixelSize});
+		PhysicsBlock::PhysicsShape* halfB = new PhysicsBlock::PhysicsShape({0, 0}, {PixelSize, PixelSize});
+
+		for (int gx = 0; gx < PixelSize; ++gx) {
+			for (int gy = 0; gy < PixelSize; ++gy) {
+				if (!(srcBody->at(gx, gy).Entity)) continue;
+
+				float dx = gx + 0.5f - localCPGrid.x;
+				float dy = gy + 0.5f - localCPGrid.y;
+				float perp = -localDir.x * dy + localDir.y * dx;
+
+				float perpDist = fabsf(perp);
+
+				if (perp > 0.01f || (perpDist < 0.6f && perp >= -0.01f)) {
+					halfA->at(gx, gy).Entity = true;
+					halfA->at(gx, gy).Collision = true;
+					halfA->at(gx, gy).mass = 1.0f;
+				}
+				if (perp < -0.01f) {
+					halfB->at(gx, gy).Entity = true;
+					halfB->at(gx, gy).Collision = true;
+					halfB->at(gx, gy).mass = 1.0f;
+				}
+			}
 		}
+
+		halfA->angle = srcBody->angle;
+		halfB->angle = srcBody->angle;
+		halfA->UpdateAll();
+		halfB->UpdateAll();
+
+		halfA->pos = srcBody->pos;
+		halfA->OldPos = halfA->pos;
+		halfB->pos = srcBody->pos;
+		halfB->OldPos = halfB->pos;
+
+		glm::vec2 perpDir(-cutDirection.y, cutDirection.x);
+		float sepSpeed = cutSpeed * 0.3f;
+		halfA->speed = {srcBody->speed.x + perpDir.x * sepSpeed, srcBody->speed.y + perpDir.y * sepSpeed};
+		halfB->speed = {srcBody->speed.x - perpDir.x * sepSpeed, srcBody->speed.y - perpDir.y * sepSpeed};
+		halfA->angleSpeed = srcBody->angleSpeed + 3.0f;
+		halfB->angleSpeed = srcBody->angleSpeed - 3.0f;
+
+		mPhysicsWorld->AddObject(halfA);
+		mPhysicsWorld->AddObject(halfB);
+
+		HalfFruit hfA, hfB;
+		hfA.body = halfA; hfA.type = type; hfA.lifetime = HalfFruitLifetime;
+		hfB.body = halfB; hfB.type = type; hfB.lifetime = HalfFruitLifetime;
+		mHalfFruits.push_back(hfA);
+		mHalfFruits.push_back(hfB);
 	}
 
-	void FruitNinja::UpdateFragments(float dt)
+	void FruitNinja::UpdateHalfFruits(float dt)
 	{
-		for (size_t i = 0; i < mFragments.size(); ) {
-			mFragments[i].lifetime -= dt;
-			if (mFragments[i].lifetime <= 0) {
-				mPhysicsWorld->RemoveObject(mFragments[i].body);
-				mFragments.erase(mFragments.begin() + i);
+		for (size_t i = 0; i < mHalfFruits.size(); ) {
+			mHalfFruits[i].lifetime -= dt;
+			if (mHalfFruits[i].lifetime <= 0) {
+				mPhysicsWorld->RemoveObject(mHalfFruits[i].body);
+				mHalfFruits.erase(mHalfFruits.begin() + i);
 				continue;
 			}
 			++i;
@@ -488,7 +591,7 @@ namespace GAME
 	void FruitNinja::UpdateScorePopups(float dt)
 	{
 		for (size_t i = 0; i < mScorePopups.size(); ) {
-			mScorePopups[i].pos.y += 2.0f * dt;
+			mScorePopups[i].pos.y += 8.0f * dt;
 			mScorePopups[i].lifetime -= dt;
 			if (mScorePopups[i].lifetime <= 0) {
 				mScorePopups.erase(mScorePopups.begin() + i);
@@ -501,7 +604,7 @@ namespace GAME
 	int FruitNinja::CalculateScore(FruitType type, float cutSpeed, bool isCombo)
 	{
 		int base = GetFruitBaseScore(type);
-		float speedMult = glm::clamp(cutSpeed / 8.0f, 0.5f, 3.0f);
+		float speedMult = glm::clamp(cutSpeed / 20.0f, 0.5f, 3.0f);
 		float comboMult = isCombo ? (1.0f + mCombo * 0.5f) : 1.0f;
 		return (int)(base * speedMult * comboMult);
 	}
@@ -510,7 +613,7 @@ namespace GAME
 	{
 		mScore += points;
 		ScorePopup pop;
-		pop.pos = pos + glm::vec2(0, 1.0f);
+		pop.pos = pos + glm::vec2(0, 4.0f);
 		pop.score = points;
 		pop.maxLifetime = 0.8f;
 		pop.lifetime = pop.maxLifetime;
@@ -534,30 +637,26 @@ namespace GAME
 		for (size_t i = 0; i < mFruits.size(); ++i) {
 			const FruitData& f = mFruits[i];
 			if (f.cut) continue;
-			glm::vec4 color = GetFruitColor(f.type);
-			FLOAT_ r = f.body->radius;
-			mAuxiliaryVision->Circle(glm::dvec3(f.body->pos, 0.0), r, color);
-
-			glm::vec4 innerColor = color * 0.7f;
-			innerColor.a = 1.0f;
-			mAuxiliaryVision->Circle(glm::dvec3(f.body->pos, 0.0), r * 0.5f, innerColor);
-
-			glm::vec4 highlight = color * 1.3f;
-			highlight.a = 0.6f;
-			double hlX = (double)f.body->pos.x - (double)r * 0.25;
-			double hlY = (double)f.body->pos.y + (double)r * 0.25;
-			mAuxiliaryVision->Circle(glm::dvec3(hlX, hlY, 0.0), r * 0.25f, highlight);
+			RenderPixelFruit(f);
 		}
 	}
 
-	void FruitNinja::RenderFragments()
+	void FruitNinja::RenderHalfFruits()
 	{
-		for (size_t i = 0; i < mFragments.size(); ++i) {
-			const CutFragment& frag = mFragments[i];
-			float alpha = frag.lifetime / 0.8f;
-			glm::vec4 color = frag.color;
+		for (size_t i = 0; i < mHalfFruits.size(); ++i) {
+			const HalfFruit& hf = mHalfFruits[i];
+			RenderPixelHalf(hf);
+		}
+	}
+
+	void FruitNinja::RenderDebris()
+	{
+		for (size_t i = 0; i < mDebris.size(); ++i) {
+			const DebrisFragment& d = mDebris[i];
+			float alpha = d.lifetime / 0.8f;
+			glm::vec4 color = d.color;
 			color.a = alpha;
-			mAuxiliaryVision->Circle(glm::dvec3(frag.body->pos, 0.0), frag.body->radius, color);
+			mAuxiliaryVision->Circle(glm::dvec3(d.body->pos, 0.0), d.body->radius, color);
 		}
 	}
 
@@ -601,7 +700,7 @@ namespace GAME
 	void FruitNinja::RenderBoundary()
 	{
 		glm::vec4 boundaryColor = {0.8f, 0.2f, 0.2f, 0.8f};
-		double y = (double)(DeathY + 1.0f);
+		double y = (double)(DeathY + 8.0f);
 		mAuxiliaryVision->AddStaticLine(glm::dvec3(-(double)VisibleHalfWidth, y, 0.0), glm::dvec3((double)VisibleHalfWidth, y, 0.0), boundaryColor);
 
 		glm::vec4 topColor = {0.2f, 0.8f, 0.2f, 0.4f};
@@ -618,8 +717,8 @@ namespace GAME
 			p.pos = pos;
 			p.velocity = {cosf(angle) * spd, sinf(angle) * spd};
 			p.color = color;
-			p.size = 0.08f;
-			p.maxLifetime = 0.4f + 0.3f * (float)rand() / RAND_MAX;
+			p.size = 0.25f;
+			p.maxLifetime = 0.5f + 0.3f * (float)rand() / RAND_MAX;
 			p.lifetime = p.maxLifetime;
 			mParticles.push_back(p);
 		}
@@ -629,13 +728,13 @@ namespace GAME
 	{
 		for (int i = 0; i < count; ++i) {
 			float angle = -1.5708f + 1.5708f * (2.0f * (float)rand() / RAND_MAX - 1.0f);
-			float spd = 4.0f + 6.0f * (float)rand() / RAND_MAX;
+			float spd = 12.0f + 16.0f * (float)rand() / RAND_MAX;
 			ParticleEffect p;
 			p.pos = pos;
 			p.velocity = {cosf(angle) * spd, sinf(angle) * spd};
 			p.color = color * 0.8f;
-			p.size = 0.04f;
-			p.maxLifetime = 0.3f + 0.2f * (float)rand() / RAND_MAX;
+			p.size = 0.12f;
+			p.maxLifetime = 0.3f + 0.3f * (float)rand() / RAND_MAX;
 			p.lifetime = p.maxLifetime;
 			mParticles.push_back(p);
 		}
@@ -655,23 +754,6 @@ namespace GAME
 		case FruitType::Mango:        return {1.0f, 0.7f, 0.15f, 1.0f};
 		case FruitType::DragonFruit:  return {0.9f, 0.2f, 0.7f, 1.0f};
 		default:                      return {0.5f, 0.5f, 0.5f, 1.0f};
-		}
-	}
-
-	float FruitNinja::GetFruitRadius(FruitType type)
-	{
-		switch (type) {
-		case FruitType::Apple:        return 1.0f;
-		case FruitType::Watermelon:   return 1.5f;
-		case FruitType::Orange:       return 0.9f;
-		case FruitType::Banana:       return 0.7f;
-		case FruitType::Pineapple:    return 1.2f;
-		case FruitType::Kiwi:         return 0.8f;
-		case FruitType::Peach:        return 0.9f;
-		case FruitType::Grape:        return 0.6f;
-		case FruitType::Mango:        return 0.95f;
-		case FruitType::DragonFruit:  return 1.1f;
-		default:                      return 1.0f;
 		}
 	}
 
@@ -882,6 +964,310 @@ namespace GAME
 		ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.0f}, u8"按空格键返回菜单");
 
 		ImGui::End();
+	}
+
+	void FruitNinja::DrawFruitPattern(PixelColorGrid& grid, FruitType type)
+	{
+		for (int x = 0; x < PixelSize; ++x)
+			for (int y = 0; y < PixelSize; ++y)
+				grid[x][y] = 0;
+
+		int cx = PixelSize / 2;
+		int cy = PixelSize / 2;
+
+		int bodyR, innerR;
+
+		switch (type) {
+		case FruitType::Apple:
+			bodyR = 14; innerR = 12;
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int dx = x - cx, dy = y - (cy + 1);
+					float dist = sqrtf((float)(dx*dx + dy*dy));
+					if (dist <= bodyR) {
+						grid[x][y] = (dist > bodyR - 1.5f) ? 2 : 1;
+					}
+					if (dist <= innerR - 3 && dx > 3 && dy < -2) grid[x][y] = 3;
+				}
+			for (int x = cx - 1; x <= cx; ++x)
+				for (int y = 0; y <= 4; ++y)
+					grid[x][y] = 4;
+			for (int x = cx + 1; x <= cx + 5; ++x)
+				for (int y = 3; y <= 7; ++y) {
+					int lx = x - (cx + 2), ly = y - 5;
+					if (lx*lx*2 + ly*ly < 20) grid[x][y] = 5;
+				}
+			break;
+
+		case FruitType::Watermelon:
+			bodyR = 15; innerR = 13;
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int dx = x - cx, dy = y - cy;
+					float dist = sqrtf((float)(dx*dx + dy*dy));
+					if (dist <= bodyR) {
+						grid[x][y] = (dist > bodyR - 1.5f) ? 2 : 1;
+						if (dist < innerR - 3) grid[x][y] = 6;
+						if (dist < innerR - 5) grid[x][y] = 7;
+					}
+				}
+			break;
+
+		case FruitType::Orange:
+			bodyR = 14; innerR = 11;
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int dx = x - cx, dy = y - cy;
+					float dist = sqrtf((float)(dx*dx + dy*dy));
+					if (dist <= bodyR) {
+						grid[x][y] = (dist > bodyR - 1.5f) ? 2 : 1;
+					}
+					if (dist <= innerR && dx > 3 && dy < -2) grid[x][y] = 3;
+				}
+			grid[cx][cy - bodyR + 3] = 4;
+			break;
+
+		case FruitType::Banana:
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int bx = x - 4, by = y - 4;
+					float curveY = by - bx * bx * 0.008f;
+					float dist = fabsf(curveY);
+					if (x >= 4 && x <= 28 && dist <= 5.0f) {
+						grid[x][y] = (dist > 3.5f) ? 2 : 1;
+					}
+				}
+			for (int x = 4; x <= 8; ++x)
+				for (int y = 0; y <= 6; ++y)
+					if (sqrtf((float)((x-6)*(x-6) + (y-4)*(y-4))) < 3.5f)
+						grid[x][y] = 4;
+			for (int x = 24; x <= 29; ++x)
+				for (int y = 0; y <= 6; ++y)
+					if (sqrtf((float)((x-26)*(x-26) + (y-4)*(y-4))) < 3.5f)
+						grid[x][y] = 4;
+			break;
+
+		case FruitType::Pineapple:
+			bodyR = 12;
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int dx = x - cx, dy = y - (cy + 2);
+					if ((float)(dx*dx)/(11.0f*11.0f) + (float)(dy*dy)/(14.0f*14.0f) <= 1.0f) {
+						float dist = sqrtf((float)(dx*dx + dy*dy));
+						grid[x][y] = (dist > bodyR - 2.0f) ? 2 : 1;
+					}
+				}
+			for (int y = cx + 10; y <= cx + 14; ++y)
+				for (int x = cx - 5; x <= cx + 5; ++x) {
+					float ex = (float)(x - cx) / 5.0f;
+					float ey = (float)(y - (cx + 11)) / 4.0f;
+					if (ex*ex + ey*ey <= 1.0f) grid[x][y] = 5;
+				}
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					if (grid[x][y] == 1 && (x + y) % 8 < 3) grid[x][y] = 8;
+				}
+			break;
+
+		case FruitType::Kiwi:
+			bodyR = 13; innerR = 10;
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int dx = x - cx, dy = y - cy;
+					float dist = sqrtf((float)(dx*dx + dy*dy));
+					if (dist <= bodyR) {
+						grid[x][y] = (dist > bodyR - 2.0f) ? 2 : 1;
+						if (dist < innerR) grid[x][y] = 5;
+						if (dist < innerR - 2) grid[x][y] = 9;
+					}
+				}
+			for (int x = cx - 4; x <= cx + 4; ++x)
+				for (int y = cy - 4; y <= cy + 4; ++y)
+					if ((x-cx)*(x-cx) + (y-cy)*(y-cy) < 9)
+						grid[x][y] = 10;
+			break;
+
+		case FruitType::Peach:
+			bodyR = 14;
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int dx = x - cx, dy = y - (cy + 1);
+					float dist = sqrtf((float)(dx*dx + dy*dy * 1.1f));
+					if (dist <= bodyR) {
+						grid[x][y] = (dist > bodyR - 1.5f) ? 2 : 1;
+					}
+					if (dist < bodyR - 3 && dx > 3 && dy < -1) grid[x][y] = 3;
+					if (dy > 6 && fabsf((float)dx) < 3) grid[x][y] = 2;
+				}
+			break;
+
+		case FruitType::Grape: {
+			struct { int gx, gy, r; } grapes[] = {
+				{14, 18, 6}, {20, 16, 6}, {12, 12, 6}, {18, 10, 5},
+				{14, 6, 5}, {21, 22, 5}, {11, 22, 4}
+			};
+			for (auto& g : grapes) {
+				for (int x = 0; x < PixelSize; ++x)
+					for (int y = 0; y < PixelSize; ++y) {
+						int dx = x - g.gx, dy = y - g.gy;
+						float dist = sqrtf((float)(dx*dx + dy*dy));
+						if (dist <= g.r) {
+							grid[x][y] = (dist > g.r - 1.0f) ? 2 : 1;
+						}
+						if (dist < g.r - 2 && dx > 0 && dy < -1) grid[x][y] = 3;
+					}
+			}
+			for (int x = 14; x <= 18; ++x)
+				for (int y = 25; y <= 28; ++y)
+					grid[x][y] = 4;
+			break;
+		}
+
+		case FruitType::Mango:
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int dx = x - cx, dy = y - (cy + 1);
+					float ex = (float)dx / 10.0f;
+					float ey = (float)dy / 14.0f;
+					float eDist = ex*ex + ey*ey;
+					if (eDist <= 1.0f && y > 4) {
+						grid[x][y] = (eDist > 0.75f) ? 2 : 1;
+					}
+					if (eDist < 0.4f && dx > 2 && dy < -2) grid[x][y] = 3;
+				}
+			for (int x = cx - 1; x <= cx + 1; ++x)
+				for (int y = cy + 12; y <= cy + 15; ++y)
+					grid[x][y] = 4;
+			for (int x = cx - 3; x <= cx + 3 && x < PixelSize; ++x)
+				for (int y = cy - 15; y <= cy - 12 && y >= 0; ++y)
+					if (fabsf((float)(x - cx)) < 3.5f)
+						grid[x][y] = 4;
+			break;
+
+		case FruitType::DragonFruit:
+			bodyR = 13;
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int dx = x - cx, dy = y - cy;
+					float dist = sqrtf((float)(dx*dx + dy*dy));
+					if (dist <= bodyR) {
+						grid[x][y] = (dist > bodyR - 1.5f) ? 2 : 1;
+					}
+				}
+			for (int i = 0; i < 8; ++i) {
+				float a = i * 0.785f;
+				int sx = cx + (int)(cosf(a) * 11);
+				int sy = cy + (int)(sinf(a) * 11);
+				for (int x = sx - 2; x <= sx + 2; ++x)
+					for (int y = sy - 2; y <= sy + 2; ++y)
+						if (x >= 0 && x < PixelSize && y >= 0 && y < PixelSize)
+							grid[x][y] = 5;
+			}
+			break;
+
+		default:
+			bodyR = 13;
+			for (int x = 0; x < PixelSize; ++x)
+				for (int y = 0; y < PixelSize; ++y) {
+					int dx = x - cx, dy = y - cy;
+					if (dx*dx + dy*dy <= bodyR*bodyR)
+						grid[x][y] = 1;
+				}
+			break;
+		}
+	}
+
+	glm::vec4 FruitNinja::MapPixelColor(uint8_t cell, glm::vec4 baseColor)
+	{
+		switch (cell) {
+		case 0:  return {0, 0, 0, 0};
+		case 1:  return baseColor;
+		case 2:  return baseColor * 0.55f;
+		case 3:  { glm::vec4 h = baseColor * 1.4f; h.a = 1.0f; return glm::clamp(h, 0.0f, 1.0f); }
+		case 4:  return {0.35f, 0.2f, 0.1f, 1.0f};
+		case 5:  return {0.15f, 0.55f, 0.1f, 1.0f};
+		case 6:  return {0.1f, 0.45f, 0.1f, 1.0f};
+		case 7:  return {0.85f, 0.25f, 0.25f, 1.0f};
+		case 8:  return baseColor * 0.65f;
+		case 9:  return {0.55f, 0.85f, 0.2f, 1.0f};
+		case 10: return {0.8f, 0.9f, 0.5f, 1.0f};
+		default: return baseColor;
+		}
+	}
+
+	void FruitNinja::SetupFruitShape(PhysicsBlock::PhysicsShape* shape, FruitType type)
+	{
+		PixelColorGrid pattern;
+		DrawFruitPattern(pattern, type);
+
+		for (int x = 0; x < PixelSize; ++x) {
+			for (int y = 0; y < PixelSize; ++y) {
+				if (pattern[x][y] != 0) {
+					shape->at(x, y).Entity = true;
+					shape->at(x, y).Collision = true;
+					shape->at(x, y).mass = 1.0f;
+				}
+			}
+		}
+	}
+
+	void FruitNinja::RenderPixelFruit(const FruitData& f)
+	{
+		PixelColorGrid pattern;
+		DrawFruitPattern(pattern, f.type);
+		glm::vec4 baseColor = GetFruitColor(f.type);
+
+		float cosA = cosf(f.body->angle);
+		float sinA = sinf(f.body->angle);
+
+		for (int gx = 0; gx < PixelSize; ++gx) {
+			for (int gy = 0; gy < PixelSize; ++gy) {
+				uint8_t cell = pattern[gx][gy];
+				if (cell == 0) continue;
+
+				glm::vec4 color = MapPixelColor(cell, baseColor);
+				if (color.a < 0.01f) continue;
+
+				float localX = gx + 0.5f - (float)f.body->CentreMass.x;
+				float localY = gy + 0.5f - (float)f.body->CentreMass.y;
+
+				float worldX = (float)f.body->pos.x + localX * cosA - localY * sinA;
+				float worldY = (float)f.body->pos.y + localX * sinA + localY * cosA;
+
+				mAuxiliaryVision->Spot(glm::dvec3(worldX, worldY, 0.0), 0.55f, color);
+			}
+		}
+	}
+
+	void FruitNinja::RenderPixelHalf(const HalfFruit& hf)
+	{
+		PixelColorGrid pattern;
+		DrawFruitPattern(pattern, hf.type);
+		glm::vec4 baseColor = GetFruitColor(hf.type);
+		float alpha = hf.lifetime / HalfFruitLifetime;
+
+		float cosA = cosf(hf.body->angle);
+		float sinA = sinf(hf.body->angle);
+
+		for (int gx = 0; gx < PixelSize; ++gx) {
+			for (int gy = 0; gy < PixelSize; ++gy) {
+				if (!(hf.body->at(gx, gy).Entity)) continue;
+
+				uint8_t cell = pattern[gx][gy];
+				if (cell == 0) continue;
+
+				glm::vec4 color = MapPixelColor(cell, baseColor);
+				color.a = alpha;
+
+				float localX = gx + 0.5f - (float)hf.body->CentreMass.x;
+				float localY = gy + 0.5f - (float)hf.body->CentreMass.y;
+
+				float worldX = (float)hf.body->pos.x + localX * cosA - localY * sinA;
+				float worldY = (float)hf.body->pos.y + localX * sinA + localY * cosA;
+
+				mAuxiliaryVision->Spot(glm::dvec3(worldX, worldY, 0.0), 0.55f, color);
+			}
+		}
 	}
 
 }

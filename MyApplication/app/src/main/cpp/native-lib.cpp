@@ -420,7 +420,7 @@ Java_com_pixelclean_MainActivity_nativeGetGameMode(
     jobject /* this */) {
 
     if (!gApplication || gDestroying.load()) return -1;
-    return static_cast<jint>(Global::GameMode);
+    return static_cast<jint>(GetGameModeStableId(Global::GameMode));
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

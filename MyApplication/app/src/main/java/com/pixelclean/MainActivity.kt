@@ -525,7 +525,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             showJoystick = false,
             buttons = emptyList()
         ),
-        0 to ModeConfig(
+        GameModeId.Maze to ModeConfig(
             showJoystick = true,
             buttons = listOf(
                 ButtonSpec("SP", 4, Color.argb(120, 60, 140, 200)),
@@ -535,26 +535,30 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 ButtonSpec("`", 5, Color.argb(120, 100, 100, 200))
             )
         ),
-        1 to ModeConfig(
+        GameModeId.TankTrouble to ModeConfig(
             showJoystick = true,
             buttons = listOf(
                 ButtonSpec("SP", 4, Color.argb(120, 60, 140, 200)),
                 ButtonSpec("/", 1, Color.argb(120, 100, 180, 100))
             )
         ),
-        2 to ModeConfig(
+        GameModeId.PhysicsTest to ModeConfig(
             showJoystick = false,
             buttons = emptyList()
         ),
-        3 to ModeConfig(
+        GameModeId.SoloudTest to ModeConfig(
             showJoystick = true,
             buttons = emptyList()
         ),
-        4 to ModeConfig(
+        GameModeId.RadianceCascades to ModeConfig(
             showJoystick = false,
             buttons = emptyList()
         ),
-        5 to ModeConfig(
+        GameModeId.FruitNinja to ModeConfig(
+            showJoystick = false,
+            buttons = emptyList()
+        ),
+        GameModeId.Infinite to ModeConfig(
             showJoystick = true,
             buttons = listOf(
                 ButtonSpec("SP", 4, Color.argb(120, 60, 140, 200)),
@@ -785,6 +789,16 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private external fun nativeMouseScroll(delta: Int)
 
     companion object {
+        object GameModeId {
+            const val Maze = 0
+            const val TankTrouble = 1
+            const val PhysicsTest = 2
+            const val SoloudTest = 3
+            const val RadianceCascades = 4
+            const val FruitNinja = 5
+            const val Infinite = 100
+        }
+
         init {
             System.loadLibrary("pixelclean")
         }

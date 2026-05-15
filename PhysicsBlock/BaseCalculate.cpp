@@ -1,5 +1,6 @@
 #define _USE_MATH_DEFINES // 这个要放在第一行
 #include <cmath>
+#include <algorithm>
 #include "BaseCalculate.hpp"
 #include <utility>
 

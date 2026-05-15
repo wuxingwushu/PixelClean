@@ -76,7 +76,7 @@ namespace PhysicsBlock
          * @brief 获取指定索引的子碰撞体
          * @param index 索引
          * @return 碰撞体指针 */
-        PhysicsFormwork *operator[](size_t index) { return mChildren[index]; }
+        PhysicsFormwork *operator[](size_t index) { return (index < mChildren.size()) ? mChildren[index] : nullptr; }
 
         /**
          * @brief 获取所有子碰撞体的引用

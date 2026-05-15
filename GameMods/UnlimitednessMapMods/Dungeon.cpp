@@ -110,10 +110,10 @@ namespace GAME {
 		wSquarePhysics->SetFixedSizeTerrain(mMoveTerrain);
 
 		const float Positions[] = {
-			-0.001f, -0.001f, 0.0f,
-			16.001f, -0.001f, 0.0f,
-			16.001f, 16.001f, 0.0f,
-			-0.001f, 16.001f, 0.0f,
+			-0.001f, -0.001f, -0.001f,
+			16.001f, -0.001f, -0.001f,
+			16.001f, 16.001f, -0.001f,
+			-0.001f, 16.001f, -0.001f,
 		};
 
 		const float UVs[] = {

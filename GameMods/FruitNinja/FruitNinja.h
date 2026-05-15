@@ -3,7 +3,10 @@
 #include "../GameMods.h"
 #include "../../PhysicsBlock/PhysicsWorld.hpp"
 #include "../../PhysicsBlock/MapStatic.hpp"
+#include "../../PhysicsBlock/PhysicsShape.hpp"
 #include <vector>
+#include <array>
+#include <cstdint>
 
 namespace GAME
 {
@@ -26,18 +29,28 @@ namespace GAME
 		virtual void GameUI();
 
 	private:
+		static constexpr int PixelSize = 32;
+
 		enum class FruitType {
 			Apple = 0, Watermelon, Orange, Banana, Pineapple,
 			Kiwi, Peach, Grape, Mango, DragonFruit, Count
 		};
 
+		using PixelColorGrid = std::array<std::array<uint8_t, PixelSize>, PixelSize>;
+
 		struct FruitData {
 			FruitType type;
-			PhysicsBlock::PhysicsCircle* body;
+			PhysicsBlock::PhysicsShape* body;
 			bool cut;
 		};
 
-		struct CutFragment {
+		struct HalfFruit {
+			PhysicsBlock::PhysicsShape* body;
+			FruitType type;
+			float lifetime;
+		};
+
+		struct DebrisFragment {
 			PhysicsBlock::PhysicsCircle* body;
 			float lifetime;
 			glm::vec4 color;
@@ -66,13 +79,13 @@ namespace GAME
 		void ResetGame();
 		void StartGame();
 
-		void SpawnFruit();
+		void SpawnFruit(float dt);
 		void UpdateFruits(float dt);
 		void CheckCutting(float dt);
 		void CheckMissedFruits();
 		void CutFruit(size_t index, glm::vec2 cutPoint, glm::vec2 cutDirection, float cutSpeed);
-		void SpawnCutFragments(glm::vec2 pos, glm::vec2 direction, const FruitData& fruit, float cutSpeed);
-		void UpdateFragments(float dt);
+		void SpawnHalfFruits(const FruitData& fruit, glm::vec2 cutPoint, glm::vec2 cutDirection, float cutSpeed);
+		void UpdateHalfFruits(float dt);
 		void UpdateParticles(float dt);
 		void UpdateScorePopups(float dt);
 
@@ -81,7 +94,8 @@ namespace GAME
 		void LoseLife();
 
 		void RenderFruits();
-		void RenderFragments();
+		void RenderHalfFruits();
+		void RenderDebris();
 		void RenderSwipeTrail();
 		void RenderParticles();
 		void RenderScorePopups();
@@ -92,7 +106,6 @@ namespace GAME
 		void RenderGameOver();
 
 		glm::vec4 GetFruitColor(FruitType type);
-		float GetFruitRadius(FruitType type);
 		int GetFruitBaseScore(FruitType type);
 		const char* GetFruitName(FruitType type);
 		bool LineCircleIntersect(glm::vec2 a, glm::vec2 b, glm::vec2 center, float radius);
@@ -100,11 +113,19 @@ namespace GAME
 		void SpawnExplosionParticles(glm::vec2 pos, glm::vec4 color, int count, float speed);
 		void SpawnFruitJuiceParticles(glm::vec2 pos, glm::vec4 color, int count);
 
+		void SetupFruitShape(PhysicsBlock::PhysicsShape* shape, FruitType type);
+		void DrawFruitPattern(PixelColorGrid& grid, FruitType type);
+		glm::vec4 MapPixelColor(uint8_t cell, glm::vec4 baseColor);
+		void RenderPixelFruit(const FruitData& f);
+		void RenderPixelHalf(const HalfFruit& hf);
+		void TryCutDuringSwipe();
+
 		PhysicsBlock::PhysicsWorld* mPhysicsWorld = nullptr;
 		VulKan::AuxiliaryVision* mAuxiliaryVision = nullptr;
 
 		std::vector<FruitData> mFruits;
-		std::vector<CutFragment> mFragments;
+		std::vector<HalfFruit> mHalfFruits;
+		std::vector<DebrisFragment> mDebris;
 		std::vector<ParticleEffect> mParticles;
 		std::vector<ScorePopup> mScorePopups;
 
@@ -116,6 +137,7 @@ namespace GAME
 		bool mIsSwiping = false;
 		bool mLeftMouseDown = false;
 		glm::vec2 mLastMouseWorldPos = {0, 0};
+		size_t mLastCheckedTrailIndex = 0;
 
 		GameState mGameState = GameState::MainMenu;
 		Difficulty mDifficulty = Difficulty::Normal;
@@ -130,15 +152,16 @@ namespace GAME
 		int mWinWidth = 0;
 		int mWinHeight = 0;
 
-		static constexpr float VisibleHalfWidth = 12.0f;
-		static constexpr float VisibleHalfHeight = 9.0f;
-		static constexpr float SpawnY = -7.0f;
-		static constexpr float DeathY = -11.0f;
-		static constexpr float TopBoundaryY = 10.0f;
+		static constexpr float VisibleHalfWidth = 86.0f;
+		static constexpr float VisibleHalfHeight = 64.0f;
+		static constexpr float SpawnY = -50.0f;
+		static constexpr float DeathY = -90.0f;
+		static constexpr float TopBoundaryY = 72.0f;
 		static constexpr float ComboTimeout = 1.0f;
 		static constexpr float GameDuration = 60.0f;
 		static constexpr int MaxLives = 3;
-		static constexpr float SwipeTrailMaxAge = 0.15f;
+		static constexpr float SwipeTrailMaxAge = 0.35f;
+		static constexpr float HalfFruitLifetime = 1.5f;
 
 		std::chrono::steady_clock::time_point mLastFrameTime;
 	};

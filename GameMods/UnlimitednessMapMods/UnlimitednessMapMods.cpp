@@ -236,6 +236,14 @@ namespace GAME
 		mDamagePrompt->UpDataDamagePrompt(Global::GamePlayerX, Global::GamePlayerY, TOOL::FPStime);
 
 		int winwidth = mWinWidth, winheight = mWinHeight;
+		if (winwidth == 0 || winheight == 0) {
+#if defined(__ANDROID__)
+			winwidth = mWindow->getWidth();
+			winheight = mWindow->getHeight();
+#else
+			glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
+#endif
+		}
 		m_angle = std::atan2((winwidth / 2) - CursorPosX, (winheight / 2) - CursorPosY) + 1.57f;
 
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());

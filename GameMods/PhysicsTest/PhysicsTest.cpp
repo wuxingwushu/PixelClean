@@ -347,6 +347,14 @@ namespace GAME
 	void PhysicsTest::GameLoop(unsigned int mCurrentFrame)
 	{
 		int winwidth = mWinWidth, winheight = mWinHeight;
+		if (winwidth == 0 || winheight == 0) {
+#if defined(__ANDROID__)
+			winwidth = mWindow->getWidth();
+			winheight = mWindow->getHeight();
+#else
+			glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
+#endif
+		}
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 		huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
 		huoqdedian.x += mCamera->getCameraPos().x;
@@ -566,6 +574,14 @@ namespace GAME
 				}
 			}
 			int winwidth = mWinWidth, winheight = mWinHeight;
+			if (winwidth == 0 || winheight == 0) {
+#if defined(__ANDROID__)
+				winwidth = mWindow->getWidth();
+				winheight = mWindow->getHeight();
+#else
+				glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
+#endif
+			}
 			glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 			huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
 			huoqdedian.x += mCamera->getCameraPos().x;

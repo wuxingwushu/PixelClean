@@ -153,7 +153,7 @@ namespace GAME {
 	}
 
 	void GIF::UpDataCommandBuffer() {
-		for (size_t i = 0; i < 3; ++i)
+		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
 		{
 			VkCommandBufferInheritanceInfo InheritanceInfo{};
 			InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;

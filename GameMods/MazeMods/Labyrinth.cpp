@@ -407,33 +407,26 @@ namespace GAME {
 	}
 
 	void Labyrinth::ThreadUpdateCommandBuffer() {
-		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
+		Global::MainCommandBufferUpdateRequest();
 
 		std::vector<std::future<void>> pool;
-		int UpdateNumber = (numberX * numberY) / (mFrameCount / 3);
-		int UpdateNumber_yu = (numberX * numberY) % (mFrameCount / 3);
-		for (int i = 0; i < 3; ++i) {
-			for (int j = 0; j < UpdateNumber_yu; ++j) {
-				pool.push_back(TOOL::mThreadPool->enqueue(&Labyrinth::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + j), (UpdateNumber + 1)));
-			}
-			for (int j = UpdateNumber_yu; j < (mFrameCount / 3); ++j) {
-				pool.push_back(TOOL::mThreadPool->enqueue(&Labyrinth::ThreadCommandBufferToUpdate, this, i, j, ((UpdateNumber * j) + UpdateNumber_yu), UpdateNumber));
-			}
+		pool.reserve(mFrameCount);
+		for (int i = 0; i < mFrameCount; ++i) {
+			pool.push_back(TOOL::mThreadPool->enqueue(&Labyrinth::ThreadCommandBufferToUpdate, this, i));
 		}
 		for (size_t i = 0; i < pool.size(); ++i) {
 			pool[i].wait();
 		}
 	}
 
-	void Labyrinth::ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count)
+	void Labyrinth::ThreadCommandBufferToUpdate(unsigned int FrameIndex)
 	{
-		unsigned int mFrameBufferCount = ((mFrameCount / 3) * FrameCount) + BufferCount;
-		VulKan::CommandBuffer* commandbuffer = mThreadCommandBufferS[mFrameBufferCount];
+		VulKan::CommandBuffer* commandbuffer = mThreadCommandBufferS[FrameIndex];
 
 		VkCommandBufferInheritanceInfo InheritanceInfo{};
 		InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 		InheritanceInfo.renderPass = mRenderPass->getRenderPass();
-		InheritanceInfo.framebuffer = mSwapChain->getFrameBuffer(FrameCount);
+		InheritanceInfo.framebuffer = mSwapChain->getFrameBuffer(FrameIndex);
 
 
 
@@ -441,17 +434,17 @@ namespace GAME {
 		commandbuffer->bindGraphicPipeline(mPipeline->getPipeline());//获得渲染管线
 		commandbuffer->bindVertexBuffer(getVertexBuffers());//获取顶点数据，UV值
 		commandbuffer->bindIndexBuffer(getIndexBuffer()->getBuffer());//获得顶点索引
-		commandbuffer->bindDescriptorSet(mPipeline->getLayout(), mDescriptorSet->getDescriptorSet(FrameCount));//获得 模型位置数据， 贴图数据，……
+		commandbuffer->bindDescriptorSet(mPipeline->getLayout(), mDescriptorSet->getDescriptorSet(FrameIndex));//获得 模型位置数据， 贴图数据，……
 		commandbuffer->drawIndex(getIndexCount());//获取绘画物体的顶点个数
 		commandbuffer->end();
 
-		commandbuffer = mMistCommandBufferS[mFrameBufferCount];
+		commandbuffer = mMistCommandBufferS[FrameIndex];
 
 		commandbuffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);//开始录制二级指令
 		commandbuffer->bindGraphicPipeline(mPipeline->getPipeline());//获得渲染管线
 		commandbuffer->bindVertexBuffer(getVertexBuffers());//获取顶点数据，UV值
 		commandbuffer->bindIndexBuffer(getIndexBuffer()->getBuffer());//获得顶点索引
-		commandbuffer->bindDescriptorSet(mPipeline->getLayout(), mMistDescriptorSet->getDescriptorSet(FrameCount));//获得 模型位置数据， 贴图数据，……
+		commandbuffer->bindDescriptorSet(mPipeline->getLayout(), mMistDescriptorSet->getDescriptorSet(FrameIndex));//获得 模型位置数据， 贴图数据，……
 		commandbuffer->drawIndex(getIndexCount());//获取绘画物体的顶点个数
 		commandbuffer->end();
 	}

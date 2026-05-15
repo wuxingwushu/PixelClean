@@ -5,6 +5,7 @@
 #include "../../NetworkTCP/Client.h"
 #include "../../DebugLog.h"
 #include <chrono>
+#include <cmath>
 
 namespace GAME
 {
@@ -898,7 +899,11 @@ namespace GAME
 		mAuxiliaryVision->End();
 
 		if (mPlayer) {
-			mCamera->setCameraPos({(float)mPlayer->pos.x, (float)mPlayer->pos.y, mCameraTarget.z});
+			glm::vec3 currentCamPos = mCamera->getCameraPos();
+			glm::vec3 targetCamPos = {(float)mPlayer->pos.x, (float)mPlayer->pos.y, mCameraTarget.z};
+			float smoothFactor = (float)(1.0 - std::exp(-40.0 * TOOL::FPStime));
+			glm::vec3 smoothedPos = currentCamPos + (targetCamPos - currentCamPos) * smoothFactor;
+			mCamera->setCameraPos(smoothedPos);
 		}
 
 		mCamera->update();

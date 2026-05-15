@@ -152,11 +152,11 @@ namespace GAME
 		int mWinWidth = 0;
 		int mWinHeight = 0;
 
-		static constexpr float VisibleHalfWidth = 86.0f;
-		static constexpr float VisibleHalfHeight = 64.0f;
-		static constexpr float SpawnY = -50.0f;
-		static constexpr float DeathY = -90.0f;
-		static constexpr float TopBoundaryY = 72.0f;
+		static constexpr float VisibleHalfWidth = 130.0f;
+		static constexpr float VisibleHalfHeight = 96.0f;
+		static constexpr float SpawnY = -75.0f;
+		static constexpr float DeathY = -135.0f;
+		static constexpr float TopBoundaryY = 108.0f;
 		static constexpr float ComboTimeout = 1.0f;
 		static constexpr float GameDuration = 60.0f;
 		static constexpr int MaxLives = 3;

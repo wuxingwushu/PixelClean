@@ -109,7 +109,7 @@ namespace GAME {
 		//多线程分配指令缓存
 		void ThreadUpdateCommandBuffer();
 		//录制缓存指令
-		void ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count);
+		void ThreadCommandBufferToUpdate(unsigned int FrameIndex);
 
 		//初始化战争迷雾
 		void InitMist();

@@ -24,7 +24,7 @@ namespace GAME
 		InitGame();
 		RenderBoundary();
 
-		mCamera->setCameraPos({0, 0, 200});
+		mCamera->setCameraPos({0, 0, 300});
 		mCamera->update();
 
 		mLastFrameTime = std::chrono::steady_clock::now();
@@ -116,6 +116,14 @@ namespace GAME
 		if (mGameState != GameState::Playing) return;
 
 		int winwidth = mWinWidth, winheight = mWinHeight;
+		if (winwidth == 0 || winheight == 0) {
+#if defined(__ANDROID__)
+			winwidth = mWindow->getWidth();
+			winheight = mWindow->getHeight();
+#else
+			glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
+#endif
+		}
 		glm::vec3 ray = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 		ray *= -mCamera->getCameraPos().z / ray.z;
 		glm::vec2 worldPos(ray.x + mCamera->getCameraPos().x, ray.y + mCamera->getCameraPos().y);
@@ -143,22 +151,21 @@ namespace GAME
 		switch (button) {
 		case MouseBtn::Left:
 			if (State == InputState::Down) {
-				mLeftMouseDown = true;
-				mIsSwiping = true;
-				mSwipeTrail.clear();
-				mLastCheckedTrailIndex = 0;
-				mSwipeTrail.push_back({mLastMouseWorldPos, (float)std::chrono::duration<float>(
-					std::chrono::steady_clock::now().time_since_epoch()).count()});
+				if (!mLeftMouseDown) {
+					mLeftMouseDown = true;
+					mIsSwiping = true;
+					mSwipeTrail.clear();
+					mLastCheckedTrailIndex = 0;
+					mSwipeTrail.push_back({mLastMouseWorldPos, (float)std::chrono::duration<float>(
+						std::chrono::steady_clock::now().time_since_epoch()).count()});
+				}
 			}
 			else if (State == InputState::Up) {
-				mLeftMouseDown = false;
-				mIsSwiping = false;
-				static float lastFrameTime = 0;
-				float now = (float)std::chrono::duration<float>(
-					std::chrono::steady_clock::now().time_since_epoch()).count();
-				float dt = now - lastFrameTime;
-				lastFrameTime = now;
-				CheckCutting(dt > 0 ? dt : 0.016f);
+				if (mLeftMouseDown) {
+					mLeftMouseDown = false;
+					mIsSwiping = false;
+					CheckCutting(0.016f);
+				}
 			}
 			break;
 		case MouseBtn::Right:
@@ -180,7 +187,7 @@ namespace GAME
 			camPos.z += z * 5;
 		}
 		if (camPos.z <= 0.1f) camPos.z = 0.1f;
-		if (camPos.z > 200.0f) camPos.z = 200.0f;
+		if (camPos.z > 600.0f) camPos.z = 600.0f;
 		mCamera->setCameraPos(camPos);
 		mCamera->update();
 	}
@@ -311,23 +318,23 @@ namespace GAME
 	void FruitNinja::SpawnFruit(float dt)
 	{
 		float spawnRate = 0.8f;
-		float velYMin = 36.0f;
-		float velYMax = 58.0f;
+		float velYMin = 28.0f;
+		float velYMax = 44.0f;
 		switch (mDifficulty) {
 		case Difficulty::Easy:
 			spawnRate = 1.5f;
-			velYMin = 29.0f;
-			velYMax = 50.0f;
+			velYMin = 22.0f;
+			velYMax = 38.0f;
 			break;
 		case Difficulty::Normal:
 			spawnRate = 0.8f;
-			velYMin = 36.0f;
-			velYMax = 58.0f;
+			velYMin = 28.0f;
+			velYMax = 44.0f;
 			break;
 		case Difficulty::Hard:
 			spawnRate = 0.4f;
-			velYMin = 43.0f;
-			velYMax = 72.0f;
+			velYMin = 32.0f;
+			velYMax = 54.0f;
 			break;
 		}
 
@@ -343,7 +350,7 @@ namespace GAME
 		body->UpdateAll();
 
 		float x = (VisibleHalfWidth - (float)body->radius) * (2.0f * (float)rand() / RAND_MAX - 1.0f);
-		float velX = 11.0f * (2.0f * (float)rand() / RAND_MAX - 1.0f);
+		float velX = 8.0f * (2.0f * (float)rand() / RAND_MAX - 1.0f);
 		float velY = velYMin + (velYMax - velYMin) * (float)rand() / RAND_MAX;
 
 		body->pos = {x, SpawnY};

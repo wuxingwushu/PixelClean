@@ -1,4 +1,5 @@
 #pragma once
+#include "BaseDefine.h"
 #include "BaseStruct.hpp"
 #include <functional>
 #include "BaseSerialization.hpp"
@@ -179,7 +180,7 @@ namespace PhysicsBlock
 #endif
 
     public:
-        Contact contacts[20]; // 碰撞点集合，最多支持 20 个碰撞点
+        Contact contacts[PhysicsContactMaxSize]; // 碰撞点集合，最多支持 20 个碰撞点
         int numContacts = 0;  // 当前碰撞点数量
 
         ArbiterKey key; // 两个碰撞对象的标识符

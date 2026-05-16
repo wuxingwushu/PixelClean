@@ -154,8 +154,8 @@ namespace GAME
 
 		static constexpr float VisibleHalfWidth = 130.0f;
 		static constexpr float VisibleHalfHeight = 96.0f;
-		static constexpr float SpawnY = -75.0f;
-		static constexpr float DeathY = -135.0f;
+		static constexpr float SpawnY = -115.0f;
+		static constexpr float DeathY = -155.0f;
 		static constexpr float TopBoundaryY = 108.0f;
 		static constexpr float ComboTimeout = 1.0f;
 		static constexpr float GameDuration = 60.0f;

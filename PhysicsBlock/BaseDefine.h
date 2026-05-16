@@ -10,6 +10,8 @@
 #define Define_MinSpoilage 0.9994 // 能量转换率
 #endif
 
+#define PhysicsContactMaxSize 20 // 每对物体之间的最大碰撞点数量（过多会增加计算负担）
+
 #define PhysicsApplyImpulseSize 10 // 最低物理迭代次数
 
 #define PhysicsSleepThreshold 10 // 物体休眠阈值（StaticNum超过此值视为静止）

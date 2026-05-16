@@ -351,8 +351,14 @@ namespace GAME {
 			mWindown->WindowClose();
 		}
 
-		float logBtnW = 280.0f * scale;
+
+#if defined(__ANDROID__)
+		float logBtnW = 350.0f * scale;
+		float logBtnH = 90.0f * scale;
+#else
+		float logBtnW = 200.0f * scale;
 		float logBtnH = 72.0f * scale;
+#endif
 		float margin = 36.0f * scale;
 		ImGui::SetCursorPos(ImVec2(Global::mWidth - logBtnW - margin, Global::mHeight - logBtnH - margin));
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.2f, 0.85f));
@@ -553,8 +559,14 @@ namespace GAME {
 
 		float scale = mUIScale;
 		float panelW = 900.0f * scale;
-		float btnW = 180.0f * scale;
-		float btnH = 50.0f * scale;
+#if defined(__ANDROID__)
+		float btnW = 300.0f * scale;
+		float btnH = 100.0f * scale;
+#else
+		float btnW = 200.0f * scale;
+		float btnH = 70.0f * scale;
+#endif
+		
 		float inputW = 200.0f * scale;
 		float spacing = 10.0f * scale;
 		float fontScale = Global::FontZoomRatio * scale;
@@ -709,8 +721,13 @@ namespace GAME {
 		float scale = mUIScale;
 		float panelW = 1000.0f * scale;
 		float panelH = 700.0f * scale;
+#if defined(__ANDROID__)
 		float btnW = 120.0f * scale;
-		float btnH = 40.0f * scale;
+		float btnH = 90.0f * scale;
+#else
+		float btnW = 120.0f * scale;
+		float btnH = 70.0f * scale;
+#endif
 		float spacing = 10.0f * scale;
 		float fontScale = Global::FontZoomRatio * scale;
 

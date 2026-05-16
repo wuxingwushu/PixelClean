@@ -170,7 +170,7 @@ namespace PhysicsBlock
         Vec2_ Drop, DropPos;
 
         // 检测 ShapeA 的轮廓点与 ShapeB 的碰撞
-        for (size_t i = 0; i < ShapeA->OutlineSize; ++i)
+        for (size_t i = 0; i < ShapeA->OutlineSize && ContactSize < PhysicsContactMaxSize; ++i)
         {
             Drop = ShapeA->OutlineSet[i];
             Drop = Mat.Rotary(Drop);
@@ -200,7 +200,7 @@ namespace PhysicsBlock
 
         // 检测 ShapeB 的轮廓点与 ShapeA 的碰撞
         Mat.SetAngle(ShapeB->angle);
-        for (size_t i = 0; i < ShapeB->OutlineSize; ++i)
+        for (size_t i = 0; i < ShapeB->OutlineSize && ContactSize < PhysicsContactMaxSize; ++i)
         {
             Drop = ShapeB->OutlineSet[i];
             Drop = Mat.Rotary(Drop);

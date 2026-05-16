@@ -362,23 +362,24 @@ namespace PhysicsBlock
         {
             unsigned int index = atIndex(atocr->PFGetPos(), atocr->PFGetCollisionR());
 
-            // 在网格中查找并移除
-            for (size_t i = 0; i < Grid[index].size(); ++i)
+            if (index < Grid.size())
             {
-                if (Grid[index][i] == atocr)
+                for (size_t i = 0; i < Grid[index].size(); ++i)
                 {
-                    Grid[index][i] = Grid[index].back();  // swap-and-pop
-                    Grid[index].pop_back();
-                    return;
+                    if (Grid[index][i] == atocr)
+                    {
+                        Grid[index][i] = Grid[index].back();
+                        Grid[index].pop_back();
+                        return;
+                    }
                 }
             }
 
-            // 在网格外容器中查找并移除
             for (size_t i = 0; i < GridExtrovert.size(); ++i)
             {
                 if (GridExtrovert[i] == atocr)
                 {
-                    GridExtrovert[i] = GridExtrovert.back();  // swap-and-pop
+                    GridExtrovert[i] = GridExtrovert.back();
                     GridExtrovert.pop_back();
                     return;
                 }

@@ -45,7 +45,7 @@ namespace GAME
 		if (mPhysicsWorld) {
 			delete mPhysicsWorld;
 		}
-		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -40.0}, false);
+		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -30.0}, false);
 
 		PhysicsBlock::MapStatic* map = new PhysicsBlock::MapStatic(100, 100);
 		for (int i = 0; i < 100 * 100; ++i) {
@@ -69,7 +69,7 @@ namespace GAME
 		}
 		for (auto& hf : mHalfFruits) {
 			if (hf.body) {
-				mPhysicsWorld->RemoveObject(hf.body);
+				delete hf.body;
 			}
 		}
 		for (auto& d : mDebris) {
@@ -329,23 +329,23 @@ namespace GAME
 	void FruitNinja::SpawnFruit(float dt)
 	{
 		float spawnRate = 0.8f;
-		float velYMin = 28.0f;
-		float velYMax = 44.0f;
+		float velYMin = 70.0f;
+		float velYMax = 105.0f;
 		switch (mDifficulty) {
 		case Difficulty::Easy:
 			spawnRate = 1.5f;
-			velYMin = 22.0f;
-			velYMax = 38.0f;
+			velYMin = 55.0f;
+			velYMax = 90.0f;
 			break;
 		case Difficulty::Normal:
 			spawnRate = 0.8f;
-			velYMin = 28.0f;
-			velYMax = 44.0f;
+			velYMin = 70.0f;
+			velYMax = 105.0f;
 			break;
 		case Difficulty::Hard:
 			spawnRate = 0.4f;
-			velYMin = 32.0f;
-			velYMax = 54.0f;
+			velYMin = 85.0f;
+			velYMax = 125.0f;
 			break;
 		}
 
@@ -361,7 +361,7 @@ namespace GAME
 		body->UpdateAll();
 
 		float x = (VisibleHalfWidth - (float)body->radius) * (2.0f * (float)rand() / RAND_MAX - 1.0f);
-		float velX = 8.0f * (2.0f * (float)rand() / RAND_MAX - 1.0f);
+		float velX = 12.0f * (2.0f * (float)rand() / RAND_MAX - 1.0f);
 		float velY = velYMin + (velYMax - velYMin) * (float)rand() / RAND_MAX;
 
 		body->pos = {x, SpawnY};
@@ -534,6 +534,11 @@ namespace GAME
 
 		for (int gx = 0; gx < PixelSize; ++gx) {
 			for (int gy = 0; gy < PixelSize; ++gy) {
+				halfA->at(gx, gy).Entity = false;
+				halfA->at(gx, gy).Collision = false;
+				halfB->at(gx, gy).Entity = false;
+				halfB->at(gx, gy).Collision = false;
+
 				if (!(srcBody->at(gx, gy).Entity)) continue;
 
 				float dx = gx + 0.5f - localCPGrid.x;
@@ -560,20 +565,20 @@ namespace GAME
 		halfA->UpdateAll();
 		halfB->UpdateAll();
 
-		halfA->pos = srcBody->pos;
+		glm::vec2 perpDir(-cutDirection.y, cutDirection.x);
+		float sepOffset = (float)PixelSize * 0.55f;
+		halfA->pos = srcBody->pos + perpDir * sepOffset;
 		halfA->OldPos = halfA->pos;
-		halfB->pos = srcBody->pos;
+		halfB->pos = srcBody->pos - perpDir * sepOffset;
 		halfB->OldPos = halfB->pos;
 
-		glm::vec2 perpDir(-cutDirection.y, cutDirection.x);
-		float sepSpeed = cutSpeed * 0.3f;
+		float sepSpeed = std::min(cutSpeed * 0.015f, 8.0f);
 		halfA->speed = {srcBody->speed.x + perpDir.x * sepSpeed, srcBody->speed.y + perpDir.y * sepSpeed};
 		halfB->speed = {srcBody->speed.x - perpDir.x * sepSpeed, srcBody->speed.y - perpDir.y * sepSpeed};
-		halfA->angleSpeed = srcBody->angleSpeed + 3.0f;
-		halfB->angleSpeed = srcBody->angleSpeed - 3.0f;
+		halfA->angleSpeed = srcBody->angleSpeed + 1.0f;
+		halfB->angleSpeed = srcBody->angleSpeed - 1.0f;
 
-		mPhysicsWorld->AddObject(halfA);
-		mPhysicsWorld->AddObject(halfB);
+		// 半水果不加入物理世界，无碰撞，仅手动物理
 
 		HalfFruit hfA, hfB;
 		hfA.body = halfA; hfA.type = type; hfA.lifetime = HalfFruitLifetime;
@@ -587,11 +592,14 @@ namespace GAME
 		for (size_t i = 0; i < mHalfFruits.size(); ) {
 			mHalfFruits[i].lifetime -= dt;
 			if (mHalfFruits[i].lifetime <= 0) {
-				mPhysicsWorld->WaitForCollisionThreads();
-				mPhysicsWorld->RemoveObject(mHalfFruits[i].body);
+				delete mHalfFruits[i].body;
 				mHalfFruits.erase(mHalfFruits.begin() + i);
 				continue;
 			}
+			mHalfFruits[i].body->speed.y += -30.0f * dt;
+			mHalfFruits[i].body->pos.x += mHalfFruits[i].body->speed.x * dt;
+			mHalfFruits[i].body->pos.y += mHalfFruits[i].body->speed.y * dt;
+			mHalfFruits[i].body->angle += mHalfFruits[i].body->angleSpeed * dt;
 			++i;
 		}
 	}

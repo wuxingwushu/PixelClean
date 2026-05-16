@@ -7,9 +7,29 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/compiler.xml
+/.idea/misc.xml
+/.idea/gradle.xml
+/.idea/AndroidProjectSystem.xml
+/.idea/vcs.xml
+/.idea/runConfigurations.xml
+/.idea/.name
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# App
+/app/build
+/app/release
+
+# Keystore
+*.jks
+*.keystore
+
+# Generated
+*.apk
+*.aab

@@ -52,6 +52,12 @@ namespace VulKan {
 		//获得屏幕的长宽
 		[[nodiscard]] inline VkExtent2D getExtent() const noexcept { return mSwapChainExtent; }
 
+		[[nodiscard]] inline VkImageView getImageView(const int index) const { return mSwapChainImageViews[index]; }
+
+		[[nodiscard]] inline VkImageView getMutiSampleImageView(const int index) const { return mMutiSampleImages[index]->getImageView(); }
+
+		[[nodiscard]] inline VkImageView getDepthImageView(const int index) const { return mDepthImages[index]->getImageView(); }
+
 	private:
 		//创建imageView
 		VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels = 1);

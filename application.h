@@ -91,13 +91,16 @@ namespace GAME {
 		VulKan::CommandPool* mImGuuiCommandPool{ nullptr };
 		VulKan::CommandBuffer* mImGuuiCommandBuffers{ nullptr };
 		VulKan::RenderPass* mImGuuiRenderPass{ nullptr };
+		VulKan::RenderPass* mImGuiLoadRenderPass{ nullptr };
+		std::vector<VkFramebuffer> mImGuiLoadFrameBuffers{};
 		VulKan::Fence* mImGuuiFence{ nullptr };
 
 
 
 		std::vector<VulKan::Semaphore*> mImageAvailableSemaphores{};//图片显示完毕信号量
 		std::vector<VulKan::Semaphore*> mRenderFinishedSemaphores{};//图片渲染完成信号量
-		std::vector<VulKan::Fence*> mFences{};//控制管线工作，比如（下一个管线需要上一个管线的图片，那就等上一个管线图片输入进来才开始工作）
+		std::vector<VulKan::Fence*> mFences{};//控制管线工作
+		VkEvent mGameToImGuiEvent{ VK_NULL_HANDLE };//Game→ImGui 跨提交同步事件
 
 
 		std::vector<VkCommandBuffer> ThreadCommandBufferS;//把录制好的二级指令存放在数组中统一绑定在主指令缓存中

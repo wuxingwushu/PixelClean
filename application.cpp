@@ -150,6 +150,7 @@ namespace GAME {
 		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
 		mRenderPass = new VulKan::RenderPass(mDevice);//创建GPU画布描述
 		mImGuuiRenderPass = new VulKan::RenderPass(mDevice);
+		mImGuiLoadRenderPass = new VulKan::RenderPass(mDevice);
 		mSampler = new VulKan::Sampler(mDevice);//采样器
 		createRenderPass();//设置GPU画布描述
 		mSwapChain->createFrameBuffers(mRenderPass);//把GPU画布描述传给交换链生成GPU画布
@@ -168,6 +169,32 @@ namespace GAME {
 		wThreadCommandBufferS = &ThreadCommandBufferS;
 
 		createSyncObjects();//创建信号量（用于渲染同步）
+
+		mImGuiLoadFrameBuffers.resize(mSwapChain->getImageCount());
+		for (uint32_t i = 0; i < mSwapChain->getImageCount(); ++i) {
+			std::array<VkImageView, 3> attachments = {
+				mSwapChain->getImageView(i),
+				mSwapChain->getMutiSampleImageView(i),
+				mSwapChain->getDepthImageView(i)
+			};
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = mImGuiLoadRenderPass->getRenderPass();
+			framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+			framebufferInfo.pAttachments = attachments.data();
+			framebufferInfo.width = mSwapChain->getExtent().width;
+			framebufferInfo.height = mSwapChain->getExtent().height;
+			framebufferInfo.layers = 1;
+			if (vkCreateFramebuffer(mDevice->getDevice(), &framebufferInfo, nullptr, &mImGuiLoadFrameBuffers[i]) != VK_SUCCESS) {
+				throw std::runtime_error("Error: failed to create ImGui load frame buffer");
+			}
+		}
+
+		VkEventCreateInfo eventCreateInfo{};
+		eventCreateInfo.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+		if (vkCreateEvent(mDevice->getDevice(), &eventCreateInfo, nullptr, &mGameToImGuiEvent) != VK_SUCCESS) {
+			throw std::runtime_error("Error:failed to create GameToImGui event");
+		}
 	}
 	
 	void GAME::Application::initImGui()
@@ -343,6 +370,27 @@ namespace GAME {
 		mImGuuiRenderPass->addSubPass(subPass);
 		mImGuuiRenderPass->addDependency(dependency);
 		mImGuuiRenderPass->buildRenderPass();
+
+		VkAttachmentDescription loadFinalAttachmentDes = finalAttachmentDes;
+		loadFinalAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		loadFinalAttachmentDes.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		mImGuiLoadRenderPass->addAttachment(loadFinalAttachmentDes);
+
+		VkAttachmentDescription loadMutiAttachmentDes{};
+		loadMutiAttachmentDes.format = mSwapChain->getFormat();
+		loadMutiAttachmentDes.samples = mDevice->getMaxUsableSampleCount();
+		loadMutiAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		loadMutiAttachmentDes.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		loadMutiAttachmentDes.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		loadMutiAttachmentDes.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		loadMutiAttachmentDes.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		loadMutiAttachmentDes.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		mImGuiLoadRenderPass->addAttachment(loadMutiAttachmentDes);
+
+		mImGuiLoadRenderPass->addAttachment(depthAttachmentDes);
+		mImGuiLoadRenderPass->addSubPass(subPass);
+		mImGuiLoadRenderPass->addDependency(dependency);
+		mImGuiLoadRenderPass->buildRenderPass();
 	}
 	
 	void Application::createCommandBuffers(unsigned int i)
@@ -394,12 +442,62 @@ namespace GAME {
 		}
 		else if(!Global::MonitorCompatibleMode){
 			mImGuuiFence->block();
-			renderBeginInfo.renderPass = mImGuuiRenderPass->getRenderPass();//获得画布信息
+
 			mImGuuiCommandBuffers->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-			mImGuuiCommandBuffers->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+			VkMemoryBarrier memoryBarrier{};
+			memoryBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+			memoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			memoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+			vkCmdWaitEvents(mImGuuiCommandBuffers->getCommandBuffer(), 1, &mGameToImGuiEvent,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				1, &memoryBarrier, 0, nullptr, 0, nullptr);
+
+			VkRenderPassBeginInfo imguiRenderBeginInfo{};
+			imguiRenderBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			imguiRenderBeginInfo.renderPass = mImGuiLoadRenderPass->getRenderPass();
+			imguiRenderBeginInfo.framebuffer = mImGuiLoadFrameBuffers[i];
+			imguiRenderBeginInfo.renderArea.offset = { 0, 0 };
+			imguiRenderBeginInfo.renderArea.extent = mSwapChain->getExtent();
+			std::vector<VkClearValue> imguiClearValues{};
+			VkClearValue imguiFinalClear{};
+			imguiFinalClear.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			imguiClearValues.push_back(imguiFinalClear);
+			VkClearValue imguiMutiClear{};
+			imguiMutiClear.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			imguiClearValues.push_back(imguiMutiClear);
+			VkClearValue imguiDepthClear{};
+			imguiDepthClear.depthStencil = { 1.0f, 0 };
+			imguiClearValues.push_back(imguiDepthClear);
+			imguiRenderBeginInfo.clearValueCount = static_cast<uint32_t>(imguiClearValues.size());
+			imguiRenderBeginInfo.pClearValues = imguiClearValues.data();
+
+			mImGuuiCommandBuffers->beginRenderPass(imguiRenderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mImGuuiCommandBuffers->getCommandBuffer());
-			mImGuuiCommandBuffers->endRenderPass();//结束RenderPass
-			mImGuuiCommandBuffers->end();//结束
+			mImGuuiCommandBuffers->endRenderPass();
+			mImGuuiCommandBuffers->end();
+
+			if (Global::MainCommandBufferS[i].load(std::memory_order_acquire)) {
+				mCommandBuffers[i]->begin();
+
+				renderBeginInfo.renderPass = mRenderPass->getRenderPass();
+				mCommandBuffers[i]->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+				mGameMods->GameCommandBuffers(i);
+
+				if (!ThreadCommandBufferS.empty()) {
+					vkCmdExecuteCommands(mCommandBuffers[i]->getCommandBuffer(), ThreadCommandBufferS.size(), ThreadCommandBufferS.data());
+				}
+
+				mCommandBuffers[i]->endRenderPass();
+
+				vkCmdSetEvent(mCommandBuffers[i]->getCommandBuffer(), mGameToImGuiEvent, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+				mCommandBuffers[i]->end();
+				Global::MainCommandBufferS[i].store(false, std::memory_order_release);
+			}
+			return;
 		}
 
 		if (!Global::MainCommandBufferS[i].load(std::memory_order_acquire) && !Global::MonitorCompatibleMode) {
@@ -466,10 +564,40 @@ namespace GAME {
 		mSwapChain->StructureSwapChain();
 		Global::mWidth = mSwapChain->getExtent().width;
 		Global::mHeight = mSwapChain->getExtent().height;
+
+		for (auto& fb : mImGuiLoadFrameBuffers) {
+			if (fb != VK_NULL_HANDLE) {
+				vkDestroyFramebuffer(mDevice->getDevice(), fb, nullptr);
+				fb = VK_NULL_HANDLE;
+			}
+		}
+		mImGuiLoadFrameBuffers.clear();
+
 		mRenderPass->~RenderPass();
 		mImGuuiRenderPass->~RenderPass();
+		mImGuiLoadRenderPass->~RenderPass();
 		createRenderPass();
 		mSwapChain->createFrameBuffers(mRenderPass);
+
+		mImGuiLoadFrameBuffers.resize(mSwapChain->getImageCount());
+		for (uint32_t i = 0; i < mSwapChain->getImageCount(); ++i) {
+			std::array<VkImageView, 3> attachments = {
+				mSwapChain->getImageView(i),
+				mSwapChain->getMutiSampleImageView(i),
+				mSwapChain->getDepthImageView(i)
+			};
+			VkFramebufferCreateInfo fbInfo{};
+			fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			fbInfo.renderPass = mImGuiLoadRenderPass->getRenderPass();
+			fbInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+			fbInfo.pAttachments = attachments.data();
+			fbInfo.width = mSwapChain->getExtent().width;
+			fbInfo.height = mSwapChain->getExtent().height;
+			fbInfo.layers = 1;
+			if (vkCreateFramebuffer(mDevice->getDevice(), &fbInfo, nullptr, &mImGuiLoadFrameBuffers[i]) != VK_SUCCESS) {
+				throw std::runtime_error("Error: failed to recreate ImGui load frame buffer");
+			}
+		}
 		mPipelineS->ReconfigurationPipelineS();
 		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
 		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
@@ -748,7 +876,8 @@ namespace GAME {
 		submitInfo.commandBufferCount = (uint32_t)1;
 		submitInfo.pCommandBuffers = commandBuffers;
 
-		VkSemaphore signalSemaphores[] = { mRenderFinishedSemaphores[mCurrentFrame]->getSemaphore()};
+		VkSemaphore renderFinishedSemaphore = mRenderFinishedSemaphores[mCurrentFrame]->getSemaphore();
+		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
 		bool imguiSeparateSubmit = (!InterFace->GetInterFaceBool() && Global::Monitor) && !Global::MonitorCompatibleMode;
 
 		if (imguiSeparateSubmit) {
@@ -764,6 +893,8 @@ namespace GAME {
 		if (vkQueueSubmit(mDevice->getGraphicQueue(), 1, &submitInfo, mFences[mCurrentFrame]->getFence()) != VK_SUCCESS) {
 			throw std::runtime_error("Error:failed to submit renderCommand");
 		}
+		TOOL::mTimer->StartEnd();
+
 		if (imguiSeparateSubmit)
 		{
 			VkSubmitInfo imguiSubmitInfo{};
@@ -779,7 +910,6 @@ namespace GAME {
 				throw std::runtime_error("Error:failed to submit ImGui renderCommand");
 			}
 		}
-		TOOL::mTimer->StartEnd();
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -856,6 +986,22 @@ namespace GAME {
 		mImGuuiCommandPool = nullptr;
 		delete mImGuuiFence;
 		mImGuuiFence = nullptr;
+
+		if (mGameToImGuiEvent != VK_NULL_HANDLE) {
+			vkDestroyEvent(mDevice->getDevice(), mGameToImGuiEvent, nullptr);
+			mGameToImGuiEvent = VK_NULL_HANDLE;
+		}
+
+		for (auto& fb : mImGuiLoadFrameBuffers) {
+			if (fb != VK_NULL_HANDLE) {
+				vkDestroyFramebuffer(mDevice->getDevice(), fb, nullptr);
+				fb = VK_NULL_HANDLE;
+			}
+		}
+		mImGuiLoadFrameBuffers.clear();
+		delete mImGuiLoadRenderPass;
+		mImGuiLoadRenderPass = nullptr;
+
 		delete mImGuuiRenderPass;
 		mImGuuiRenderPass = nullptr;
 		delete InterFace;

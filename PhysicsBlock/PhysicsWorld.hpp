@@ -362,6 +362,9 @@ namespace PhysicsBlock
         // 物理信息更新
         void PhysicsInformationUpdate();
 
+        // 等待碰撞检测线程完成
+        void WaitForCollisionThreads();
+
         /**
          * @brief 获取世界内的能量
          * @return 能量 */

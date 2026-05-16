@@ -334,8 +334,9 @@ namespace GAME {
 
 		mRenderPass->buildRenderPass();
 
-		//finalAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		mImGuuiRenderPass->addAttachment(finalAttachmentDes);
+		VkAttachmentDescription imguiFinalAttachmentDes = finalAttachmentDes;
+		imguiFinalAttachmentDes.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		mImGuuiRenderPass->addAttachment(imguiFinalAttachmentDes);
 		MutiAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		mImGuuiRenderPass->addAttachment(MutiAttachmentDes);
 		mImGuuiRenderPass->addAttachment(depthAttachmentDes);
@@ -748,18 +749,35 @@ namespace GAME {
 		submitInfo.pCommandBuffers = commandBuffers;
 
 		VkSemaphore signalSemaphores[] = { mRenderFinishedSemaphores[mCurrentFrame]->getSemaphore()};
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
+		bool imguiSeparateSubmit = (!InterFace->GetInterFaceBool() && Global::Monitor) && !Global::MonitorCompatibleMode;
+
+		if (imguiSeparateSubmit) {
+			submitInfo.signalSemaphoreCount = 0;
+			submitInfo.pSignalSemaphores = nullptr;
+		} else {
+			submitInfo.signalSemaphoreCount = 1;
+			submitInfo.pSignalSemaphores = signalSemaphores;
+		}
 
 		mFences[mCurrentFrame]->resetFence();
 		TOOL::mTimer->StartTiming(u8"等待渲染完成 ");
 		if (vkQueueSubmit(mDevice->getGraphicQueue(), 1, &submitInfo, mFences[mCurrentFrame]->getFence()) != VK_SUCCESS) {
 			throw std::runtime_error("Error:failed to submit renderCommand");
 		}
-		if ((!InterFace->GetInterFaceBool() && Global::Monitor) && !Global::MonitorCompatibleMode)
+		if (imguiSeparateSubmit)
 		{
+			VkSubmitInfo imguiSubmitInfo{};
+			imguiSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			imguiSubmitInfo.commandBufferCount = 1;
+			VkCommandBuffer imguiCmdBuf = mImGuuiCommandBuffers->getCommandBuffer();
+			imguiSubmitInfo.pCommandBuffers = &imguiCmdBuf;
+			imguiSubmitInfo.signalSemaphoreCount = 1;
+			imguiSubmitInfo.pSignalSemaphores = signalSemaphores;
+
 			mImGuuiFence->resetFence();
-			mImGuuiCommandBuffers->submit(mDevice->getGraphicQueue(), mImGuuiFence->getFence());
+			if (vkQueueSubmit(mDevice->getGraphicQueue(), 1, &imguiSubmitInfo, mImGuuiFence->getFence()) != VK_SUCCESS) {
+				throw std::runtime_error("Error:failed to submit ImGui renderCommand");
+			}
 		}
 		TOOL::mTimer->StartEnd();
 

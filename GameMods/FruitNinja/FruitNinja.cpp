@@ -15,7 +15,7 @@ namespace GAME
 	FruitNinja::FruitNinja(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
 		LOGD("FruitNinja::FruitNinja constructor");
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 3000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
 			mCameraVPMatricesBuffer);
@@ -47,13 +47,13 @@ namespace GAME
 		}
 		mPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -40.0}, false);
 
-		PhysicsBlock::MapStatic* map = new PhysicsBlock::MapStatic(20, 20);
-		for (int i = 0; i < 20 * 20; ++i) {
+		PhysicsBlock::MapStatic* map = new PhysicsBlock::MapStatic(100, 100);
+		for (int i = 0; i < 100 * 100; ++i) {
 			map->at(i).Entity = false;
 			map->at(i).Collision = false;
 			map->at(i).mass = 1.0;
 		}
-		map->SetCentrality({10.0, 10.0});
+		map->SetCentrality({50.0, 50.0});
 		mPhysicsWorld->SetMapFormwork(map);
 
 		ResetGame();
@@ -61,6 +61,7 @@ namespace GAME
 
 	void FruitNinja::ResetGame()
 	{
+		mPhysicsWorld->WaitForCollisionThreads();
 		for (auto& f : mFruits) {
 			if (f.body && !f.cut) {
 				mPhysicsWorld->RemoveObject(f.body);
@@ -210,6 +211,7 @@ namespace GAME
 				StartGame();
 			}
 			else if (mGameState == GameState::GameOver) {
+				ResetGame();
 				mGameState = GameState::MainMenu;
 			}
 			break;
@@ -233,14 +235,7 @@ namespace GAME
 		mAuxiliaryVision->Begin();
 
 		if (mGameState == GameState::Playing) {
-			mGameTimeElapsed += dt;
-
-			if (mGameTimeElapsed >= GameDuration) {
-				mGameState = GameState::GameOver;
-				if (mScore > mHighScore) mHighScore = mScore;
-				SoundEffect::SoundEffect::GetSoundEffect()->Play("Impact", MP3, false, Global::SoundEffectsVolume * 0.5f, 0.0f);
-			}
-
+			mPhysicsWorld->WaitForCollisionThreads();
 			UpdateFruits(dt);
 			UpdateHalfFruits(dt);
 			UpdateParticles(dt);
@@ -263,14 +258,31 @@ namespace GAME
 			}
 
 			CheckMissedFruits();
-			RenderFruits();
-			RenderHalfFruits();
-			RenderDebris();
-			RenderSwipeTrail();
-			RenderParticles();
-			RenderScorePopups();
+			if (mGameState != GameState::Playing) {
+				RenderHalfFruits();
+				RenderDebris();
+				RenderParticles();
+				RenderScorePopups();
+				mPhysicsWorld->PhysicsEmulator(dt);
+			}
+			else {
+				RenderFruits();
+				RenderHalfFruits();
+				RenderDebris();
+				RenderSwipeTrail();
+				RenderParticles();
+				RenderScorePopups();
+				mPhysicsWorld->PhysicsEmulator(dt);
+			}
 
-			mPhysicsWorld->PhysicsEmulator(dt);
+			if (mGameState == GameState::Playing) {
+				mGameTimeElapsed += dt;
+				if (mGameTimeElapsed >= GameDuration) {
+					mGameState = GameState::GameOver;
+					if (mScore > mHighScore) mHighScore = mScore;
+					SoundEffect::SoundEffect::GetSoundEffect()->Play("Impact", MP3, false, Global::SoundEffectsVolume * 0.5f, 0.0f);
+				}
+			}
 		}
 		else if (mGameState == GameState::MainMenu) {
 			mPhysicsWorld->PhysicsInformationUpdate();
@@ -464,6 +476,7 @@ namespace GAME
 			bool outOfBounds = (f.body->pos.y < DeathY);
 			if (missed || outOfBounds) {
 				LoseLife();
+				mPhysicsWorld->WaitForCollisionThreads();
 				mPhysicsWorld->RemoveObject(f.body);
 				mFruits.erase(mFruits.begin() + i);
 				continue;
@@ -488,6 +501,7 @@ namespace GAME
 		SpawnExplosionParticles(cutPoint, GetFruitColor(f.type), 40, 20.0f);
 		SpawnFruitJuiceParticles(cutPoint, GetFruitColor(f.type), 30);
 
+		mPhysicsWorld->WaitForCollisionThreads();
 		mPhysicsWorld->RemoveObject(f.body);
 		f.body = nullptr;
 	}
@@ -573,6 +587,7 @@ namespace GAME
 		for (size_t i = 0; i < mHalfFruits.size(); ) {
 			mHalfFruits[i].lifetime -= dt;
 			if (mHalfFruits[i].lifetime <= 0) {
+				mPhysicsWorld->WaitForCollisionThreads();
 				mPhysicsWorld->RemoveObject(mHalfFruits[i].body);
 				mHalfFruits.erase(mHalfFruits.begin() + i);
 				continue;

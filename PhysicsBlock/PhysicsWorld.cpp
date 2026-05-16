@@ -916,6 +916,17 @@ namespace PhysicsBlock
 #endif
     }
 
+    void PhysicsWorld::WaitForCollisionThreads()
+    {
+#if ThreadPoolBool
+        for (auto &tf : xTn)
+        {
+            tf.wait();
+        }
+        xTn.clear();
+#endif
+    }
+
     void PhysicsWorld::SetMapFormwork(MapFormwork *MapFormwork_)
     {
         GridWindSize = MapFormwork_->FMGetMapSize();
@@ -1010,6 +1021,31 @@ namespace PhysicsBlock
                     ++it;
                 }
             }
+            for (size_t i = 0; i < NewCollideGroup.size(); )
+            {
+                if (NewCollideGroup[i]->key.object1 == shape || NewCollideGroup[i]->key.object2 == shape)
+                {
+                    DeleteArbiter(NewCollideGroup[i]);
+                    NewCollideGroup[i] = NewCollideGroup.back();
+                    NewCollideGroup.pop_back();
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+            for (size_t i = 0; i < DeleteCollideGroup.size(); )
+            {
+                if (DeleteCollideGroup[i].object1 == shape || DeleteCollideGroup[i].object2 == shape)
+                {
+                    DeleteCollideGroup[i] = DeleteCollideGroup.back();
+                    DeleteCollideGroup.pop_back();
+                }
+                else
+                {
+                    ++i;
+                }
+            }
             delete shape;
             break;
         }
@@ -1067,6 +1103,31 @@ namespace PhysicsBlock
                 else
                 {
                     ++it;
+                }
+            }
+            for (size_t i = 0; i < NewCollideGroup.size(); )
+            {
+                if (NewCollideGroup[i]->key.object1 == particle || NewCollideGroup[i]->key.object2 == particle)
+                {
+                    DeleteArbiter(NewCollideGroup[i]);
+                    NewCollideGroup[i] = NewCollideGroup.back();
+                    NewCollideGroup.pop_back();
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+            for (size_t i = 0; i < DeleteCollideGroup.size(); )
+            {
+                if (DeleteCollideGroup[i].object1 == particle || DeleteCollideGroup[i].object2 == particle)
+                {
+                    DeleteCollideGroup[i] = DeleteCollideGroup.back();
+                    DeleteCollideGroup.pop_back();
+                }
+                else
+                {
+                    ++i;
                 }
             }
             delete particle;
@@ -1137,6 +1198,31 @@ namespace PhysicsBlock
                     ++it;
                 }
             }
+            for (size_t i = 0; i < NewCollideGroup.size(); )
+            {
+                if (NewCollideGroup[i]->key.object1 == circle || NewCollideGroup[i]->key.object2 == circle)
+                {
+                    DeleteArbiter(NewCollideGroup[i]);
+                    NewCollideGroup[i] = NewCollideGroup.back();
+                    NewCollideGroup.pop_back();
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+            for (size_t i = 0; i < DeleteCollideGroup.size(); )
+            {
+                if (DeleteCollideGroup[i].object1 == circle || DeleteCollideGroup[i].object2 == circle)
+                {
+                    DeleteCollideGroup[i] = DeleteCollideGroup.back();
+                    DeleteCollideGroup.pop_back();
+                }
+                else
+                {
+                    ++i;
+                }
+            }
             delete circle;
             break;
         }
@@ -1181,6 +1267,31 @@ namespace PhysicsBlock
                 else
                 {
                     ++it;
+                }
+            }
+            for (size_t i = 0; i < NewCollideGroup.size(); )
+            {
+                if (NewCollideGroup[i]->key.object1 == line || NewCollideGroup[i]->key.object2 == line)
+                {
+                    DeleteArbiter(NewCollideGroup[i]);
+                    NewCollideGroup[i] = NewCollideGroup.back();
+                    NewCollideGroup.pop_back();
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+            for (size_t i = 0; i < DeleteCollideGroup.size(); )
+            {
+                if (DeleteCollideGroup[i].object1 == line || DeleteCollideGroup[i].object2 == line)
+                {
+                    DeleteCollideGroup[i] = DeleteCollideGroup.back();
+                    DeleteCollideGroup.pop_back();
+                }
+                else
+                {
+                    ++i;
                 }
             }
             delete line;

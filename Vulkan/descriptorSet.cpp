@@ -43,19 +43,30 @@ namespace VulKan {
 		
 		mDescriptorSize = params.size();
 
+		// 预分配本地 BufferInfo 存储，避免悬空指针引用已被销毁的 Buffer
+		mBufferInfoStorage.resize(frameCount, std::vector<VkDescriptorBufferInfo>(params.size()));
+
 		for (int i = 0; i < frameCount; ++i) {
 			std::vector<VkWriteDescriptorSet> LSdescriptorSetWrites;
+			int paramIndex = 0;
 			for (const auto& param : params) {
 				VkWriteDescriptorSet descriptorSetWrite{};
 				descriptorSetWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				descriptorSetWrite.dstSet = mDescriptorSets[i];//
+				descriptorSetWrite.dstSet = mDescriptorSets[i];
 				descriptorSetWrite.dstArrayElement = 0;
-				descriptorSetWrite.descriptorType = param->mDescriptorType;//数据类型
-				descriptorSetWrite.descriptorCount = param->mCount;//多少个这样的数据
-				descriptorSetWrite.dstBinding = param->mBinding;//绑定到那个Binding
+				descriptorSetWrite.descriptorType = param->mDescriptorType;
+				descriptorSetWrite.descriptorCount = param->mCount;
+				descriptorSetWrite.dstBinding = param->mBinding;
 				
 				if ((param->mDescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) || (param->mDescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)) {
-					descriptorSetWrite.pBufferInfo = &param->mBuffers[i]->getBufferInfo();
+					if (i < (int)param->mBuffers.size() && param->mBuffers[i] != nullptr) {
+						mBufferInfoStorage[i][paramIndex] = param->mBuffers[i]->getBufferInfo();
+						descriptorSetWrite.pBufferInfo = &mBufferInfoStorage[i][paramIndex];
+					} else {
+						LOGE("DescriptorSet: param[%d] mBuffers[%d] is null or out of range (mBuffers.size=%zu)", paramIndex, i, param->mBuffers.size());
+						mBufferInfoStorage[i][paramIndex] = {};
+						descriptorSetWrite.pBufferInfo = &mBufferInfoStorage[i][paramIndex];
+					}
 				}
 				else if ((param->mDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) || (param->mDescriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)) {
 					if (param->mTexture == nullptr) {
@@ -68,6 +79,7 @@ namespace VulKan {
 				}
 
 				LSdescriptorSetWrites.push_back(descriptorSetWrite);
+				paramIndex++;
 			}
 			descriptorSetWrites.push_back(LSdescriptorSetWrites);
 
@@ -85,9 +97,15 @@ namespace VulKan {
 	}
 
 	void DescriptorSet::UpDataBufferPicture(unsigned int Index, VkDescriptorBufferInfo* BufferInfo) {
+		if (BufferInfo == nullptr) {
+			LOGE("DescriptorSet::UpDataBufferPicture: BufferInfo is null");
+			return;
+		}
+		mUpdateBufferInfoStorage.resize(1);
+		mUpdateBufferInfoStorage[0] = *BufferInfo;
 		for (auto& DescriptorSetWrites : descriptorSetWrites) {
 			if (DescriptorSetWrites[Index].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
-				DescriptorSetWrites[Index].pBufferInfo = BufferInfo;
+				DescriptorSetWrites[Index].pBufferInfo = &mUpdateBufferInfoStorage[0];
 			}
 			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(DescriptorSetWrites.size()), DescriptorSetWrites.data(), 0, nullptr);
 		}

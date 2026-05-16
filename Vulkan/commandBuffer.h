@@ -78,6 +78,9 @@ namespace VulKan {
 		//上传数据，同步用的工具函数
 		void submitSync(VkQueue queue, VkFence fence = VK_NULL_HANDLE);//上传指令只可以再主线程运行
 		
+		// 异步提交：仅使用 Fence 同步，不阻塞队列（用于每帧调用场景）
+		void submit(VkQueue queue, VkFence fence);
+
 		// 获取录制好的 CommandBuffer
 		[[nodiscard]] inline VkCommandBuffer getCommandBuffer() const noexcept { return mCommandBuffer; }
 	private:

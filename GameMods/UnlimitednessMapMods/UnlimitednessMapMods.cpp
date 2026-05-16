@@ -268,10 +268,9 @@ namespace GAME
 
 		mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);
 
-		// 更新Camera变换矩阵
-		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
+		// 更新Camera变换矩阵（使用持久映射避免每帧 map/unmap 开销）
+		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getPersistentMappedPtr();
 		mVPMatrices->mViewMatrix = mCamera->getViewMatrix(); // 获取ViewMatrix数据
-		mCameraVPMatricesBuffer[mCurrentFrame]->endupdateBufferByMap();
 
 		mGamePlayer->setGamePlayerMatrix(TOOL::FPStime, mCurrentFrame);
 
@@ -411,7 +410,7 @@ namespace GAME
 		// 战争迷雾
 		TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
 		MistContinuityFire += TOOL::FPStime;
-		if (MistContinuityFire > 0.02f && Global::MistSwitch)
+		if (MistContinuityFire > 0.03f && Global::MistSwitch)
 		{
 			MistContinuityFire = 0;
 			mDungeon->UpdataMist(int(mCamera->getCameraPos().x), int(mCamera->getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);

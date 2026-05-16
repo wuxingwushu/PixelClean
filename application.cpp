@@ -157,12 +157,12 @@ namespace GAME {
 		mPipelineS = new VulKan::PipelineS(mDevice, mRenderPass);//创建渲染管线集合
 
 		Global::CommandBufferSize = mSwapChain->getImageCount();
-		Global::MainCommandBufferS = new bool[Global::CommandBufferSize];
+		Global::MainCommandBufferS = new std::atomic<bool>[Global::CommandBufferSize];
 		//主指令缓存录制
 		mCommandBuffers.resize(mSwapChain->getImageCount());//用来给每个GPU画布都绑上单独的 主CommandBuffer
 		for (int i = 0; i < mSwapChain->getImageCount(); ++i) {
 			mCommandBuffers[i] = new VulKan::CommandBuffer(mDevice, mCommandPool);//创建主指令缓存
-			Global::MainCommandBufferS[i] = true;
+			Global::MainCommandBufferS[i].store(true, std::memory_order_release);
 		}
 
 		wThreadCommandBufferS = &ThreadCommandBufferS;
@@ -388,7 +388,7 @@ namespace GAME {
 			vkCmdExecuteCommands(mCommandBuffers[i]->getCommandBuffer(), ThreadCommandBufferS.size(), ThreadCommandBufferS.data());
 			mCommandBuffers[i]->endRenderPass();//结束RenderPass
 			mCommandBuffers[i]->end();//结束
-			Global::MainCommandBufferS[i] = true;
+			Global::MainCommandBufferS[i].store(true, std::memory_order_release);
 			return;
 		}
 		else if(!Global::MonitorCompatibleMode){
@@ -401,7 +401,7 @@ namespace GAME {
 			mImGuuiCommandBuffers->end();//结束
 		}
 
-		if (!Global::MainCommandBufferS[i] && !Global::MonitorCompatibleMode) {
+		if (!Global::MainCommandBufferS[i].load(std::memory_order_acquire) && !Global::MonitorCompatibleMode) {
 			return;
 		}
 
@@ -425,7 +425,7 @@ namespace GAME {
 
 		mCommandBuffers[i]->end();//结束
 
-		Global::MainCommandBufferS[i] = false;
+		Global::MainCommandBufferS[i].store(false, std::memory_order_release);
 	}
 
 	void Application::createSyncObjects() {
@@ -484,7 +484,7 @@ namespace GAME {
 		mParticleSystem->ThreadUpdateCommandBuffer();
 		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
 		{
-			Global::MainCommandBufferS[i] = true;
+			Global::MainCommandBufferS[i].store(true, std::memory_order_release);
 		}
 		TOOL::mTimer->MomentEnd();
 	}
@@ -693,6 +693,7 @@ namespace GAME {
 	void Application::Render() {
 		mFences[mCurrentFrame]->block();
 		
+		TOOL::mTimer->StartTiming(u8"获取交换链图像 ");
 		uint32_t imageIndex{ 0 };
 		VkResult result = vkAcquireNextImageKHR(
 			mDevice->getDevice(),
@@ -718,6 +719,8 @@ namespace GAME {
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 			throw std::runtime_error("Error: failed to acquire next image");
 		}
+
+		TOOL::mTimer->StartEnd();
 
 		//重新录制指令
 		TOOL::mTimer->StartTiming(u8"录制指令 ");
@@ -756,7 +759,7 @@ namespace GAME {
 		if ((!InterFace->GetInterFaceBool() && Global::Monitor) && !Global::MonitorCompatibleMode)
 		{
 			mImGuuiFence->resetFence();
-			mImGuuiCommandBuffers->submitSync(mDevice->getGraphicQueue(), mImGuuiFence->getFence());
+			mImGuuiCommandBuffers->submit(mDevice->getGraphicQueue(), mImGuuiFence->getFence());
 		}
 		TOOL::mTimer->StartEnd();
 

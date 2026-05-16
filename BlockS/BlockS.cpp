@@ -254,7 +254,7 @@ namespace GAME {
 			}
 
 			if (mGenerate) {
-				mDoubleCommandBufferBool = !mDoubleCommandBufferBool;
+				mDoubleCommandBufferBool.store(!mDoubleCommandBufferBool.load(std::memory_order_relaxed), std::memory_order_release);
 			}
 		}
 	}
@@ -298,6 +298,12 @@ namespace GAME {
 		if (Y > 0) {
 			mCameraBlockY--;
 			for (int i = 0; i < numberX; i++) {
+				if (DestroyBlockNumber[DestroyBlock_i] >= 1000) {
+					for (int ixx = 0; ixx < DestroyBlockNumber[DestroyBlock_i]; ixx++) {
+						mMemoryPoolBlock[DestroyBlockPool[DestroyBlock_i][ixx]->MemoryPool_i]->deleteElement(DestroyBlockPool[DestroyBlock_i][ixx]);
+					}
+					DestroyBlockNumber[DestroyBlock_i] = 0;
+				}
 				DestroyBlockPool[DestroyBlock_i][DestroyBlockNumber[DestroyBlock_i]] = mBlock[i][numberY - 1];
 				DestroyBlockNumber[DestroyBlock_i]++;
 				for (int k = numberY - 1; k > 0; k--) {
@@ -313,6 +319,12 @@ namespace GAME {
 		else {
 			mCameraBlockY++;
 			for (int i = 0; i < numberX; i++) {
+				if (DestroyBlockNumber[DestroyBlock_i] >= 1000) {
+					for (int ixx = 0; ixx < DestroyBlockNumber[DestroyBlock_i]; ixx++) {
+						mMemoryPoolBlock[DestroyBlockPool[DestroyBlock_i][ixx]->MemoryPool_i]->deleteElement(DestroyBlockPool[DestroyBlock_i][ixx]);
+					}
+					DestroyBlockNumber[DestroyBlock_i] = 0;
+				}
 				DestroyBlockPool[DestroyBlock_i][DestroyBlockNumber[DestroyBlock_i]] = mBlock[i][0];
 				DestroyBlockNumber[DestroyBlock_i]++;
 				//memcpy(&mBlock[i][0], &mBlock[i][1], ((numberY - 1) * sizeof(mBlock[i][0])));
@@ -335,6 +347,12 @@ namespace GAME {
 		if (X > 0) {
 			mCameraBlockX--;
 			for (int i = 0; i < numberY; i++) {
+				if (DestroyBlockNumber[DestroyBlock_i] >= 1000) {
+					for (int ixx = 0; ixx < DestroyBlockNumber[DestroyBlock_i]; ixx++) {
+						mMemoryPoolBlock[DestroyBlockPool[DestroyBlock_i][ixx]->MemoryPool_i]->deleteElement(DestroyBlockPool[DestroyBlock_i][ixx]);
+					}
+					DestroyBlockNumber[DestroyBlock_i] = 0;
+				}
 				DestroyBlockPool[DestroyBlock_i][DestroyBlockNumber[DestroyBlock_i]] = mBlock[numberX - 1][i];
 				DestroyBlockNumber[DestroyBlock_i]++;
 				/*for (int k = numberX - 1; k > 0; k--) {
@@ -360,6 +378,12 @@ namespace GAME {
 		else {
 			mCameraBlockX++;
 			for (int i = 0; i < numberY; i++) {
+				if (DestroyBlockNumber[DestroyBlock_i] >= 1000) {
+					for (int ixx = 0; ixx < DestroyBlockNumber[DestroyBlock_i]; ixx++) {
+						mMemoryPoolBlock[DestroyBlockPool[DestroyBlock_i][ixx]->MemoryPool_i]->deleteElement(DestroyBlockPool[DestroyBlock_i][ixx]);
+					}
+					DestroyBlockNumber[DestroyBlock_i] = 0;
+				}
 				DestroyBlockPool[DestroyBlock_i][DestroyBlockNumber[DestroyBlock_i]] = mBlock[0][i];
 				DestroyBlockNumber[DestroyBlock_i]++;
 				/*for (int k = 1; k < numberX; k++) {
@@ -410,13 +434,13 @@ namespace GAME {
 		for (int i = 0; i < (mFrameCount * ThreadCommandBufferNumber); i++) {
 			pool[i].wait();
 		}
-		mDoubleCommandBufferBool = !mDoubleCommandBufferBool;
+		mDoubleCommandBufferBool.store(!mDoubleCommandBufferBool.load(std::memory_order_relaxed), std::memory_order_release);
 	}
 
 	void BlockS::ThreadCommandBufferToUpdate(unsigned int FrameCount, unsigned int BufferCount, unsigned int AddresShead, unsigned int Count)
 	{
 		unsigned int mFrameBufferCount = (FrameCount * ThreadCommandBufferNumber) + BufferCount;
-		VulKan::CommandBuffer* commandbuffer = mThreadCommandBufferS[mFrameBufferCount + (mDoubleCommandBufferBool ? (mFrameCount * ThreadCommandBufferNumber) : 0)];
+		VulKan::CommandBuffer* commandbuffer = mThreadCommandBufferS[mFrameBufferCount + (mDoubleCommandBufferBool.load(std::memory_order_acquire) ? (mFrameCount * ThreadCommandBufferNumber) : 0)];
 
 		VkCommandBufferInheritanceInfo InheritanceInfo{};
 		InheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;

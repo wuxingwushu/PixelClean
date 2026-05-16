@@ -21,13 +21,13 @@ namespace Global {
 
 	bool ConsoleBool = false;
 	unsigned int CommandBufferSize = 0;
-	bool* MainCommandBufferS = nullptr;
-	void MainCommandBufferUpdateRequest() {
-		for (size_t i = 0; i < CommandBufferSize; ++i)
-		{
-			MainCommandBufferS[i] = true;
-		}
+	std::atomic<bool>* MainCommandBufferS = nullptr;
+void MainCommandBufferUpdateRequest() {
+	for (size_t i = 0; i < CommandBufferSize; ++i)
+	{
+		MainCommandBufferS[i].store(true, std::memory_order_release);
 	}
+}
 
 	bool MultiplePeopleMode = false;
 	bool ServerOrClient = true;

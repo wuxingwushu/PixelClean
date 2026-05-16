@@ -351,9 +351,8 @@ namespace GAME
 		mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);
 
 		// 更新Camera变换矩阵
-		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
+		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getPersistentMappedPtr();
 		mVPMatrices->mViewMatrix = mCamera->getViewMatrix(); // 获取ViewMatrix数据
-		mCameraVPMatricesBuffer[mCurrentFrame]->endupdateBufferByMap();
 
 		mGamePlayer->setGamePlayerMatrix(TOOL::FPStime, mCurrentFrame);
 

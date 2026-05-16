@@ -289,9 +289,8 @@ namespace GAME
 		mAuxiliaryVision->End();
 
 		mCamera->update();
-		VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
+		VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[mCurrentFrame]->getPersistentMappedPtr();
 		mVPMatrices->mViewMatrix = mCamera->getViewMatrix();
-		mCameraVPMatricesBuffer[mCurrentFrame]->endupdateBufferByMap();
 	}
 
 	void FruitNinja::GameRecordCommandBuffers()

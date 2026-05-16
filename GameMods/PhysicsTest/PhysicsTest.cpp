@@ -598,9 +598,8 @@ namespace GAME
 
 		// 更新Camera变换矩阵
 		mCamera->update();
-		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
+		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getPersistentMappedPtr();
 		mVPMatrices->mViewMatrix = mCamera->getViewMatrix(); // 获取ViewMatrix数据
-		mCameraVPMatricesBuffer[mCurrentFrame]->endupdateBufferByMap();
 	}
 
 	void PhysicsTest::GameRecordCommandBuffers()

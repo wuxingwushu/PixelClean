@@ -142,6 +142,14 @@ namespace VulKan {
 			delete BufferstageBuffer;
 			BufferstageBuffer = nullptr;
 		}
+		if (mPersistentMappedMemory != nullptr) {
+#if defined(_WIN32) || defined(__ANDROID__)
+			vmaUnmapMemory(mDevice->getAllocator(), mAllocation);
+#else
+			vkUnmapMemory(mDevice->getDevice(), mBufferMemory);
+#endif
+			mPersistentMappedMemory = nullptr;
+		}
 		if (mBuffer != VK_NULL_HANDLE) {
 #if defined(_WIN32) || defined(__ANDROID__)
 			vmaDestroyBuffer(mDevice->getAllocator(), mBuffer, mAllocation);
@@ -209,6 +217,23 @@ namespace VulKan {
 #else
 		vkUnmapMemory(mDevice->getDevice(), mBufferMemory);
 #endif
+	}
+
+	void* Buffer::getPersistentMappedPtr() {
+		if (mPersistentMappedMemory != nullptr) {
+			return mPersistentMappedMemory;
+		}
+		void* memPtr = nullptr;
+#if defined(_WIN32) || defined(__ANDROID__)
+		VkResult result = vmaMapMemory(mDevice->getAllocator(), mAllocation, &memPtr);
+#else
+		VkResult result = vkMapMemory(mDevice->getDevice(), mBufferMemory, 0, VK_WHOLE_SIZE, 0, &memPtr);
+#endif
+		if (result != VK_SUCCESS || memPtr == nullptr) {
+			throw std::runtime_error("Error: failed to map buffer memory for persistent mapping");
+		}
+		mPersistentMappedMemory = memPtr;
+		return memPtr;
 	}
 
 	void Buffer::updateImageByStage(const VkImage& dstImage, VkImageLayout dstImageLayout, uint32_t width, uint32_t height, void* data, size_t size) {

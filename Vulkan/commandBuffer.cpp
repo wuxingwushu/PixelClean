@@ -117,6 +117,15 @@ namespace VulKan {
 		vkQueueWaitIdle(queue);//等待命令结束
 	}
 
+	void CommandBuffer::submit(VkQueue queue, VkFence fence) {
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &mCommandBuffer;
+
+		vkQueueSubmit(queue, 1, &submitInfo, fence);
+	}
+
 
 
 	void CommandBuffer::transferImageLayout(const VkImageMemoryBarrier &imageMemoryBarrier, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask) {

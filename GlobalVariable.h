@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <string>
 #include "GameMods/GameMods.h"
 
@@ -20,8 +21,8 @@ namespace Global {
 
 	extern bool ConsoleBool;
 	extern unsigned int CommandBufferSize;
-	extern bool* MainCommandBufferS;//需要更新MainCommandBuffer
-	void MainCommandBufferUpdateRequest();//全部 MainCommandBuffer 需要更新;
+	extern std::atomic<bool>* MainCommandBufferS;//需要更新MainCommandBuffer（原子操作保证多线程安全）
+void MainCommandBufferUpdateRequest();//全部 MainCommandBuffer 需要更新;
 
 	extern bool MultiplePeopleMode;	//多人模式
 	extern bool ServerOrClient;		//服务器还是客户端

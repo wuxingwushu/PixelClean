@@ -39,6 +39,8 @@ namespace VulKan {
 		void* getupdateBufferByMap();
 		//关闭HOST数据指针
 		void endupdateBufferByMap();
+		//持久映射：首次调用映射内存，返回指针；后续调用直接返回已映射指针，避免每帧 map/unmap 开销
+		void* getPersistentMappedPtr();
 		/********************************  生成单一模型  *************************************/
 		//我们创建的这个Buffer是CPU不可读的，所以不可以直接上传数据，所以做一个中间Buffer用来上传数据，上传完就销毁
 
@@ -85,6 +87,7 @@ namespace VulKan {
 #if defined(_WIN32) || defined(__ANDROID__)
 		VmaAllocation mAllocation{};// vma 的GPU内存描述
 #endif
+		void* mPersistentMappedMemory{ nullptr };//持久映射指针
 		//VkDeviceMemory mBufferMemory{ VK_NULL_HANDLE };//GPU端的内存描述，（废弃，专用 vma）
 		Device* mDevice{ nullptr };
 		VkDescriptorBufferInfo mBufferInfo{};

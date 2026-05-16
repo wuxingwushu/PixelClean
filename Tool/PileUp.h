@@ -1,5 +1,6 @@
 #pragma once
 #include "Iterator.h"
+#include "../DebugLog.h"
 
 template <typename T>
 class PileUp
@@ -32,7 +33,7 @@ public:
     [[nodiscard]] inline T* pop() noexcept {
         if (Index == 0)
         {
-            std::cout << "[PileUp]Error: Empty" << std::endl;
+            LOGE("[PileUp] Error: Empty");
             return nullptr;
         }
         --Index;

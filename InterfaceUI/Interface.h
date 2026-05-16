@@ -63,6 +63,9 @@ namespace GAME {
 			InterFaceBool = !InterFaceBool;
 		}
 
+		// 缓存的 UI 缩放值，在 InterFace() 入口处更新，避免每帧各函数重复计算
+		float mUIScale{ 1.0f };
+
 		VkCommandBuffer GetCommandBuffer(int i, VkCommandBufferInheritanceInfo info);
 
 		VulKan::ShaderTexture* mShaderTexture{ nullptr };

@@ -4,6 +4,7 @@
 #include "../VulKan/sampler.h"
 #include "../VulKan/device.h"
 #include "../Vulkan/buffer.h"
+#include "../Vulkan/fence.h"
 #include "PixelTexture.h"
 #include "Calculate.h"
 
@@ -46,6 +47,8 @@ namespace VulKan {
 		Buffer* mParameter{ nullptr };
 		Buffer* mBackground{ nullptr };
 
+		// 异步提交用 Fence，避免每帧 vkQueueWaitIdle 阻塞 GPU 管线
+		Fence* mFence{ nullptr };
 
 		Device* wDevice{ nullptr };
 		

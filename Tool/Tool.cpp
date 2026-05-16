@@ -348,6 +348,7 @@ namespace TOOL {
 	const int number = 60;//多少帧刷新一次
 	const double miao_time = (number + 1) * CLOCKS_PER_SEC;//用来计算FPS的数
 	double FPSNumber = 0.0f;//帧数
+	double FPStimes = 0.0f;//帧时间
 	double FPStime = 0.0f;//帧时间
 
 	float values[values_number] = {};//储存FPS数据
@@ -369,6 +370,8 @@ namespace TOOL {
 
 	void FPS()
 	{
+		FPStime = double(clock() - zhenfu_time) / CLOCKS_PER_SEC;
+		zhenfu_time = clock();
 		if (number_time >= number) {
 			FrameAmplitude = FrameAmplitudeAccumulate;
 			Max_FrameAmplitude = LMax_FrameAmplitude;
@@ -379,7 +382,7 @@ namespace TOOL {
 			number_time = 0;
 			jieshu_time = clock();
 			FPSNumber = miao_time / double(jieshu_time - kaishi_time);
-			FPStime = 1.0f / FPSNumber;
+			FPStimes = 1.0f / FPSNumber;
 			Max_values = 0.0f;
 			Min_values = 10000.0f;
 			Mean_values = 0.0f;
@@ -404,8 +407,7 @@ namespace TOOL {
 			kaishi_time = clock();
 		}
 		else {
-			float Ltame = (float(clock() - zhenfu_time) / CLOCKS_PER_SEC) - FPStime;
-			zhenfu_time = clock();
+			float Ltame = (float(clock() - zhenfu_time) / CLOCKS_PER_SEC) - FPStimes;
 			Ltame = (Ltame < 0 ? -Ltame : Ltame);
 			if (LMax_FrameAmplitude < Ltame) {
 				LMax_FrameAmplitude = Ltame;
@@ -416,6 +418,7 @@ namespace TOOL {
 			FrameAmplitudeAccumulate += Ltame;
 			++number_time;
 		}
+		
 	}
 #endif
 

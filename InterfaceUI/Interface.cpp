@@ -97,7 +97,7 @@ namespace GAME {
 			pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
 			pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
 			pool_info.pPoolSizes = pool_sizes;
-			if (vkCreateDescriptorPool(mDevice->getDevice(), &pool_info, nullptr, &g_DescriptorPool)) {
+			if (vkCreateDescriptorPool(mDevice->getDevice(), &pool_info, nullptr, &g_DescriptorPool) != VK_SUCCESS) {
 				throw std::runtime_error("Error: initImGui DescriptorPool 生成失败 ");
 			}
 		}
@@ -180,9 +180,12 @@ namespace GAME {
 		delete ImGuiCommandPoolS;
 	}
 
+	static float GetUIScale();
+
 	void ImGuiInterFace::InterFace(unsigned int CurrentFrame)
 	{
 		mCurrentFrame = CurrentFrame;
+		mUIScale = GetUIScale();
 		ImGui_ImplVulkan_NewFrame();
 #if defined(_WIN32)
 		ImGui_ImplGlfw_NewFrame();
@@ -250,7 +253,7 @@ namespace GAME {
 	{
 		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
 
-		float scale = GetUIScale();
+		float scale = mUIScale; // 使用缓存值避免每帧重复计算
 #if defined(__ANDROID__)
 		float btnScale = 1.5f;
 #else
@@ -371,7 +374,7 @@ namespace GAME {
 	{
 		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
 
-		float scale = GetUIScale();
+		float scale = mUIScale;
 #if defined(__ANDROID__)
 		float btnScale = 1.5f;
 #else
@@ -436,7 +439,7 @@ namespace GAME {
 	void ImGuiInterFace::MultiplePeopleInterface() {
 		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
 
-		float scale = GetUIScale();
+		float scale = mUIScale;
 #if defined(__ANDROID__)
 		float btnScale = 1.5f;
 #else
@@ -548,7 +551,7 @@ namespace GAME {
 
 		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
 
-		float scale = GetUIScale();
+		float scale = mUIScale;
 		float panelW = 900.0f * scale;
 		float btnW = 180.0f * scale;
 		float btnH = 50.0f * scale;
@@ -703,7 +706,7 @@ namespace GAME {
 	}
 
 	void ImGuiInterFace::LogViewerInterface() {
-		float scale = GetUIScale();
+		float scale = mUIScale;
 		float panelW = 1000.0f * scale;
 		float panelH = 700.0f * scale;
 		float btnW = 120.0f * scale;
@@ -813,7 +816,7 @@ namespace GAME {
 		static int PromptSelected = -1;
 		static std::vector<const std::string*> Vvector;
 
-		float scale = GetUIScale();
+		float scale = mUIScale;
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.WindowBorderSize = 0.0f;
@@ -920,7 +923,7 @@ namespace GAME {
 	}
 
 	void ImGuiInterFace::DisplayTextS() {
-		float scale = GetUIScale();
+		float scale = mUIScale;
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.WindowBorderSize = 0.0f;

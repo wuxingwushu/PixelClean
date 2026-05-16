@@ -126,15 +126,17 @@ namespace VulKan {
 
 			mDepthImages[i]->setImageLayout(
 				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,// 初始化布局转换使用 TOP_OF_PIPE 作为源阶段是 Vulkan 合法惯例，确保屏障完全执行
 				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
 				region,
 				mCommandPool
 			);
 		}
 
-		//创建MutiSampleImages
+		//创建MutiSampleImages（仅当设备支持MSAA时创建）
 		mMutiSampleImages.resize(mImageCount);
+
+		VkSampleCountFlagBits sampleCount = mDevice->getMaxUsableSampleCount();
 
 		VkImageSubresourceRange regionMutiSample{};
 		regionMutiSample.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -143,21 +145,26 @@ namespace VulKan {
 		regionMutiSample.baseArrayLayer = 0;
 		regionMutiSample.layerCount = 1;
 
-		for (uint32_t i = 0; i < mImageCount; ++i) {
-			mMutiSampleImages[i] = Image::createRenderTargetImage(
-				mDevice,
-				mSwapChainExtent.width,
-				mSwapChainExtent.height,
-				mSwapChainFormat
-			);
+		for (unsigned int i = 0; i < mImageCount; ++i) {
+			if (sampleCount != VK_SAMPLE_COUNT_1_BIT) {
+				mMutiSampleImages[i] = Image::createRenderTargetImage(
+					mDevice,
+					mSwapChainExtent.width,
+					mSwapChainExtent.height,
+					mSwapChainFormat
+				);
 
-			mMutiSampleImages[i]->setImageLayout(
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				regionMutiSample,
-				mCommandPool
-			);
+				mMutiSampleImages[i]->setImageLayout(
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,// 初始化布局转换使用 TOP_OF_PIPE 作为源阶段是 Vulkan 合法惯例
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					regionMutiSample,
+					mCommandPool
+				);
+			}
+			else {
+				mMutiSampleImages[i] = nullptr;
+			}
 		}
 	}
 	

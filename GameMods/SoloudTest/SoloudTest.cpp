@@ -907,9 +907,8 @@ namespace GAME
 		}
 
 		mCamera->update();
-		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getupdateBufferByMap();
+		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[mCurrentFrame]->getPersistentMappedPtr();
 		mVPMatrices->mViewMatrix = mCamera->getViewMatrix();
-		mCameraVPMatricesBuffer[mCurrentFrame]->endupdateBufferByMap();
 
 		mMoveLeft = mMoveRight = mMoveUp = mMoveDown = false;
 	}

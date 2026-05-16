@@ -16,7 +16,8 @@ namespace VulKan {
 		Sampler* sampler)
 		:wDevice(device)
 	{
-		LOGD("[ShaderTexture] Constructor");
+		mFence = new Fence(device, true);
+
 		mPixelTexture = new PixelTexture(device, commandPool, nullptr, texWidth, texHeight, ChannelsNumber, sampler);
 
 		mParameter = new VulKan::Buffer(device, sizeof(ShaderTextureParameter),
@@ -48,9 +49,12 @@ namespace VulKan {
 		delete mParameter;
 		delete mBackground;
 		delete mCalculate;
+		delete mFence;
 	}
 
 	void ShaderTexture::CalculationScreen(float time) {
+		mFence->block();
+
 		ShaderTextureParameter* ShaderTextureParameterP = (ShaderTextureParameter*)mParameter->getupdateBufferByMap();
 		ShaderTextureParameterP->time += time;
 		mParameter->endupdateBufferByMap();
@@ -70,7 +74,9 @@ namespace VulKan {
 		);
 		mPixelTexture->RewriteDataTypeOptimization(mCalculate->GetCommandBuffer());
 		mCalculate->end();
-		mCalculate->GetCommandBuffer()->submitSync(wDevice->getGraphicQueue(), VK_NULL_HANDLE);
+
+		mFence->resetFence();
+		mCalculate->GetCommandBuffer()->submit(wDevice->getGraphicQueue(), mFence->getFence());
 	}
 
 }

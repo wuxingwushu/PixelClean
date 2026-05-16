@@ -51,6 +51,7 @@ namespace GAME {
 		}
 
 		void GetCommandBuffer(std::vector<VkCommandBuffer>* Vector, unsigned int F) {
+			if (mParticle->GetNumber() == 0) return;
 			for (size_t i = 0; i < (ThreadS / 3); ++i)
 			{
 				Vector->push_back(mThreadCommandBufferS[(F * (ThreadS / 3)) + i]->getCommandBuffer());

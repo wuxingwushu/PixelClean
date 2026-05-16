@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include "../base.h"
 #include "Block.h"
 #include "PixelTextureS.h"
@@ -54,7 +55,7 @@ namespace GAME {
 		[[nodiscard]] Block* getBlock(int x, int y) const { return mBlock[x][y]; }
 
 		[[nodiscard]] VkCommandBuffer getDoubleCommandBuffer(int i,int j) const {
-			if (mDoubleCommandBufferBool) {
+			if (mDoubleCommandBufferBool.load(std::memory_order_acquire)) {
 				return mThreadCommandBufferS[(i * ThreadCommandBufferNumber) + j]->getCommandBuffer();
 			}
 			else {
@@ -141,7 +142,7 @@ namespace GAME {
 		// 一个显示，一个更新，更新好了，再和显示的替换，这样就不会卡顿
 		VulKan::CommandPool** mThreadCommandPoolS;
 		VulKan::CommandBuffer** mThreadCommandBufferS;
-		bool mDoubleCommandBufferBool = true;// 双CommandBuffer 交替使用的控制量，
+		std::atomic<bool> mDoubleCommandBufferBool{ true };// 双CommandBuffer 交替使用的控制量，原子操作保证多线程安全
 	public:
 		int ThreadCommandBufferNumber;
 	private:

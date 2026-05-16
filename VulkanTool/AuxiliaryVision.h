@@ -83,6 +83,8 @@ namespace VulKan
 		);
 
 		// 初次录制 CommandBuffer
+		// 注意：命令缓冲区是静态录制的（bindDescriptorSet 记录了 DescriptorSet 句柄引用），
+		// Buffer 内容通过 HostVisible 内存直接更新，无需重新录制 CommandBuffer 即可反映变化
 		void RecordingCommandBuffer(RenderPass *R, SwapChain *S)
 		{
 			wRenderPass = R;

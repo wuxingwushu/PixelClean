@@ -22,7 +22,7 @@ namespace Opcode {
 	GAME::ImGuiInterFace* OpImGuiInterFace = nullptr;
 
 	void OPNULLPTR(Queue<const char*>* CodeS) {
-		OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: No Corresponding Function !", clock() });
+		OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: No Corresponding Function !", std::chrono::steady_clock::now() });
 		return;
 	}
 
@@ -86,7 +86,7 @@ namespace Opcode {
 		}
 		else
 		{
-			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", clock() });
+			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", std::chrono::steady_clock::now() });
 			std::cout << "[Opcode][Error]: AddNPCPos Generate Error ! " << std::endl;
 		}
 	}
@@ -103,7 +103,7 @@ namespace Opcode {
 		}
 		else
 		{
-			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", clock() });
+			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", std::chrono::steady_clock::now() });
 			std::cout << "[Opcode][Error]: AddNPCS Generate Error ! " << std::endl;
 		}
 	}
@@ -122,7 +122,7 @@ namespace Opcode {
 		}
 		else
 		{
-			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", clock() });
+			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", std::chrono::steady_clock::now() });
 			std::cout << "[Opcode][Error]: ReplaceMap Generate Error ! " << std::endl;
 		}
 		
@@ -136,8 +136,8 @@ namespace Opcode {
 		}
 		else
 		{
-			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", clock() });
-			std::cout << "[Opcode][Error]: SetMistSwitch Generate Error ! " << std::endl;
+			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", std::chrono::steady_clock::now() });
+		std::cout << "[Opcode][Error]: SetMistSwitch Generate Error ! " << std::endl;
 		}
 	}
 
@@ -149,7 +149,7 @@ namespace Opcode {
 		}
 		else
 		{
-			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", clock() });
+			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: SetPipelineLinesMode Generate Error ! ", std::chrono::steady_clock::now() });
 			std::cout << "[Opcode][Error]: SetPipelineLinesMode Generate Error ! " << std::endl;
 		}
 	}
@@ -161,7 +161,7 @@ namespace Opcode {
 		}
 		else
 		{
-			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: ReplaceArms Generate Error ! ", clock() });
+			OpImGuiInterFace->mChatBoxStr->add({ "[Opcode][Error]: ReplaceArms Generate Error ! ", std::chrono::steady_clock::now() });
 			std::cout << "[Opcode][Error]: ReplaceArms Generate Error ! " << std::endl;
 		}
 	}

@@ -877,7 +877,7 @@ namespace GAME
 			auto now = std::chrono::steady_clock::now();
 			float dt = std::chrono::duration<float>(now - mLastFrameTime).count();
 			mLastFrameTime = now;
-			dt = glm::clamp(dt, 0.005f, 0.05f);
+			dt = glm::clamp(dt, 0.0001f, 0.05f);
 
 			if (mMoveLeft)       mPlayer->speed.x = -PLAYER_SPEED;
 			else if (mMoveRight) mPlayer->speed.x =  PLAYER_SPEED;

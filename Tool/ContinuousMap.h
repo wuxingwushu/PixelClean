@@ -1,6 +1,6 @@
 #pragma once
 #include <unordered_map>
-#include <time.h>
+#include <chrono>
 #include <iostream>
 #include "Iterator.h"
 
@@ -36,8 +36,8 @@ private:
     TKey* KeyS = nullptr;//键
     TData* DataS = nullptr;//数据
     ContinuousMapFlags mFlags = ContinuousMap_None;//配置信息
-    clock_t* TimeS = nullptr;//键对应的更新时间（Get算更新）
-    clock_t TimeoutTime = 3000;//默认三秒
+    std::chrono::steady_clock::time_point* TimeS = nullptr;//键对应的更新时间（Get算更新）
+	unsigned int TimeoutTime = 3000;//默认三秒
     unsigned int Max = 0;//最多容量
     unsigned int Number = 0;//当前容量
     std::unordered_map<TKey, unsigned int> Dictionary;//索引对应数据
@@ -54,7 +54,7 @@ public:
         KeyS = new TKey[Max];
         DataS = new TData[Max];
         if (mFlags & ContinuousMap_Timeout) {
-            TimeS = new clock_t[Max];
+            TimeS = new std::chrono::steady_clock::time_point[Max];
         }
         if (mFlags & ContinuousMap_Pointer){
             mPointerData = new void* [Max];
@@ -98,7 +98,7 @@ public:
         }
         KeyS[Number] = key;//获取最前面的空位储存键
         if (mFlags & ContinuousMap_Timeout){
-            TimeS[Number] = clock();//获取时间戳
+            TimeS[Number] = std::chrono::steady_clock::now();//获取时间戳
         }
         Dictionary.insert(std::make_pair(key, Number));//添加到Map
         if (mFlags & ContinuousMap_Debug) {
@@ -124,7 +124,7 @@ public:
         }
         if (mFlags & ContinuousMap_Timeout) {
             unsigned int dictionary = Dictionary[key];//获取键
-            TimeS[dictionary] = clock();//更新键的时间搓
+            TimeS[dictionary] = std::chrono::steady_clock::now();//更新键的时间搓
             return &DataS[dictionary];//返回数据指针
         }
         return &DataS[Dictionary[key]];//返回数据指针
@@ -178,11 +178,11 @@ public:
     /**
      * @brief 超时检测 */
     void inline TimeoutDetection() {
-        assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
-        clock_t time = clock();
-        for (size_t i = 0; i < Number; ++i)
-        {
-            if ((time - TimeS[i]) > TimeoutTime) {//判断是否超时
+		assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
+		auto now = std::chrono::steady_clock::now();
+		for (size_t i = 0; i < Number; ++i)
+		{
+			if (std::chrono::duration_cast<std::chrono::milliseconds>(now - TimeS[i]).count() > TimeoutTime) {//判断是否超时
                 if (mFlags & ContinuousMap_Debug) {
                     std::cerr << KeyS[i] << " 超时： 销毁！" << std::endl;
                 }
@@ -206,7 +206,7 @@ public:
     /**
      * @brief 设置超时时间
      * @param Time 超时时间 */
-    void inline SetTimeoutTime(clock_t Time) noexcept {
+    void inline SetTimeoutTime(unsigned int Time) noexcept {
         assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
         TimeoutTime = Time;
     }
@@ -215,11 +215,11 @@ public:
      * @brief 更新所有时间 
      * @note 清空所有数据的计时*/
     void inline UpDataWholeTime() noexcept {
-        assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
-        clock_t time = clock();
-        for (size_t i = 0; i < Number; ++i)
-        {
-            TimeS[i] = time;
+		assert(mFlags & ContinuousMap_Timeout && "Not Turned On ContinuousMap_Timeout");
+		auto now = std::chrono::steady_clock::now();
+		for (size_t i = 0; i < Number; ++i)
+		{
+			TimeS[i] = now;
         }
     }
 
@@ -260,7 +260,7 @@ public:
             LSData = TData{};//清空，防止函数结束释放时调用 ~析构（），导致资源被释放; 
             //std::swap<TData>(DataS[keyData], DataS[Number - 1]);
             if (mFlags & ContinuousMap_Timeout) {
-                std::swap<clock_t>(TimeS[keyData], TimeS[Number - 1]);
+                std::swap<std::chrono::steady_clock::time_point>(TimeS[keyData], TimeS[Number - 1]);
             }
             if (mFlags & ContinuousMap_Pointer) {
                 assert(mPointerCallback != nullptr && "[Error]: mPointerCallback = nullptr !");
@@ -359,9 +359,9 @@ public:
 
         
         if (mFlags & ContinuousMap_Timeout) {
-            clock_t* PTimeS = TimeS;
-            clock_t* LTimeS = new clock_t[Max * 2];
-            clock_t* WTimeS = LTimeS;
+            std::chrono::steady_clock::time_point* PTimeS = TimeS;
+            std::chrono::steady_clock::time_point* LTimeS = new std::chrono::steady_clock::time_point[Max * 2];
+            std::chrono::steady_clock::time_point* WTimeS = LTimeS;
             for (size_t i = 0; i < Max; i++)
             {
                 *LTimeS = *PTimeS;

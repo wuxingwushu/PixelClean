@@ -172,7 +172,7 @@ void SStrReceive(bufferevent* be, void* Data) {
 	SynchronizeData* AData = (SynchronizeData*)Data;
 	char* BData = (char*)AData->Pointer;
 	std::string LChat(BData);
-	server::GetServer()->GetInterFace()->mChatBoxStr->add({ LChat, clock() });
+	server::GetServer()->GetInterFace()->mChatBoxStr->add({ LChat, std::chrono::steady_clock::now() });
 
 
 	char* NewChar = new char[AData->Size];

@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include "GUI.h"
 #include "../Vulkan/Window.h"
 #include "../Vulkan/device.h"
@@ -24,7 +25,7 @@ namespace GAME {
 	{
 		struct ChatBoxStr {
 			std::string str;
-			clock_t timr;
+			std::chrono::steady_clock::time_point timr;
 		};
 	public:
 		ImGuiInterFace(

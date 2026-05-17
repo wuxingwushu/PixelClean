@@ -343,12 +343,11 @@ namespace TOOL {
 
 #ifdef TOOL_FPS
 	/*********************************************- FPS -*********************************************/
-	clock_t kaishi_time, jieshu_time;//储存时间戳
+	ClockTP kaishi_time, jieshu_time, zhenfu_time;
 	int number_time = 0;//当前第几帧
 	const int number = 60;//多少帧刷新一次
-	const double miao_time = (number + 1) * CLOCKS_PER_SEC;//用来计算FPS的数
 	double FPSNumber = 0.0f;//帧数
-	double FPStimes = 0.0f;//帧时间
+	double FPStimes = 0.0f;//60帧平均时间
 	double FPStime = 0.0f;//帧时间
 
 	float values[values_number] = {};//储存FPS数据
@@ -366,12 +365,11 @@ namespace TOOL {
 	float FrameAmplitudeAccumulate;//帧振幅累积
 
 
-	clock_t zhenfu_time;
-
 	void FPS()
 	{
-		FPStime = double(clock() - zhenfu_time) / CLOCKS_PER_SEC;
-		zhenfu_time = clock();
+		auto now = std::chrono::steady_clock::now();
+		FPStime = std::chrono::duration<double>(now - zhenfu_time).count();
+		zhenfu_time = now;
 		if (number_time >= number) {
 			FrameAmplitude = FrameAmplitudeAccumulate;
 			Max_FrameAmplitude = LMax_FrameAmplitude;
@@ -380,9 +378,9 @@ namespace TOOL {
 			LMin_FrameAmplitude = 100.0f;
 			FrameAmplitudeAccumulate = 0;
 			number_time = 0;
-			jieshu_time = clock();
-			FPSNumber = miao_time / double(jieshu_time - kaishi_time);
-			FPStimes = 1.0f / FPSNumber;
+			jieshu_time = now;
+			FPSNumber = (number + 1) / std::chrono::duration<double>(jieshu_time - kaishi_time).count();
+			FPStimes = 1.0 / FPSNumber;
 			Max_values = 0.0f;
 			Min_values = 10000.0f;
 			Mean_values = 0.0f;
@@ -404,10 +402,10 @@ namespace TOOL {
 				}
 			}
 			Mean_values = Mean_values / values_number;
-			kaishi_time = clock();
+			kaishi_time = now;
 		}
 		else {
-			float Ltame = (float(clock() - zhenfu_time) / CLOCKS_PER_SEC) - FPStimes;
+			float Ltame = (float)std::chrono::duration<double>(std::chrono::steady_clock::now() - zhenfu_time).count() - (float)FPStimes;
 			Ltame = (Ltame < 0 ? -Ltame : Ltame);
 			if (LMax_FrameAmplitude < Ltame) {
 				LMax_FrameAmplitude = Ltame;
@@ -427,8 +425,8 @@ namespace TOOL {
 #ifdef TOOL_Timing
 	/*********************************************- 耗时检测 -*********************************************/
 
-	clock_t TemporaryCycleTime;//周期总耗时开始时间戳
-	clock_t CycleTime = 100;//周期总耗时
+	ClockTP TemporaryCycleTime;//周期总耗时开始时间戳
+	double CycleTime = 100.0;//周期总耗时
 	int Gap = 100;//间隔
 	int CurrentCount = 0;//现在是第次轮回
 	bool DetectionSwitch = false;//更新开关
@@ -438,15 +436,15 @@ namespace TOOL {
 	int DetectionCount = 0;//现在是检测第几个
 
 	//嵌套堆载
-	clock_t TemporaryConsumetime[100]{};//临时时间堆载
-	clock_t TemporaryConsumeName[100]{};//临时嵌套索引堆载
+	ClockTP TemporaryConsumetime[100]{};//临时时间堆载
+	int TemporaryConsumeName[100]{};//临时嵌套索引堆载
 	int TemporaryTimeQuantity = -1; //堆载指针
 
 	//结果数据
 	int ConsumeNumber;//最多检测数量
 	char* Consume_name[DetectionNumber]{};//储存检测的名字
 	char* MomentConsume_name[DetectionNumber]{};
-	clock_t TemporaryConsume_time[DetectionNumber]{};//储存检测的周期总累加耗时
+	double TemporaryConsume_time[DetectionNumber]{};//储存检测的周期总累加耗时
 	double Consume_time[DetectionNumber]{};//储存检测的百分比
 	double Consume_Second[DetectionNumber]{};//储存检测的秒
 	double MomentConsume_Second[DetectionNumber]{};
@@ -482,14 +480,15 @@ namespace TOOL {
 			}
 		}
 		TemporaryTimeQuantity++;//堆载指针压载
-		TemporaryConsumetime[TemporaryTimeQuantity] = clock();
+		TemporaryConsumetime[TemporaryTimeQuantity] = std::chrono::steady_clock::now();
 		TemporaryConsumeName[TemporaryTimeQuantity] = DetectionCount + TemporaryTimeQuantity;//压入索引
 	}
 
 	void StartEnd()
 	{
 		LOGD("StartEnd");
-		TemporaryConsume_time[TemporaryConsumeName[TemporaryTimeQuantity]] += (clock() - TemporaryConsumetime[TemporaryTimeQuantity]);
+		TemporaryConsume_time[TemporaryConsumeName[TemporaryTimeQuantity]] += std::chrono::duration<double>(
+			std::chrono::steady_clock::now() - TemporaryConsumetime[TemporaryTimeQuantity]).count();
 		TemporaryTimeQuantity--;//堆载指针出载
 		DetectionCount++;
 	}
@@ -498,10 +497,11 @@ namespace TOOL {
 	{
 		LOGD("RefreshTiming");
 		if (DetectionSwitch) {
-			CycleTime = clock() - TemporaryCycleTime;//Interval 个轮回，结束计时，得出时间
+			auto now = std::chrono::steady_clock::now();
+			CycleTime = std::chrono::duration<double>(now - TemporaryCycleTime).count();//Interval 个轮回，结束计时，得出时间
 			for (int i = 0; i < ConsumeNumber; i++) {
 				Consume_time[i] = (double(TemporaryConsume_time[i] * 100) / CycleTime);//求出他在一个帧周期的耗时占比
-				Consume_Second[i] = (double(TemporaryConsume_time[i]) / (CLOCKS_PER_SEC * Gap));//他所花时间
+				Consume_Second[i] = TemporaryConsume_time[i] / (double)Gap;//他所花时间
 				TemporaryConsume_time[i] = 0;//清零，累计下 Interval 个轮回的时间
 
 				if (SecondVectorBool[i]) {//时间是否记录
@@ -525,7 +525,7 @@ namespace TOOL {
 				}
 			}
 			DetectionSwitch = false;
-			TemporaryCycleTime = clock();//Interval 个轮回，开始计时
+			TemporaryCycleTime = now;//Interval 个轮回，开始计时
 		}
 		else {
 			CurrentCount++;//一轮结束
@@ -546,14 +546,15 @@ namespace TOOL {
 			MomentQuantity++;
 		}
 		TemporaryTimeQuantity++;//堆载指针压载
-		TemporaryConsumetime[TemporaryTimeQuantity] = clock();
+		TemporaryConsumetime[TemporaryTimeQuantity] = std::chrono::steady_clock::now();
 		TemporaryConsumeName[TemporaryTimeQuantity] = Index[0];//压入索引
 	}
 
 	void MomentEnd()
 	{
 		LOGD("MomentEnd");
-		MomentConsume_Second[TemporaryConsumeName[TemporaryTimeQuantity]] = double(clock() - TemporaryConsumetime[TemporaryTimeQuantity]) / CLOCKS_PER_SEC;
+		MomentConsume_Second[TemporaryConsumeName[TemporaryTimeQuantity]] = std::chrono::duration<double>(
+			std::chrono::steady_clock::now() - TemporaryConsumetime[TemporaryTimeQuantity]).count();
 		TemporaryTimeQuantity--;//堆载指针出载
 	}
 #endif

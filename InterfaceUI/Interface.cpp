@@ -881,7 +881,7 @@ namespace GAME {
 				Opcode::Opcode(&LOpCode[1]);
 			}
 			else {
-				mChatBoxStr->add({ LOpCode, clock() });
+				mChatBoxStr->add({ LOpCode, std::chrono::steady_clock::now() });
 			}
 
 			if (Global::MultiplePeopleMode) {
@@ -962,7 +962,8 @@ namespace GAME {
 		for (size_t i = 0; i < mChatBoxStr->GetNumber(); ++i)
 		{
 			LChatBoxStr = mChatBoxStr->addData();
-			if ((i == (mChatBoxStr->GetNumber() - 1)) && ((clock() - LChatBoxStr->timr) > 10000)) {
+			if ((i == (mChatBoxStr->GetNumber() - 1)) && (std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::steady_clock::now() - LChatBoxStr->timr).count() > 10000)) {
 				LChatBoxStr = mChatBoxStr->pop();
 				continue;
 			}

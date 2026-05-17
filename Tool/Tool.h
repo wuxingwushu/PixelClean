@@ -50,7 +50,7 @@
 #endif
 
 #if defined TOOL_FPS || defined TOOL_Timing
-#include <time.h>
+#include <chrono>
 #endif
 
 
@@ -119,11 +119,12 @@ namespace TOOL {
 
 #ifdef TOOL_FPS
 /************************************************- FPS -************************************************/
-	extern clock_t kaishi_time, jieshu_time;//储存时间戳
+	using ClockTP = std::chrono::steady_clock::time_point;
+	extern ClockTP kaishi_time, jieshu_time, zhenfu_time;
 	extern int number_time;//当前第几帧
 	extern const int number;//多少帧刷新一次
-	extern const double miao_time;//用来计算FPS的数
 	extern double FPSNumber;//帧数
+	extern double FPStimes;//60帧平均时间
 	extern double FPStime;//帧时间
 
 	const int values_number = 60;//记录多少FPS数据
@@ -173,8 +174,8 @@ int main(){
 }
 */
 	
-	extern clock_t TemporaryCycleTime;//周期总耗时开始时间戳
-	extern clock_t CycleTime;//周期总耗时
+	extern ClockTP TemporaryCycleTime;//周期总耗时开始时间戳
+	extern double CycleTime;//周期总耗时
 	extern int Gap;//间隔
 	extern int CurrentCount;//现在是第次轮回
 	extern bool DetectionSwitch;//更新开关
@@ -184,8 +185,8 @@ int main(){
 	extern int DetectionCount;//现在是检测第几个
 
 	//嵌套堆载
-	extern clock_t TemporaryConsumetime[100];//临时时间堆载
-	extern clock_t TemporaryConsumeName[100];//临时嵌套索引堆载
+	extern ClockTP TemporaryConsumetime[100];//临时时间堆载
+	extern int TemporaryConsumeName[100];//临时嵌套索引堆载
 	extern int TemporaryTimeQuantity; //堆载指针
 
 	//结果数据
@@ -193,7 +194,7 @@ int main(){
 	extern int ConsumeNumber;//最多检测数量
 	extern char* Consume_name[DetectionNumber];//储存检测的名字
 	extern char* MomentConsume_name[DetectionNumber];
-	extern clock_t TemporaryConsume_time[DetectionNumber];//储存检测的周期总累加耗时
+	extern double TemporaryConsume_time[DetectionNumber];//储存检测的周期总累加耗时
 	extern double Consume_time[DetectionNumber];//储存检测的百分比
 	extern double Consume_Second[DetectionNumber];//储存检测的秒
 	extern double MomentConsume_Second[DetectionNumber];

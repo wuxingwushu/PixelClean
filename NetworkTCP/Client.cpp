@@ -1,8 +1,9 @@
 #include "Client.h"
 #include "../DebugLog.h"
+#include <chrono>
 
 client* client::mClient = nullptr;
-clock_t Ctime = 0;
+static auto Ctime = std::chrono::steady_clock::now();
 
 //错误，超时 （连接断开会进入）
 void client_event_cb(bufferevent* be, short events, void* arg)
@@ -91,8 +92,9 @@ void client_write_cb(bufferevent* be, void* arg)
 		client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->ClearAll();//客户端清空发射
 	}
 
-	if ((clock() - Ctime) >= 1000) {//请求玩家破损情况
-		Ctime = clock();
+	if (std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - Ctime).count() >= 1000) {//请求玩家破损情况
+		Ctime = std::chrono::steady_clock::now();
 		DataHeader DHArms;
 		DHArms.Key = 3;
 		DHArms.Size = sizeof(unsigned int);

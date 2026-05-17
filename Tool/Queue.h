@@ -1,5 +1,5 @@
 #pragma once
-#include <time.h>
+#include <chrono>
 #include <assert.h>
 #include <iostream>
 
@@ -28,8 +28,8 @@ private:
     T* mQueue = nullptr;
    
     
-    clock_t* mTimeS = nullptr;
-    unsigned int mTime = 2000;
+    std::chrono::steady_clock::time_point* mTimeS = nullptr;
+	unsigned int mTime = 2000;
     _PopCallback mPopCallback = nullptr;//弹出回调函数
     void* mClass = nullptr;
 
@@ -44,7 +44,7 @@ public:
     constexpr Queue(unsigned int size, QueueFlags_ flags = Queue_None):mMax(size), mFlags_(flags){
         mQueue = new T[mMax];
         if (mFlags_ & Queue_Timeout) {
-            mTimeS = new clock_t[mMax];
+            mTimeS = new std::chrono::steady_clock::time_point[mMax];
         }
     };
 
@@ -70,7 +70,7 @@ public:
         ++mNumber;
         mQueue[TailIndex] = Parameter;
         if (mFlags_ & Queue_Timeout) {
-            mTimeS[TailIndex] = clock();
+            mTimeS[TailIndex] = std::chrono::steady_clock::now();
         }
         TailIndex = Max(TailIndex + 1);
     };
@@ -119,7 +119,8 @@ public:
         assert(mFlags_ & Queue_Timeout && "Not Turned On Queue_Timeout");
         if (mNumber == 0)return;
 
-        if ((clock() - mTimeS[HeadIndex]) > mTime) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::steady_clock::now() - mTimeS[HeadIndex]).count() > mTime) {
             mPopCallback(&mQueue[HeadIndex], mClass);
             HeadIndex = Max(HeadIndex + 1);//弹出
         }
@@ -138,9 +139,9 @@ public:
         delete mQueue;
         mQueue = WQueue;
         if (mFlags_ & Queue_Timeout) {
-            clock_t* PTimeS = mTimeS;
-            clock_t* LTimeS= new clock_t[mMax * 2];
-            clock_t* WTimeS = LTimeS;
+            std::chrono::steady_clock::time_point* PTimeS = mTimeS;
+            std::chrono::steady_clock::time_point* LTimeS = new std::chrono::steady_clock::time_point[mMax * 2];
+            std::chrono::steady_clock::time_point* WTimeS = LTimeS;
             for (size_t i = 0; i < mMax; i++)
             {
                 *LTimeS = *PTimeS;

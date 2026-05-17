@@ -230,7 +230,7 @@ namespace GAME
 		auto now = std::chrono::steady_clock::now();
 		float dt = std::chrono::duration<float>(now - mLastFrameTime).count();
 		mLastFrameTime = now;
-		dt = glm::clamp(dt, 0.005f, 0.05f);
+		dt = glm::clamp(dt, 0.0001f, 0.05f);
 
 		mAuxiliaryVision->Begin();
 
@@ -416,7 +416,10 @@ namespace GAME
 					glm::vec2 cutDir = segB - segA;
 					if (segLen > 0.001f) cutDir /= segLen;
 					else cutDir = {1.0f, 0.0f};
-					CutFruit(fi, fruitPos, cutDir, segSpeed);
+					float t = glm::dot(fruitPos - segA, segB - segA) / (segLen * segLen);
+					t = glm::clamp(t, 0.0f, 1.0f);
+					glm::vec2 hitPoint = segA + (segB - segA) * t;
+					CutFruit(fi, hitPoint, cutDir, segSpeed);
 				}
 			}
 		}
@@ -567,9 +570,9 @@ namespace GAME
 
 		glm::vec2 perpDir(-cutDirection.y, cutDirection.x);
 		float sepOffset = (float)PixelSize * 0.55f;
-		halfA->pos = srcBody->pos + perpDir * sepOffset;
+		halfA->pos = srcBody->pos - perpDir * sepOffset;
 		halfA->OldPos = halfA->pos;
-		halfB->pos = srcBody->pos - perpDir * sepOffset;
+		halfB->pos = srcBody->pos + perpDir * sepOffset;
 		halfB->OldPos = halfB->pos;
 
 		float sepSpeed = std::min(cutSpeed * 0.015f, 8.0f);

@@ -130,5 +130,5 @@ void CStrReceive(bufferevent* be, void* Data) {
 	SynchronizeData* AData = (SynchronizeData*)Data;
 	char* BData = (char*)AData->Pointer;
 	std::string LChat(BData);
-	client::GetClient()->GetInterFace()->mChatBoxStr->add({ LChat, clock() });
+	client::GetClient()->GetInterFace()->mChatBoxStr->add({ LChat, std::chrono::steady_clock::now() });
 }

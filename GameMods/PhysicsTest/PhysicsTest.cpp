@@ -546,7 +546,12 @@ namespace GAME
 			}
 		}
 
-		mAuxiliaryVision->End();
+		if (mAuxiliaryVision->End()) {
+			for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
+			{
+				Global::MainCommandBufferS[i].store(true, std::memory_order_release);
+			}
+		}
 
 		if (GridEditShape != nullptr)
 		{

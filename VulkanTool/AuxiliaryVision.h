@@ -11,6 +11,12 @@
 namespace VulKan
 {
 
+	struct StaticVertexTracker
+	{
+		bool UpData = false;
+		unsigned int FirstNewIndex = 0;
+	};
+
 	// 线基础单位
 	struct AuxiliaryLineSpot
 	{
@@ -73,6 +79,8 @@ namespace VulKan
 	class AuxiliaryVision
 	{
 	public:
+		static constexpr unsigned int kVertexCountBuffer = 100;
+
 		AuxiliaryVision(Device *device, PipelineS *P, const unsigned int number);
 		~AuxiliaryVision();
 
@@ -137,7 +145,7 @@ namespace VulKan
 		};
 
 		// 结束录制辅助视觉
-		void End();
+		bool End();
 
 		// 一次性线段（录制外使用）
 		inline void AddLine(glm::dvec3 Vertex1, glm::dvec3 Vertex2, glm::vec4 color)
@@ -160,33 +168,54 @@ namespace VulKan
 		// 静态线段（录制外使用）
 		inline void AddStaticLine(glm::dvec3 Vertex1, glm::dvec3 Vertex2, glm::vec4 color)
 		{
+			if (!mLineStaticVertex.UpData) {
+				mLineStaticVertex.FirstNewIndex = (unsigned int)StaticLineVertex.size();
+			}
 			StaticLineVertex.push_back({Vertex1, color});
 			StaticLineVertex.push_back({Vertex2, color});
-			StaticLineVertexUpData = true;
+			mLineStaticVertex.UpData = true;
 		};
 
 		// 清空静态线段
-		inline void ClearStaticLine() { StaticLineVertex.clear(); }
+		inline void ClearStaticLine() {
+			StaticLineVertex.clear();
+			mLineStaticVertex.FirstNewIndex = 0;
+			mLineStaticVertex.UpData = true;
+		}
 
 		// 静态点（录制外使用）
 		inline void AddStaticSpot(glm::dvec3 pos, float size, glm::vec4 color)
 		{
+			if (!mSpotStaticVertex.UpData) {
+				mSpotStaticVertex.FirstNewIndex = (unsigned int)StaticSpotVertex.size();
+			}
 			StaticSpotVertex.push_back({pos, size, color});
-			StaticSpotVertexUpData = true;
+			mSpotStaticVertex.UpData = true;
 		};
 
 		// 清空静态点
-		inline void ClearStaticSpot() { StaticSpotVertex.clear(); }
+		inline void ClearStaticSpot() {
+			StaticSpotVertex.clear();
+			mSpotStaticVertex.FirstNewIndex = 0;
+			mSpotStaticVertex.UpData = true;
+		}
 
 		// 静态圆（录制外使用）
 		inline void AddStaticCircle(glm::dvec3 pos, float radius, glm::vec4 color)
 		{
+			if (!mCircleStaticVertex.UpData) {
+				mCircleStaticVertex.FirstNewIndex = (unsigned int)StaticCircleVertex.size();
+			}
 			StaticCircleVertex.push_back({pos, radius, color});
-			StaticCircleVertexUpData = true;
+			mCircleStaticVertex.UpData = true;
 		};
 
 		// 清空静态圆
-		inline void ClearStaticCircle() { StaticCircleVertex.clear(); }
+		inline void ClearStaticCircle() {
+			StaticCircleVertex.clear();
+			mCircleStaticVertex.FirstNewIndex = 0;
+			mCircleStaticVertex.UpData = true;
+		}
 
 		// 动态线段
 		inline constexpr auto GetContinuousLine() noexcept { return ContinuousAuxiliaryLine; }
@@ -200,47 +229,53 @@ namespace VulKan
 		// 静态点
 		inline constexpr auto GetContinuousStaticSpot() noexcept { return StaticContinuousAuxiliarySpot; }
 		// 静态数据更新
-		inline constexpr void OpenStaticSpotUpData() noexcept { StaticSpotUpData = true; }
-		inline constexpr void OpenStaticLineUpData() noexcept { StaticLineUpData = true; }
+		inline constexpr void OpenStaticSpotUpData() noexcept { mStaticSpotCallbackUpData = true; }
+		inline constexpr void OpenStaticLineUpData() noexcept { mStaticLineCallbackUpData = true; }
 
 	private: // 线段
 		AuxiliaryLineSpot *LinePointerHOST = nullptr;
-		unsigned int LineNumber = 0;															 // 当前帧的数量
-		unsigned int LineMax = 0;																 // 上一帧的数量
-		ContinuousMap<glm::dvec2 *, AuxiliaryLineData> *ContinuousAuxiliaryLine = nullptr;		 // 两点连线（动态）
-		ContinuousMap<glm::dvec2 *, AuxiliaryForceData> *ContinuousAuxiliaryForce = nullptr;	 // 点上的向量（动态）
-		ContinuousMap<void *, StaticAuxiliaryLineData> *StaticContinuousAuxiliaryLine = nullptr; // 线段集（静态）
-		bool StaticLineUpData = false;															 // 静态线段是否需要更新
-		unsigned int StaticLineDeviation = 0;													 // 静态数据偏移量
-		std::vector<AuxiliaryLineSpot> LineVertex{};											 // 单纯的位置连线（一次性）
-		bool StaticLineVertexUpData = false;													 // 静态线段是否需要更新
-		unsigned int StaticLineVertexDeviation = 0;												 // 静态数据偏移量
-		std::vector<AuxiliaryLineSpot> StaticLineVertex{};										 // 单纯的位置连线（静态）
-		Buffer *AuxiliaryLineS{nullptr};														 // 线段缓存
+		unsigned int LineNumber = 0;
+		unsigned int LineMax = 0;
+		unsigned int mLineRecordedCount = 0;
+		ContinuousMap<glm::dvec2 *, AuxiliaryLineData> *ContinuousAuxiliaryLine = nullptr;
+		ContinuousMap<glm::dvec2 *, AuxiliaryForceData> *ContinuousAuxiliaryForce = nullptr;
+		ContinuousMap<void *, StaticAuxiliaryLineData> *StaticContinuousAuxiliaryLine = nullptr;
+		StaticVertexTracker mLineStaticVertex{};
+		bool mStaticLineCallbackUpData = false;
+		unsigned int StaticLineDeviation = 0;
+		std::vector<AuxiliaryLineSpot> LineVertex{};
+		unsigned int StaticLineVertexDeviation = 0;
+		std::vector<AuxiliaryLineSpot> StaticLineVertex{};
+		Buffer *AuxiliaryLineS{nullptr};
+		AuxiliaryLineSpot *mLinePersistentPtr{nullptr};
 
 	private: // 点
 		AuxiliarySpot *SpotPointerHOST = nullptr;
-		unsigned int SpotNumber = 0;															 // 当前帧的数量
-		unsigned int SpotMax = 0;																 // 上一帧的数量
-		ContinuousMap<glm::dvec2 *, AuxiliarySpotData> *ContinuousAuxiliarySpot = nullptr;		 // 点集（动态）
-		ContinuousMap<void *, StaticAuxiliarySpotData> *StaticContinuousAuxiliarySpot = nullptr; // 点集（静态）
-		bool StaticSpotUpData = false;															 // 静态点是否需要更新
-		unsigned int StaticSpotDeviation = 0;													 // 静态数据偏移量
-		std::vector<AuxiliarySpot> SpotVertex{};												 // 单纯的位置点（一次性）
-		bool StaticSpotVertexUpData = false;													 // 静态点是否需要更新
-		unsigned int StaticSpotVertexDeviation = 0;												 // 静态数据偏移量
-		std::vector<AuxiliarySpot> StaticSpotVertex{};											 // 单纯的位置点（静态）
-		Buffer *AuxiliarySpotS{nullptr};														 // 点缓存
+		unsigned int SpotNumber = 0;
+		unsigned int SpotMax = 0;
+		unsigned int mSpotRecordedCount = 0;
+		ContinuousMap<glm::dvec2 *, AuxiliarySpotData> *ContinuousAuxiliarySpot = nullptr;
+		ContinuousMap<void *, StaticAuxiliarySpotData> *StaticContinuousAuxiliarySpot = nullptr;
+		StaticVertexTracker mSpotStaticVertex{};
+		bool mStaticSpotCallbackUpData = false;
+		unsigned int StaticSpotDeviation = 0;
+		std::vector<AuxiliarySpot> SpotVertex{};
+		unsigned int StaticSpotVertexDeviation = 0;
+		std::vector<AuxiliarySpot> StaticSpotVertex{};
+		Buffer *AuxiliarySpotS{nullptr};
+		AuxiliarySpot *mSpotPersistentPtr{nullptr};
 
 	private: // 圆
 		AuxiliaryCircle *CirclePointerHOST = nullptr;
-		unsigned int CircleNumber = 0;					   // 当前帧的数量
-		unsigned int CircleMax = 0;						   // 上一帧的数量
+		unsigned int CircleNumber = 0;
+		unsigned int CircleMax = 0;
+		unsigned int mCircleRecordedCount = 0;
 		std::vector<AuxiliaryCircle> CircleVertex{};
-		bool StaticCircleVertexUpData = false;			   // 静态点是否需要更新
-		unsigned int StaticCircleVertexDeviation = 0;	   // 静态数据偏移量
-		std::vector<AuxiliaryCircle> StaticCircleVertex{}; // 单纯的位置点（静态）
-		Buffer *AuxiliaryCircleS{nullptr};				   // 圆缓存
+		StaticVertexTracker mCircleStaticVertex{};
+		unsigned int StaticCircleVertexDeviation = 0;
+		std::vector<AuxiliaryCircle> StaticCircleVertex{};
+		Buffer *AuxiliaryCircleS{nullptr};
+		AuxiliaryCircle *mCirclePersistentPtr{nullptr};
 
 	private:
 		DescriptorPool *mDescriptorPool{nullptr};

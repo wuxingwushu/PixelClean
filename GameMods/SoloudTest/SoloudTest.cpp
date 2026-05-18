@@ -15,7 +15,7 @@ namespace GAME
 	SoloudTest::SoloudTest(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
 		LOGD("SoloudTest::SoloudTest constructor");
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 200000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 5000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
 			mCameraVPMatricesBuffer);
@@ -879,13 +879,21 @@ namespace GAME
 			mLastFrameTime = now;
 			dt = glm::clamp(dt, 0.0001f, 0.05f);
 
-			if (mMoveLeft)       mPlayer->speed.x = -PLAYER_SPEED;
-			else if (mMoveRight) mPlayer->speed.x =  PLAYER_SPEED;
-			else                 mPlayer->speed.x = 0;
+			Vec2_ inputDir = {0, 0};
+			if (mMoveLeft)  inputDir.x -= 1;
+			if (mMoveRight) inputDir.x += 1;
+			if (mMoveDown)  inputDir.y -= 1;
+			if (mMoveUp)    inputDir.y += 1;
 
-			if (mMoveUp)         mPlayer->speed.y =  PLAYER_SPEED;
-			else if (mMoveDown)  mPlayer->speed.y = -PLAYER_SPEED;
-			else                 mPlayer->speed.y = 0;
+			float inputMag = (float)PhysicsBlock::Modulus(inputDir);
+			Vec2_ targetSpeed = {0, 0};
+			if (inputMag > 0.001f) {
+				targetSpeed = (inputDir / inputMag) * PLAYER_MAX_SPEED;
+			}
+
+			float t = glm::min(PLAYER_ACCEL * dt, 1.0f);
+			mPlayer->speed.x += (targetSpeed.x - mPlayer->speed.x) * t;
+			mPlayer->speed.y += (targetSpeed.y - mPlayer->speed.y) * t;
 
 			mPhysicsWorld->PhysicsEmulator(dt);
 		}
@@ -896,7 +904,12 @@ namespace GAME
 		UpdateAudio();
 		RenderScene();
 
-		mAuxiliaryVision->End();
+		if (mAuxiliaryVision->End()) {
+		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
+		{
+			Global::MainCommandBufferS[i].store(true, std::memory_order_release);
+		}
+}
 
 		if (mPlayer) {
 			glm::vec3 currentCamPos = mCamera->getCameraPos();

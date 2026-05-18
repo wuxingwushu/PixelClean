@@ -167,39 +167,76 @@ namespace PhysicsBlock
     inline void PhysicsWorld::HandleCollideGroup(BaseArbiter *Ba)
     {
         Ba->ComputeCollide();
-        auto i = CollideGroupS.find(Ba->key);
-        if (i == CollideGroupS.end())
+        auto it = CollideGroupS.find(Ba->key);
+
+        if (Ba->numContacts > 0)
         {
-            if (Ba->numContacts > 0)
+            if (it == CollideGroupS.end())
             {
 #if ThreadPoolBool
-                mLock.lock();
+                std::lock_guard<std::mutex> lock(mLock);
 #endif
                 NewCollideGroup.push_back(Ba);
-#if ThreadPoolBool
-                mLock.unlock();
-#endif
                 return;
             }
+            it->second->Update(Ba->contacts, Ba->numContacts);
         }
-        else
+        else if (it != CollideGroupS.end())
         {
-            if (Ba->numContacts > 0)
+#if ThreadPoolBool
+            std::lock_guard<std::mutex> lock(mLock);
+#endif
+            DeleteCollideGroup.push_back(Ba->key);
+        }
+        DeleteArbiter(Ba);
+    }
+
+    inline void PhysicsWorld::ResolveCollideGroup()
+    {
+        if (DeleteCollideGroup.empty() && NewCollideGroup.empty())
+        {
+            return;
+        }
+
+        for (const auto &D : DeleteCollideGroup)
+        {
+            auto it = CollideGroupS.find(D);
+            if (it == CollideGroupS.end())
             {
-                i->second->Update(Ba->contacts, Ba->numContacts);
+                continue;
+            }
+            BaseArbiter *arb = it->second;
+            CollideGroupS.erase(it);
+            for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
+            {
+                if (CollideGroupVector[i] == arb)
+                {
+                    DeleteArbiter(arb);
+                    if (i != (int)CollideGroupVector.size() - 1)
+                    {
+                        CollideGroupVector[i] = CollideGroupVector.back();
+                    }
+                    CollideGroupVector.pop_back();
+                    break;
+                }
+            }
+        }
+        DeleteCollideGroup.clear();
+
+        CollideGroupVector.reserve(CollideGroupVector.size() + NewCollideGroup.size());
+        for (auto &J : NewCollideGroup)
+        {
+            auto result = CollideGroupS.emplace(J->key, J);
+            if (result.second)
+            {
+                CollideGroupVector.push_back(J);
             }
             else
             {
-#if ThreadPoolBool
-                mLock.lock();
-#endif
-                DeleteCollideGroup.push_back(Ba->key);
-#if ThreadPoolBool
-                mLock.unlock();
-#endif
+                DeleteArbiter(J);
             }
         }
-        DeleteArbiter(Ba);
+        NewCollideGroup.clear();
     }
 
     void PhysicsWorld::PhysicsEmulator(FLOAT_ time)
@@ -419,38 +456,7 @@ namespace PhysicsBlock
 
         FLOAT_ inv_dt = 1.0 / time;
 
-        for (auto &D : DeleteCollideGroup)
-        {
-            if (CollideGroupS.find(D) == CollideGroupS.end())
-            {
-                continue;
-            }
-            CollideGroupS.erase(D);
-            for (int i = 0; i < CollideGroupVector.size(); ++i)
-            {
-                if (CollideGroupVector[i]->key == D)
-                {
-                    DeleteArbiter(CollideGroupVector[i]);
-                    CollideGroupVector[i] = CollideGroupVector[CollideGroupVector.size() - 1];
-                    CollideGroupVector.pop_back();
-                    break;
-                }
-            }
-        }
-        DeleteCollideGroup.clear();
-        for (auto &J : NewCollideGroup)
-        {
-            if (CollideGroupS.find(J->key) == CollideGroupS.end())
-            {
-                CollideGroupS.insert({J->key, J});
-                CollideGroupVector.push_back(J);
-            }
-            else
-            {
-                DeleteArbiter(J);
-            }
-        }
-        NewCollideGroup.clear();
+        ResolveCollideGroup();
 
 #define Definite 0 // 是否需要确定性(暂时没法保证确定性，没有对解算的前后顺序进行排序)
 
@@ -837,38 +843,7 @@ namespace PhysicsBlock
             }
         };
 
-        for (auto &D : DeleteCollideGroup)
-        {
-            if (CollideGroupS.find(D) == CollideGroupS.end())
-            {
-                continue;
-            }
-            CollideGroupS.erase(D);
-            for (int i = 0; i < CollideGroupVector.size(); ++i)
-            {
-                if (CollideGroupVector[i]->key == D)
-                {
-                    DeleteArbiter(CollideGroupVector[i]);
-                    CollideGroupVector[i] = CollideGroupVector[CollideGroupVector.size() - 1];
-                    CollideGroupVector.pop_back();
-                    break;
-                }
-            }
-        }
-        DeleteCollideGroup.clear();
-        for (auto &J : NewCollideGroup)
-        {
-            if (CollideGroupS.find(J->key) == CollideGroupS.end())
-            {
-                CollideGroupS.insert({J->key, J});
-                CollideGroupVector.push_back(J);
-            }
-            else
-            {
-                DeleteArbiter(J);
-            }
-        }
-        NewCollideGroup.clear();
+        ResolveCollideGroup();
 
 #if ThreadPoolBool
         // 预处理

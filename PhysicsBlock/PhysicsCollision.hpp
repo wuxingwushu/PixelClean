@@ -13,7 +13,7 @@ namespace PhysicsBlock
     struct CollisionBinding
     {
         LayerMask Layers = LayerMaskAll;
-        int Priority = 50;
+        int Priority = 50;//默认优先级
         CollisionCallback OnEnter = nullptr;
         CollisionCallback OnStay = nullptr;
         CollisionCallback OnExit = nullptr;

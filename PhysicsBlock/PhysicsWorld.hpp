@@ -199,6 +199,7 @@ namespace PhysicsBlock
         unsigned int ApplyImpulseSize = PhysicsApplyImpulseSize; // 迭代次数
 
         void HandleCollideGroup(BaseArbiter *Ba);
+        void ResolveCollideGroup();
 
         AuxiliaryMemoryPool(PhysicsArbiterCP, PhysicsCircle, C, PhysicsParticle, P);
         AuxiliaryMemoryPool(PhysicsArbiterSP, PhysicsShape, S, PhysicsParticle, P);

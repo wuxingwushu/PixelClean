@@ -154,13 +154,13 @@ namespace PhysicsBlock
 
 	void PhysicsAuxiliaryColorUI()
 	{
-		AuxiliaryColorUI("位置", &Auxiliary_PosBool, Auxiliary_PosColor);
+		AuxiliaryColorUI("位置##辅助", &Auxiliary_PosBool, Auxiliary_PosColor);
 		AuxiliaryColorUI("旧位置", &Auxiliary_OldPosBool, Auxiliary_OldPosColor);
-		AuxiliaryColorUI("角度", &Auxiliary_AngleBool, Auxiliary_AngleColor);
-		AuxiliaryColorUI("速度", &Auxiliary_SpeedBool, Auxiliary_SpeedColor);
-		AuxiliaryColorUI("受力", &Auxiliary_ForceBool, Auxiliary_ForceColor);
-		AuxiliaryColorUI("质心", &Auxiliary_CentreMassBool, Auxiliary_CentreMassColor);
-		AuxiliaryColorUI("几何中心", &Auxiliary_CentreShapeBool, Auxiliary_CentreShapeColor);
+		AuxiliaryColorUI("角度##辅助", &Auxiliary_AngleBool, Auxiliary_AngleColor);
+		AuxiliaryColorUI("速度##辅助", &Auxiliary_SpeedBool, Auxiliary_SpeedColor);
+		AuxiliaryColorUI("受力##辅助", &Auxiliary_ForceBool, Auxiliary_ForceColor);
+		AuxiliaryColorUI("质心##辅助", &Auxiliary_CentreMassBool, Auxiliary_CentreMassColor);
+		AuxiliaryColorUI("几何中心##辅助", &Auxiliary_CentreShapeBool, Auxiliary_CentreShapeColor);
 		AuxiliaryColorUI("外骨骼点", &Auxiliary_OutlineBool, Auxiliary_OutlineColor);
 		AuxiliaryColorUI("碰撞点", &Auxiliary_CollisionDropBool, Auxiliary_CollisionDropColor);
 		AuxiliaryColorUI("分离法向量", &Auxiliary_SeparateNormalVectorBool, Auxiliary_SeparateNormalVectorColor);
@@ -181,7 +181,7 @@ namespace PhysicsBlock
 	bool PhysicsUI(PhysicsAngle *Object)
 	{
 		bool UpData = PhysicsUI((PhysicsParticle *)Object);
-		ImGui::DragScalar("角度", MyImGuiDataType, &Object->angle, 0.0005f, NULL, NULL, "%.10f");
+		ImGui::DragScalar("##对象角度", MyImGuiDataType, &Object->angle, 0.0005f, NULL, NULL, "%.10f");
 		ImGui::DragScalar("角速度", MyImGuiDataType, &Object->angleSpeed, 0.0005f, NULL, NULL, "%.10f");
 		ImGui::DragScalar("转动惯量", MyImGuiDataType, &Object->MomentInertia, 0.0005f, NULL, NULL, "%.10f");
 		ImGui::DragScalar("扭矩", MyImGuiDataType, &Object->torque, 0.0005f, NULL, NULL, "%.10f");

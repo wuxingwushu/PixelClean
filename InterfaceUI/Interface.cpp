@@ -1011,6 +1011,7 @@ namespace GAME {
 				ImGui::Text("%s", TOOL::mTimer->mTimerTimeS[i].Name);
 				ImGui::TableNextColumn();
 				if (TOOL::mTimer->mTimerTimeS[i].HeapBool) {
+					ImGui::PushID(i);
 					ImGui::PlotLines("",
 						TOOL::mTimer->mTimerTimeS[i].TimeHeap.data(),
 						TOOL::mTimer->mHeapNumber,
@@ -1020,6 +1021,7 @@ namespace GAME {
 						TOOL::mTimer->mTimerTimeS[i].TimeMin,
 						ImVec2(0, 25.0f)
 					);
+					ImGui::PopID();
 				}
 				else {
 					ImGui::Text(u8"%1.6f 秒 ", TOOL::mTimer->mTimerTimeS[i].Time);

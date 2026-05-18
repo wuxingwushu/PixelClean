@@ -1,8 +1,101 @@
 #include "AuxiliaryVision.h"
 #include "../GlobalStructural.h"
+#include "../GlobalVariable.h"
 #include "../DebugLog.h"
 
 namespace VulKan {
+
+namespace {
+
+	template<typename TVertex>
+	bool ProcessStaticVertices(
+		TVertex*& ptr, const TVertex* bufferEnd,
+		std::vector<TVertex>& staticVertices,
+		StaticVertexTracker& tracker,
+		unsigned int& deviation,
+		unsigned int& number)
+	{
+		if (!tracker.UpData) {
+			number = deviation;
+			ptr += deviation;
+			return false;
+		}
+		tracker.UpData = false;
+		if (tracker.FirstNewIndex > staticVertices.size()) {
+			tracker.FirstNewIndex = 0;
+			deviation = 0;
+		}
+		else {
+			ptr += tracker.FirstNewIndex;
+			deviation = tracker.FirstNewIndex;
+		}
+		for (size_t i = tracker.FirstNewIndex; i < staticVertices.size(); ++i) {
+			if (ptr >= bufferEnd) break;
+			*ptr = staticVertices[i];
+			++ptr;
+			++deviation;
+		}
+		tracker.FirstNewIndex = staticVertices.size();
+		number = deviation;
+		return true;
+	}
+
+	template<typename TVertex, typename TStaticData>
+	void ProcessStaticCallbacks(
+		TVertex*& ptr, const TVertex* bufferEnd,
+		ContinuousMap<void*, TStaticData>* callbackMap,
+		bool& upData,
+		unsigned int& deviation,
+		unsigned int& number)
+	{
+		if (!upData) {
+			number += deviation;
+			ptr += deviation;
+			return;
+		}
+		upData = false;
+		deviation = 0;
+		int funcNumber;
+		for (auto& i : *callbackMap) {
+			if (i.Size != 0) {
+				if (ptr >= bufferEnd) break;
+				funcNumber = i.Function(ptr, i.Pointer, i.Size);
+				deviation += funcNumber;
+				ptr += funcNumber;
+			}
+		}
+		number += deviation;
+	}
+
+	template<typename TVertex>
+	void ProcessOneShotVertices(
+		TVertex*& ptr, const TVertex* bufferEnd,
+		std::vector<TVertex>& vertices,
+		unsigned int& number)
+	{
+		number += (unsigned int)vertices.size();
+		while (vertices.size() != 0) {
+			if (ptr >= bufferEnd) break;
+			*ptr = vertices.back();
+			++ptr;
+			vertices.pop_back();
+		}
+	}
+
+	template<typename TVertex>
+	void HideUnusedVertices(
+		TVertex* ptr, unsigned int number, unsigned int& max)
+	{
+		if (max > number) {
+			for (size_t i = number; i < max; ++i) {
+				ptr->Pos.z = -10000.0;
+				++ptr;
+			}
+		}
+		max = number;
+	}
+
+}
 
 	AuxiliaryVision::AuxiliaryVision(VulKan::Device* device, PipelineS* P, const unsigned int number):
 		wDevice(device),
@@ -10,7 +103,6 @@ namespace VulKan {
 		Number(number)
 	{
 		LOGD("[AuxiliaryVision] Constructor");
-		//线段
 		AuxiliaryLineS = new Buffer(
 			wDevice, sizeof(AuxiliaryLineSpot) * Number * 2,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -19,14 +111,12 @@ namespace VulKan {
 		ContinuousAuxiliaryLine = new ContinuousMap<glm::dvec2*, AuxiliaryLineData>(Number);
 		ContinuousAuxiliaryForce = new ContinuousMap<glm::dvec2*, AuxiliaryForceData>(Number);
 		StaticContinuousAuxiliaryLine = new ContinuousMap<void*, StaticAuxiliaryLineData>(Number, ContinuousMap_New);
-		AuxiliaryLineSpot* LP = (AuxiliaryLineSpot*)AuxiliaryLineS->getupdateBufferByMap();
+		mLinePersistentPtr = static_cast<AuxiliaryLineSpot*>(AuxiliaryLineS->getPersistentMappedPtr());
 		for (size_t i = 0; i < (Number * 2); ++i)
 		{
-			LP[i].Pos = { i, i, -10000.0 };
-			LP[i].Color = { 0, 1.0f, 0, 1.0f };
+			mLinePersistentPtr[i].Pos = { i, i, -10000.0 };
+			mLinePersistentPtr[i].Color = { 0, 1.0f, 0, 1.0f };
 		}
-		AuxiliaryLineS->endupdateBufferByMap();
-		//点
 		AuxiliarySpotS = new Buffer(
 			wDevice, sizeof(AuxiliarySpot) * Number,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -34,47 +124,44 @@ namespace VulKan {
 		);
 		ContinuousAuxiliarySpot = new ContinuousMap<glm::dvec2*, AuxiliarySpotData>(Number);
 		StaticContinuousAuxiliarySpot = new ContinuousMap<void*, StaticAuxiliarySpotData>(Number, ContinuousMap_New);
-		AuxiliarySpot* SP = (AuxiliarySpot*)AuxiliarySpotS->getupdateBufferByMap();
+		mSpotPersistentPtr = static_cast<AuxiliarySpot*>(AuxiliarySpotS->getPersistentMappedPtr());
 		for (size_t i = 0; i < Number; ++i)
 		{
-			SP[i].Pos = { i, i, -10000.0 };
-			SP[i].Size = 0.2;
-			SP[i].Color = { 0, 0, 1.0f, 1.0f };
+			mSpotPersistentPtr[i].Pos = { i, i, -10000.0 };
+			mSpotPersistentPtr[i].Size = 0.2;
+			mSpotPersistentPtr[i].Color = { 0, 0, 1.0f, 1.0f };
 		}
-		AuxiliarySpotS->endupdateBufferByMap();
-		// 圆
 		AuxiliaryCircleS = new Buffer(
 			wDevice, sizeof(AuxiliaryCircle) * Number,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
-		AuxiliaryCircle* CP = (AuxiliaryCircle*)AuxiliaryCircleS->getupdateBufferByMap();
+		mCirclePersistentPtr = static_cast<AuxiliaryCircle*>(AuxiliaryCircleS->getPersistentMappedPtr());
 		for (size_t i = 0; i < Number; ++i)
 		{
-			CP[i].Pos = { i, i, -10000.0 };
-			CP[i].Radius = 0.5;
-			CP[i].Color = { 0, 0, 1.0f, 1.0f };
+			mCirclePersistentPtr[i].Pos = { i, i, -10000.0 };
+			mCirclePersistentPtr[i].Radius = 0.5;
+			mCirclePersistentPtr[i].Color = { 0, 0, 1.0f, 1.0f };
 		}
-		AuxiliaryCircleS->endupdateBufferByMap();
+
+		mLineRecordedCount = Number;
+		mSpotRecordedCount = Number;
+		mCircleRecordedCount = Number;
 	}
 
 	AuxiliaryVision::~AuxiliaryVision()
 	{
-		//线段
 		delete AuxiliaryLineS;
 		delete ContinuousAuxiliaryLine;
 		delete ContinuousAuxiliaryForce;
 		delete StaticContinuousAuxiliaryLine;
 
-		//点
 		delete AuxiliarySpotS;
 		delete ContinuousAuxiliarySpot;
 		delete StaticContinuousAuxiliarySpot;
 
-		// 圆
 		delete AuxiliaryCircleS;
 
-		//资源
 		if (wSwapChain != nullptr) {
 			for (size_t i = 0; i < wSwapChain->getImageCount(); ++i)
 			{
@@ -89,10 +176,9 @@ namespace VulKan {
 		delete mCommandPool;
 	}
 
-	//初始化描述符
 	void AuxiliaryVision::initUniformManager(
-		int frameCount, //GPU画布的数量
-		std::vector<VulKan::Buffer*> VPMstdBuffer//玩家相机的变化矩阵 
+		int frameCount,
+		std::vector<VulKan::Buffer*> VPMstdBuffer
 	) {
 		mCommandPool = new CommandPool(wDevice);
 		mCommandBuffer = new CommandBuffer*[frameCount];
@@ -111,11 +197,9 @@ namespace VulKan {
 
 		std::vector<UniformParameter*> paramsvector;
 		paramsvector.push_back(&vpParam);
-		//各种类型申请多少个
 		mDescriptorPool = new VulKan::DescriptorPool(wDevice);
 		mDescriptorPool->build(paramsvector, frameCount * 3);
 
-		//将申请的各种类型按照Layout绑定起来
 		mDescriptorSetLine = new VulKan::DescriptorSet(wDevice, paramsvector, wPipelineS->GetPipeline(VulKan::PipelineMods::LineMods)->DescriptorSetLayout, mDescriptorPool, frameCount);
 		mDescriptorSetSpot = new VulKan::DescriptorSet(wDevice, paramsvector, wPipelineS->GetPipeline(VulKan::PipelineMods::SpotMods)->DescriptorSetLayout, mDescriptorPool, frameCount);
 		mDescriptorSetCircle = new VulKan::DescriptorSet(wDevice, paramsvector, wPipelineS->GetPipeline(VulKan::PipelineMods::CircleMods)->DescriptorSetLayout, mDescriptorPool, frameCount);
@@ -129,68 +213,42 @@ namespace VulKan {
 		{
 			InheritanceInfo.framebuffer = wSwapChain->getFrameBuffer(i);
 
-			mCommandBuffer[i]->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);//开始录制二级指令
-			//点
-			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::SpotMods)->getPipeline());//获得渲染管线
+			mCommandBuffer[i]->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);
+			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::SpotMods)->getPipeline());
 			mCommandBuffer[i]->bindVertexBuffer({ AuxiliarySpotS->getBuffer() });
-			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::SpotMods)->getLayout(), mDescriptorSetSpot->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
-			mCommandBuffer[i]->draw(Number);//获取绘画物体的顶点个数
-			//线
-			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::LineMods)->getPipeline());//获得渲染管线
+			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::SpotMods)->getLayout(), mDescriptorSetSpot->getDescriptorSet(i));
+			mCommandBuffer[i]->draw(mSpotRecordedCount);
+			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::LineMods)->getPipeline());
 			mCommandBuffer[i]->bindVertexBuffer({ AuxiliaryLineS->getBuffer() });
-			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::LineMods)->getLayout(), mDescriptorSetLine->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
-			mCommandBuffer[i]->draw(Number);//获取绘画物体的顶点个数
-			//圆
-			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::CircleMods)->getPipeline());//获得渲染管线
+			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::LineMods)->getLayout(), mDescriptorSetLine->getDescriptorSet(i));
+			mCommandBuffer[i]->draw(mLineRecordedCount);
+			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::CircleMods)->getPipeline());
 			mCommandBuffer[i]->bindVertexBuffer({ AuxiliaryCircleS->getBuffer() });
-			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::CircleMods)->getLayout(), mDescriptorSetCircle->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
-			mCommandBuffer[i]->draw(Number);//获取绘画物体的顶点个数
+			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::CircleMods)->getLayout(), mDescriptorSetCircle->getDescriptorSet(i));
+			mCommandBuffer[i]->draw(mCircleRecordedCount);
 
 			mCommandBuffer[i]->end();
 		}
 	}
 
 	void AuxiliaryVision::Begin() {
-		//线
-		LinePointerHOST = (AuxiliaryLineSpot*)AuxiliaryLineS->getupdateBufferByMap();
+		LinePointerHOST = mLinePersistentPtr;
 		AuxiliaryLineSpot* const LineBufferEnd = LinePointerHOST + (Number * 2);
-		//静态
-		if (StaticLineVertexUpData) {
-			StaticLineVertexUpData = false;
-			StaticLineUpData = true;
-			StaticLineVertexDeviation = 0;
-			for (auto L : StaticLineVertex)
-			{
-				if (LinePointerHOST >= LineBufferEnd) break;
-				*LinePointerHOST = L;
-				++LinePointerHOST;
-				++StaticLineVertexDeviation;
-			}
-			LineNumber = StaticLineVertexDeviation;
+
+		bool lineVertexUpdated = ProcessStaticVertices(
+			LinePointerHOST, LineBufferEnd,
+			StaticLineVertex, mLineStaticVertex,
+			StaticLineVertexDeviation, LineNumber);
+		if (lineVertexUpdated) {
+			mStaticLineCallbackUpData = true;
 		}
-		else {
-			LineNumber = StaticLineVertexDeviation;
-			LinePointerHOST += StaticLineVertexDeviation;
-		}
-		if (StaticLineUpData) {
-			StaticLineUpData = false;
-			int FuncNumber;
-			StaticLineDeviation = 0;
-			for (auto& i : *StaticContinuousAuxiliaryLine) {
-				if (i.Size != 0) {
-					if (LinePointerHOST >= LineBufferEnd) break;
-					FuncNumber = i.Function(LinePointerHOST, i.Pointer, i.Size);
-					StaticLineDeviation += FuncNumber;
-					LinePointerHOST += FuncNumber;
-				}
-			}
-			LineNumber += StaticLineDeviation;
-		}
-		else {
-			LineNumber += StaticLineDeviation;
-			LinePointerHOST += StaticLineDeviation;
-		}
-		//动态
+
+		ProcessStaticCallbacks(
+			LinePointerHOST, LineBufferEnd,
+			StaticContinuousAuxiliaryLine,
+			mStaticLineCallbackUpData,
+			StaticLineDeviation, LineNumber);
+
 		for (auto& i : *ContinuousAuxiliaryLine)
 		{
 			if (LinePointerHOST + 2 > LineBufferEnd) break;
@@ -212,56 +270,26 @@ namespace VulKan {
 			++LinePointerHOST;
 		}
 		LineNumber += ((ContinuousAuxiliaryLine->GetNumber() + ContinuousAuxiliaryForce->GetNumber()) * 2);
-		//一次性
-		LineNumber += LineVertex.size();
-		while (LineVertex.size() != 0)
-		{
-			if (LinePointerHOST >= LineBufferEnd) break;
-			*LinePointerHOST = LineVertex.back();
-			++LinePointerHOST;
-			LineVertex.pop_back();
-		}
-		
-		//点
-		SpotPointerHOST = (AuxiliarySpot*)AuxiliarySpotS->getupdateBufferByMap();
+
+		ProcessOneShotVertices(LinePointerHOST, LineBufferEnd, LineVertex, LineNumber);
+
+		SpotPointerHOST = mSpotPersistentPtr;
 		AuxiliarySpot* const SpotBufferEnd = SpotPointerHOST + Number;
-		//静态
-		if (StaticSpotVertexUpData) {
-			StaticSpotVertexUpData = false;
-			StaticSpotUpData = true;
-			StaticSpotVertexDeviation = 0;
-			for (auto S : StaticSpotVertex)
-			{
-				if (SpotPointerHOST >= SpotBufferEnd) break;
-				*SpotPointerHOST = S;
-				++SpotPointerHOST;
-				++StaticSpotVertexDeviation;
-			}
-			SpotNumber = StaticSpotVertexDeviation;
+
+		bool spotVertexUpdated = ProcessStaticVertices(
+			SpotPointerHOST, SpotBufferEnd,
+			StaticSpotVertex, mSpotStaticVertex,
+			StaticSpotVertexDeviation, SpotNumber);
+		if (spotVertexUpdated) {
+			mStaticSpotCallbackUpData = true;
 		}
-		else {
-			SpotNumber = StaticSpotVertexDeviation;
-			SpotPointerHOST += StaticSpotVertexDeviation;
-		}
-		if (StaticSpotUpData) {
-			StaticSpotUpData = false;
-			StaticSpotDeviation = 0;
-			int FuncNumber;
-			for (auto& i : *StaticContinuousAuxiliarySpot) {
-				if (i.Size != 0) {
-					if (SpotPointerHOST >= SpotBufferEnd) break;
-					FuncNumber = i.Function(SpotPointerHOST, i.Pointer, i.Size);
-					StaticSpotDeviation += FuncNumber;
-					SpotPointerHOST += FuncNumber;
-				}
-			}
-			SpotNumber += StaticSpotDeviation;
-		}
-		else {
-			SpotNumber += StaticSpotDeviation;
-			SpotPointerHOST += StaticSpotDeviation;
-		}
-		//动态
+
+		ProcessStaticCallbacks(
+			SpotPointerHOST, SpotBufferEnd,
+			StaticContinuousAuxiliarySpot,
+			mStaticSpotCallbackUpData,
+			StaticSpotDeviation, SpotNumber);
+
 		SpotNumber += ContinuousAuxiliarySpot->GetNumber();
 		for (auto& i : *ContinuousAuxiliarySpot)
 		{
@@ -270,76 +298,63 @@ namespace VulKan {
 			SpotPointerHOST->Color = i.Color;
 			++SpotPointerHOST;
 		}
-		//一次性
-		SpotNumber += SpotVertex.size();
-		while (SpotVertex.size() != 0)
-		{
-			if (SpotPointerHOST >= SpotBufferEnd) break;
-			*SpotPointerHOST = SpotVertex.back();
-			++SpotPointerHOST;
-			SpotVertex.pop_back();
-		}
-		// 圆
-		CirclePointerHOST = (AuxiliaryCircle*)AuxiliaryCircleS->getupdateBufferByMap();
+
+		ProcessOneShotVertices(SpotPointerHOST, SpotBufferEnd, SpotVertex, SpotNumber);
+
+		CirclePointerHOST = mCirclePersistentPtr;
 		AuxiliaryCircle* const CircleBufferEnd = CirclePointerHOST + Number;
-		if (StaticCircleVertexUpData) {
-			StaticCircleVertexUpData = false;
-			StaticCircleVertexDeviation = 0;
-			for (auto S : StaticCircleVertex)
-			{
-				if (CirclePointerHOST >= CircleBufferEnd) break;
-				*CirclePointerHOST = S;
-				++CirclePointerHOST;
-				++StaticCircleVertexDeviation;
-			}
-		}
-		CircleNumber = StaticCircleVertexDeviation;
-		while (CircleVertex.size() != 0)
-		{
-			if (CirclePointerHOST >= CircleBufferEnd) break;
-			*CirclePointerHOST = CircleVertex.back();
-			++CirclePointerHOST;
-			CircleVertex.pop_back();
-			++CircleNumber;
-		}
+
+		ProcessStaticVertices(
+			CirclePointerHOST, CircleBufferEnd,
+			StaticCircleVertex, mCircleStaticVertex,
+			StaticCircleVertexDeviation, CircleNumber);
+
+		ProcessOneShotVertices(CirclePointerHOST, CircleBufferEnd, CircleVertex, CircleNumber);
 	}
 
-	void AuxiliaryVision::End() {
-		//线段多余
-		if (LineMax > LineNumber) {
-			for (size_t i = LineNumber; i < LineMax; ++i)
-			{
-				LinePointerHOST->Pos.z = -10000.0;
-				++LinePointerHOST;
-			}
-		}
-		LineMax = LineNumber;
-		AuxiliaryLineS->endupdateBufferByMap();
+	bool AuxiliaryVision::End() {
+		HideUnusedVertices(LinePointerHOST, LineNumber, LineMax);
 		LinePointerHOST = nullptr;
 
-		//点多余
-		if (SpotMax > SpotNumber) {
-			for (size_t i = SpotNumber; i < SpotMax; ++i)
-			{
-				SpotPointerHOST->Pos.z = -10000.0;
-				++SpotPointerHOST;
-			}
-		}
-		SpotMax = SpotNumber;
-		AuxiliarySpotS->endupdateBufferByMap();
+		HideUnusedVertices(SpotPointerHOST, SpotNumber, SpotMax);
 		SpotPointerHOST = nullptr;
 
-		//圆多余
-		if (CircleMax > CircleNumber) {
-			for (size_t i = CircleNumber; i < CircleMax; ++i)
-			{
-				CirclePointerHOST->Pos.z = -10000.0;
-				++CirclePointerHOST;
-			}
-		}
-		CircleMax = CircleNumber;
-		AuxiliaryCircleS->endupdateBufferByMap();
+		HideUnusedVertices(CirclePointerHOST, CircleNumber, CircleMax);
 		CirclePointerHOST = nullptr;
+
+		bool needReRecord = false;
+
+		if (LineMax > mLineRecordedCount) {
+			mLineRecordedCount = LineMax + kVertexCountBuffer;
+			if (mLineRecordedCount > Number) { mLineRecordedCount = Number; }
+			needReRecord = true;
+		} else if (LineMax + kVertexCountBuffer < mLineRecordedCount) {
+			mLineRecordedCount = LineMax;
+			if (mLineRecordedCount > Number) { mLineRecordedCount = Number; }
+			needReRecord = true;
+		}
+
+		if (SpotMax > mSpotRecordedCount) {
+			mSpotRecordedCount = SpotMax + kVertexCountBuffer;
+			if (mSpotRecordedCount > Number) { mSpotRecordedCount = Number; }
+			needReRecord = true;
+		} else if (SpotMax + kVertexCountBuffer < mSpotRecordedCount) {
+			mSpotRecordedCount = SpotMax;
+			if (mSpotRecordedCount > Number) { mSpotRecordedCount = Number; }
+			needReRecord = true;
+		}
+
+		if (CircleMax > mCircleRecordedCount) {
+			mCircleRecordedCount = CircleMax + kVertexCountBuffer;
+			if (mCircleRecordedCount > Number) { mCircleRecordedCount = Number; }
+			needReRecord = true;
+		} else if (CircleMax + kVertexCountBuffer < mCircleRecordedCount) {
+			mCircleRecordedCount = CircleMax;
+			if (mCircleRecordedCount > Number) { mCircleRecordedCount = Number; }
+			needReRecord = true;
+		}
+
+		return needReRecord;
 	}
 	
 }

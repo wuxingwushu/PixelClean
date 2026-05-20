@@ -1,0 +1,89 @@
+#version 450
+
+#define BODY_STRIDE 8
+#define JOINT_FLOATS 20
+
+layout(std430, binding = 0) buffer BodyBuf { uint bodyUints[]; };
+
+layout(std430, binding = 1) buffer JointBuf { float jointFloats[]; };
+
+layout(std430, binding = 2) buffer CountBuf { uint elementCount; };
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+float atomicAddBodyF(uint bodyIdx, uint off, float val) {
+    uint idx = bodyIdx * BODY_STRIDE + off;
+    uint expected = bodyUints[idx];
+    for (;;) {
+        float sum = uintBitsToFloat(expected) + val;
+        uint desired = floatBitsToUint(sum);
+        uint old = atomicCompSwap(bodyUints[idx], expected, desired);
+        if (old == expected) return uintBitsToFloat(old);
+        expected = old;
+    }
+}
+
+float cross2D(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
+
+void main() {
+    uint jIdx = gl_GlobalInvocationID.x;
+    if (jIdx >= elementCount) return;
+
+    uint base = jIdx * JOINT_FLOATS;
+
+    uint bodyAIdx = floatBitsToUint(jointFloats[base + 0u]);
+    uint bodyBIdx = floatBitsToUint(jointFloats[base + 1u]);
+
+    float r1X = jointFloats[base + 2u];
+    float r1Y = jointFloats[base + 3u];
+    float r2X = jointFloats[base + 4u];
+    float r2Y = jointFloats[base + 5u];
+
+    float biasX = jointFloats[base + 6u];
+    float biasY = jointFloats[base + 7u];
+
+    float M00 = jointFloats[base + 8u];
+    float M10 = jointFloats[base + 9u];
+    float M01 = jointFloats[base + 10u];
+    float M11 = jointFloats[base + 11u];
+
+    float softness = jointFloats[base + 12u];
+    float Px = jointFloats[base + 13u];
+    float Py = jointFloats[base + 14u];
+
+    float spdAX = uintBitsToFloat(bodyUints[bodyAIdx * BODY_STRIDE + 0u]);
+    float spdAY = uintBitsToFloat(bodyUints[bodyAIdx * BODY_STRIDE + 1u]);
+    float angA  = uintBitsToFloat(bodyUints[bodyAIdx * BODY_STRIDE + 2u]);
+    float invMassA = uintBitsToFloat(bodyUints[bodyAIdx * BODY_STRIDE + 3u]);
+    float invIA    = uintBitsToFloat(bodyUints[bodyAIdx * BODY_STRIDE + 4u]);
+
+    float spdBX = uintBitsToFloat(bodyUints[bodyBIdx * BODY_STRIDE + 0u]);
+    float spdBY = uintBitsToFloat(bodyUints[bodyBIdx * BODY_STRIDE + 1u]);
+    float angB  = uintBitsToFloat(bodyUints[bodyBIdx * BODY_STRIDE + 2u]);
+    float invMassB = uintBitsToFloat(bodyUints[bodyBIdx * BODY_STRIDE + 3u]);
+    float invIB    = uintBitsToFloat(bodyUints[bodyBIdx * BODY_STRIDE + 4u]);
+
+    vec2 dv = vec2(spdBX, spdBY) + vec2(-angB * r2Y, angB * r2X)
+            - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+
+    float ax = biasX - dv.x - softness * Px;
+    float ay = biasY - dv.y - softness * Py;
+    float impulseX = M00 * ax + M01 * ay;
+    float impulseY = M10 * ax + M11 * ay;
+
+    if (invMassA > 0.0) {
+        atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseX);
+        atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseY);
+        float torqueA = -invIA * cross2D(vec2(r1X, r1Y), vec2(impulseX, impulseY));
+        atomicAddBodyF(bodyAIdx, 2u, torqueA);
+    }
+    if (invMassB > 0.0) {
+        atomicAddBodyF(bodyBIdx, 0u, invMassB * impulseX);
+        atomicAddBodyF(bodyBIdx, 1u, invMassB * impulseY);
+        float torqueB = invIB * cross2D(vec2(r2X, r2Y), vec2(impulseX, impulseY));
+        atomicAddBodyF(bodyBIdx, 2u, torqueB);
+    }
+
+    jointFloats[base + 13u] = Px + impulseX;
+    jointFloats[base + 14u] = Py + impulseY;
+}

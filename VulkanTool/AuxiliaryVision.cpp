@@ -324,12 +324,14 @@ namespace {
 
 		bool needReRecord = false;
 
+		unsigned int maxVertexCount = kVertexCountBuffer * 2;
+
 		if (LineMax > mLineRecordedCount) {
 			mLineRecordedCount = LineMax + kVertexCountBuffer;
 			if (mLineRecordedCount > Number) { mLineRecordedCount = Number; }
 			needReRecord = true;
-		} else if (LineMax + kVertexCountBuffer < mLineRecordedCount) {
-			mLineRecordedCount = LineMax;
+		} else if (LineMax + maxVertexCount < mLineRecordedCount) {
+			mLineRecordedCount = LineMax + kVertexCountBuffer;
 			if (mLineRecordedCount > Number) { mLineRecordedCount = Number; }
 			needReRecord = true;
 		}
@@ -338,8 +340,8 @@ namespace {
 			mSpotRecordedCount = SpotMax + kVertexCountBuffer;
 			if (mSpotRecordedCount > Number) { mSpotRecordedCount = Number; }
 			needReRecord = true;
-		} else if (SpotMax + kVertexCountBuffer < mSpotRecordedCount) {
-			mSpotRecordedCount = SpotMax;
+		} else if (SpotMax + maxVertexCount < mSpotRecordedCount) {
+			mSpotRecordedCount = SpotMax + kVertexCountBuffer;
 			if (mSpotRecordedCount > Number) { mSpotRecordedCount = Number; }
 			needReRecord = true;
 		}
@@ -348,10 +350,15 @@ namespace {
 			mCircleRecordedCount = CircleMax + kVertexCountBuffer;
 			if (mCircleRecordedCount > Number) { mCircleRecordedCount = Number; }
 			needReRecord = true;
-		} else if (CircleMax + kVertexCountBuffer < mCircleRecordedCount) {
-			mCircleRecordedCount = CircleMax;
+		} else if (CircleMax + maxVertexCount < mCircleRecordedCount) {
+			mCircleRecordedCount = CircleMax + kVertexCountBuffer;
 			if (mCircleRecordedCount > Number) { mCircleRecordedCount = Number; }
 			needReRecord = true;
+		}
+
+		if (needReRecord) {
+			initCommandBuffer();
+			Global::MainCommandBufferUpdateRequest();
 		}
 
 		return needReRecord;

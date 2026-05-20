@@ -50,5 +50,8 @@ mkdir "%OUTPUT_DIR%" 2>nul
 "%GLSLANG%" -V "%SCRIPT_DIR%RC_SDF.comp" -o "%OUTPUT_DIR%/RC_SDF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%RC_Cascade.comp" -o "%OUTPUT_DIR%/RC_Cascade.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%RC_Display.comp" -o "%OUTPUT_DIR%/RC_Display.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%physics_arbiter.comp" -o "%OUTPUT_DIR%/physics_arbiter.comp.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%physics_joint.comp" -o "%OUTPUT_DIR%/physics_joint.comp.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%physics_junction.comp" -o "%OUTPUT_DIR%/physics_junction.comp.spv"
 
 echo Shader compilation completed. Output directory: %OUTPUT_DIR%

@@ -1,0 +1,102 @@
+#version 450
+
+#define BODY_STRIDE 8
+#define JUNCTION_FLOATS 20
+#define INVALID_INDEX 0xFFFFFFFFu
+
+layout(std430, binding = 0) buffer BodyBuf { uint bodyUints[]; };
+
+layout(std430, binding = 1) buffer JunctionBuf { float junctionFloats[]; };
+
+layout(std430, binding = 2) buffer CountBuf { uint elementCount; };
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+void atomicAddBodyF(uint bodyIdx, uint off, float val) {
+    uint idx = bodyIdx * BODY_STRIDE + off;
+    uint expected = bodyUints[idx];
+    for (;;) {
+        float sum = uintBitsToFloat(expected) + val;
+        uint desired = floatBitsToUint(sum);
+        uint old = atomicCompSwap(bodyUints[idx], expected, desired);
+        if (old == expected) break;
+        expected = old;
+    }
+}
+
+float cross2D(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
+
+vec2 bodyVel(uint bodyIdx) {
+    float spdX = uintBitsToFloat(bodyUints[bodyIdx * BODY_STRIDE + 0u]);
+    float spdY = uintBitsToFloat(bodyUints[bodyIdx * BODY_STRIDE + 1u]);
+    return vec2(spdX, spdY);
+}
+
+float bodyAng(uint bodyIdx) {
+    return uintBitsToFloat(bodyUints[bodyIdx * BODY_STRIDE + 2u]);
+}
+
+float bodyInvMass(uint bodyIdx) {
+    return uintBitsToFloat(bodyUints[bodyIdx * BODY_STRIDE + 3u]);
+}
+
+float bodyInvI(uint bodyIdx) {
+    return uintBitsToFloat(bodyUints[bodyIdx * BODY_STRIDE + 4u]);
+}
+
+void main() {
+    uint jIdx = gl_GlobalInvocationID.x;
+    if (jIdx >= elementCount) return;
+
+    uint base = jIdx * JUNCTION_FLOATS;
+
+    uint bodyAIdx = floatBitsToUint(junctionFloats[base + 0u]);
+    uint bodyBIdx = floatBitsToUint(junctionFloats[base + 1u]);
+
+    float normalX = junctionFloats[base + 6u];
+    float normalY = junctionFloats[base + 7u];
+    float bias   = junctionFloats[base + 8u];
+    float k      = junctionFloats[base + 9u];
+    float elasticity = junctionFloats[base + 12u];
+    float mR1X = junctionFloats[base + 13u];
+    float mR1Y = junctionFloats[base + 14u];
+    float mR2X = junctionFloats[base + 15u];
+    float mR2Y = junctionFloats[base + 16u];
+
+    if (k == 0.0) return;
+
+    vec2 normal = vec2(normalX, normalY);
+
+    vec2 dv = vec2(0.0);
+    if (bodyAIdx != INVALID_INDEX) {
+        dv += bodyVel(bodyAIdx) + vec2(-bodyAng(bodyAIdx) * mR1Y, bodyAng(bodyAIdx) * mR1X);
+    }
+    if (bodyBIdx != INVALID_INDEX) {
+        dv -= bodyVel(bodyBIdx) + vec2(-bodyAng(bodyBIdx) * mR2Y, bodyAng(bodyBIdx) * mR2X);
+    }
+
+    float impulseMag = (dot(-dv * elasticity, normal) + bias) / k;
+    vec2 impulse = normal * impulseMag;
+
+    if (bodyAIdx != INVALID_INDEX) {
+        float invMassA = bodyInvMass(bodyAIdx);
+        float invIA    = bodyInvI(bodyAIdx);
+        if (invMassA > 0.0) {
+            atomicAddBodyF(bodyAIdx, 0u, invMassA * impulse.x);
+            atomicAddBodyF(bodyAIdx, 1u, invMassA * impulse.y);
+            float torqueA = invIA * cross2D(vec2(mR1X, mR1Y), impulse);
+            atomicAddBodyF(bodyAIdx, 2u, torqueA);
+        }
+    }
+
+    if (bodyBIdx != INVALID_INDEX) {
+        float invMassB = bodyInvMass(bodyBIdx);
+        float invIB    = bodyInvI(bodyBIdx);
+        if (invMassB > 0.0) {
+            atomicAddBodyF(bodyBIdx, 0u, -invMassB * impulse.x);
+            atomicAddBodyF(bodyBIdx, 1u, -invMassB * impulse.y);
+            float torqueB = -invIB * cross2D(vec2(mR2X, mR2Y), impulse);
+            atomicAddBodyF(bodyBIdx, 2u, torqueB);
+        }
+    }
+}

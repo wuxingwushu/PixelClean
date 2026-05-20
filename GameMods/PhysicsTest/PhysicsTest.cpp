@@ -40,14 +40,32 @@ namespace GAME
 		}
 
 		PhysicsBlock::AuxiliaryInfoRead();
-	}
+
+        // GPU 计算后端初始化
+        mPhysicsGPU = new PhysicsBlock::PhysicsGPU(mDevice, mPhysicsWorld);
+        mPhysicsGPU->Initialize();
+        mGPUInitialized = mPhysicsGPU->IsReady();
+        if (mGPUInitialized) {
+            mPhysicsWorld->SetGPU(mPhysicsGPU);
+            PhysicsLog("[GPU] PhysicsGPU initialized successfully\n");
+        } else {
+            PhysicsLog("[GPU] PhysicsGPU initialization failed, fallback to CPU\n");
+            mUseGPUApplyImpulse = false;
+            delete mPhysicsGPU;
+            mPhysicsGPU = nullptr;
+        }
+    }
 
 	PhysicsTest::~PhysicsTest()
 	{
 		LOGD("PhysicsTest::~PhysicsTest destructor");
 		PhysicsBlock::AuxiliaryInfoStorage();
-		delete mAuxiliaryVision;
-		delete mPhysicsWorld;
+        if (mPhysicsGPU) {
+            delete mPhysicsGPU;
+            mPhysicsGPU = nullptr;
+        }
+        delete mAuxiliaryVision;
+        delete mPhysicsWorld;
 	}
 
 	void PhysicsTest::MouseMove(double xpos, double ypos)
@@ -194,6 +212,17 @@ namespace GAME
 					}
 				}
 			}
+
+			// Demo 切换后重建 GPU Buffer
+			if (mGPUInitialized && mPhysicsGPU) {
+				delete mPhysicsGPU;
+				mPhysicsGPU = new PhysicsBlock::PhysicsGPU(mDevice, mPhysicsWorld);
+				mPhysicsGPU->Initialize();
+				mGPUInitialized = mPhysicsGPU->IsReady();
+				if (mGPUInitialized) {
+					mPhysicsWorld->SetGPU(mPhysicsGPU);
+				}
+			}
 		}
 		if (ImGui::Button("重置")) {
 			ResetBool = true;
@@ -224,6 +253,50 @@ namespace GAME
 		if (ImGui::Button(PhysicsSwitch ? u8"关闭物理" : u8"开启物理"))
 		{
 			PhysicsSwitch = !PhysicsSwitch;
+		}
+		// === CPU/GPU 计算后端切换 ===
+		if (mGPUInitialized) {
+			ImGui::Separator();
+			ImGui::Text(u8"计算后端");
+
+			int gpuMode = mUseGPUApplyImpulse ? 1 : 0;
+			if (ImGui::RadioButton(u8"CPU（原有求解器）", &gpuMode, 0)) {
+				mUseGPUApplyImpulse = false;
+				mPhysicsWorld->SetUseGPUApplyImpulse(false);
+				PhysicsLog("[Switch] ApplyImpulse backend: CPU\n");
+			}
+			ImGui::SameLine();
+			if (ImGui::RadioButton(u8"GPU（Compute Shader）", &gpuMode, 1)) {
+				mUseGPUApplyImpulse = true;
+				mPhysicsWorld->SetUseGPUApplyImpulse(true);
+				PhysicsLog("[Switch] ApplyImpulse backend: GPU\n");
+			}
+
+			ImVec4 green  = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
+			ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
+
+			if (mUseGPUApplyImpulse) {
+				if (mGPULastFrameTime > 0.0f) {
+					ImGui::TextColored(green, u8"  GPU 耗时: %.3f ms", mGPULastFrameTime);
+				} else {
+					ImGui::TextColored(green, u8"  GPU 模式运行中...");
+				}
+			} else {
+				ImGui::TextColored(yellow, u8"  CPU 模式运行中");
+			}
+
+			ImGui::Text(u8"  物体数: %d  Arbiter: %d  Joint: %d  Junction: %d",
+				(int)(mPhysicsWorld->PhysicsShapeS.size() +
+				      mPhysicsWorld->PhysicsCircleS.size() +
+				      mPhysicsWorld->PhysicsParticleS.size() +
+				      mPhysicsWorld->PhysicsLineS.size()),
+				(int)mPhysicsWorld->CollideGroupVector.size(),
+				(int)mPhysicsWorld->PhysicsJointS.size(),
+				(int)mPhysicsWorld->BaseJunctionS.size()
+			);
+		} else {
+			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
+				u8"GPU 未就绪（检查 Vulkan 设备 / shader 编译）");
 		}
 		if (ImGui::Button(PhysicsAssistantInformation ? u8"关闭物理辅助视觉" : u8"开启物理辅助视觉"))
 		{
@@ -373,7 +446,14 @@ namespace GAME
 			AddUpTime += TOOL::FPStime;
 			if (AddUpTime > PhysicsTick) {
 				AddUpTime -= PhysicsTick;
-				mPhysicsWorld->PhysicsEmulator(PhysicsTick);
+
+				if (mUseGPUApplyImpulse && mGPUInitialized) {
+					mPhysicsWorld->PhysicsEmulator(PhysicsTick);
+					mGPULastFrameTime = mPhysicsGPU->GetLastFrameTimeMS();
+				} else {
+					mPhysicsWorld->PhysicsEmulator(PhysicsTick);
+				}
+
 				if (AddUpTime > 0.02) {
 					AddUpTime = 0.01;
 				}
@@ -546,12 +626,7 @@ namespace GAME
 			}
 		}
 
-		if (mAuxiliaryVision->End()) {
-			for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
-			{
-				Global::MainCommandBufferS[i].store(true, std::memory_order_release);
-			}
-		}
+		mAuxiliaryVision->End();
 
 		if (GridEditShape != nullptr)
 		{

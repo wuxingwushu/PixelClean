@@ -133,7 +133,7 @@ namespace GAME
 		// ==================== 物理系统 ====================
 		PhysicsBlock::PhysicsWorld *mPhysicsWorld = nullptr;   // 物理世界，驱动仿真
 		PhysicsBlock::MapStatic *mMapStatic = nullptr;         // 静态地图（墙壁/建筑）
-		PhysicsBlock::PhysicsCircle *mPlayer = nullptr;        // 玩家控制的圆形物理体
+		PhysicsBlock::PhysicsAngle *mPlayer = nullptr;        // 玩家控制的圆形物理体
 		VulKan::AuxiliaryVision *mAuxiliaryVision = nullptr;   // Vulkan 辅助线渲染器
 
 		// ==================== SoLoud 音频引擎 ====================

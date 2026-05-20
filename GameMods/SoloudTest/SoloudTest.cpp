@@ -904,12 +904,7 @@ namespace GAME
 		UpdateAudio();
 		RenderScene();
 
-		if (mAuxiliaryVision->End()) {
-		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
-		{
-			Global::MainCommandBufferS[i].store(true, std::memory_order_release);
-		}
-}
+		mAuxiliaryVision->End();
 
 		if (mPlayer) {
 			glm::vec3 currentCamPos = mCamera->getCameraPos();

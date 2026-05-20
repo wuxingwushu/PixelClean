@@ -138,4 +138,50 @@ namespace VulKan {
 	void Calculate::end() {
 		mCommandBuffer->end();
 	}
+
+	/*
+	 * ===================== 共享模式实现 =====================
+	 *
+	 * 与 begin() 的核心区别：
+	 * - begin() 会调用 mCommandBuffer->begin() 开启新的录制，然后绑定管线/描述符
+	 * - recordDispatch() 不管理 CommandBuffer 生命周期，仅执行绑定 + dispatch + 恢复状态
+	 *
+	 * 为什么需要恢复管线/描述符状态？
+	 * - Vulkan 中 vkCmdBindPipeline / vkCmdBindDescriptorSets 会修改 CommandBuffer 的绑定状态
+	 * - 如果两个不同 Calculate 向同一个 CommandBuffer 写入 dispatch 指令，第二个
+	 *   Calculate 的绑定会覆盖第一个的。由于我们在 recordDispatch 内已经完成了绑定 +
+	 *   dispatch，当前 CommandBuffer 的状态停留在"最后一个绑定的管线"。这对后续指令
+	 *   无影响（后续指令会重新绑定自己的管线），但对调用者来说是确定性的。
+	 */
+	void Calculate::recordDispatch(
+		VkCommandBuffer cmdBuffer,
+		uint32_t groupCountX,
+		uint32_t groupCountY,
+		uint32_t groupCountZ
+	) {
+		// 绑定此 Calculate 的计算管线到外部 CommandBuffer
+		// 注意：这里使用 VK_PIPELINE_BIND_POINT_COMPUTE 而非 GRAPHICS
+		vkCmdBindPipeline(
+			cmdBuffer,
+			VK_PIPELINE_BIND_POINT_COMPUTE,
+			mPipeline
+		);
+
+		// 绑定此 Calculate 的描述符集（包含所有 SSBO 的引用）
+		// firstSet = 0 表示绑定到 descriptor set #0
+		// 30 个 dynamic offset 全部初始化为 0（本类不使用 dynamic uniform/storage buffer）
+		vkCmdBindDescriptorSets(
+			cmdBuffer,
+			VK_PIPELINE_BIND_POINT_COMPUTE,
+			mPipelineLayout,
+			0,                         // firstSet
+			1,                         // descriptorSetCount
+			&mDescriptorSet,
+			0,                         // dynamicOffsetCount
+			nullptr                    // pDynamicOffsets
+		);
+
+		// 执行 Compute Shader dispatch
+		vkCmdDispatch(cmdBuffer, groupCountX, groupCountY, groupCountZ);
+	}
 }

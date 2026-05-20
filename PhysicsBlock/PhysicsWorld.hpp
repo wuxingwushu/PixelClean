@@ -36,6 +36,8 @@
 namespace PhysicsBlock
 {
 
+class PhysicsGPU;
+
 #if MemoryPoolBool
 #if ThreadPoolBool
 
@@ -194,6 +196,14 @@ namespace PhysicsBlock
         PhysicsCollision mCollision;   // 碰撞回调管理器
         PhysicsKinematic mKinematic;   // 运动学物体管理器
         PhysicsTrigger mTrigger;       // 触发器管理器
+
+        // GPU 计算后端
+        PhysicsGPU* mGPU = nullptr;            // GPU 物理求解器
+        bool mUseGPUApplyImpulse = false;      // 运行时 GPU 开关
+
+        void SetGPU(PhysicsGPU* gpu) { mGPU = gpu; }
+        void SetUseGPUApplyImpulse(bool use) { mUseGPUApplyImpulse = use; }
+        bool IsUseGPUApplyImpulse() const { return mUseGPUApplyImpulse; }
 
         unsigned int ObjectSize = 0;                             // 动态物理对象总数量
         unsigned int ApplyImpulseSize = PhysicsApplyImpulseSize; // 迭代次数

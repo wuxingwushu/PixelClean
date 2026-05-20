@@ -3,7 +3,6 @@
 #include "../GameMods.h"
 #include "../../PhysicsBlock/PhysicsWorld.hpp"
 #include "../../PhysicsBlock/MapStatic.hpp"
-#include "../../PhysicsBlock/PhysicsShape.hpp"
 #include <vector>
 #include <array>
 #include <cstdint>
@@ -48,10 +47,12 @@ namespace GAME
 			PhysicsBlock::PhysicsShape* body;
 			FruitType type;
 			float lifetime;
+			bool activeGrid[PixelSize][PixelSize]{};
+			glm::vec2 centreMass = {PixelSize * 0.5f, PixelSize * 0.5f};
 		};
 
 		struct DebrisFragment {
-			PhysicsBlock::PhysicsCircle* body;
+			PhysicsBlock::PhysicsShape* body;
 			float lifetime;
 			glm::vec4 color;
 		};

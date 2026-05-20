@@ -8,6 +8,7 @@
 #include <climits>
 #include "PhysicsBaseArbiter.hpp"
 #include "PhysicsBaseCollide.hpp"
+#include "PhysicsGPU.hpp"
 
 // 计算线程任务片段
 #define ThreadTaskAllot(S, E, Size, Tn, TSize) \
@@ -512,6 +513,12 @@ namespace PhysicsBlock
         }
 #endif
 
+
+        if (mGPU && mGPU->IsReady() && mUseGPUApplyImpulse) {
+            mGPU->ExecuteGPUApplyImpulse(inv_dt, ApplyImpulseSize);
+        }
+        else {
+
 // 这里使用多线程虽然会增加不确定性，但是现在我暂时不需求确定性。所以舍弃也无所谓
 #if (Definite != 1) & ThreadPoolBool
         // 迭代结果
@@ -551,23 +558,26 @@ namespace PhysicsBlock
         }
 #else
         // 迭代结果
-        for (size_t i = 0; i < ApplyImpulseSize; ++i)
-        {
-            for (auto kv : CollideGroupVector)
+        
+            for (size_t i = 0; i < ApplyImpulseSize; ++i)
             {
-                kv->ApplyImpulse();
+                for (auto kv : CollideGroupVector)
+                {
+                    kv->ApplyImpulse();
+                }
+                for (auto J : PhysicsJointS)
+                {
+                    J->ApplyImpulse();
+                }
+                for (auto J : BaseJunctionS)
+                {
+                    J->ApplyImpulse();
+                }
             }
-            for (auto J : PhysicsJointS)
-            {
-                J->ApplyImpulse();
-            }
-            for (auto J : BaseJunctionS)
-            {
-                J->ApplyImpulse();
-            }
-        }
+        
 
 #endif
+            }
 
 // 这个多线程不影响结果
 #if ThreadPoolBool

@@ -1,0 +1,171 @@
+#version 450
+
+#define ARBITER_TYPE_AA 0
+#define ARBITER_TYPE_AD 1
+#define ARBITER_TYPE_A  2
+#define ARBITER_TYPE_D  3
+
+#define MAX_CONTACTS 20
+#define BODY_STRIDE 8
+#define ARBITER_META_U32 8
+#define CONTACT_U32 12
+
+layout(std430, binding = 0) buffer BodyBuf { uint bodyUints[]; };
+
+const uint ARBITER_STRIDE_U32 = ARBITER_META_U32 + MAX_CONTACTS * CONTACT_U32;
+layout(std430, binding = 1) buffer ArbiterBuf { uint arbiterRaw[]; };
+
+layout(std430, binding = 2) buffer CountBuf { uint elementCount; };
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+float getBodyF(uint bodyIdx, uint off) {
+    return uintBitsToFloat(bodyUints[bodyIdx * BODY_STRIDE + off]);
+}
+
+void setBodyF(uint bodyIdx, uint off, float val) {
+    bodyUints[bodyIdx * BODY_STRIDE + off] = floatBitsToUint(val);
+}
+
+void atomicAddBodyF(uint bodyIdx, uint off, float val) {
+    uint idx = bodyIdx * BODY_STRIDE + off;
+    uint expected = bodyUints[idx];
+    for (;;) {
+        float sum = uintBitsToFloat(expected) + val;
+        uint desired = floatBitsToUint(sum);
+        uint old = atomicCompSwap(bodyUints[idx], expected, desired);
+        if (old == expected) break;
+        expected = old;
+    }
+}
+
+float cross2D(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= elementCount) return;
+
+    uint metaOff = idx * ARBITER_STRIDE_U32;
+    uint type        = arbiterRaw[metaOff + 2];
+    uint numContact  = arbiterRaw[metaOff + 3];
+    if (numContact == 0u) return;
+
+    uint bodyAIdx = arbiterRaw[metaOff + 0];
+    uint bodyBIdx = arbiterRaw[metaOff + 1];
+
+    float invMassA  = getBodyF(bodyAIdx, 3u);
+    float invMassB  = getBodyF(bodyBIdx, 3u);
+    float invIA     = getBodyF(bodyAIdx, 4u);
+    float invIB     = getBodyF(bodyBIdx, 4u);
+
+    for (uint ci = 0u; ci < numContact; ++ci) {
+        uint ctOff = metaOff + ARBITER_META_U32 + ci * CONTACT_U32;
+
+        float normalX    = uintBitsToFloat(arbiterRaw[ctOff + 0u]);
+        float normalY    = uintBitsToFloat(arbiterRaw[ctOff + 1u]);
+        float r1X        = uintBitsToFloat(arbiterRaw[ctOff + 2u]);
+        float r1Y        = uintBitsToFloat(arbiterRaw[ctOff + 3u]);
+        float r2X        = uintBitsToFloat(arbiterRaw[ctOff + 4u]);
+        float r2Y        = uintBitsToFloat(arbiterRaw[ctOff + 5u]);
+        float massNormal = uintBitsToFloat(arbiterRaw[ctOff + 6u]);
+        float massTangent= uintBitsToFloat(arbiterRaw[ctOff + 7u]);
+        float bias       = uintBitsToFloat(arbiterRaw[ctOff + 8u]);
+        float friction   = uintBitsToFloat(arbiterRaw[ctOff + 9u]);
+        float Pn         = uintBitsToFloat(arbiterRaw[ctOff + 10u]);
+        float Pt         = uintBitsToFloat(arbiterRaw[ctOff + 11u]);
+
+        float spdAX = getBodyF(bodyAIdx, 0u);
+        float spdAY = getBodyF(bodyAIdx, 1u);
+        float angA  = getBodyF(bodyAIdx, 2u);
+        float spdBX = getBodyF(bodyBIdx, 0u);
+        float spdBY = getBodyF(bodyBIdx, 1u);
+        float angB  = getBodyF(bodyBIdx, 2u);
+
+        vec2 dv;
+        if (type == ARBITER_TYPE_AA) {
+            dv = vec2(spdBX, spdBY) + vec2(-angB * r2Y, angB * r2X)
+               - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+        } else if (type == ARBITER_TYPE_AD) {
+            dv = vec2(spdBX, spdBY)
+               - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+        } else if (type == ARBITER_TYPE_A) {
+            dv = -vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+            invIB = 0.0;
+        } else {
+            dv = -vec2(spdAX, spdAY);
+            invIA = 0.0;
+            invIB = 0.0;
+        }
+
+        vec2 normal = vec2(normalX, normalY);
+        float vn = dot(dv, normal);
+        float dPn = massNormal * (-vn + bias);
+        float newPn = max(Pn + dPn, 0.0);
+        float appliedDPn = newPn - Pn;
+
+        vec2 impulseN = appliedDPn * normal;
+
+        if (invMassA > 0.0) {
+            atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseN.x);
+            atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseN.y);
+            float torqueA = -invIA * cross2D(vec2(r1X, r1Y), impulseN);
+            atomicAddBodyF(bodyAIdx, 2u, torqueA);
+        }
+        if (invMassB > 0.0 && type != ARBITER_TYPE_A && type != ARBITER_TYPE_D) {
+            atomicAddBodyF(bodyBIdx, 0u, invMassB * impulseN.x);
+            atomicAddBodyF(bodyBIdx, 1u, invMassB * impulseN.y);
+            float torqueB = invIB * cross2D(vec2(r2X, r2Y), impulseN);
+            atomicAddBodyF(bodyBIdx, 2u, torqueB);
+        }
+
+        spdAX = getBodyF(bodyAIdx, 0u);
+        spdAY = getBodyF(bodyAIdx, 1u);
+        angA  = getBodyF(bodyAIdx, 2u);
+        spdBX = getBodyF(bodyBIdx, 0u);
+        spdBY = getBodyF(bodyBIdx, 1u);
+        angB  = getBodyF(bodyBIdx, 2u);
+
+        if (type == ARBITER_TYPE_AA) {
+            dv = vec2(spdBX, spdBY) + vec2(-angB * r2Y, angB * r2X)
+               - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+        } else if (type == ARBITER_TYPE_AD) {
+            dv = vec2(spdBX, spdBY)
+               - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+        } else if (type == ARBITER_TYPE_A) {
+            dv = -vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+        } else {
+            dv = -vec2(spdAX, spdAY);
+        }
+
+        vec2 tangent;
+        if (type == ARBITER_TYPE_A) {
+            tangent = vec2(-normalY, normalX);
+        } else {
+            tangent = vec2(normalY, -normalX);
+        }
+        float vt = dot(dv, tangent);
+        float dPt = massTangent * (-vt);
+
+        float maxPt = friction * newPn;
+        float newPt = clamp(Pt + dPt, -maxPt, maxPt);
+        float appliedDPt = newPt - Pt;
+
+        vec2 impulseT = appliedDPt * tangent;
+
+        if (invMassA > 0.0) {
+            atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseT.x);
+            atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseT.y);
+            float torqueA = -invIA * cross2D(vec2(r1X, r1Y), impulseT);
+            atomicAddBodyF(bodyAIdx, 2u, torqueA);
+        }
+        if (invMassB > 0.0 && type != ARBITER_TYPE_A && type != ARBITER_TYPE_D) {
+            atomicAddBodyF(bodyBIdx, 0u, invMassB * impulseT.x);
+            atomicAddBodyF(bodyBIdx, 1u, invMassB * impulseT.y);
+            float torqueB = invIB * cross2D(vec2(r2X, r2Y), impulseT);
+            atomicAddBodyF(bodyBIdx, 2u, torqueB);
+        }
+
+        arbiterRaw[ctOff + 10u] = floatBitsToUint(newPn);
+        arbiterRaw[ctOff + 11u] = floatBitsToUint(newPt);
+    }
+}

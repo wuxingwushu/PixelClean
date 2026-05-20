@@ -10,6 +10,8 @@ namespace PhysicsBlock
      *          支持序列化功能 */
     class PhysicsJoint SerializationInherit_
     {
+        friend class PhysicsGPU;
+
 #if PhysicsBlock_Serialization
     public:
         SerializationVirtualFunction;

@@ -42,3 +42,6 @@
 #define Background_spv			ShaderPath"Background.spv"
 #define GridBackground_spv		ShaderPath"GridBackground.spv"
 #define _2D_GI_spv               ShaderPath"2D_GI.spv"
+#define physics_arbiter_spv       ShaderPath"physics_arbiter.comp.spv"
+#define physics_joint_spv         ShaderPath"physics_joint.comp.spv"
+#define physics_junction_spv      ShaderPath"physics_junction.comp.spv"

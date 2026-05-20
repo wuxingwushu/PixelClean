@@ -417,12 +417,7 @@ namespace GAME
 		}
 		TOOL::mTimer->StartEnd();
 
-		if (mAuxiliaryVision->End()) {
-			for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
-			{
-				Global::MainCommandBufferS[i].store(true, std::memory_order_release);
-			}
-		}
+		mAuxiliaryVision->End();
 	}
 
 	void UnlimitednessMapMods::GameRecordCommandBuffers()

@@ -79,7 +79,7 @@ namespace VulKan
 	class AuxiliaryVision
 	{
 	public:
-		static constexpr unsigned int kVertexCountBuffer = 100;
+		static constexpr unsigned int kVertexCountBuffer = 200;
 
 		AuxiliaryVision(Device *device, PipelineS *P, const unsigned int number);
 		~AuxiliaryVision();

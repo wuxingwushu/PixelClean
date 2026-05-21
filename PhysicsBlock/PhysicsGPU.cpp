@@ -8,6 +8,7 @@
 #include "PhysicsBaseArbiter.hpp"
 #include <cstring>
 #include <cassert>
+#include <algorithm>
 
 namespace PhysicsBlock {
 
@@ -127,32 +128,77 @@ void PhysicsGPU::PackBodyDynamic() {
     EnsureBodyCapacity(N);
 
     float* dst = reinterpret_cast<float*>(mBodyBuffer->getPersistentMappedPtr());
-    size_t offset = 0;
-    uint32_t idx = 0;
 
-    auto writeDynamicAngle = [&](PhysicsAngle* obj) {
-        mBodyIndexMap[obj] = idx++;
-        dst[offset + 0] = obj->speed.x;
-        dst[offset + 1] = obj->speed.y;
-        dst[offset + 2] = obj->angleSpeed;
-        offset += BODY_FLOATS;
+    const uint32_t shapesStart    = 0;
+    const uint32_t circlesStart   = shapesStart    + (uint32_t)shapes.size();
+    const uint32_t particlesStart = circlesStart   + (uint32_t)circles.size();
+    const uint32_t linesStart     = particlesStart + (uint32_t)particles.size();
+
+    const int xThreadNum = (int)std::thread::hardware_concurrency();
+    std::vector<std::future<std::unordered_map<void*, uint32_t>>> futures;
+
+    const auto PackChunk = [&](int threadIdx, int totalThreads)
+            -> std::unordered_map<void*, uint32_t> {
+        std::unordered_map<void*, uint32_t> localMap;
+        int start, end;
+
+        ThreadTaskAllot(start, end, (int)shapes.size(), threadIdx, totalThreads);
+        for (int i = start; i < end; ++i) {
+            PhysicsAngle* obj = shapes[i];
+            uint32_t idx = shapesStart + i;
+            localMap[obj] = idx;
+            size_t off = idx * BODY_FLOATS;
+            dst[off + 0] = obj->speed.x;
+            dst[off + 1] = obj->speed.y;
+            dst[off + 2] = obj->angleSpeed;
+        }
+
+        ThreadTaskAllot(start, end, (int)circles.size(), threadIdx, totalThreads);
+        for (int i = start; i < end; ++i) {
+            PhysicsAngle* obj = circles[i];
+            uint32_t idx = circlesStart + i;
+            localMap[obj] = idx;
+            size_t off = idx * BODY_FLOATS;
+            dst[off + 0] = obj->speed.x;
+            dst[off + 1] = obj->speed.y;
+            dst[off + 2] = obj->angleSpeed;
+        }
+
+        ThreadTaskAllot(start, end, (int)particles.size(), threadIdx, totalThreads);
+        for (int i = start; i < end; ++i) {
+            PhysicsParticle* obj = particles[i];
+            uint32_t idx = particlesStart + i;
+            localMap[obj] = idx;
+            size_t off = idx * BODY_FLOATS;
+            dst[off + 0] = obj->speed.x;
+            dst[off + 1] = obj->speed.y;
+            dst[off + 2] = 0.0f;
+        }
+
+        ThreadTaskAllot(start, end, (int)lines.size(), threadIdx, totalThreads);
+        for (int i = start; i < end; ++i) {
+            PhysicsAngle* obj = lines[i];
+            uint32_t idx = linesStart + i;
+            localMap[obj] = idx;
+            size_t off = idx * BODY_FLOATS;
+            dst[off + 0] = obj->speed.x;
+            dst[off + 1] = obj->speed.y;
+            dst[off + 2] = obj->angleSpeed;
+        }
+
+        return localMap;
     };
 
-    auto writeDynamicParticle = [&](PhysicsParticle* obj) {
-        mBodyIndexMap[obj] = idx++;
-        dst[offset + 0] = obj->speed.x;
-        dst[offset + 1] = obj->speed.y;
-        dst[offset + 2] = 0.0f;
-        offset += BODY_FLOATS;
-    };
+    for (int i = 0; i < xThreadNum; ++i)
+        futures.push_back(std::async(std::launch::async, PackChunk, i, xThreadNum));
 
-    for (auto* s : shapes)    writeDynamicAngle(s);
-    for (auto* c : circles)   writeDynamicAngle(c);
-    for (auto* p : particles) writeDynamicParticle(p);
-    for (auto* l : lines)     writeDynamicAngle(l);
+    for (auto& f : futures) {
+        auto localMap = f.get();
+        mBodyIndexMap.insert(localMap.begin(), localMap.end());
+    }
 
     if (hasMap) {
-        mBodyIndexMap[mWorld->GetMapFormwork()] = idx;
+        mBodyIndexMap[mWorld->GetMapFormwork()] = (uint32_t)dynCount;
     }
 }
 
@@ -325,6 +371,131 @@ void PhysicsGPU::PackJunctionBuffer() {
            cpuJunction.data(), N * JUNCTION_BYTES);
 }
 
+void PhysicsGPU::PackSingleArbiter(uint32_t arbIdx) {
+    BaseArbiter* arb = mWorld->CollideGroupVector[arbIdx];
+    uint32_t* dst = reinterpret_cast<uint32_t*>(mArbiterBuffer->getPersistentMappedPtr());
+    uint32_t* slot = dst + arbIdx * ARBITER_STRIDE_U32;
+
+    slot[0] = GetBodyIndex(arb->mOriginalObject1);
+    slot[1] = GetBodyIndex(arb->mOriginalObject2);
+    slot[2] = GetArbiterGPUType(arb);
+    slot[3] = (uint32_t)arb->numContacts;
+
+    float* contacts = reinterpret_cast<float*>(slot + 8);
+    for (int ci = 0; ci < arb->numContacts && ci < (int)MAX_CONTACTS; ++ci) {
+        Contact& c = arb->contacts[ci];
+        float* ct = contacts + ci * CONTACT_FLOATS;
+        ct[0]  = c.normal.x;
+        ct[1]  = c.normal.y;
+        ct[2]  = c.r1.x;
+        ct[3]  = c.r1.y;
+        ct[4]  = c.r2.x;
+        ct[5]  = c.r2.y;
+        ct[6]  = c.massNormal;
+        ct[7]  = c.massTangent;
+        ct[8]  = c.bias;
+        ct[9]  = c.friction;
+        ct[10] = c.Pn;
+        ct[11] = c.Pt;
+    }
+}
+
+void PhysicsGPU::PackSingleJoint(uint32_t jIdx) {
+    PhysicsJoint* j = mWorld->PhysicsJointS[jIdx];
+    float* dst = reinterpret_cast<float*>(mJointBuffer->getPersistentMappedPtr());
+    float* slot = dst + jIdx * JOINT_FLOATS;
+
+    uint32_t idxA = GetBodyIndex(j->body1);
+    uint32_t idxB = GetBodyIndex(j->body2);
+    memcpy(&slot[0], &idxA, sizeof(uint32_t));
+    memcpy(&slot[1], &idxB, sizeof(uint32_t));
+    slot[2]  = j->r1.x;
+    slot[3]  = j->r1.y;
+    slot[4]  = j->r2.x;
+    slot[5]  = j->r2.y;
+    slot[6]  = j->bias.x;
+    slot[7]  = j->bias.y;
+    slot[8]  = j->M[0][0];
+    slot[9]  = j->M[1][0];
+    slot[10] = j->M[0][1];
+    slot[11] = j->M[1][1];
+    slot[12] = j->softness;
+    slot[13] = j->P.x;
+    slot[14] = j->P.y;
+    for (int k = 15; k < (int)JOINT_FLOATS; ++k) slot[k] = 0.0f;
+}
+
+void PhysicsGPU::PackSingleJunction(uint32_t jnIdx) {
+    BaseJunction* jn = mWorld->BaseJunctionS[jnIdx];
+    float* dst = reinterpret_cast<float*>(mJunctionBuffer->getPersistentMappedPtr());
+    float* slot = dst + jnIdx * JUNCTION_FLOATS;
+
+    uint32_t bodyA = INVALID_INDEX;
+    uint32_t bodyB = INVALID_INDEX;
+    float fixedAX = 0, fixedAY = 0, fixedBX = 0, fixedBY = 0;
+    float mR1X = 0, mR1Y = 0, mR2X = 0, mR2Y = 0;
+    uint32_t jType = 0;
+
+    switch (jn->ObjectType()) {
+        case CordObjectType::JunctionAA: {
+            auto* j = static_cast<PhysicsJunctionSS*>(jn);
+            bodyA = GetBodyIndex(j->mParticle1);
+            bodyB = GetBodyIndex(j->mParticle2);
+            mR1X = j->mR1.x; mR1Y = j->mR1.y;
+            mR2X = j->mR2.x; mR2Y = j->mR2.y;
+            jType = 0;
+            break;
+        }
+        case CordObjectType::JunctionA: {
+            auto* j = static_cast<PhysicsJunctionS*>(jn);
+            bodyA = GetBodyIndex(j->mParticle);
+            fixedBX = j->mRegularDrop.x;
+            fixedBY = j->mRegularDrop.y;
+            mR1X = j->R.x; mR1Y = j->R.y;
+            jType = 1;
+            break;
+        }
+        case CordObjectType::JunctionP: {
+            auto* j = static_cast<PhysicsJunctionP*>(jn);
+            bodyA = GetBodyIndex(j->mParticle);
+            fixedBX = j->mRegularDrop.x;
+            fixedBY = j->mRegularDrop.y;
+            jType = 2;
+            break;
+        }
+        case CordObjectType::JunctionPP: {
+            auto* j = static_cast<PhysicsJunctionPP*>(jn);
+            bodyA = GetBodyIndex(j->mParticle1);
+            bodyB = GetBodyIndex(j->mParticle2);
+            jType = 3;
+            break;
+        }
+        default:
+            break;
+    }
+
+    memcpy(&slot[0], &bodyA, sizeof(uint32_t));
+    memcpy(&slot[1], &bodyB, sizeof(uint32_t));
+    slot[2]  = fixedAX;
+    slot[3]  = fixedAY;
+    slot[4]  = fixedBX;
+    slot[5]  = fixedBY;
+    slot[6]  = jn->Normal.x;
+    slot[7]  = jn->Normal.y;
+    slot[8]  = jn->bias;
+    slot[9]  = jn->k;
+    slot[10] = jn->Length;
+    memcpy(&slot[11], &jType, sizeof(uint32_t));
+    slot[12] = jn->ElasticityType();
+    slot[13] = mR1X;
+    slot[14] = mR1Y;
+    slot[15] = mR2X;
+    slot[16] = mR2Y;
+    slot[17] = jn->P.x;
+    slot[18] = jn->P.y;
+    slot[19] = 0.0f;
+}
+
 void PhysicsGPU::UnpackBodyBuffer() {
     auto& shapes    = mWorld->PhysicsShapeS;
     auto& circles   = mWorld->PhysicsCircleS;
@@ -335,25 +506,57 @@ void PhysicsGPU::UnpackBodyBuffer() {
     if (N == 0) return;
 
     float* mapped = reinterpret_cast<float*>(mBodyBuffer->getPersistentMappedPtr());
-    size_t offset = 0;
 
-    auto unpackAngle = [&](PhysicsAngle* obj) {
-        obj->speed.x   = mapped[offset + 0];
-        obj->speed.y   = mapped[offset + 1];
-        obj->angleSpeed = mapped[offset + 2];
-        offset += BODY_FLOATS;
+    const uint32_t shapesStart    = 0;
+    const uint32_t circlesStart   = shapesStart    + (uint32_t)shapes.size();
+    const uint32_t particlesStart = circlesStart   + (uint32_t)circles.size();
+    const uint32_t linesStart     = particlesStart + (uint32_t)particles.size();
+
+    const int xThreadNum = (int)std::thread::hardware_concurrency();
+    std::vector<std::future<void>> futures;
+
+    const auto UnpackChunk = [&](int threadIdx, int totalThreads) {
+        int start, end;
+
+        ThreadTaskAllot(start, end, (int)shapes.size(), threadIdx, totalThreads);
+        for (int i = start; i < end; ++i) {
+            PhysicsAngle* obj = shapes[i];
+            size_t off = (shapesStart + i) * BODY_FLOATS;
+            obj->speed.x    = mapped[off + 0];
+            obj->speed.y    = mapped[off + 1];
+            obj->angleSpeed = mapped[off + 2];
+        }
+
+        ThreadTaskAllot(start, end, (int)circles.size(), threadIdx, totalThreads);
+        for (int i = start; i < end; ++i) {
+            PhysicsAngle* obj = circles[i];
+            size_t off = (circlesStart + i) * BODY_FLOATS;
+            obj->speed.x    = mapped[off + 0];
+            obj->speed.y    = mapped[off + 1];
+            obj->angleSpeed = mapped[off + 2];
+        }
+
+        ThreadTaskAllot(start, end, (int)particles.size(), threadIdx, totalThreads);
+        for (int i = start; i < end; ++i) {
+            PhysicsParticle* obj = particles[i];
+            size_t off = (particlesStart + i) * BODY_FLOATS;
+            obj->speed.x = mapped[off + 0];
+            obj->speed.y = mapped[off + 1];
+        }
+
+        ThreadTaskAllot(start, end, (int)lines.size(), threadIdx, totalThreads);
+        for (int i = start; i < end; ++i) {
+            PhysicsAngle* obj = lines[i];
+            size_t off = (linesStart + i) * BODY_FLOATS;
+            obj->speed.x    = mapped[off + 0];
+            obj->speed.y    = mapped[off + 1];
+            obj->angleSpeed = mapped[off + 2];
+        }
     };
 
-    auto unpackParticle = [&](PhysicsParticle* obj) {
-        obj->speed.x = mapped[offset + 0];
-        obj->speed.y = mapped[offset + 1];
-        offset += BODY_FLOATS;
-    };
-
-    for (auto* s : shapes)    unpackAngle(s);
-    for (auto* c : circles)   unpackAngle(c);
-    for (auto* p : particles) unpackParticle(p);
-    for (auto* l : lines)     unpackAngle(l);
+    for (int i = 0; i < xThreadNum; ++i)
+        futures.push_back(std::async(std::launch::async, UnpackChunk, i, xThreadNum));
+    for (auto& f : futures) f.wait();
 }
 
 void PhysicsGPU::UnpackArbiterPnPt() {
@@ -363,17 +566,28 @@ void PhysicsGPU::UnpackArbiterPnPt() {
 
     uint32_t* mapped = reinterpret_cast<uint32_t*>(mArbiterBuffer->getPersistentMappedPtr());
 
-    for (size_t i = 0; i < N; ++i) {
-        BaseArbiter* arb = arbVec[i];
-        uint32_t* slot = mapped + i * ARBITER_STRIDE_U32;
-        float* contacts = reinterpret_cast<float*>(slot + 8);
+    const int xThreadNum = (int)std::thread::hardware_concurrency();
+    std::vector<std::future<void>> futures;
 
-        for (int ci = 0; ci < arb->numContacts && ci < (int)MAX_CONTACTS; ++ci) {
-            float* ct = contacts + ci * CONTACT_FLOATS;
-            arb->contacts[ci].Pn = ct[10];
-            arb->contacts[ci].Pt = ct[11];
+    const auto UnpackChunk = [&](int threadIdx, int totalThreads) {
+        int start, end;
+        ThreadTaskAllot(start, end, (int)N, threadIdx, totalThreads);
+        for (int i = start; i < end; ++i) {
+            BaseArbiter* arb = arbVec[i];
+            uint32_t* slot = mapped + i * ARBITER_STRIDE_U32;
+            float* contacts = reinterpret_cast<float*>(slot + 8);
+
+            for (int ci = 0; ci < arb->numContacts && ci < (int)MAX_CONTACTS; ++ci) {
+                float* ct = contacts + ci * CONTACT_FLOATS;
+                arb->contacts[ci].Pn = ct[10];
+                arb->contacts[ci].Pt = ct[11];
+            }
         }
-    }
+    };
+
+    for (int i = 0; i < xThreadNum; ++i)
+        futures.push_back(std::async(std::launch::async, UnpackChunk, i, xThreadNum));
+    for (auto& f : futures) f.wait();
 }
 
 void PhysicsGPU::EnsureBodyCapacity(size_t N) {
@@ -505,6 +719,14 @@ void PhysicsGPU::Initialize() {
     mSharedCmdPool   = new VulKan::CommandPool(mDevice);
     mSharedCmdBuffer = new VulKan::CommandBuffer(mDevice, mSharedCmdPool);
 
+    auto caps = mDevice->getComputeCapabilities();
+    mSMCount = caps.smCount;
+    uint32_t sgSize = caps.subgroupSize;
+    if (sgSize == 0) sgSize = 32;
+    mLocalSizeX = sgSize * 2;
+    if (mLocalSizeX < 32)  mLocalSizeX = 32;
+    if (mLocalSizeX > 256) mLocalSizeX = 256;
+
     mReady = true;
 }
 
@@ -553,12 +775,31 @@ void PhysicsGPU::RecreateCalculateJunction() {
 void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) {
     if (!mReady) return;
 
+    const int xThreadNum = (int)std::thread::hardware_concurrency();
+
     auto tUploadStart = std::chrono::high_resolution_clock::now();
 
     PackBodyDynamic();
-    PackArbiterBuffer();
-    PackJointBuffer();
-    PackJunctionBuffer();
+
+    EnsureArbiterCapacity(mWorld->CollideGroupVector.size());
+    EnsureJointCapacity(mWorld->PhysicsJointS.size());
+    EnsureJunctionCapacity(mWorld->BaseJunctionS.size());
+
+    {
+        std::vector<std::future<void>> futures;
+        const auto PackChunk = [this](int threadIdx, int totalThreads) {
+            int start, end;
+            ThreadTaskAllot(start, end, (int)mWorld->CollideGroupVector.size(), threadIdx, totalThreads);
+            for (int i = start; i < end; ++i) PackSingleArbiter((uint32_t)i);
+            ThreadTaskAllot(start, end, (int)mWorld->PhysicsJointS.size(), threadIdx, totalThreads);
+            for (int i = start; i < end; ++i) PackSingleJoint((uint32_t)i);
+            ThreadTaskAllot(start, end, (int)mWorld->BaseJunctionS.size(), threadIdx, totalThreads);
+            for (int i = start; i < end; ++i) PackSingleJunction((uint32_t)i);
+        };
+        for (int i = 0; i < xThreadNum; ++i)
+            futures.push_back(std::async(std::launch::async, PackChunk, i, xThreadNum));
+        for (auto& f : futures) f.wait();
+    }
 
     uint32_t N_arbiters  = (uint32_t)mWorld->CollideGroupVector.size();
     uint32_t N_joints    = (uint32_t)mWorld->PhysicsJointS.size();
@@ -587,30 +828,46 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
     bodyBarrier.offset        = 0;
     bodyBarrier.size          = VK_WHOLE_SIZE;
 
-    uint32_t groupsA = (N_arbiters  + 255) / 256;
-    uint32_t groupsJ = (N_joints    + 255) / 256;
-    uint32_t groupsJu= (N_junctions + 255) / 256;
+    VkBufferMemoryBarrier arbiterBarrier = bodyBarrier;
+    if (mArbiterBuffer) arbiterBarrier.buffer = mArbiterBuffer->getBuffer();
+
+    VkBufferMemoryBarrier jointBarrier = bodyBarrier;
+    if (mJointBuffer) jointBarrier.buffer = mJointBuffer->getBuffer();
+
+    const uint32_t MIN_WG = mSMCount;
+
+    uint32_t groupsA = (N_arbiters > 0)
+        ? std::max((N_arbiters + mLocalSizeX - 1) / mLocalSizeX, MIN_WG)
+        : 0u;
+    uint32_t groupsJ = (N_joints > 0)
+        ? std::max((N_joints + mLocalSizeX - 1) / mLocalSizeX, MIN_WG)
+        : 0u;
+    uint32_t groupsJu = (N_junctions > 0)
+        ? std::max((N_junctions + mLocalSizeX - 1) / mLocalSizeX, MIN_WG)
+        : 0u;
 
     for (unsigned int iter = 0; iter < impulseSize; ++iter) {
         if (N_arbiters > 0 && mCalculateArbiter) {
             mCalculateArbiter->recordDispatch(cmd, groupsA);
+            VkBufferMemoryBarrier ab[2] = { bodyBarrier, arbiterBarrier };
             vkCmdPipelineBarrier(cmd,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 0,
                 0, nullptr,
-                1, &bodyBarrier,
+                2, ab,
                 0, nullptr);
         }
 
         if (N_joints > 0 && mCalculateJoint) {
             mCalculateJoint->recordDispatch(cmd, groupsJ);
+            VkBufferMemoryBarrier jb[2] = { bodyBarrier, jointBarrier };
             vkCmdPipelineBarrier(cmd,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 0,
                 0, nullptr,
-                1, &bodyBarrier,
+                2, jb,
                 0, nullptr);
         }
 

@@ -19,6 +19,14 @@ namespace VulKan {
 		//VK_NV_FRAMEBUFFER_MIXED_SAMPLES_EXTENSION_NAME
 	};
 
+	struct GPUComputeCapabilities {
+		uint32_t smCount;
+		uint32_t subgroupSize;
+		uint32_t maxWorkGroupInvocations;
+		uint32_t maxWorkGroupCount[3];
+		bool     hasSMCountExtension;
+	};
+
 	class Device {
 	public:
 		Device(Instance* instance, WindowSurface* surface);
@@ -51,6 +59,8 @@ namespace VulKan {
 
 		[[nodiscard]] inline VkDevice getDevice() const noexcept { return mDevice; }
 		[[nodiscard]] inline VkPhysicalDevice getPhysicalDevice() const noexcept { return mPhysicalDevice; }
+
+		[[nodiscard]] GPUComputeCapabilities getComputeCapabilities() const;
 
 		[[nodiscard]] inline std::optional<uint32_t> getGraphicQueueFamily() const noexcept { return mGraphicQueueFamily; }
 		[[nodiscard]] inline std::optional<uint32_t> getPresentQueueFamily() const noexcept { return mPresentQueueFamily; }

@@ -8,6 +8,7 @@
 #include <vma/vk_mem_alloc.h>
 #endif
 #include "../DebugLog.h"
+#include <algorithm>
 
 namespace VulKan {
 
@@ -214,5 +215,64 @@ namespace VulKan {
 		if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
 
 		return VK_SAMPLE_COUNT_1_BIT;
+	}
+
+	GPUComputeCapabilities Device::getComputeCapabilities() const {
+		GPUComputeCapabilities caps = {};
+		caps.hasSMCountExtension = false;
+
+		VkPhysicalDeviceProperties props;
+		vkGetPhysicalDeviceProperties(mPhysicalDevice, &props);
+		caps.maxWorkGroupInvocations = props.limits.maxComputeWorkGroupInvocations;
+		caps.maxWorkGroupCount[0] = props.limits.maxComputeWorkGroupCount[0];
+		caps.maxWorkGroupCount[1] = props.limits.maxComputeWorkGroupCount[1];
+		caps.maxWorkGroupCount[2] = props.limits.maxComputeWorkGroupCount[2];
+
+		auto vkGetPhysicalDeviceProperties2 =
+			reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2>(
+				vkGetInstanceProcAddr(mInstance->getInstance(), "vkGetPhysicalDeviceProperties2"));
+
+		if (!vkGetPhysicalDeviceProperties2) {
+			caps.subgroupSize = 0;
+			caps.smCount = std::max(4u, caps.maxWorkGroupInvocations / 1024u);
+			return caps;
+		}
+
+		VkPhysicalDeviceSubgroupProperties subgroup = {};
+		subgroup.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
+
+		VkPhysicalDeviceProperties2 props2 = {};
+		props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+
+		VkPhysicalDeviceShaderSMBuiltinsPropertiesNV smPropsNV = {};
+		smPropsNV.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SM_BUILTINS_PROPERTIES_NV;
+
+		props2.pNext = &subgroup;
+		subgroup.pNext = &smPropsNV;
+
+		vkGetPhysicalDeviceProperties2(mPhysicalDevice, &props2);
+
+		caps.subgroupSize = subgroup.subgroupSize;
+
+		if (smPropsNV.shaderSMCount > 0) {
+			caps.smCount = smPropsNV.shaderSMCount;
+			caps.hasSMCountExtension = true;
+		} else {
+			VkPhysicalDeviceShaderCorePropertiesAMD corePropsAMD = {};
+			corePropsAMD.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CORE_PROPERTIES_AMD;
+
+			props2.pNext = &subgroup;
+			subgroup.pNext = &corePropsAMD;
+			vkGetPhysicalDeviceProperties2(mPhysicalDevice, &props2);
+
+			if (corePropsAMD.shaderEngineCount > 0 && corePropsAMD.shaderArraysPerEngineCount > 0) {
+				caps.smCount = corePropsAMD.shaderEngineCount * corePropsAMD.shaderArraysPerEngineCount;
+				caps.hasSMCountExtension = true;
+			} else {
+				caps.smCount = std::max(4u, caps.maxWorkGroupInvocations / 1024u);
+			}
+		}
+
+		return caps;
 	}
 }

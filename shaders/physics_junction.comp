@@ -10,7 +10,7 @@ layout(std430, binding = 1) buffer JunctionBuf { float junctionFloats[]; };
 
 layout(std430, binding = 2) buffer CountBuf { uint elementCount; };
 
-layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 void atomicAddBodyF(uint bodyIdx, uint off, float val) {
     uint idx = bodyIdx * BODY_STRIDE + off;

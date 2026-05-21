@@ -3,6 +3,7 @@
 #include <vector>
 #include <chrono>
 #include <unordered_map>
+#include <future>
 
 namespace VulKan {
     class Device;
@@ -40,6 +41,10 @@ private:
     void PackArbiterBuffer();
     void PackJointBuffer();
     void PackJunctionBuffer();
+
+    void PackSingleArbiter(uint32_t arbIdx);
+    void PackSingleJoint(uint32_t jIdx);
+    void PackSingleJunction(uint32_t jnIdx);
 
     void UnpackBodyBuffer();
     void UnpackArbiterPnPt();
@@ -84,6 +89,9 @@ private:
     float mCPUUploadTimeMS   = 0.0f;
     float mGPUExecuteTimeMS  = 0.0f;
     float mGPUReadbackTimeMS = 0.0f;
+
+    uint32_t mLocalSizeX = 64;
+    uint32_t mSMCount = 32;
 
     std::unordered_map<void*, uint32_t> mBodyIndexMap;
 

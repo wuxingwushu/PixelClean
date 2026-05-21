@@ -11,29 +11,6 @@
 #include "PhysicsGPU.hpp"
 #include <chrono>
 
-// 计算线程任务片段
-#define ThreadTaskAllot(S, E, Size, Tn, TSize) \
-    if (Tn == TSize)                           \
-    {                                          \
-        S = 0;                                 \
-        E = Size;                              \
-    }                                          \
-    else                                       \
-    {                                          \
-        S = Size / TSize;                      \
-        E = Size % TSize;                      \
-        if (Tn < E)                            \
-        {                                      \
-            E = S * Tn + Tn + S + 1;           \
-            S = S * Tn + Tn;                   \
-        }                                      \
-        else                                   \
-        {                                      \
-            int Y = E;                         \
-            E = S * Tn + Y + S;                \
-            S = S * Tn + Y;                    \
-        }                                      \
-    }
 #if ThreadPoolBool
 #define Map_Delete(key)                                 \
     if (CollideGroupS.find(key) != CollideGroupS.end()) \

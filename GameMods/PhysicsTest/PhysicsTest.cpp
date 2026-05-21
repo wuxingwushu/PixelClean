@@ -277,17 +277,19 @@ namespace GAME
 			ImVec4 green  = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
 			ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
 
+			ImGui::TextColored(yellow, u8"  碰撞检测 耗时: %.3f ms", mPhysicsWorld->GetCollisionDetectionTimeMS());
+			ImGui::TextColored(yellow, u8"  预处理   耗时: %.3f ms", mPhysicsWorld->GetPreStepTimeMS());
+			ImGui::TextColored(yellow, u8"  冲量求解 耗时: %.3f ms", mPhysicsWorld->GetApplyImpulseCPUTimeMS());
 			if (mUseGPUApplyImpulse) {
 				if (mPhysicsGPU->GetGPUExecuteTimeMS() > 0.0f) {
-					ImGui::TextColored(green, u8"  CPU→GPU 耗时: %.3f ms", mPhysicsGPU->GetCPUUploadTimeMS());
-					ImGui::TextColored(green, u8"  GPU 计算 耗时: %.3f ms", mPhysicsGPU->GetGPUExecuteTimeMS());
-					ImGui::TextColored(green, u8"  GPU→CPU 耗时: %.3f ms", mPhysicsGPU->GetGPUReadbackTimeMS());
-				} else {
-					ImGui::TextColored(green, u8"  GPU 模式运行中...");
+					ImGui::TextColored(green, u8"    CPU→GPU 耗时: %.3f ms", mPhysicsGPU->GetCPUUploadTimeMS());
+					ImGui::TextColored(green, u8"    GPU 计算 耗时: %.3f ms", mPhysicsGPU->GetGPUExecuteTimeMS());
+					ImGui::TextColored(green, u8"    GPU→CPU 耗时: %.3f ms", mPhysicsGPU->GetGPUReadbackTimeMS());
 				}
-			} else {
-				ImGui::TextColored(yellow, u8"  CPU 模式运行中");
 			}
+			ImGui::TextColored(yellow, u8"  位置更新 耗时: %.3f ms", mPhysicsWorld->GetPositionUpdateTimeMS());
+			ImGui::TextColored(yellow, u8"  后处理   耗时: %.3f ms", mPhysicsWorld->GetPostProcessTimeMS());
+
 
 			ImGui::Text(u8"  物体数: %d  Arbiter: %d  Joint: %d  Junction: %d",
 				(int)(mPhysicsWorld->PhysicsShapeS.size() +

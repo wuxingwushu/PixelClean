@@ -9,6 +9,7 @@
 #include "PhysicsBaseArbiter.hpp"
 #include "PhysicsBaseCollide.hpp"
 #include "PhysicsGPU.hpp"
+#include <chrono>
 
 // 计算线程任务片段
 #define ThreadTaskAllot(S, E, Size, Tn, TSize) \
@@ -242,6 +243,8 @@ namespace PhysicsBlock
 
     void PhysicsWorld::PhysicsEmulator(FLOAT_ time)
     {
+        auto tEmulatorStart = std::chrono::high_resolution_clock::now();
+
 #if ThreadPoolBool
         const int xThreadNum = std::thread::hardware_concurrency();
 
@@ -252,6 +255,9 @@ namespace PhysicsBlock
         }
         xTn.clear();
 #endif
+
+        auto tCollisionEnd = std::chrono::high_resolution_clock::now();
+        mCollisionDetectionTimeMS = std::chrono::duration<float, std::milli>(tCollisionEnd - tEmulatorStart).count();
 
         const auto XT_Fun = [this](int T_Num, int Tx)
         {
@@ -457,6 +463,8 @@ namespace PhysicsBlock
 
         FLOAT_ inv_dt = 1.0 / time;
 
+        auto tPreStepStart = std::chrono::high_resolution_clock::now();
+
         ResolveCollideGroup();
 
 #define Definite 0 // 是否需要确定性(暂时没法保证确定性，没有对解算的前后顺序进行排序)
@@ -513,71 +521,84 @@ namespace PhysicsBlock
         }
 #endif
 
+        auto tPreStepEnd = std::chrono::high_resolution_clock::now();
+        mPreStepTimeMS = std::chrono::duration<float, std::milli>(tPreStepEnd - tPreStepStart).count();
+
+
+        auto tImpulseStart = std::chrono::high_resolution_clock::now();
 
         if (mGPU && mGPU->IsReady() && mUseGPUApplyImpulse) {
+            mApplyImpulseCPUTimeMS = 0.0f;
             mGPU->ExecuteGPUApplyImpulse(inv_dt, ApplyImpulseSize);
         }
-        else {
-
+        else 
+        {
+            
 // 这里使用多线程虽然会增加不确定性，但是现在我暂时不需求确定性。所以舍弃也无所谓
 #if (Definite != 1) & ThreadPoolBool
-        // 迭代结果
-        const auto ApplyImpulseXT_Fun = [this](int T_Num, int Tx)
-        {
-            bool JZ;
-            int SizeD;
-            int SizeY;
-            ThreadTaskAllot(SizeD, SizeY, CollideGroupVector.size(), T_Num, Tx);
-            for (; SizeD < SizeY; ++SizeD)
+            // 迭代结果
+            const auto ApplyImpulseXT_Fun = [this](int T_Num, int Tx)
             {
-                CollideGroupVector[SizeD]->ApplyImpulse();
-            }
-            ThreadTaskAllot(SizeD, SizeY, PhysicsJointS.size(), T_Num, Tx);
-            for (; SizeD < SizeY; ++SizeD)
+                bool JZ;
+                int SizeD;
+                int SizeY;
+                ThreadTaskAllot(SizeD, SizeY, CollideGroupVector.size(), T_Num, Tx);
+                for (; SizeD < SizeY; ++SizeD)
+                {
+                    CollideGroupVector[SizeD]->ApplyImpulse();
+                }
+                ThreadTaskAllot(SizeD, SizeY, PhysicsJointS.size(), T_Num, Tx);
+                for (; SizeD < SizeY; ++SizeD)
+                {
+                    PhysicsJointS[SizeD]->ApplyImpulse();
+                }
+                ThreadTaskAllot(SizeD, SizeY, BaseJunctionS.size(), T_Num, Tx);
+                for (; SizeD < SizeY; ++SizeD)
+                {
+                    BaseJunctionS[SizeD]->ApplyImpulse();
+                }
+            };
+            for (size_t di = 0; di < ApplyImpulseSize; ++di)
             {
-                PhysicsJointS[SizeD]->ApplyImpulse();
+                for (size_t i = 0; i < xThreadNum; ++i)
+                {
+                    xTn.push_back(mThreadPool.enqueue(ApplyImpulseXT_Fun, i, xThreadNum));
+                }
+                // 等待 迭代结果 任务结束
+                for (auto &tf : xTn)
+                {
+                    tf.wait();
+                }
+                xTn.clear();
             }
-            ThreadTaskAllot(SizeD, SizeY, BaseJunctionS.size(), T_Num, Tx);
-            for (; SizeD < SizeY; ++SizeD)
-            {
-                BaseJunctionS[SizeD]->ApplyImpulse();
-            }
-        };
-        for (size_t di = 0; di < ApplyImpulseSize; ++di)
-        {
-            for (size_t i = 0; i < xThreadNum; ++i)
-            {
-                xTn.push_back(mThreadPool.enqueue(ApplyImpulseXT_Fun, i, xThreadNum));
-            }
-            // 等待 迭代结果 任务结束
-            for (auto &tf : xTn)
-            {
-                tf.wait();
-            }
-            xTn.clear();
-        }
 #else
-        // 迭代结果
-        
-            for (size_t i = 0; i < ApplyImpulseSize; ++i)
-            {
-                for (auto kv : CollideGroupVector)
+            // 迭代结果
+            
+                for (size_t i = 0; i < ApplyImpulseSize; ++i)
                 {
-                    kv->ApplyImpulse();
+                    for (auto kv : CollideGroupVector)
+                    {
+                        kv->ApplyImpulse();
+                    }
+                    for (auto J : PhysicsJointS)
+                    {
+                        J->ApplyImpulse();
+                    }
+                    for (auto J : BaseJunctionS)
+                    {
+                        J->ApplyImpulse();
+                    }
                 }
-                for (auto J : PhysicsJointS)
-                {
-                    J->ApplyImpulse();
-                }
-                for (auto J : BaseJunctionS)
-                {
-                    J->ApplyImpulse();
-                }
-            }
-        
+            
 
 #endif
-            }
+                
+        }
+
+        auto tImpulseEnd = std::chrono::high_resolution_clock::now();
+        mApplyImpulseCPUTimeMS = std::chrono::duration<float, std::milli>(tImpulseEnd - tImpulseStart).count();
+
+        auto tPosStart = std::chrono::high_resolution_clock::now();
 
 // 这个多线程不影响结果
 #if ThreadPoolBool
@@ -646,6 +667,11 @@ namespace PhysicsBlock
         }
 #endif
 
+        auto tPosEnd = std::chrono::high_resolution_clock::now();
+        mPositionUpdateTimeMS = std::chrono::duration<float, std::milli>(tPosEnd - tPosStart).count();
+
+        auto tPostStart = std::chrono::high_resolution_clock::now();
+
         mCollision.ProcessCollisions(CollideGroupVector);
 
         {
@@ -670,6 +696,9 @@ namespace PhysicsBlock
         // 碰撞检测
         XT_Fun(1, 1);
 #endif
+
+        auto tPostEnd = std::chrono::high_resolution_clock::now();
+        mPostProcessTimeMS = std::chrono::duration<float, std::milli>(tPostEnd - tPostStart).count();
     }
 
     void PhysicsWorld::PhysicsInformationUpdate()

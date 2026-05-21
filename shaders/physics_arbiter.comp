@@ -47,6 +47,8 @@ void applyImpulseAA(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact)
     float invIA     = getBodyF(bodyAIdx, 4u);
     float invIB     = getBodyF(bodyBIdx, 4u);
 
+    const float relax = 0.5;
+
     for (uint ci = 0u; ci < numContact; ++ci) {
         uint ctOff = metaOff + ARBITER_META_U32 + ci * CONTACT_U32;
 
@@ -75,7 +77,7 @@ void applyImpulseAA(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact)
 
         vec2 normal = vec2(normalX, normalY);
         float vn = dot(dv, normal);
-        float dPn = massNormal * (-vn + bias);
+        float dPn = massNormal * (-vn + bias) * relax;
         float newPn = max(Pn + dPn, 0.0);
         float appliedDPn = newPn - Pn;
 
@@ -94,19 +96,15 @@ void applyImpulseAA(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact)
             atomicAddBodyF(bodyBIdx, 2u, torqueB);
         }
 
-        spdAX = getBodyF(bodyAIdx, 0u);
-        spdAY = getBodyF(bodyAIdx, 1u);
-        angA  = getBodyF(bodyAIdx, 2u);
-        spdBX = getBodyF(bodyBIdx, 0u);
-        spdBY = getBodyF(bodyBIdx, 1u);
-        angB  = getBodyF(bodyBIdx, 2u);
+        float csR1impN = cross2D(vec2(r1X, r1Y), impulseN);
+        float csR2impN = cross2D(vec2(r2X, r2Y), impulseN);
 
-        dv = vec2(spdBX, spdBY) + vec2(-angB * r2Y, angB * r2X)
-           - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+        dv.x += (invMassA + invMassB) * impulseN.x + invIB * csR2impN * (-r2Y) + invIA * csR1impN * (-r1Y);
+        dv.y += (invMassA + invMassB) * impulseN.y + invIB * csR2impN * r2X + invIA * csR1impN * r1X;
 
         vec2 tangent = vec2(normalY, -normalX);
         float vt = dot(dv, tangent);
-        float dPt = massTangent * (-vt);
+        float dPt = massTangent * (-vt) * relax;
 
         float maxPt = friction * newPn;
         float newPt = clamp(Pt + dPt, -maxPt, maxPt);
@@ -137,6 +135,8 @@ void applyImpulseAD(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact)
     float invMassB  = getBodyF(bodyBIdx, 3u);
     float invIA     = getBodyF(bodyAIdx, 4u);
 
+    const float relax = 0.5;
+
     for (uint ci = 0u; ci < numContact; ++ci) {
         uint ctOff = metaOff + ARBITER_META_U32 + ci * CONTACT_U32;
 
@@ -162,7 +162,7 @@ void applyImpulseAD(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact)
 
         vec2 normal = vec2(normalX, normalY);
         float vn = dot(dv, normal);
-        float dPn = massNormal * (-vn + bias);
+        float dPn = massNormal * (-vn + bias) * relax;
         float newPn = max(Pn + dPn, 0.0);
         float appliedDPn = newPn - Pn;
 
@@ -179,18 +179,14 @@ void applyImpulseAD(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact)
             atomicAddBodyF(bodyBIdx, 1u, invMassB * impulseN.y);
         }
 
-        spdAX = getBodyF(bodyAIdx, 0u);
-        spdAY = getBodyF(bodyAIdx, 1u);
-        angA  = getBodyF(bodyAIdx, 2u);
-        spdBX = getBodyF(bodyBIdx, 0u);
-        spdBY = getBodyF(bodyBIdx, 1u);
+        float csR1impN = cross2D(vec2(r1X, r1Y), impulseN);
 
-        dv = vec2(spdBX, spdBY)
-           - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+        dv.x += (invMassA + invMassB) * impulseN.x + invIA * csR1impN * (-r1Y);
+        dv.y += (invMassA + invMassB) * impulseN.y + invIA * csR1impN * r1X;
 
         vec2 tangent = vec2(normalY, -normalX);
         float vt = dot(dv, tangent);
-        float dPt = massTangent * (-vt);
+        float dPt = massTangent * (-vt) * relax;
 
         float maxPt = friction * newPn;
         float newPt = clamp(Pt + dPt, -maxPt, maxPt);
@@ -220,6 +216,8 @@ void applyImpulseA(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) 
 
     if (invMassA == 0.0) return;
 
+    const float relax = 0.5;
+
     for (uint ci = 0u; ci < numContact; ++ci) {
         uint ctOff = metaOff + ARBITER_META_U32 + ci * CONTACT_U32;
 
@@ -242,7 +240,7 @@ void applyImpulseA(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) 
 
         vec2 normal = vec2(normalX, normalY);
         float vn = dot(dv, normal);
-        float dPn = massNormal * (-vn + bias);
+        float dPn = massNormal * (-vn + bias) * relax;
         float newPn = max(Pn + dPn, 0.0);
         float appliedDPn = newPn - Pn;
 
@@ -253,15 +251,14 @@ void applyImpulseA(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) 
         float torqueA = -invIA * cross2D(vec2(r1X, r1Y), impulseN);
         atomicAddBodyF(bodyAIdx, 2u, torqueA);
 
-        spdAX = getBodyF(bodyAIdx, 0u);
-        spdAY = getBodyF(bodyAIdx, 1u);
-        angA  = getBodyF(bodyAIdx, 2u);
+        float csR1impN = cross2D(vec2(r1X, r1Y), impulseN);
 
-        dv = -vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+        dv.x += invMassA * impulseN.x + invIA * csR1impN * (-r1Y);
+        dv.y += invMassA * impulseN.y + invIA * csR1impN * r1X;
 
         vec2 tangent = vec2(-normalY, normalX);
         float vt = dot(dv, tangent);
-        float dPt = massTangent * (-vt);
+        float dPt = massTangent * (-vt) * relax;
 
         float maxPt = friction * newPn;
         float newPt = clamp(Pt + dPt, -maxPt, maxPt);
@@ -284,6 +281,8 @@ void applyImpulseD(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) 
 
     if (invMassA == 0.0) return;
 
+    const float relax = 0.5;
+
     for (uint ci = 0u; ci < numContact; ++ci) {
         uint ctOff = metaOff + ARBITER_META_U32 + ci * CONTACT_U32;
 
@@ -303,7 +302,7 @@ void applyImpulseD(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) 
 
         vec2 normal = vec2(normalX, normalY);
         float vn = dot(dv, normal);
-        float dPn = massNormal * (-vn + bias);
+        float dPn = massNormal * (-vn + bias) * relax;
         float newPn = max(Pn + dPn, 0.0);
         float appliedDPn = newPn - Pn;
 
@@ -312,14 +311,12 @@ void applyImpulseD(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) 
         atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseN.x);
         atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseN.y);
 
-        spdAX = getBodyF(bodyAIdx, 0u);
-        spdAY = getBodyF(bodyAIdx, 1u);
-
-        dv = -vec2(spdAX, spdAY);
+        dv.x += invMassA * impulseN.x;
+        dv.y += invMassA * impulseN.y;
 
         vec2 tangent = vec2(normalY, -normalX);
         float vt = dot(dv, tangent);
-        float dPt = massTangent * (-vt);
+        float dPt = massTangent * (-vt) * relax;
 
         float maxPt = friction * newPn;
         float newPt = clamp(Pt + dPt, -maxPt, maxPt);

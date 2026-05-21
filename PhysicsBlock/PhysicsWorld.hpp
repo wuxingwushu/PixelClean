@@ -205,6 +205,19 @@ class PhysicsGPU;
         void SetUseGPUApplyImpulse(bool use) { mUseGPUApplyImpulse = use; }
         bool IsUseGPUApplyImpulse() const { return mUseGPUApplyImpulse; }
 
+        // CPU 各阶段耗时统计 (ms)
+        float mCollisionDetectionTimeMS = 0.0f;
+        float mPreStepTimeMS           = 0.0f;
+        float mApplyImpulseCPUTimeMS   = 0.0f;
+        float mPositionUpdateTimeMS    = 0.0f;
+        float mPostProcessTimeMS       = 0.0f;
+
+        float GetCollisionDetectionTimeMS() const { return mCollisionDetectionTimeMS; }
+        float GetPreStepTimeMS()           const { return mPreStepTimeMS; }
+        float GetApplyImpulseCPUTimeMS()   const { return mApplyImpulseCPUTimeMS; }
+        float GetPositionUpdateTimeMS()    const { return mPositionUpdateTimeMS; }
+        float GetPostProcessTimeMS()       const { return mPostProcessTimeMS; }
+
         unsigned int ObjectSize = 0;                             // 动态物理对象总数量
         unsigned int ApplyImpulseSize = PhysicsApplyImpulseSize; // 迭代次数
 

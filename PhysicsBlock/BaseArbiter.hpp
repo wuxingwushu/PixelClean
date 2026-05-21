@@ -185,6 +185,9 @@ namespace PhysicsBlock
 
         ArbiterKey key; // 两个碰撞对象的标识符
 
+        void *mOriginalObject1; // 原始顺序的第一个对象（与 key 可能不同，key 内部会交换指针顺序）
+        void *mOriginalObject2; // 原始顺序的第二个对象
+
     public:
         /**
          * @brief 构造函数
@@ -192,7 +195,8 @@ namespace PhysicsBlock
          * @param Object2 第二个碰撞对象
          * @details 创建一个裁决器，用于处理两个对象之间的碰撞
          */
-        BaseArbiter(void *Object1, void *Object2) : key(Object1, Object2) {};
+        BaseArbiter(void *Object1, void *Object2) : key(Object1, Object2),
+            mOriginalObject1(Object1), mOriginalObject2(Object2) {};
         
         /**
          * @brief 析构函数

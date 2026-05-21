@@ -2,6 +2,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <chrono>
+#include <unordered_map>
 
 namespace VulKan {
     class Device;
@@ -28,10 +29,14 @@ public:
 
     bool IsReady() const { return mReady; }
 
-    float GetLastFrameTimeMS() const { return mLastFrameTimeMS; }
+    float GetCPUUploadTimeMS()   const { return mCPUUploadTimeMS; }
+    float GetGPUExecuteTimeMS()  const { return mGPUExecuteTimeMS; }
+    float GetGPUReadbackTimeMS() const { return mGPUReadbackTimeMS; }
 
 private:
     void PackBodyBuffer();
+    void PackBodyStatic();
+    void PackBodyDynamic();
     void PackArbiterBuffer();
     void PackJointBuffer();
     void PackJunctionBuffer();
@@ -47,7 +52,9 @@ private:
     void EnsureJointCapacity(size_t N);
     void EnsureJunctionCapacity(size_t N);
 
-    void RecreateCalculates();
+    void RecreateCalculateArbiter();
+    void RecreateCalculateJoint();
+    void RecreateCalculateJunction();
 
     VulKan::Device* mDevice = nullptr;
     PhysicsWorld*  mWorld  = nullptr;
@@ -74,7 +81,15 @@ private:
     size_t mJointCapacity    = 0;
     size_t mJunctionCapacity = 0;
 
-    float mLastFrameTimeMS = 0.0f;
+    float mCPUUploadTimeMS   = 0.0f;
+    float mGPUExecuteTimeMS  = 0.0f;
+    float mGPUReadbackTimeMS = 0.0f;
+
+    std::unordered_map<void*, uint32_t> mBodyIndexMap;
+
+    std::vector<uint32_t> mCpuArbiterBuffer;
+    std::vector<float>    mCpuJointBuffer;
+    std::vector<float>    mCpuJunctionBuffer;
 };
 
 } // namespace PhysicsBlock

@@ -45,26 +45,10 @@ PhysicsGPU::~PhysicsGPU() {
 }
 
 uint32_t PhysicsGPU::GetBodyIndex(void* objPtr) {
-    auto& shapes    = mWorld->PhysicsShapeS;
-    auto& circles   = mWorld->PhysicsCircleS;
-    auto& particles = mWorld->PhysicsParticleS;
-    auto& lines     = mWorld->PhysicsLineS;
-
-    for (size_t i = 0; i < shapes.size(); ++i)
-        if (shapes[i] == objPtr) return (uint32_t)i;
-    size_t offset = shapes.size();
-    for (size_t i = 0; i < circles.size(); ++i)
-        if (circles[i] == objPtr) return (uint32_t)(offset + i);
-    offset += circles.size();
-    for (size_t i = 0; i < particles.size(); ++i)
-        if (particles[i] == objPtr) return (uint32_t)(offset + i);
-    offset += particles.size();
-    for (size_t i = 0; i < lines.size(); ++i)
-        if (lines[i] == objPtr) return (uint32_t)(offset + i);
-    offset += lines.size();
-
-    if (mWorld->GetMapFormwork() == objPtr) return (uint32_t)offset;
-
+    auto it = mBodyIndexMap.find(objPtr);
+    if (it != mBodyIndexMap.end()) {
+        return it->second;
+    }
     return INVALID_INDEX;
 }
 
@@ -78,7 +62,7 @@ uint32_t PhysicsGPU::GetArbiterGPUType(BaseArbiter* arb) {
     }
 }
 
-void PhysicsGPU::PackBodyBuffer() {
+void PhysicsGPU::PackBodyStatic() {
     auto& shapes    = mWorld->PhysicsShapeS;
     auto& circles   = mWorld->PhysicsCircleS;
     auto& particles = mWorld->PhysicsParticleS;
@@ -91,50 +75,90 @@ void PhysicsGPU::PackBodyBuffer() {
 
     EnsureBodyCapacity(N);
 
-    std::vector<float> cpuBody(N * BODY_FLOATS);
+    float* dst = reinterpret_cast<float*>(mBodyBuffer->getPersistentMappedPtr());
     size_t offset = 0;
 
-    auto packAngle = [&](PhysicsAngle* obj) {
-        cpuBody[offset + 0] = obj->speed.x;
-        cpuBody[offset + 1] = obj->speed.y;
-        cpuBody[offset + 2] = obj->angleSpeed;
-        cpuBody[offset + 3] = obj->invMass;
-        cpuBody[offset + 4] = obj->invMomentInertia;
-        cpuBody[offset + 5] = obj->mass;
-        cpuBody[offset + 6] = obj->friction;
-        cpuBody[offset + 7] = 0.0f;
+    auto writeStaticAngle = [&](PhysicsAngle* obj) {
+        dst[offset + 3] = obj->invMass;
+        dst[offset + 4] = obj->invMomentInertia;
+        dst[offset + 5] = obj->mass;
+        dst[offset + 6] = obj->friction;
+        dst[offset + 7] = 0.0f;
         offset += BODY_FLOATS;
     };
 
-    auto packParticle = [&](PhysicsParticle* obj) {
-        cpuBody[offset + 0] = obj->speed.x;
-        cpuBody[offset + 1] = obj->speed.y;
-        cpuBody[offset + 2] = 0.0f;
-        cpuBody[offset + 3] = obj->invMass;
-        cpuBody[offset + 4] = 0.0f;
-        cpuBody[offset + 5] = obj->mass;
-        cpuBody[offset + 6] = obj->friction;
-        cpuBody[offset + 7] = 0.0f;
+    auto writeStaticParticle = [&](PhysicsParticle* obj) {
+        dst[offset + 3] = obj->invMass;
+        dst[offset + 4] = 0.0f;
+        dst[offset + 5] = obj->mass;
+        dst[offset + 6] = obj->friction;
+        dst[offset + 7] = 0.0f;
         offset += BODY_FLOATS;
     };
 
-    for (auto* s : shapes)    packAngle(s);
-    for (auto* c : circles)   packAngle(c);
-    for (auto* p : particles) packParticle(p);
-    for (auto* l : lines)     packAngle(l);
+    for (auto* s : shapes)    writeStaticAngle(s);
+    for (auto* c : circles)   writeStaticAngle(c);
+    for (auto* p : particles) writeStaticParticle(p);
+    for (auto* l : lines)     writeStaticAngle(l);
 
     if (hasMap) {
-        cpuBody[offset + 0] = 0.0f;
-        cpuBody[offset + 1] = 0.0f;
-        cpuBody[offset + 2] = 0.0f;
-        cpuBody[offset + 3] = 0.0f;
-        cpuBody[offset + 4] = 0.0f;
-        cpuBody[offset + 5] = 0.0f;
-        cpuBody[offset + 6] = 0.0f;
-        cpuBody[offset + 7] = 0.0f;
+        dst[offset + 3] = 0.0f;
+        dst[offset + 4] = 0.0f;
+        dst[offset + 5] = 0.0f;
+        dst[offset + 6] = 0.0f;
+        dst[offset + 7] = 0.0f;
     }
+}
 
-    mBodyBuffer->updateBufferByMap(cpuBody.data(), N * BODY_BYTES);
+void PhysicsGPU::PackBodyDynamic() {
+    auto& shapes    = mWorld->PhysicsShapeS;
+    auto& circles   = mWorld->PhysicsCircleS;
+    auto& particles = mWorld->PhysicsParticleS;
+    auto& lines     = mWorld->PhysicsLineS;
+
+    size_t dynCount = shapes.size() + circles.size() + particles.size() + lines.size();
+    bool hasMap = (mWorld->GetMapFormwork() != nullptr);
+    size_t N = dynCount + (hasMap ? 1 : 0);
+
+    mBodyIndexMap.clear();
+    if (dynCount == 0) return;
+    mBodyIndexMap.reserve(N);
+
+    EnsureBodyCapacity(N);
+
+    float* dst = reinterpret_cast<float*>(mBodyBuffer->getPersistentMappedPtr());
+    size_t offset = 0;
+    uint32_t idx = 0;
+
+    auto writeDynamicAngle = [&](PhysicsAngle* obj) {
+        mBodyIndexMap[obj] = idx++;
+        dst[offset + 0] = obj->speed.x;
+        dst[offset + 1] = obj->speed.y;
+        dst[offset + 2] = obj->angleSpeed;
+        offset += BODY_FLOATS;
+    };
+
+    auto writeDynamicParticle = [&](PhysicsParticle* obj) {
+        mBodyIndexMap[obj] = idx++;
+        dst[offset + 0] = obj->speed.x;
+        dst[offset + 1] = obj->speed.y;
+        dst[offset + 2] = 0.0f;
+        offset += BODY_FLOATS;
+    };
+
+    for (auto* s : shapes)    writeDynamicAngle(s);
+    for (auto* c : circles)   writeDynamicAngle(c);
+    for (auto* p : particles) writeDynamicParticle(p);
+    for (auto* l : lines)     writeDynamicAngle(l);
+
+    if (hasMap) {
+        mBodyIndexMap[mWorld->GetMapFormwork()] = idx;
+    }
+}
+
+void PhysicsGPU::PackBodyBuffer() {
+    PackBodyStatic();
+    PackBodyDynamic();
 }
 
 void PhysicsGPU::PackArbiterBuffer() {
@@ -144,14 +168,15 @@ void PhysicsGPU::PackArbiterBuffer() {
 
     EnsureArbiterCapacity(N);
 
-    std::vector<uint32_t> cpuArbiter(N * ARBITER_STRIDE_U32, 0);
+    mCpuArbiterBuffer.assign(N * ARBITER_STRIDE_U32, 0u);
+    std::vector<uint32_t>& cpuArbiter = mCpuArbiterBuffer;
 
     for (size_t i = 0; i < N; ++i) {
         BaseArbiter* arb = arbVec[i];
         uint32_t* slot = cpuArbiter.data() + i * ARBITER_STRIDE_U32;
 
-        slot[0] = GetBodyIndex(arb->key.object1);
-        slot[1] = GetBodyIndex(arb->key.object2);
+        slot[0] = GetBodyIndex(arb->mOriginalObject1);
+        slot[1] = GetBodyIndex(arb->mOriginalObject2);
         slot[2] = GetArbiterGPUType(arb);
         slot[3] = (uint32_t)arb->numContacts;
 
@@ -174,7 +199,8 @@ void PhysicsGPU::PackArbiterBuffer() {
         }
     }
 
-    mArbiterBuffer->updateBufferByMap(cpuArbiter.data(), N * ARBITER_STRIDE_BYTES);
+    memcpy(reinterpret_cast<uint32_t*>(mArbiterBuffer->getPersistentMappedPtr()),
+           cpuArbiter.data(), N * ARBITER_STRIDE_BYTES);
 }
 
 void PhysicsGPU::PackJointBuffer() {
@@ -184,7 +210,8 @@ void PhysicsGPU::PackJointBuffer() {
 
     EnsureJointCapacity(N);
 
-    std::vector<float> cpuJoint(N * JOINT_FLOATS);
+    mCpuJointBuffer.resize(N * JOINT_FLOATS);
+    std::vector<float>& cpuJoint = mCpuJointBuffer;
 
     for (size_t i = 0; i < N; ++i) {
         PhysicsJoint* j = jointVec[i];
@@ -210,7 +237,8 @@ void PhysicsGPU::PackJointBuffer() {
         for (int k = 15; k < (int)JOINT_FLOATS; ++k) slot[k] = 0.0f;
     }
 
-    mJointBuffer->updateBufferByMap(cpuJoint.data(), N * JOINT_BYTES);
+    memcpy(reinterpret_cast<float*>(mJointBuffer->getPersistentMappedPtr()),
+           cpuJoint.data(), N * JOINT_BYTES);
 }
 
 void PhysicsGPU::PackJunctionBuffer() {
@@ -220,7 +248,8 @@ void PhysicsGPU::PackJunctionBuffer() {
 
     EnsureJunctionCapacity(N);
 
-    std::vector<float> cpuJunction(N * JUNCTION_FLOATS);
+    mCpuJunctionBuffer.resize(N * JUNCTION_FLOATS);
+    std::vector<float>& cpuJunction = mCpuJunctionBuffer;
 
     for (size_t i = 0; i < N; ++i) {
         BaseJunction* jn = junctionVec[i];
@@ -292,7 +321,8 @@ void PhysicsGPU::PackJunctionBuffer() {
         slot[19] = 0.0f;
     }
 
-    mJunctionBuffer->updateBufferByMap(cpuJunction.data(), N * JUNCTION_BYTES);
+    memcpy(reinterpret_cast<float*>(mJunctionBuffer->getPersistentMappedPtr()),
+           cpuJunction.data(), N * JUNCTION_BYTES);
 }
 
 void PhysicsGPU::UnpackBodyBuffer() {
@@ -304,7 +334,7 @@ void PhysicsGPU::UnpackBodyBuffer() {
     size_t N = shapes.size() + circles.size() + particles.size() + lines.size();
     if (N == 0) return;
 
-    float* mapped = reinterpret_cast<float*>(mBodyBuffer->getupdateBufferByMap());
+    float* mapped = reinterpret_cast<float*>(mBodyBuffer->getPersistentMappedPtr());
     size_t offset = 0;
 
     auto unpackAngle = [&](PhysicsAngle* obj) {
@@ -324,8 +354,6 @@ void PhysicsGPU::UnpackBodyBuffer() {
     for (auto* c : circles)   unpackAngle(c);
     for (auto* p : particles) unpackParticle(p);
     for (auto* l : lines)     unpackAngle(l);
-
-    mBodyBuffer->endupdateBufferByMap();
 }
 
 void PhysicsGPU::UnpackArbiterPnPt() {
@@ -333,7 +361,7 @@ void PhysicsGPU::UnpackArbiterPnPt() {
     size_t N = arbVec.size();
     if (N == 0) return;
 
-    uint32_t* mapped = reinterpret_cast<uint32_t*>(mArbiterBuffer->getupdateBufferByMap());
+    uint32_t* mapped = reinterpret_cast<uint32_t*>(mArbiterBuffer->getPersistentMappedPtr());
 
     for (size_t i = 0; i < N; ++i) {
         BaseArbiter* arb = arbVec[i];
@@ -346,8 +374,6 @@ void PhysicsGPU::UnpackArbiterPnPt() {
             arb->contacts[ci].Pt = ct[11];
         }
     }
-
-    mArbiterBuffer->endupdateBufferByMap();
 }
 
 void PhysicsGPU::EnsureBodyCapacity(size_t N) {
@@ -358,8 +384,12 @@ void PhysicsGPU::EnsureBodyCapacity(size_t N) {
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
+    mBodyBuffer->getPersistentMappedPtr();
     mBodyCapacity = N;
-    RecreateCalculates();
+    RecreateCalculateArbiter();
+    RecreateCalculateJoint();
+    RecreateCalculateJunction();
+    PackBodyStatic();
 }
 
 void PhysicsGPU::EnsureArbiterCapacity(size_t N) {
@@ -370,8 +400,9 @@ void PhysicsGPU::EnsureArbiterCapacity(size_t N) {
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
+    mArbiterBuffer->getPersistentMappedPtr();
     mArbiterCapacity = N;
-    RecreateCalculates();
+    RecreateCalculateArbiter();
 }
 
 void PhysicsGPU::EnsureJointCapacity(size_t N) {
@@ -382,8 +413,9 @@ void PhysicsGPU::EnsureJointCapacity(size_t N) {
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
+    mJointBuffer->getPersistentMappedPtr();
     mJointCapacity = N;
-    RecreateCalculates();
+    RecreateCalculateJoint();
 }
 
 void PhysicsGPU::EnsureJunctionCapacity(size_t N) {
@@ -394,8 +426,9 @@ void PhysicsGPU::EnsureJunctionCapacity(size_t N) {
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
+    mJunctionBuffer->getPersistentMappedPtr();
     mJunctionCapacity = N;
-    RecreateCalculates();
+    RecreateCalculateJunction();
 }
 
 void PhysicsGPU::Initialize() {
@@ -425,16 +458,19 @@ void PhysicsGPU::Initialize() {
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
+    mArbiterCount->getPersistentMappedPtr();
     mJointCount = new VulKan::Buffer(
         mDevice, COUNT_BUFFER_BYTES,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
+    mJointCount->getPersistentMappedPtr();
     mJunctionCount = new VulKan::Buffer(
         mDevice, COUNT_BUFFER_BYTES,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
+    mJunctionCount->getPersistentMappedPtr();
 
     if (mBodyBuffer && mArbiterBuffer) {
         std::vector<VulKan::CalculateStruct> calcStruct(3);
@@ -472,7 +508,7 @@ void PhysicsGPU::Initialize() {
     mReady = true;
 }
 
-void PhysicsGPU::RecreateCalculates() {
+void PhysicsGPU::RecreateCalculateArbiter() {
     if (mBodyBuffer && mArbiterBuffer && mArbiterCount) {
         delete mCalculateArbiter;
         mCalculateArbiter = nullptr;
@@ -484,7 +520,9 @@ void PhysicsGPU::RecreateCalculates() {
             mDevice, &calcStruct, "shaders/physics_arbiter.comp.spv"
         );
     }
+}
 
+void PhysicsGPU::RecreateCalculateJoint() {
     if (mBodyBuffer && mJointBuffer && mJointCount) {
         delete mCalculateJoint;
         mCalculateJoint = nullptr;
@@ -496,7 +534,9 @@ void PhysicsGPU::RecreateCalculates() {
             mDevice, &calcStruct, "shaders/physics_joint.comp.spv"
         );
     }
+}
 
+void PhysicsGPU::RecreateCalculateJunction() {
     if (mBodyBuffer && mJunctionBuffer && mJunctionCount) {
         delete mCalculateJunction;
         mCalculateJunction = nullptr;
@@ -513,9 +553,9 @@ void PhysicsGPU::RecreateCalculates() {
 void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) {
     if (!mReady) return;
 
-    auto tStart = std::chrono::high_resolution_clock::now();
+    auto tUploadStart = std::chrono::high_resolution_clock::now();
 
-    PackBodyBuffer();
+    PackBodyDynamic();
     PackArbiterBuffer();
     PackJointBuffer();
     PackJunctionBuffer();
@@ -523,19 +563,29 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
     uint32_t N_arbiters  = (uint32_t)mWorld->CollideGroupVector.size();
     uint32_t N_joints    = (uint32_t)mWorld->PhysicsJointS.size();
     uint32_t N_junctions = (uint32_t)mWorld->BaseJunctionS.size();
-    mArbiterCount->updateBufferByMap(&N_arbiters, sizeof(uint32_t));
-    mJointCount->updateBufferByMap(&N_joints, sizeof(uint32_t));
-    mJunctionCount->updateBufferByMap(&N_junctions, sizeof(uint32_t));
+    memcpy(mArbiterCount->getPersistentMappedPtr(), &N_arbiters, sizeof(uint32_t));
+    memcpy(mJointCount->getPersistentMappedPtr(), &N_joints, sizeof(uint32_t));
+    memcpy(mJunctionCount->getPersistentMappedPtr(), &N_junctions, sizeof(uint32_t));
+
+    auto tUploadEnd = std::chrono::high_resolution_clock::now();
+    mCPUUploadTimeMS = std::chrono::duration<float, std::milli>(tUploadEnd - tUploadStart).count();
+
+    auto tExecuteStart = std::chrono::high_resolution_clock::now();
 
     mSharedCmdPool->reset();
     mSharedCmdBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     VkCommandBuffer cmd = mSharedCmdBuffer->getCommandBuffer();
 
-    VkMemoryBarrier ssboBarrier = {};
-    ssboBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    ssboBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    ssboBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    VkBufferMemoryBarrier bodyBarrier = {};
+    bodyBarrier.sType         = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    bodyBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    bodyBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    bodyBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bodyBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bodyBarrier.buffer        = mBodyBuffer->getBuffer();
+    bodyBarrier.offset        = 0;
+    bodyBarrier.size          = VK_WHOLE_SIZE;
 
     uint32_t groupsA = (N_arbiters  + 255) / 256;
     uint32_t groupsJ = (N_joints    + 255) / 256;
@@ -547,7 +597,10 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
             vkCmdPipelineBarrier(cmd,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 1, &ssboBarrier, 0, nullptr, 0, nullptr);
+                0,
+                0, nullptr,
+                1, &bodyBarrier,
+                0, nullptr);
         }
 
         if (N_joints > 0 && mCalculateJoint) {
@@ -555,7 +608,10 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
             vkCmdPipelineBarrier(cmd,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 1, &ssboBarrier, 0, nullptr, 0, nullptr);
+                0,
+                0, nullptr,
+                1, &bodyBarrier,
+                0, nullptr);
         }
 
         if (N_junctions > 0 && mCalculateJunction) {
@@ -563,18 +619,26 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
             vkCmdPipelineBarrier(cmd,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 1, &ssboBarrier, 0, nullptr, 0, nullptr);
+                0,
+                0, nullptr,
+                1, &bodyBarrier,
+                0, nullptr);
         }
     }
 
     mSharedCmdBuffer->end();
     mSharedCmdBuffer->submitSync(mDevice->getGraphicQueue());
 
+    auto tExecuteEnd = std::chrono::high_resolution_clock::now();
+    mGPUExecuteTimeMS = std::chrono::duration<float, std::milli>(tExecuteEnd - tExecuteStart).count();
+
+    auto tReadbackStart = std::chrono::high_resolution_clock::now();
+
     UnpackBodyBuffer();
     UnpackArbiterPnPt();
 
-    auto tEnd = std::chrono::high_resolution_clock::now();
-    mLastFrameTimeMS = std::chrono::duration<float, std::milli>(tEnd - tStart).count();
+    auto tReadbackEnd = std::chrono::high_resolution_clock::now();
+    mGPUReadbackTimeMS = std::chrono::duration<float, std::milli>(tReadbackEnd - tReadbackStart).count();
 }
 
 } // namespace PhysicsBlock

@@ -20,7 +20,7 @@ namespace GAME
 	{
 		LOGD("PhysicsTest::PhysicsTest constructor");
 		// 添加视觉辅助
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 100000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 200000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
 			mCameraVPMatricesBuffer);
@@ -223,6 +223,8 @@ namespace GAME
 					mPhysicsWorld->SetGPU(mPhysicsGPU);
 				}
 			}
+
+			mPhysicsWorld->SetUseGPUApplyImpulse(mUseGPUApplyImpulse);
 		}
 		if (ImGui::Button("重置")) {
 			ResetBool = true;
@@ -276,8 +278,10 @@ namespace GAME
 			ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
 
 			if (mUseGPUApplyImpulse) {
-				if (mGPULastFrameTime > 0.0f) {
-					ImGui::TextColored(green, u8"  GPU 耗时: %.3f ms", mGPULastFrameTime);
+				if (mPhysicsGPU->GetGPUExecuteTimeMS() > 0.0f) {
+					ImGui::TextColored(green, u8"  CPU→GPU 耗时: %.3f ms", mPhysicsGPU->GetCPUUploadTimeMS());
+					ImGui::TextColored(green, u8"  GPU 计算 耗时: %.3f ms", mPhysicsGPU->GetGPUExecuteTimeMS());
+					ImGui::TextColored(green, u8"  GPU→CPU 耗时: %.3f ms", mPhysicsGPU->GetGPUReadbackTimeMS());
 				} else {
 					ImGui::TextColored(green, u8"  GPU 模式运行中...");
 				}
@@ -449,7 +453,6 @@ namespace GAME
 
 				if (mUseGPUApplyImpulse && mGPUInitialized) {
 					mPhysicsWorld->PhysicsEmulator(PhysicsTick);
-					mGPULastFrameTime = mPhysicsGPU->GetLastFrameTimeMS();
 				} else {
 					mPhysicsWorld->PhysicsEmulator(PhysicsTick);
 				}

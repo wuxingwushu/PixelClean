@@ -41,18 +41,7 @@ void atomicAddBodyF(uint bodyIdx, uint off, float val) {
 
 float cross2D(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
 
-void main() {
-    uint idx = gl_GlobalInvocationID.x;
-    if (idx >= elementCount) return;
-
-    uint metaOff = idx * ARBITER_STRIDE_U32;
-    uint type        = arbiterRaw[metaOff + 2];
-    uint numContact  = arbiterRaw[metaOff + 3];
-    if (numContact == 0u) return;
-
-    uint bodyAIdx = arbiterRaw[metaOff + 0];
-    uint bodyBIdx = arbiterRaw[metaOff + 1];
-
+void applyImpulseAA(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) {
     float invMassA  = getBodyF(bodyAIdx, 3u);
     float invMassB  = getBodyF(bodyBIdx, 3u);
     float invIA     = getBodyF(bodyAIdx, 4u);
@@ -81,21 +70,8 @@ void main() {
         float spdBY = getBodyF(bodyBIdx, 1u);
         float angB  = getBodyF(bodyBIdx, 2u);
 
-        vec2 dv;
-        if (type == ARBITER_TYPE_AA) {
-            dv = vec2(spdBX, spdBY) + vec2(-angB * r2Y, angB * r2X)
-               - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
-        } else if (type == ARBITER_TYPE_AD) {
-            dv = vec2(spdBX, spdBY)
-               - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
-        } else if (type == ARBITER_TYPE_A) {
-            dv = -vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
-            invIB = 0.0;
-        } else {
-            dv = -vec2(spdAX, spdAY);
-            invIA = 0.0;
-            invIB = 0.0;
-        }
+        vec2 dv = vec2(spdBX, spdBY) + vec2(-angB * r2Y, angB * r2X)
+                - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
 
         vec2 normal = vec2(normalX, normalY);
         float vn = dot(dv, normal);
@@ -111,7 +87,7 @@ void main() {
             float torqueA = -invIA * cross2D(vec2(r1X, r1Y), impulseN);
             atomicAddBodyF(bodyAIdx, 2u, torqueA);
         }
-        if (invMassB > 0.0 && type != ARBITER_TYPE_A && type != ARBITER_TYPE_D) {
+        if (invMassB > 0.0) {
             atomicAddBodyF(bodyBIdx, 0u, invMassB * impulseN.x);
             atomicAddBodyF(bodyBIdx, 1u, invMassB * impulseN.y);
             float torqueB = invIB * cross2D(vec2(r2X, r2Y), impulseN);
@@ -125,24 +101,10 @@ void main() {
         spdBY = getBodyF(bodyBIdx, 1u);
         angB  = getBodyF(bodyBIdx, 2u);
 
-        if (type == ARBITER_TYPE_AA) {
-            dv = vec2(spdBX, spdBY) + vec2(-angB * r2Y, angB * r2X)
-               - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
-        } else if (type == ARBITER_TYPE_AD) {
-            dv = vec2(spdBX, spdBY)
-               - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
-        } else if (type == ARBITER_TYPE_A) {
-            dv = -vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
-        } else {
-            dv = -vec2(spdAX, spdAY);
-        }
+        dv = vec2(spdBX, spdBY) + vec2(-angB * r2Y, angB * r2X)
+           - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
 
-        vec2 tangent;
-        if (type == ARBITER_TYPE_A) {
-            tangent = vec2(-normalY, normalX);
-        } else {
-            tangent = vec2(normalY, -normalX);
-        }
+        vec2 tangent = vec2(normalY, -normalX);
         float vt = dot(dv, tangent);
         float dPt = massTangent * (-vt);
 
@@ -158,7 +120,7 @@ void main() {
             float torqueA = -invIA * cross2D(vec2(r1X, r1Y), impulseT);
             atomicAddBodyF(bodyAIdx, 2u, torqueA);
         }
-        if (invMassB > 0.0 && type != ARBITER_TYPE_A && type != ARBITER_TYPE_D) {
+        if (invMassB > 0.0) {
             atomicAddBodyF(bodyBIdx, 0u, invMassB * impulseT.x);
             atomicAddBodyF(bodyBIdx, 1u, invMassB * impulseT.y);
             float torqueB = invIB * cross2D(vec2(r2X, r2Y), impulseT);
@@ -167,5 +129,231 @@ void main() {
 
         arbiterRaw[ctOff + 10u] = floatBitsToUint(newPn);
         arbiterRaw[ctOff + 11u] = floatBitsToUint(newPt);
+    }
+}
+
+void applyImpulseAD(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) {
+    float invMassA  = getBodyF(bodyAIdx, 3u);
+    float invMassB  = getBodyF(bodyBIdx, 3u);
+    float invIA     = getBodyF(bodyAIdx, 4u);
+
+    for (uint ci = 0u; ci < numContact; ++ci) {
+        uint ctOff = metaOff + ARBITER_META_U32 + ci * CONTACT_U32;
+
+        float normalX    = uintBitsToFloat(arbiterRaw[ctOff + 0u]);
+        float normalY    = uintBitsToFloat(arbiterRaw[ctOff + 1u]);
+        float r1X        = uintBitsToFloat(arbiterRaw[ctOff + 2u]);
+        float r1Y        = uintBitsToFloat(arbiterRaw[ctOff + 3u]);
+        float massNormal = uintBitsToFloat(arbiterRaw[ctOff + 6u]);
+        float massTangent= uintBitsToFloat(arbiterRaw[ctOff + 7u]);
+        float bias       = uintBitsToFloat(arbiterRaw[ctOff + 8u]);
+        float friction   = uintBitsToFloat(arbiterRaw[ctOff + 9u]);
+        float Pn         = uintBitsToFloat(arbiterRaw[ctOff + 10u]);
+        float Pt         = uintBitsToFloat(arbiterRaw[ctOff + 11u]);
+
+        float spdAX = getBodyF(bodyAIdx, 0u);
+        float spdAY = getBodyF(bodyAIdx, 1u);
+        float angA  = getBodyF(bodyAIdx, 2u);
+        float spdBX = getBodyF(bodyBIdx, 0u);
+        float spdBY = getBodyF(bodyBIdx, 1u);
+
+        vec2 dv = vec2(spdBX, spdBY)
+                - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+
+        vec2 normal = vec2(normalX, normalY);
+        float vn = dot(dv, normal);
+        float dPn = massNormal * (-vn + bias);
+        float newPn = max(Pn + dPn, 0.0);
+        float appliedDPn = newPn - Pn;
+
+        vec2 impulseN = appliedDPn * normal;
+
+        if (invMassA > 0.0) {
+            atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseN.x);
+            atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseN.y);
+            float torqueA = -invIA * cross2D(vec2(r1X, r1Y), impulseN);
+            atomicAddBodyF(bodyAIdx, 2u, torqueA);
+        }
+        if (invMassB > 0.0) {
+            atomicAddBodyF(bodyBIdx, 0u, invMassB * impulseN.x);
+            atomicAddBodyF(bodyBIdx, 1u, invMassB * impulseN.y);
+        }
+
+        spdAX = getBodyF(bodyAIdx, 0u);
+        spdAY = getBodyF(bodyAIdx, 1u);
+        angA  = getBodyF(bodyAIdx, 2u);
+        spdBX = getBodyF(bodyBIdx, 0u);
+        spdBY = getBodyF(bodyBIdx, 1u);
+
+        dv = vec2(spdBX, spdBY)
+           - vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+
+        vec2 tangent = vec2(normalY, -normalX);
+        float vt = dot(dv, tangent);
+        float dPt = massTangent * (-vt);
+
+        float maxPt = friction * newPn;
+        float newPt = clamp(Pt + dPt, -maxPt, maxPt);
+        float appliedDPt = newPt - Pt;
+
+        vec2 impulseT = appliedDPt * tangent;
+
+        if (invMassA > 0.0) {
+            atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseT.x);
+            atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseT.y);
+            float torqueA = -invIA * cross2D(vec2(r1X, r1Y), impulseT);
+            atomicAddBodyF(bodyAIdx, 2u, torqueA);
+        }
+        if (invMassB > 0.0) {
+            atomicAddBodyF(bodyBIdx, 0u, invMassB * impulseT.x);
+            atomicAddBodyF(bodyBIdx, 1u, invMassB * impulseT.y);
+        }
+
+        arbiterRaw[ctOff + 10u] = floatBitsToUint(newPn);
+        arbiterRaw[ctOff + 11u] = floatBitsToUint(newPt);
+    }
+}
+
+void applyImpulseA(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) {
+    float invMassA  = getBodyF(bodyAIdx, 3u);
+    float invIA     = getBodyF(bodyAIdx, 4u);
+
+    if (invMassA == 0.0) return;
+
+    for (uint ci = 0u; ci < numContact; ++ci) {
+        uint ctOff = metaOff + ARBITER_META_U32 + ci * CONTACT_U32;
+
+        float normalX    = uintBitsToFloat(arbiterRaw[ctOff + 0u]);
+        float normalY    = uintBitsToFloat(arbiterRaw[ctOff + 1u]);
+        float r1X        = uintBitsToFloat(arbiterRaw[ctOff + 2u]);
+        float r1Y        = uintBitsToFloat(arbiterRaw[ctOff + 3u]);
+        float massNormal = uintBitsToFloat(arbiterRaw[ctOff + 6u]);
+        float massTangent= uintBitsToFloat(arbiterRaw[ctOff + 7u]);
+        float bias       = uintBitsToFloat(arbiterRaw[ctOff + 8u]);
+        float friction   = uintBitsToFloat(arbiterRaw[ctOff + 9u]);
+        float Pn         = uintBitsToFloat(arbiterRaw[ctOff + 10u]);
+        float Pt         = uintBitsToFloat(arbiterRaw[ctOff + 11u]);
+
+        float spdAX = getBodyF(bodyAIdx, 0u);
+        float spdAY = getBodyF(bodyAIdx, 1u);
+        float angA  = getBodyF(bodyAIdx, 2u);
+
+        vec2 dv = -vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+
+        vec2 normal = vec2(normalX, normalY);
+        float vn = dot(dv, normal);
+        float dPn = massNormal * (-vn + bias);
+        float newPn = max(Pn + dPn, 0.0);
+        float appliedDPn = newPn - Pn;
+
+        vec2 impulseN = appliedDPn * normal;
+
+        atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseN.x);
+        atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseN.y);
+        float torqueA = -invIA * cross2D(vec2(r1X, r1Y), impulseN);
+        atomicAddBodyF(bodyAIdx, 2u, torqueA);
+
+        spdAX = getBodyF(bodyAIdx, 0u);
+        spdAY = getBodyF(bodyAIdx, 1u);
+        angA  = getBodyF(bodyAIdx, 2u);
+
+        dv = -vec2(spdAX, spdAY) - vec2(-angA * r1Y, angA * r1X);
+
+        vec2 tangent = vec2(-normalY, normalX);
+        float vt = dot(dv, tangent);
+        float dPt = massTangent * (-vt);
+
+        float maxPt = friction * newPn;
+        float newPt = clamp(Pt + dPt, -maxPt, maxPt);
+        float appliedDPt = newPt - Pt;
+
+        vec2 impulseT = appliedDPt * tangent;
+
+        atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseT.x);
+        atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseT.y);
+        torqueA = -invIA * cross2D(vec2(r1X, r1Y), impulseT);
+        atomicAddBodyF(bodyAIdx, 2u, torqueA);
+
+        arbiterRaw[ctOff + 10u] = floatBitsToUint(newPn);
+        arbiterRaw[ctOff + 11u] = floatBitsToUint(newPt);
+    }
+}
+
+void applyImpulseD(uint bodyAIdx, uint bodyBIdx, uint metaOff, uint numContact) {
+    float invMassA  = getBodyF(bodyAIdx, 3u);
+
+    if (invMassA == 0.0) return;
+
+    for (uint ci = 0u; ci < numContact; ++ci) {
+        uint ctOff = metaOff + ARBITER_META_U32 + ci * CONTACT_U32;
+
+        float normalX    = uintBitsToFloat(arbiterRaw[ctOff + 0u]);
+        float normalY    = uintBitsToFloat(arbiterRaw[ctOff + 1u]);
+        float massNormal = uintBitsToFloat(arbiterRaw[ctOff + 6u]);
+        float massTangent= uintBitsToFloat(arbiterRaw[ctOff + 7u]);
+        float bias       = uintBitsToFloat(arbiterRaw[ctOff + 8u]);
+        float friction   = uintBitsToFloat(arbiterRaw[ctOff + 9u]);
+        float Pn         = uintBitsToFloat(arbiterRaw[ctOff + 10u]);
+        float Pt         = uintBitsToFloat(arbiterRaw[ctOff + 11u]);
+
+        float spdAX = getBodyF(bodyAIdx, 0u);
+        float spdAY = getBodyF(bodyAIdx, 1u);
+
+        vec2 dv = -vec2(spdAX, spdAY);
+
+        vec2 normal = vec2(normalX, normalY);
+        float vn = dot(dv, normal);
+        float dPn = massNormal * (-vn + bias);
+        float newPn = max(Pn + dPn, 0.0);
+        float appliedDPn = newPn - Pn;
+
+        vec2 impulseN = appliedDPn * normal;
+
+        atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseN.x);
+        atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseN.y);
+
+        spdAX = getBodyF(bodyAIdx, 0u);
+        spdAY = getBodyF(bodyAIdx, 1u);
+
+        dv = -vec2(spdAX, spdAY);
+
+        vec2 tangent = vec2(normalY, -normalX);
+        float vt = dot(dv, tangent);
+        float dPt = massTangent * (-vt);
+
+        float maxPt = friction * newPn;
+        float newPt = clamp(Pt + dPt, -maxPt, maxPt);
+        float appliedDPt = newPt - Pt;
+
+        vec2 impulseT = appliedDPt * tangent;
+
+        atomicAddBodyF(bodyAIdx, 0u, -invMassA * impulseT.x);
+        atomicAddBodyF(bodyAIdx, 1u, -invMassA * impulseT.y);
+
+        arbiterRaw[ctOff + 10u] = floatBitsToUint(newPn);
+        arbiterRaw[ctOff + 11u] = floatBitsToUint(newPt);
+    }
+}
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= elementCount) return;
+
+    uint metaOff = idx * ARBITER_STRIDE_U32;
+    uint type        = arbiterRaw[metaOff + 2];
+    uint numContact  = arbiterRaw[metaOff + 3];
+    if (numContact == 0u) return;
+
+    uint bodyAIdx = arbiterRaw[metaOff + 0];
+    uint bodyBIdx = arbiterRaw[metaOff + 1];
+
+    if (type == ARBITER_TYPE_AA) {
+        applyImpulseAA(bodyAIdx, bodyBIdx, metaOff, numContact);
+    } else if (type == ARBITER_TYPE_AD) {
+        applyImpulseAD(bodyAIdx, bodyBIdx, metaOff, numContact);
+    } else if (type == ARBITER_TYPE_A) {
+        applyImpulseA(bodyAIdx, bodyBIdx, metaOff, numContact);
+    } else {
+        applyImpulseD(bodyAIdx, bodyBIdx, metaOff, numContact);
     }
 }

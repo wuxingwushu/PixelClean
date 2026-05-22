@@ -12,7 +12,7 @@ namespace VulKan {
 	class Calculate
 	{
 	public:
-		Calculate(Device* Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp);
+		Calculate(Device* Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp, uint32_t localSizeX = 64);
 		~Calculate();
 
 		/*

@@ -4,7 +4,7 @@
 
 namespace VulKan {
 
-	Calculate::Calculate(Device* Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp)
+	Calculate::Calculate(Device* Device, std::vector<CalculateStruct>* CalculateStructS, const char* Comp, uint32_t localSizeX)
 	{
 		LOGD("[Calculate] Constructor");
 		wDevice = Device;
@@ -95,11 +95,23 @@ namespace VulKan {
 
 
 
+		VkSpecializationMapEntry specializationMapEntry = {};
+		specializationMapEntry.constantID = 0;
+		specializationMapEntry.offset     = 0;
+		specializationMapEntry.size       = sizeof(uint32_t);
+
+		VkSpecializationInfo specializationInfo = {};
+		specializationInfo.mapEntryCount = 1;
+		specializationInfo.pMapEntries   = &specializationMapEntry;
+		specializationInfo.dataSize      = sizeof(uint32_t);
+		specializationInfo.pData         = &localSizeX;
+
 		VkPipelineShaderStageCreateInfo shaderStageCreateInfo = {};
 		shaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		shaderStageCreateInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 		shaderStageCreateInfo.module = mShaderModule;
 		shaderStageCreateInfo.pName = "main";
+		shaderStageCreateInfo.pSpecializationInfo = &specializationInfo;
 
 		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

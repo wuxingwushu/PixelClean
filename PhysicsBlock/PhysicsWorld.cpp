@@ -719,6 +719,7 @@ namespace PhysicsBlock
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
         for (unsigned int i = 0; i < xThreadNum; ++i)
         {
+            mCollideOutputs[i].mThreadIndex = static_cast<unsigned char>(i);
             xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum, &mCollideOutputs[i]));
         }
 #else
@@ -963,6 +964,7 @@ namespace PhysicsBlock
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
         for (unsigned int i = 0; i < xThreadNum; ++i)
         {
+            mCollideOutputs[i].mThreadIndex = static_cast<unsigned char>(i);
             xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum, &mCollideOutputs[i]));
         }
 #else
@@ -1747,8 +1749,9 @@ namespace PhysicsBlock
     Type2##2 = (Type2 *)GetIndexPtr(data["CollideGroupVector"][i]["body2Type"], data["CollideGroupVector"][i]["body2"]); \
     if (Type1##1 && Type2##2)                                                                                            \
     {                                                                                                                    \
-        Arbiter_##Ptr = Pool##Arbiter_.newElement(Type1##1, Type2##2);                                                   \
+        Arbiter_##Ptr = Pool##Arbiter_[kMainThreadPoolIndex].newElement(Type1##1, Type2##2);                             \
         Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]);                                         \
+        Arbiter_##Ptr->mAllocThreadIndex = static_cast<unsigned char>(kMainThreadPoolIndex);                             \
         NewCollideGroup.push_back(Arbiter_##Ptr);                                                                        \
     }
 
@@ -1756,8 +1759,9 @@ namespace PhysicsBlock
     Type##1 = (Type *)GetIndexPtr(data["CollideGroupVector"][i]["body1Type"], data["CollideGroupVector"][i]["body1"]); \
     if (Type##1 && wMapFormwork)                                                                                       \
     {                                                                                                                   \
-        Arbiter_##Ptr = Pool##Arbiter_.newElement(Type##1, wMapFormwork);                                               \
+        Arbiter_##Ptr = Pool##Arbiter_[kMainThreadPoolIndex].newElement(Type##1, wMapFormwork);                         \
         Arbiter_##Ptr->JsonContrarySerialization(data["CollideGroupVector"][i]);                                        \
+        Arbiter_##Ptr->mAllocThreadIndex = static_cast<unsigned char>(kMainThreadPoolIndex);                            \
         NewCollideGroup.push_back(Arbiter_##Ptr);                                                                       \
     }
 

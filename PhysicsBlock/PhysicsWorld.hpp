@@ -64,16 +64,19 @@ class PhysicsGPU;
 #if MemoryPoolBool
 #if ThreadPoolBool
 
+// 每线程独占 MemoryPool 的数组大小（8 worker + 1 main）
+constexpr unsigned kMaxPoolThreads = 9;
+constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
+
 /**
- * @brief 辅助生成创建对象内存池声明
+ * @brief 辅助生成创建对象内存池声明（per-thread 数组版，无锁）
  * @param Arbiter_ 处理两种物体碰撞的类
  * @param Type1 物体1类型
  * @param Name1 物体1简称
  * @param Type2 物体2类型
  * @param Name2 物体2简称 */
-#define AuxiliaryMemoryPool(Arbiter_, Type1, Name1, Type2, Name2) \
-    std::mutex mLock##Name1##Name2;                               \
-    MemoryPool<Arbiter_, 1000 * sizeof(Arbiter_)> Pool##Arbiter_; \
+#define AuxiliaryMemoryPool(Arbiter_, Type1, Name1, Type2, Name2)                        \
+    MemoryPool<Arbiter_, 1000 * sizeof(Arbiter_)> Pool##Arbiter_[kMaxPoolThreads];       \
     void Arbiter(Type1 *Name1, Type2 *Name2);
 
 /**
@@ -87,11 +90,12 @@ class PhysicsGPU;
 #define AuxiliaryArbiter(Arbiter_, Type1, Name1, Type2, Name2, ID) \
     inline void PhysicsWorld::Arbiter(Type1 *Name1, Type2 *Name2)  \
     {                                                              \
-        BaseArbiter *ptr;                                          \
-        mLock##Name1##Name2.lock();                                \
-        ptr = Pool##Arbiter_.newElement(Name1, Name2);             \
-        mLock##Name1##Name2.unlock();                              \
-        ptr->key.PoolID = ID;                                      \
+        const unsigned char tId = tlCollideOutput                  \
+            ? tlCollideOutput->mThreadIndex                        \
+            : static_cast<unsigned char>(kMainThreadPoolIndex);    \
+        BaseArbiter *ptr = Pool##Arbiter_[tId].newElement(Name1, Name2); \
+        ptr->key.PoolID = static_cast<char>(ID);                  \
+        ptr->mAllocThreadIndex = tId;                              \
         HandleCollideGroup(ptr);                                   \
     }
 
@@ -106,8 +110,7 @@ class PhysicsGPU;
 #define AuxiliaryDelete(Arbiter_, Type1, Name1, Type2, Name2, ID) \
     case ID:                                                      \
     {                                                             \
-        std::unique_lock<std::mutex> lock(mLock##Name1##Name2);   \
-        Pool##Arbiter_.deleteElement((Arbiter_ *)BA);             \
+        Pool##Arbiter_[BA->mAllocThreadIndex].deleteElement((Arbiter_ *)BA); \
     }                                                             \
     break;
 #else
@@ -184,6 +187,8 @@ class PhysicsGPU;
     // ========== 无锁碰撞输出缓冲区 ==========
     struct CollideOutput
     {
+        unsigned char mThreadIndex = static_cast<unsigned char>(kMainThreadPoolIndex);
+
         std::vector<BaseArbiter *> newGroup;
         std::vector<ArbiterKey> deleteGroup;
 

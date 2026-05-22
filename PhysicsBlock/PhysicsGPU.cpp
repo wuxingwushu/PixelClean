@@ -711,36 +711,6 @@ void PhysicsGPU::Initialize() {
     );
     mJunctionCount->getPersistentMappedPtr();
 
-    if (mBodyBuffer && mArbiterBuffer) {
-        std::vector<VulKan::CalculateStruct> calcStruct(3);
-        calcStruct[0].mBufferInfo = &mBodyBuffer->getBufferInfo();
-        calcStruct[1].mBufferInfo = &mArbiterBuffer->getBufferInfo();
-        calcStruct[2].mBufferInfo = &mArbiterCount->getBufferInfo();
-        mCalculateArbiter = new VulKan::Calculate(
-            mDevice, &calcStruct, "shaders/physics_arbiter.comp.spv"
-        );
-    }
-
-    if (mBodyBuffer && mJointBuffer) {
-        std::vector<VulKan::CalculateStruct> calcStruct(3);
-        calcStruct[0].mBufferInfo = &mBodyBuffer->getBufferInfo();
-        calcStruct[1].mBufferInfo = &mJointBuffer->getBufferInfo();
-        calcStruct[2].mBufferInfo = &mJointCount->getBufferInfo();
-        mCalculateJoint = new VulKan::Calculate(
-            mDevice, &calcStruct, "shaders/physics_joint.comp.spv"
-        );
-    }
-
-    if (mBodyBuffer && mJunctionBuffer) {
-        std::vector<VulKan::CalculateStruct> calcStruct(3);
-        calcStruct[0].mBufferInfo = &mBodyBuffer->getBufferInfo();
-        calcStruct[1].mBufferInfo = &mJunctionBuffer->getBufferInfo();
-        calcStruct[2].mBufferInfo = &mJunctionCount->getBufferInfo();
-        mCalculateJunction = new VulKan::Calculate(
-            mDevice, &calcStruct, "shaders/physics_junction.comp.spv"
-        );
-    }
-
     mSharedCmdPool   = new VulKan::CommandPool(mDevice);
     mSharedCmdBuffer = new VulKan::CommandBuffer(mDevice, mSharedCmdPool);
 
@@ -751,6 +721,36 @@ void PhysicsGPU::Initialize() {
     mLocalSizeX = sgSize * 2;
     if (mLocalSizeX < 32)  mLocalSizeX = 32;
     if (mLocalSizeX > 256) mLocalSizeX = 256;
+
+    if (mBodyBuffer && mArbiterBuffer) {
+        std::vector<VulKan::CalculateStruct> calcStruct(3);
+        calcStruct[0].mBufferInfo = &mBodyBuffer->getBufferInfo();
+        calcStruct[1].mBufferInfo = &mArbiterBuffer->getBufferInfo();
+        calcStruct[2].mBufferInfo = &mArbiterCount->getBufferInfo();
+        mCalculateArbiter = new VulKan::Calculate(
+            mDevice, &calcStruct, "shaders/physics_arbiter.comp.spv", mLocalSizeX
+        );
+    }
+
+    if (mBodyBuffer && mJointBuffer) {
+        std::vector<VulKan::CalculateStruct> calcStruct(3);
+        calcStruct[0].mBufferInfo = &mBodyBuffer->getBufferInfo();
+        calcStruct[1].mBufferInfo = &mJointBuffer->getBufferInfo();
+        calcStruct[2].mBufferInfo = &mJointCount->getBufferInfo();
+        mCalculateJoint = new VulKan::Calculate(
+            mDevice, &calcStruct, "shaders/physics_joint.comp.spv", mLocalSizeX
+        );
+    }
+
+    if (mBodyBuffer && mJunctionBuffer) {
+        std::vector<VulKan::CalculateStruct> calcStruct(3);
+        calcStruct[0].mBufferInfo = &mBodyBuffer->getBufferInfo();
+        calcStruct[1].mBufferInfo = &mJunctionBuffer->getBufferInfo();
+        calcStruct[2].mBufferInfo = &mJunctionCount->getBufferInfo();
+        mCalculateJunction = new VulKan::Calculate(
+            mDevice, &calcStruct, "shaders/physics_junction.comp.spv", mLocalSizeX
+        );
+    }
 
     mReady = true;
 }
@@ -764,7 +764,7 @@ void PhysicsGPU::RecreateCalculateArbiter() {
         calcStruct[1].mBufferInfo = &mArbiterBuffer->getBufferInfo();
         calcStruct[2].mBufferInfo = &mArbiterCount->getBufferInfo();
         mCalculateArbiter = new VulKan::Calculate(
-            mDevice, &calcStruct, "shaders/physics_arbiter.comp.spv"
+            mDevice, &calcStruct, "shaders/physics_arbiter.comp.spv", mLocalSizeX
         );
     }
 }
@@ -778,7 +778,7 @@ void PhysicsGPU::RecreateCalculateJoint() {
         calcStruct[1].mBufferInfo = &mJointBuffer->getBufferInfo();
         calcStruct[2].mBufferInfo = &mJointCount->getBufferInfo();
         mCalculateJoint = new VulKan::Calculate(
-            mDevice, &calcStruct, "shaders/physics_joint.comp.spv"
+            mDevice, &calcStruct, "shaders/physics_joint.comp.spv", mLocalSizeX
         );
     }
 }
@@ -792,7 +792,7 @@ void PhysicsGPU::RecreateCalculateJunction() {
         calcStruct[1].mBufferInfo = &mJunctionBuffer->getBufferInfo();
         calcStruct[2].mBufferInfo = &mJunctionCount->getBufferInfo();
         mCalculateJunction = new VulKan::Calculate(
-            mDevice, &calcStruct, "shaders/physics_junction.comp.spv"
+            mDevice, &calcStruct, "shaders/physics_junction.comp.spv", mLocalSizeX
         );
     }
 }
@@ -843,6 +843,53 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
 
     VkCommandBuffer cmd = mSharedCmdBuffer->getCommandBuffer();
 
+    VkMemoryBarrier hostToDeviceMemoryBarrier = {};
+    hostToDeviceMemoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    hostToDeviceMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    hostToDeviceMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+
+    VkBufferMemoryBarrier bodyHostBarrier = {};
+    bodyHostBarrier.sType         = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    bodyHostBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    bodyHostBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    bodyHostBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bodyHostBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bodyHostBarrier.buffer        = mBodyBuffer->getBuffer();
+    bodyHostBarrier.offset        = 0;
+    bodyHostBarrier.size          = VK_WHOLE_SIZE;
+
+    std::vector<VkBufferMemoryBarrier> hostBarriers;
+    hostBarriers.push_back(bodyHostBarrier);
+    if (mArbiterBuffer) {
+        VkBufferMemoryBarrier ab = bodyHostBarrier;
+        ab.buffer = mArbiterBuffer->getBuffer();
+        hostBarriers.push_back(ab);
+    }
+    if (mJointBuffer) {
+        VkBufferMemoryBarrier jb = bodyHostBarrier;
+        jb.buffer = mJointBuffer->getBuffer();
+        hostBarriers.push_back(jb);
+    }
+    if (mJunctionBuffer) {
+        VkBufferMemoryBarrier jnb = bodyHostBarrier;
+        jnb.buffer = mJunctionBuffer->getBuffer();
+        hostBarriers.push_back(jnb);
+    }
+    if (mArbiterCount) {
+        VkBufferMemoryBarrier cb = bodyHostBarrier;
+        cb.buffer = mArbiterCount->getBuffer();
+        hostBarriers.push_back(cb);
+    }
+
+    vkCmdPipelineBarrier(cmd,
+        VK_PIPELINE_STAGE_HOST_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        0,
+        1, &hostToDeviceMemoryBarrier,
+        (uint32_t)hostBarriers.size(),
+        hostBarriers.data(),
+        0, nullptr);
+
     VkBufferMemoryBarrier bodyBarrier = {};
     bodyBarrier.sType         = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
     bodyBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -871,6 +918,11 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
         ? std::max((N_junctions + mLocalSizeX - 1) / mLocalSizeX, MIN_WG)
         : 0u;
 
+    VkMemoryBarrier memBarrier = {};
+    memBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    memBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    memBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+
     for (unsigned int iter = 0; iter < impulseSize; ++iter) {
         if (N_arbiters > 0 && mCalculateArbiter) {
             mCalculateArbiter->recordDispatch(cmd, groupsA);
@@ -879,7 +931,7 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 0,
-                0, nullptr,
+                1, &memBarrier,
                 2, ab,
                 0, nullptr);
         }
@@ -891,7 +943,7 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 0,
-                0, nullptr,
+                1, &memBarrier,
                 2, jb,
                 0, nullptr);
         }
@@ -902,11 +954,43 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 0,
-                0, nullptr,
+                1, &memBarrier,
                 1, &bodyBarrier,
                 0, nullptr);
         }
     }
+
+    VkMemoryBarrier deviceToHostMemoryBarrier = {};
+    deviceToHostMemoryBarrier.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    deviceToHostMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    deviceToHostMemoryBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+
+    VkBufferMemoryBarrier bodyDeviceToHostBarrier = {};
+    bodyDeviceToHostBarrier.sType         = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    bodyDeviceToHostBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    bodyDeviceToHostBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+    bodyDeviceToHostBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bodyDeviceToHostBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bodyDeviceToHostBarrier.buffer        = mBodyBuffer->getBuffer();
+    bodyDeviceToHostBarrier.offset        = 0;
+    bodyDeviceToHostBarrier.size          = VK_WHOLE_SIZE;
+
+    std::vector<VkBufferMemoryBarrier> readbackBarriers;
+    readbackBarriers.push_back(bodyDeviceToHostBarrier);
+    if (mArbiterBuffer) {
+        VkBufferMemoryBarrier ab = bodyDeviceToHostBarrier;
+        ab.buffer = mArbiterBuffer->getBuffer();
+        readbackBarriers.push_back(ab);
+    }
+
+    vkCmdPipelineBarrier(cmd,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_HOST_BIT,
+        0,
+        1, &deviceToHostMemoryBarrier,
+        (uint32_t)readbackBarriers.size(),
+        readbackBarriers.data(),
+        0, nullptr);
 
     if (mBodyBuffer && mBodyStaging) {
         VkBufferMemoryBarrier preCopyBarrier = {};

@@ -40,6 +40,8 @@ PhysicsGPU::~PhysicsGPU() {
     delete mArbiterBuffer;
     delete mJointBuffer;
     delete mJunctionBuffer;
+    delete mBodyStaging;
+    delete mArbiterStaging;
     delete mArbiterCount;
     delete mJointCount;
     delete mJunctionCount;
@@ -505,7 +507,7 @@ void PhysicsGPU::UnpackBodyBuffer() {
     size_t N = shapes.size() + circles.size() + particles.size() + lines.size();
     if (N == 0) return;
 
-    float* mapped = reinterpret_cast<float*>(mBodyBuffer->getPersistentMappedPtr());
+    float* mapped = reinterpret_cast<float*>(mBodyStaging->getPersistentMappedPtr());
 
     const uint32_t shapesStart    = 0;
     const uint32_t circlesStart   = shapesStart    + (uint32_t)shapes.size();
@@ -564,7 +566,7 @@ void PhysicsGPU::UnpackArbiterPnPt() {
     size_t N = arbVec.size();
     if (N == 0) return;
 
-    uint32_t* mapped = reinterpret_cast<uint32_t*>(mArbiterBuffer->getPersistentMappedPtr());
+    uint32_t* mapped = reinterpret_cast<uint32_t*>(mArbiterStaging->getPersistentMappedPtr());
 
     const int xThreadNum = (int)std::thread::hardware_concurrency();
     std::vector<std::future<void>> futures;
@@ -600,6 +602,16 @@ void PhysicsGPU::EnsureBodyCapacity(size_t N) {
     );
     mBodyBuffer->getPersistentMappedPtr();
     mBodyCapacity = N;
+
+    delete mBodyStaging;
+    mBodyStaging = new VulKan::Buffer(
+        mDevice, N * BODY_BYTES,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT
+    );
+    mBodyStaging->getPersistentMappedPtr();
+    mBodyStagingCapacity = N;
+
     RecreateCalculateArbiter();
     RecreateCalculateJoint();
     RecreateCalculateJunction();
@@ -616,6 +628,16 @@ void PhysicsGPU::EnsureArbiterCapacity(size_t N) {
     );
     mArbiterBuffer->getPersistentMappedPtr();
     mArbiterCapacity = N;
+
+    delete mArbiterStaging;
+    mArbiterStaging = new VulKan::Buffer(
+        mDevice, N * ARBITER_STRIDE_BYTES,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT
+    );
+    mArbiterStaging->getPersistentMappedPtr();
+    mArbiterStagingCapacity = N;
+
     RecreateCalculateArbiter();
 }
 
@@ -655,10 +677,13 @@ void PhysicsGPU::Initialize() {
     delete mArbiterBuffer; mArbiterBuffer = nullptr;
     delete mJointBuffer; mJointBuffer = nullptr;
     delete mJunctionBuffer; mJunctionBuffer = nullptr;
+    delete mBodyStaging; mBodyStaging = nullptr;
+    delete mArbiterStaging; mArbiterStaging = nullptr;
     delete mArbiterCount; mArbiterCount = nullptr;
     delete mJointCount; mJointCount = nullptr;
     delete mJunctionCount; mJunctionCount = nullptr;
     mBodyCapacity = mArbiterCapacity = mJointCapacity = mJunctionCapacity = 0;
+    mBodyStagingCapacity = mArbiterStagingCapacity = 0;
 
     PackBodyBuffer();
     PackArbiterBuffer();
@@ -881,6 +906,86 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
                 1, &bodyBarrier,
                 0, nullptr);
         }
+    }
+
+    if (mBodyBuffer && mBodyStaging) {
+        VkBufferMemoryBarrier preCopyBarrier = {};
+        preCopyBarrier.sType         = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        preCopyBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        preCopyBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        preCopyBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        preCopyBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        preCopyBarrier.buffer        = mBodyBuffer->getBuffer();
+        preCopyBarrier.offset        = 0;
+        preCopyBarrier.size          = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(cmd,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            0,
+            0, nullptr,
+            1, &preCopyBarrier,
+            0, nullptr);
+
+        VkBufferCopy bodyCopyRegion = {};
+        bodyCopyRegion.size = mBodyCapacity * BODY_BYTES;
+        vkCmdCopyBuffer(cmd,
+            mBodyBuffer->getBuffer(),
+            mBodyStaging->getBuffer(),
+            1, &bodyCopyRegion);
+
+        VkBufferMemoryBarrier postCopyBarrier = preCopyBarrier;
+        postCopyBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        postCopyBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+        postCopyBarrier.buffer        = mBodyStaging->getBuffer();
+
+        vkCmdPipelineBarrier(cmd,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_HOST_BIT,
+            0,
+            0, nullptr,
+            1, &postCopyBarrier,
+            0, nullptr);
+    }
+
+    if (mArbiterBuffer && mArbiterStaging) {
+        VkBufferMemoryBarrier preCopyBarrierA = {};
+        preCopyBarrierA.sType         = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        preCopyBarrierA.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        preCopyBarrierA.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        preCopyBarrierA.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        preCopyBarrierA.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        preCopyBarrierA.buffer        = mArbiterBuffer->getBuffer();
+        preCopyBarrierA.offset        = 0;
+        preCopyBarrierA.size          = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(cmd,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            0,
+            0, nullptr,
+            1, &preCopyBarrierA,
+            0, nullptr);
+
+        VkBufferCopy arbCopyRegion = {};
+        arbCopyRegion.size = mArbiterCapacity * ARBITER_STRIDE_BYTES;
+        vkCmdCopyBuffer(cmd,
+            mArbiterBuffer->getBuffer(),
+            mArbiterStaging->getBuffer(),
+            1, &arbCopyRegion);
+
+        VkBufferMemoryBarrier postCopyBarrierA = preCopyBarrierA;
+        postCopyBarrierA.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        postCopyBarrierA.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+        postCopyBarrierA.buffer        = mArbiterStaging->getBuffer();
+
+        vkCmdPipelineBarrier(cmd,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_HOST_BIT,
+            0,
+            0, nullptr,
+            1, &postCopyBarrierA,
+            0, nullptr);
     }
 
     mSharedCmdBuffer->end();

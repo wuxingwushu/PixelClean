@@ -70,6 +70,9 @@ private:
     VulKan::Buffer* mJointBuffer     = nullptr;
     VulKan::Buffer* mJunctionBuffer  = nullptr;
 
+    VulKan::Buffer* mBodyStaging     = nullptr;
+    VulKan::Buffer* mArbiterStaging  = nullptr;
+
     VulKan::Buffer* mArbiterCount    = nullptr;
     VulKan::Buffer* mJointCount      = nullptr;
     VulKan::Buffer* mJunctionCount   = nullptr;
@@ -85,6 +88,9 @@ private:
     size_t mArbiterCapacity  = 0;
     size_t mJointCapacity    = 0;
     size_t mJunctionCapacity = 0;
+
+    size_t mBodyStagingCapacity    = 0;
+    size_t mArbiterStagingCapacity = 0;
 
     float mCPUUploadTimeMS   = 0.0f;
     float mGPUExecuteTimeMS  = 0.0f;

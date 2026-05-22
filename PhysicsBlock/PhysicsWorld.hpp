@@ -181,6 +181,19 @@ class PhysicsGPU;
     }
 #endif
 
+    // ========== 无锁碰撞输出缓冲区 ==========
+    struct CollideOutput
+    {
+        std::vector<BaseArbiter *> newGroup;
+        std::vector<ArbiterKey> deleteGroup;
+
+        void clear()
+        {
+            newGroup.clear();
+            deleteGroup.clear();
+        }
+    };
+
     /**
      * @brief 物理世界
      * @note 重力加速度， 网格风 */
@@ -246,6 +259,7 @@ class PhysicsGPU;
 
         void HandleCollideGroup(BaseArbiter *Ba);
         void ResolveCollideGroup();
+        void MergeCollideOutputs(std::vector<CollideOutput> &outputs);
 
         AuxiliaryMemoryPool(PhysicsArbiterCP, PhysicsCircle, C, PhysicsParticle, P);
         AuxiliaryMemoryPool(PhysicsArbiterSP, PhysicsShape, S, PhysicsParticle, P);
@@ -263,9 +277,14 @@ class PhysicsGPU;
         void DeleteArbiter(BaseArbiter *BA);
 
 #if ThreadPoolBool
-        std::mutex mLock;
         ThreadPool mThreadPool;
         std::vector<std::future<void>> xTn;
+
+        // 无锁碰撞输出：每个工作线程写入自己的缓冲区
+        static thread_local CollideOutput *tlCollideOutput;
+
+        // 每帧预分配的 per-thread 输出缓冲区
+        std::vector<CollideOutput> mCollideOutputs;
 #endif
     public:
         /**

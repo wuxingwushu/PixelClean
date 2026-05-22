@@ -11,13 +11,19 @@
 #include "PhysicsGPU.hpp"
 #include <chrono>
 
+// ========== thread_local 静态成员定义 ==========
+#if ThreadPoolBool
+thread_local PhysicsBlock::CollideOutput *PhysicsBlock::PhysicsWorld::tlCollideOutput = nullptr;
+#endif
+
 #if ThreadPoolBool
 #define Map_Delete(key)                                 \
     if (CollideGroupS.find(key) != CollideGroupS.end()) \
     {                                                   \
-        mLock.lock();                                   \
-        DeleteCollideGroup.push_back(key);              \
-        mLock.unlock();                                 \
+        if (tlCollideOutput)                            \
+            tlCollideOutput->deleteGroup.push_back(key);\
+        else                                            \
+            DeleteCollideGroup.push_back(key);           \
     }
 #else
 #define Map_Delete(key)                                 \
@@ -153,9 +159,13 @@ namespace PhysicsBlock
             if (it == CollideGroupS.end())
             {
 #if ThreadPoolBool
-                std::lock_guard<std::mutex> lock(mLock);
-#endif
+                if (tlCollideOutput)
+                    tlCollideOutput->newGroup.push_back(Ba);
+                else
+                    NewCollideGroup.push_back(Ba);
+#else
                 NewCollideGroup.push_back(Ba);
+#endif
                 return;
             }
             it->second->Update(Ba->contacts, Ba->numContacts);
@@ -163,11 +173,41 @@ namespace PhysicsBlock
         else if (it != CollideGroupS.end())
         {
 #if ThreadPoolBool
-            std::lock_guard<std::mutex> lock(mLock);
-#endif
+            if (tlCollideOutput)
+                tlCollideOutput->deleteGroup.push_back(Ba->key);
+            else
+                DeleteCollideGroup.push_back(Ba->key);
+#else
             DeleteCollideGroup.push_back(Ba->key);
+#endif
         }
         DeleteArbiter(Ba);
+    }
+
+    inline void PhysicsWorld::MergeCollideOutputs(std::vector<CollideOutput> &outputs)
+    {
+        size_t totalNew = 0;
+        size_t totalDel = 0;
+        for (const auto &out : outputs)
+        {
+            totalNew += out.newGroup.size();
+            totalDel += out.deleteGroup.size();
+        }
+
+        NewCollideGroup.reserve(NewCollideGroup.size() + totalNew);
+        DeleteCollideGroup.reserve(DeleteCollideGroup.size() + totalDel);
+
+        for (auto &out : outputs)
+        {
+            NewCollideGroup.insert(
+                NewCollideGroup.end(),
+                std::make_move_iterator(out.newGroup.begin()),
+                std::make_move_iterator(out.newGroup.end()));
+            DeleteCollideGroup.insert(
+                DeleteCollideGroup.end(),
+                std::make_move_iterator(out.deleteGroup.begin()),
+                std::make_move_iterator(out.deleteGroup.end()));
+        }
     }
 
     inline void PhysicsWorld::ResolveCollideGroup()
@@ -223,7 +263,8 @@ namespace PhysicsBlock
         auto tEmulatorStart = std::chrono::high_resolution_clock::now();
 
 #if ThreadPoolBool
-        const int xThreadNum = std::thread::hardware_concurrency();
+        const unsigned int xThreadNumHW = std::thread::hardware_concurrency();
+        const unsigned int xThreadNum = std::min(xThreadNumHW, 8u);
 
         // 等待 判断物体间的碰撞 的 任务结束
         for (auto &tf : xTn)
@@ -231,13 +272,18 @@ namespace PhysicsBlock
             tf.wait();
         }
         xTn.clear();
+
+        // 合并所有线程的碰撞输出
+        MergeCollideOutputs(mCollideOutputs);
 #endif
 
         auto tCollisionEnd = std::chrono::high_resolution_clock::now();
         mCollisionDetectionTimeMS = std::chrono::duration<float, std::milli>(tCollisionEnd - tEmulatorStart).count();
 
-        const auto XT_Fun = [this](int T_Num, int Tx)
+        const auto XT_Fun = [this](int T_Num, int Tx, CollideOutput *output)
         {
+            tlCollideOutput = output;
+
             bool JZ;
             int SizeD;
             int SizeY;
@@ -436,6 +482,8 @@ namespace PhysicsBlock
 
                 Arbiter(PhysicsParticleS[SizeD], wMapFormwork);
             }
+
+            tlCollideOutput = nullptr;
         };
 
         FLOAT_ inv_dt = 1.0 / time;
@@ -664,14 +712,18 @@ namespace PhysicsBlock
         mGridSearch.UpData();
 
 #if ThreadPoolBool
+        // 预分配每个线程的输出缓冲区
+        mCollideOutputs.clear();
+        mCollideOutputs.resize(xThreadNum);
+
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
-        for (size_t i = 0; i < xThreadNum; ++i)
+        for (unsigned int i = 0; i < xThreadNum; ++i)
         {
-            xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum));
+            xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum, &mCollideOutputs[i]));
         }
 #else
         // 碰撞检测
-        XT_Fun(1, 1);
+        XT_Fun(1, 1, nullptr);
 #endif
 
         auto tPostEnd = std::chrono::high_resolution_clock::now();
@@ -681,7 +733,8 @@ namespace PhysicsBlock
     void PhysicsWorld::PhysicsInformationUpdate()
     {
 #if ThreadPoolBool
-        const int xThreadNum = std::thread::hardware_concurrency();
+        const unsigned int xThreadNumHW = std::thread::hardware_concurrency();
+        const unsigned int xThreadNum = std::min(xThreadNumHW, 8u);
 
         // 等待 判断物体间的碰撞 任务结束
         for (auto &tf : xTn)
@@ -689,11 +742,16 @@ namespace PhysicsBlock
             tf.wait();
         }
         xTn.clear();
+
+        // 合并所有线程的碰撞输出
+        MergeCollideOutputs(mCollideOutputs);
 #endif
 
                 // 碰撞检测
-        const auto XT_Fun = [this](int T_Num, int Tx)
+        const auto XT_Fun = [this](int T_Num, int Tx, CollideOutput *output)
         {
+            tlCollideOutput = output;
+
             int SizeD;
             int SizeY;
             std::vector<PhysicsBlock::PhysicsFormwork*> SearchV;
@@ -857,6 +915,8 @@ namespace PhysicsBlock
                 // 处理 点 与 地形 的碰撞
                 Arbiter(PhysicsParticleS[SizeD], wMapFormwork);
             }
+
+            tlCollideOutput = nullptr;
         };
 
         ResolveCollideGroup();
@@ -896,14 +956,18 @@ namespace PhysicsBlock
         mGridSearch.UpData();
 
 #if ThreadPoolBool
+        // 预分配每个线程的输出缓冲区
+        mCollideOutputs.clear();
+        mCollideOutputs.resize(xThreadNum);
+
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
-        for (size_t i = 0; i < xThreadNum; ++i)
+        for (unsigned int i = 0; i < xThreadNum; ++i)
         {
-            xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum));
+            xTn.push_back(mThreadPool.enqueue(XT_Fun, i, xThreadNum, &mCollideOutputs[i]));
         }
 #else
         // 碰撞检测
-        XT_Fun(1, 1);
+        XT_Fun(1, 1, nullptr);
 #endif
     }
 

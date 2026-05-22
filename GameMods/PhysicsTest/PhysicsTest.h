@@ -70,7 +70,7 @@ namespace GAME
 
         // GPU 计算后端切换
         PhysicsBlock::PhysicsGPU* mPhysicsGPU = nullptr; // GPU 物理求解器
-        bool mUseGPUApplyImpulse = true;                 // true=GPU, false=CPU（默认 GPU）
+        bool mUseGPUApplyImpulse = false;                 // true=GPU, false=CPU（默认 CPU）
         bool mGPUInitialized = false;                    // GPU 是否已初始化
         float mGPULastFrameTime = 0.0f;                  // 上一帧 GPU 耗时（ms）
         float mCPULastFrameTime = 0.0f;                  // 上一帧 CPU 耗时（ms）

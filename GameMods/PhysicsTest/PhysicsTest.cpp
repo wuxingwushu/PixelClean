@@ -69,16 +69,25 @@ namespace GAME
 	}
 
 	void PhysicsTest::MouseMove(double xpos, double ypos)
-	{
-		CursorPosX = xpos;
-		CursorPosY = ypos;
+{
 #if defined(__ANDROID__)
-		mWinWidth = mWindow->getWidth();
-		mWinHeight = mWindow->getHeight();
+	CursorPosX = xpos;
+	CursorPosY = ypos;
+	mWinWidth = mWindow->getWidth();
+	mWinHeight = mWindow->getHeight();
 #else
-		glfwGetWindowSize(mWindow->getWindow(), &mWinWidth, &mWinHeight);
-#endif
+	{
+		int winW, winH;
+		glfwGetWindowSize(mWindow->getWindow(), &winW, &winH);
+		double scaleX = (winW > 0) ? (double)Global::mWidth / (double)winW : 1.0;
+		double scaleY = (winH > 0) ? (double)Global::mHeight / (double)winH : 1.0;
+		CursorPosX = xpos * scaleX;
+		CursorPosY = ypos * scaleY;
 	}
+	mWinWidth = Global::mWidth;
+	mWinHeight = Global::mHeight;
+#endif
+}
 
 	void PhysicsTest::MouseButton(MouseBtn button, InputState State)
 	{
@@ -431,7 +440,8 @@ namespace GAME
 			winwidth = mWindow->getWidth();
 			winheight = mWindow->getHeight();
 #else
-			glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
+			winwidth = Global::mWidth;
+			winheight = Global::mHeight;
 #endif
 		}
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
@@ -664,7 +674,8 @@ namespace GAME
 				winwidth = mWindow->getWidth();
 				winheight = mWindow->getHeight();
 #else
-				glfwGetWindowSize(mWindow->getWindow(), &winwidth, &winheight);
+				winwidth = Global::mWidth;
+				winheight = Global::mHeight;
 #endif
 			}
 			glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
@@ -741,17 +752,23 @@ namespace GAME
 	}
 
 	void PhysicsTest::EditorMode(glm::vec2 huoqdedian)
-	{
-		// 鼠标在窗口上，不处理按键事件
-		if (Global::ClickWindow)
-			return;
+{
+	static bool sStaleState = false;
 
-		if (GridEditShape != nullptr)
+	// 鼠标在窗口上，不处理按键事件
+	// ClickWindow=true 时仍记录状态遮挡，防止解除后静态变量过时导致误判
+	if (Global::ClickWindow) {
+		sStaleState = true;
+		return;
+	}
+
+	if (GridEditShape != nullptr)
 		{
 			bool zb = false, yb = false;
 			static glm::vec2 z1, z2, y1, y2;
 
 			static int Z_fangzhifanfuvhufa;
+			if (sStaleState) { sStaleState = false; Z_fangzhifanfuvhufa = 0; }
 			int Z_Leftan = mLeftMouseDown ? 1 : 0;
 			if (Z_Leftan == GLFW_PRESS)
 			{
@@ -812,6 +829,7 @@ namespace GAME
 		static glm::vec2 z1, z2, y1, y2;
 
 		static int Z_fangzhifanfuvhufa; // 避免反复触发
+		if (sStaleState) { sStaleState = false; Z_fangzhifanfuvhufa = 0; }
 		int Z_Leftan = mLeftMouseDown ? 1 : 0;
 		if (Z_Leftan == GLFW_PRESS)
 		{
@@ -995,7 +1013,11 @@ namespace GAME
 					FLOAT_ c = 2.0 * sqrt(k * Ptr->PFGetMass());
 
 					Vec2_ grabVelocity = Ptr->speed + Ptr->angleSpeed * Vec2_{-armWorld.y, armWorld.x};
-					Vec2_ springForce = k * displacement - c * grabVelocity;
+
+					FLOAT_ nCalls = PhysicsTick / TOOL::FPStime;
+					if (nCalls < 1.0f) nCalls = 1.0f;
+
+					Vec2_ springForce = (k / nCalls) * displacement - (c / nCalls) * grabVelocity;
 
 					// 设置拖拽力上限
 					FLOAT_ maxForce = Ptr->PFGetMass() * 500.0;
@@ -1042,7 +1064,11 @@ namespace GAME
 					Vec2_ displacement = e - Ptr->pos;
 					FLOAT_ k = 300.0;
 					FLOAT_ c = 2.0 * sqrt(k * Ptr->PFGetMass());
-					Vec2_ springForce = k * displacement - c * Ptr->speed;
+
+					FLOAT_ nCalls = PhysicsTick / TOOL::FPStime;
+					if (nCalls < 1.0f) nCalls = 1.0f;
+
+					Vec2_ springForce = (k / nCalls) * displacement - (c / nCalls) * Ptr->speed;
 
 					// 设置拖拽力上限
 					FLOAT_ maxForce = Ptr->PFGetMass() * 500.0;

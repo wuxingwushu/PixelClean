@@ -76,6 +76,7 @@ namespace PhysicsBlock
 
     PhysicsWorld::PhysicsWorld(Vec2_ gravityAcceleration, const bool wind) : GravityAcceleration(gravityAcceleration), WindBool(wind)
     {
+        mGridSearch.SetThreadCount(std::thread::hardware_concurrency());
     }
 
     PhysicsWorld::~PhysicsWorld()
@@ -708,8 +709,17 @@ namespace PhysicsBlock
             mTrigger.ProcessTriggers(allObjects);
         }
 
-        // 更新网格
-        mGridSearch.UpData();
+        // 更新搜索网格树
+        for (unsigned int i = 0; i < xThreadNum; ++i)
+        {
+            xTn.push_back(mThreadPool.enqueue(&GridSearch::UpDaraWorkeTask, &mGridSearch, xThreadNum, i));
+        }
+        for (auto& tf : xTn)
+        {
+            tf.wait();
+        }
+        xTn.clear();
+        mGridSearch.UpDaraWorkeTaskEnd();
 
 #if ThreadPoolBool
         // 预分配每个线程的输出缓冲区
@@ -953,8 +963,17 @@ namespace PhysicsBlock
         }
 #endif
 
-        // 更新网格
-        mGridSearch.UpData();
+        // 更新搜索网格树
+        for (unsigned int i = 0; i < xThreadNum; ++i)
+        {
+            xTn.push_back(mThreadPool.enqueue(&GridSearch::UpDaraWorkeTask, &mGridSearch, xThreadNum, i));
+        }
+        for (auto& tf : xTn)
+        {
+            tf.wait();
+        }
+        xTn.clear();
+        mGridSearch.UpDaraWorkeTaskEnd();
 
 #if ThreadPoolBool
         // 预分配每个线程的输出缓冲区

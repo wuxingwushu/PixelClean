@@ -121,6 +121,21 @@ namespace PhysicsBlock
         }
     };
 
+    enum PhysicsArbiterType {
+        ArbiterS,
+        ArbiterP,
+        ArbiterC,
+        ArbiterL,
+        ArbiterSS,
+        ArbiterSP,
+        ArbiterCS,
+        ArbiterCP,
+        ArbiterCC,
+        ArbiterLS,
+        ArbiterLC,
+        ArbiterLP,
+    };
+
     /**
      * @brief 基础物理裁决器类
      * @details 负责处理两个物理对象之间的碰撞响应
@@ -174,9 +189,9 @@ namespace PhysicsBlock
 
         /**
          * @brief 获取裁决器类型
-         * @return 裁决器类型标识，默认返回 0
+         * @return 裁决器类型标识
          */
-        virtual unsigned int GetArbiterType() { return 0; }
+        PhysicsArbiterType GetArbiterType() { return mArbiterType; }
 #endif
 
     public:
@@ -188,6 +203,7 @@ namespace PhysicsBlock
         void *mOriginalObject1; // 原始顺序的第一个对象（与 key 可能不同，key 内部会交换指针顺序）
         void *mOriginalObject2; // 原始顺序的第二个对象
         unsigned char mAllocThreadIndex = 0; // 分配此对象的线程池索引
+        PhysicsArbiterType mArbiterType = PhysicsArbiterType::ArbiterS; // 裁决器类型枚举
 
     public:
         /**

@@ -7,33 +7,16 @@
 namespace PhysicsBlock
 {
 
-    enum PhysicsArbiterType {
-        ArbiterS,
-        ArbiterP,
-        ArbiterC,
-        ArbiterL,
-        ArbiterSS,
-        ArbiterSP,
-        ArbiterCS,
-        ArbiterCP,
-        ArbiterCC,
-        ArbiterLS,
-        ArbiterLC,
-        ArbiterLP,
-    };
-   
     /**
      * @brief 动态形状，动态形状，碰撞解析 */
     class PhysicsArbiterSS : public PhysicsBaseArbiterAA
     {
     public:
-        PhysicsArbiterSS(PhysicsShape *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1 > Object2 ? Object1 : Object2, Object1 > Object2 ? Object2 : Object1){};
+        PhysicsArbiterSS(PhysicsShape *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1 > Object2 ? Object1 : Object2, Object1 > Object2 ? Object2 : Object1) { mArbiterType = PhysicsArbiterType::ArbiterSS; }
         ~PhysicsArbiterSS(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterSS; }
     };
 
     /**
@@ -41,13 +24,11 @@ namespace PhysicsBlock
     class PhysicsArbiterSP : public PhysicsBaseArbiterAD
     {
     public:
-        PhysicsArbiterSP(PhysicsShape *Object1, PhysicsParticle *Object2):PhysicsBaseArbiterAD(Object1, Object2){};
+        PhysicsArbiterSP(PhysicsShape *Object1, PhysicsParticle *Object2):PhysicsBaseArbiterAD(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterSP; }
         ~PhysicsArbiterSP(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterSP; }
     };
 
     /**
@@ -55,13 +36,11 @@ namespace PhysicsBlock
     class PhysicsArbiterS : public PhysicsBaseArbiterA
     {
     public:
-        PhysicsArbiterS(PhysicsShape *Object1, MapFormwork *Object2):PhysicsBaseArbiterA(Object1, Object2){};
+        PhysicsArbiterS(PhysicsShape *Object1, MapFormwork *Object2):PhysicsBaseArbiterA(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterS; }
         ~PhysicsArbiterS(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterS; }
     };
 
     /**
@@ -69,13 +48,11 @@ namespace PhysicsBlock
     class PhysicsArbiterP : public PhysicsBaseArbiterD
     {
     public:
-        PhysicsArbiterP(PhysicsParticle *Object1, MapFormwork *Object2):PhysicsBaseArbiterD(Object1, Object2){};
+        PhysicsArbiterP(PhysicsParticle *Object1, MapFormwork *Object2):PhysicsBaseArbiterD(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterP; }
         ~PhysicsArbiterP(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterP; }
     };
 
 
@@ -84,13 +61,11 @@ namespace PhysicsBlock
     class PhysicsArbiterC : public PhysicsBaseArbiterA
     {
     public:
-        PhysicsArbiterC(PhysicsCircle *Object1, MapFormwork *Object2):PhysicsBaseArbiterA(Object1, Object2){};
+        PhysicsArbiterC(PhysicsCircle *Object1, MapFormwork *Object2):PhysicsBaseArbiterA(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterC; }
         ~PhysicsArbiterC(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterC; }
     };
 
     /**
@@ -98,13 +73,11 @@ namespace PhysicsBlock
     class PhysicsArbiterCS : public PhysicsBaseArbiterAA
     {
     public:
-        PhysicsArbiterCS(PhysicsCircle *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
+        PhysicsArbiterCS(PhysicsCircle *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterCS; }
         ~PhysicsArbiterCS(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterCS; }
     };
 
     /**
@@ -112,13 +85,11 @@ namespace PhysicsBlock
     class PhysicsArbiterCP : public PhysicsBaseArbiterAD
     {
     public:
-        PhysicsArbiterCP(PhysicsCircle *Object1, PhysicsParticle *Object2):PhysicsBaseArbiterAD(Object1, Object2){};
+        PhysicsArbiterCP(PhysicsCircle *Object1, PhysicsParticle *Object2):PhysicsBaseArbiterAD(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterCP; }
         ~PhysicsArbiterCP(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterCP; }
     };
 
     /**
@@ -126,13 +97,11 @@ namespace PhysicsBlock
     class PhysicsArbiterCC : public PhysicsBaseArbiterAA
     {
     public:
-        PhysicsArbiterCC(PhysicsCircle *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAA(Object1 > Object2 ? Object1 : Object2, Object1 > Object2 ? Object2 : Object1){};
+        PhysicsArbiterCC(PhysicsCircle *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAA(Object1 > Object2 ? Object1 : Object2, Object1 > Object2 ? Object2 : Object1) { mArbiterType = PhysicsArbiterType::ArbiterCC; }
         ~PhysicsArbiterCC(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterCC; }
     };
 
     /**
@@ -140,13 +109,11 @@ namespace PhysicsBlock
     class PhysicsArbiterLC : public PhysicsBaseArbiterAA
     {
     public:
-        PhysicsArbiterLC(PhysicsLine *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
+        PhysicsArbiterLC(PhysicsLine *Object1, PhysicsCircle *Object2):PhysicsBaseArbiterAA(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterLC; }
         ~PhysicsArbiterLC(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterLC; }
     };
 
     /**
@@ -154,13 +121,11 @@ namespace PhysicsBlock
     class PhysicsArbiterLP : public PhysicsBaseArbiterAD
     {
     public:
-        PhysicsArbiterLP(PhysicsLine *Object1, PhysicsParticle *Object2):PhysicsBaseArbiterAD(Object1, Object2){};
+        PhysicsArbiterLP(PhysicsLine *Object1, PhysicsParticle *Object2):PhysicsBaseArbiterAD(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterLP; }
         ~PhysicsArbiterLP(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterLP; }
     };
 
     /**
@@ -168,13 +133,11 @@ namespace PhysicsBlock
     class PhysicsArbiterLS : public PhysicsBaseArbiterAA
     {
     public:
-        PhysicsArbiterLS(PhysicsLine *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1, Object2){};
+        PhysicsArbiterLS(PhysicsLine *Object1, PhysicsShape *Object2):PhysicsBaseArbiterAA(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterLS; }
         ~PhysicsArbiterLS(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterLS; }
     };
 
     /**
@@ -182,13 +145,11 @@ namespace PhysicsBlock
     class PhysicsArbiterL : public PhysicsBaseArbiterA
     {
     public:
-        PhysicsArbiterL(PhysicsLine *Object1, MapFormwork *Object2):PhysicsBaseArbiterA(Object1, Object2){};
+        PhysicsArbiterL(PhysicsLine *Object1, MapFormwork *Object2):PhysicsBaseArbiterA(Object1, Object2) { mArbiterType = PhysicsArbiterType::ArbiterL; }
         ~PhysicsArbiterL(){};
 
         // 计算俩物体的碰撞
         virtual void ComputeCollide();
-
-        virtual unsigned int GetArbiterType() { return PhysicsArbiterType::ArbiterL; }
     };
     
 }

@@ -1236,7 +1236,6 @@ namespace PhysicsBlock
 			mMapStatic->at(i).Entity = false;
 			mMapStatic->at(i).Collision = false;
 			mMapStatic->at(i).mass = 1.0;
-			mMapStatic->at(i).Healthpoint = 24;
 		}
 		for (int i = 0; i < MapSize; ++i)
 		{
@@ -1247,117 +1246,138 @@ namespace PhysicsBlock
 			mMapStatic->at(i, 0).Entity = true;
 			mMapStatic->at(i, 0).Collision = true;
 		}
-		for (int i = 0; i < MapSize; ++i)
-		{
-			mMapStatic->at(i, MapSize - 1).Entity = true;
-			mMapStatic->at(i, MapSize - 1).Collision = true;
-		}
 		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
 		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
 
-		LayerMask layerGround = LayerMaskDefault;
-		LayerMask layerGroupA = 1 << 1;
-		LayerMask layerGroupB = 1 << 2;
+		LayerMask layerAll = LayerMaskAll;
+		LayerMask layerObjA = LayerMaskDefault;
+		LayerMask layerObjB = LayerMaskDefault;
 		LayerMask layerGhost = 1 << 3;
 
-		PhysicsBlock::PhysicsShape *divider = new PhysicsBlock::PhysicsShape({-6, 8}, {2, 14});
-		for (size_t i = 0; i < (divider->width * divider->height); ++i)
+		PhysicsBlock::PhysicsShape *floor = new PhysicsBlock::PhysicsShape({0, -(FLOAT_)(MapSize / 2 - 3)}, {MapSize - 2, 4});
+		for (size_t k = 0; k < (floor->width * floor->height); ++k)
 		{
-			divider->at(i).Entity = true;
-			divider->at(i).Collision = true;
-			divider->at(i).mass = FLOAT_MAX;
+			floor->at(k).Entity = true;
+			floor->at(k).Collision = true;
+			floor->at(k).mass = FLOAT_MAX;
+		}
+		floor->UpdateAll();
+		floor->angle = 0;
+		(*myPhysicsWorld)->AddObject(floor);
+		(*myPhysicsWorld)->mCollision.SetCollisionLayers(floor, layerAll);
+		(*myPhysicsWorld)->mCollision.SetCollisionPriority(floor, 100);
+
+		PhysicsBlock::PhysicsShape *divider = new PhysicsBlock::PhysicsShape({0, 0}, {2, 10});
+		for (size_t k = 0; k < (divider->width * divider->height); ++k)
+		{
+			divider->at(k).Entity = true;
+			divider->at(k).Collision = true;
+			divider->at(k).mass = FLOAT_MAX;
 		}
 		divider->UpdateAll();
 		divider->angle = 0;
 		(*myPhysicsWorld)->AddObject(divider);
-		(*myPhysicsWorld)->mCollision.SetCollisionLayers(divider, layerGround);
+		(*myPhysicsWorld)->mCollision.SetCollisionLayers(divider, layerAll);
+		(*myPhysicsWorld)->mCollision.SetCollisionPriority(divider, 20);
 
-		divider = new PhysicsBlock::PhysicsShape({6, 8}, {2, 14});
-		for (size_t i = 0; i < (divider->width * divider->height); ++i)
+		PhysicsBlock::PhysicsShape *platform = new PhysicsBlock::PhysicsShape({-6, -6}, {8, 2});
+		for (size_t k = 0; k < (platform->width * platform->height); ++k)
 		{
-			divider->at(i).Entity = true;
-			divider->at(i).Collision = true;
-			divider->at(i).mass = FLOAT_MAX;
+			platform->at(k).Entity = true;
+			platform->at(k).Collision = true;
+			platform->at(k).mass = FLOAT_MAX;
 		}
-		divider->UpdateAll();
-		divider->angle = 0;
-		(*myPhysicsWorld)->AddObject(divider);
-		(*myPhysicsWorld)->mCollision.SetCollisionLayers(divider, layerGround);
+		platform->UpdateAll();
+		platform->angle = 0;
+		(*myPhysicsWorld)->AddObject(platform);
+		(*myPhysicsWorld)->mCollision.SetCollisionLayers(platform, layerAll);
+		(*myPhysicsWorld)->mCollision.SetCollisionPriority(platform, 10);
 
-		for (int i = 0; i < 5; ++i)
+		(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(floor,
+			[](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
+				PhysicsLog("[FLOOR Enter] Object hit floor\n");
+			});
+
+		(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(divider,
+			[](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
+				PhysicsLog("[DIVIDER Enter] Object hit divider\n");
+			});
+
+		(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(platform,
+			[](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
+				PhysicsLog("[PLATFORM Enter] Object landed on platform\n");
+			});
+
+		for (int i = 0; i < 4; ++i)
 		{
-			for (int j = 0; j < 3; ++j)
+			PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape(
+				{-10 + i * 2.5f + Random(-0.1f, 0.1f), 10 + i * 1.5f},
+				{1, 1});
+			for (size_t k = 0; k < (box->width * box->height); ++k)
 			{
-				PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape(
-					{-12 + j * 2.2f + Random(-0.05f, 0.05f), 12 + i * 2.2f},
-					{2, 2});
-				for (size_t k = 0; k < (box->width * box->height); ++k)
-				{
-					box->at(k).Entity = true;
-					box->at(k).Collision = true;
-					box->at(k).mass = 1;
-				}
-				box->UpdateAll();
-				box->angle = 0;
-				(*myPhysicsWorld)->AddObject(box);
-				(*myPhysicsWorld)->mCollision.SetCollisionLayers(box, layerGroupA);
+				box->at(k).Entity = true;
+				box->at(k).Collision = true;
+				box->at(k).mass = 1;
 			}
+			box->UpdateAll();
+			box->angle = Random(-0.15f, 0.15f);
+			(*myPhysicsWorld)->AddObject(box);
+			(*myPhysicsWorld)->mCollision.SetCollisionLayers(box, layerObjA);
+
+			int idx = i;
+			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(box,
+				[idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
+					if (arbiter->numContacts > 0)
+						PhysicsLog("[ENTER] Box#%d hit at (%.1f,%.1f) depth=%.3f normal=(%.2f,%.2f)\n",
+							idx,
+							arbiter->contacts[0].position.x, arbiter->contacts[0].position.y,
+							-arbiter->contacts[0].separation,
+							arbiter->contacts[0].normal.x, arbiter->contacts[0].normal.y);
+				});
 		}
 
-		for (int i = 0; i < 5; ++i)
+		for (int i = 0; i < 6; ++i)
 		{
-			for (int j = 0; j < 3; ++j)
-			{
-				PhysicsBlock::PhysicsCircle *ball = new PhysicsBlock::PhysicsCircle(
-					{1 + j * 2.2f + Random(-0.05f, 0.05f), 12 + i * 2.2f},
-					0.9, 1);
-				(*myPhysicsWorld)->AddObject(ball);
-				(*myPhysicsWorld)->mCollision.SetCollisionLayers(ball, layerGroupB);
-			}
+			PhysicsBlock::PhysicsCircle *ball = new PhysicsBlock::PhysicsCircle(
+				{4 + i * 1.8f + Random(-0.1f, 0.1f), 10 + i * 1.2f},
+				0.6f + Random(0.0f, 0.3f), 1);
+			(*myPhysicsWorld)->AddObject(ball);
+			(*myPhysicsWorld)->mCollision.SetCollisionLayers(ball, layerObjB);
+
+			int idx = i;
+			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(ball,
+				[idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
+					if (arbiter->numContacts > 0)
+						PhysicsLog("[ENTER] Ball#%d at (%.1f,%.1f) depth=%.3f\n",
+							idx,
+							arbiter->contacts[0].position.x, arbiter->contacts[0].position.y,
+							-arbiter->contacts[0].separation);
+				});
+			(*myPhysicsWorld)->mCollision.AddCollisionExitListener(ball,
+				[idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
+					PhysicsLog("[EXIT]  Ball#%d separated\n", idx);
+				});
 		}
 
 		for (int i = 0; i < 3; ++i)
 		{
 			PhysicsBlock::PhysicsCircle *ghost = new PhysicsBlock::PhysicsCircle(
-				{8 + i * 2.0f + Random(-0.1f, 0.1f), 12 + i * 2.5f},
-				0.7, 1);
+				{-4 + i * 2.0f + Random(-0.1f, 0.1f), 14 + i * 2.0f},
+				0.7f, 1);
 			(*myPhysicsWorld)->AddObject(ghost);
 			(*myPhysicsWorld)->mCollision.SetCollisionLayers(ghost, layerGhost);
-		}
 
-		for (int i = 0; i < 3; ++i)
-		{
-			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(
-				(*myPhysicsWorld)->PhysicsShapeS[i],
-				[](const CollisionData &data) {
-					PhysicsLog("[Collision Enter] Shape hit at (%.1f, %.1f) depth=%.2f\n",
-						data.ContactPoint.x, data.ContactPoint.y, data.PenetrationDepth);
-				});
-				(*myPhysicsWorld)->mCollision.AddCollisionExitListener(
-					(*myPhysicsWorld)->PhysicsShapeS[i],
-					[](const CollisionData &data) {
-						PhysicsLog("[Collision Exit] Shape separated\n");
-					});
-		}
-
-		for (int i = 0; i < 3; ++i)
-		{
-			int idx = (int)(*myPhysicsWorld)->PhysicsCircleS.size() - 3 - i;
-			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(
-				(*myPhysicsWorld)->PhysicsCircleS[idx],
-				[](const CollisionData &data) {
-					PhysicsLog("[Collision Enter] Circle hit at (%.1f, %.1f) vel=(%.1f, %.1f)\n",
-						data.ContactPoint.x, data.ContactPoint.y,
-						data.RelativeVelocity.x, data.RelativeVelocity.y);
+			int idx = i;
+			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(ghost,
+				[idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
+					PhysicsLog("[GHOST#%d] Ghost touched something (no effect)\n", idx);
 				});
 		}
 
 		(*myPhysicsWorld)->mCollision.SetCollisionPriority(
-			(*myPhysicsWorld)->PhysicsShapeS[0], 90);
+			(*myPhysicsWorld)->PhysicsCircleS[0], 90);
 		(*myPhysicsWorld)->mCollision.SetCollisionPriority(
-			(*myPhysicsWorld)->PhysicsShapeS[1], 50);
-		(*myPhysicsWorld)->mCollision.SetCollisionPriority(
-			(*myPhysicsWorld)->PhysicsShapeS[2], 10);
+			(*myPhysicsWorld)->PhysicsCircleS[3], 30);
 	}
 
 	void PhysicsDemo20(PhysicsWorld **myPhysicsWorld, Camera *mCamera)

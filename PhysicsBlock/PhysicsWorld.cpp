@@ -203,6 +203,7 @@ namespace PhysicsBlock
             {
                 if (CollideGroupVector[i] == arb)
                 {
+                    mCollision.RemoveCollisionPair(arb);
                     DeleteArbiter(arb);
                     if (i != (int)CollideGroupVector.size() - 1)
                     {
@@ -222,6 +223,7 @@ namespace PhysicsBlock
             if (result.second)
             {
                 CollideGroupVector.push_back(J);
+                mCollision.AddCollisionPair(J);
             }
             else
             {
@@ -249,6 +251,7 @@ namespace PhysicsBlock
             {
                 if (CollideGroupVector[i] == arb)
                 {
+                    mCollision.RemoveCollisionPair(arb);
                     DeleteArbiter(arb);
                     if (i != (int)CollideGroupVector.size() - 1)
                     {
@@ -268,6 +271,7 @@ namespace PhysicsBlock
             if (result.second)
             {
                 CollideGroupVector.push_back(J);
+                mCollision.AddCollisionPair(J);
             }
             else
             {
@@ -545,8 +549,6 @@ namespace PhysicsBlock
         }
         xTn.clear();
 #else
-        mKinematic.UpdateKinematicMotion(time);
-
         // 预处理
         for (const auto i : CollideGroupVector)
         {
@@ -707,13 +709,14 @@ namespace PhysicsBlock
             i->PhysicsSpeed(time, GravityAcceleration);
         }
 #endif
+        mKinematic.UpdateKinematicMotion(time);
 
         auto tPosEnd = std::chrono::high_resolution_clock::now();
         mPositionUpdateTimeMS = std::chrono::duration<float, std::milli>(tPosEnd - tPosStart).count();
 
         auto tPostStart = std::chrono::high_resolution_clock::now();
 
-        mCollision.ProcessCollisions(CollideGroupVector);
+        mCollision.ProcessCollisions();
 
         {
             std::vector<PhysicsFormwork *> allObjects;
@@ -1619,7 +1622,6 @@ namespace PhysicsBlock
                 dataArray[dataIndex]["type"] = j->GetArbiterType();
                 if (j->GetArbiterType() > PhysicsArbiterType::ArbiterL)
                 {
-
                     dataArray[dataIndex]["body1"] = GetPtrIndex(((PhysicsFormwork *)j->key.object1));
                     dataArray[dataIndex]["body1Type"] = ((PhysicsFormwork *)j->key.object1)->PFGetType();
                     dataArray[dataIndex]["body2"] = GetPtrIndex(((PhysicsFormwork *)j->key.object2));

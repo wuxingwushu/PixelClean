@@ -10,7 +10,6 @@ namespace PhysicsBlock
         {
             throw ArgumentNullException("object");
         }
-        std::lock_guard<std::mutex> lock(mMutex);
         GetOrCreateBinding(object).Layers = layers;
     }
 
@@ -20,7 +19,6 @@ namespace PhysicsBlock
         {
             throw ArgumentNullException("object");
         }
-        std::lock_guard<std::mutex> lock(mMutex);
         return GetBinding(object).Layers;
     }
 
@@ -35,7 +33,6 @@ namespace PhysicsBlock
             throw ArgumentOutOfRangeException("priority",
                 "Priority must be between 0 and 100. Received: " + std::to_string(priority));
         }
-        std::lock_guard<std::mutex> lock(mMutex);
         GetOrCreateBinding(object).Priority = priority;
     }
 
@@ -45,7 +42,6 @@ namespace PhysicsBlock
         {
             throw ArgumentNullException("object");
         }
-        std::lock_guard<std::mutex> lock(mMutex);
         return GetBinding(object).Priority;
     }
 
@@ -59,7 +55,7 @@ namespace PhysicsBlock
         {
             throw ArgumentNullException("callback");
         }
-        std::lock_guard<std::mutex> lock(mMutex);
+
         GetOrCreateBinding(object).OnEnter = std::move(callback);
     }
 
@@ -73,7 +69,6 @@ namespace PhysicsBlock
         {
             throw ArgumentNullException("callback");
         }
-        std::lock_guard<std::mutex> lock(mMutex);
         GetOrCreateBinding(object).OnStay = std::move(callback);
     }
 
@@ -87,7 +82,6 @@ namespace PhysicsBlock
         {
             throw ArgumentNullException("callback");
         }
-        std::lock_guard<std::mutex> lock(mMutex);
         GetOrCreateBinding(object).OnExit = std::move(callback);
     }
 
@@ -97,7 +91,6 @@ namespace PhysicsBlock
         {
             throw ArgumentNullException("object");
         }
-        std::lock_guard<std::mutex> lock(mMutex);
         mBindings.erase(object);
     }
 
@@ -107,7 +100,6 @@ namespace PhysicsBlock
         {
             throw ArgumentNullException("object");
         }
-        std::lock_guard<std::mutex> lock(mMutex);
         auto it = mBindings.find(object);
         if (it != mBindings.end())
         {
@@ -116,243 +108,90 @@ namespace PhysicsBlock
         }
     }
 
-    void PhysicsCollision::ProcessCollisions(const std::vector<BaseArbiter *> &collideGroupVector)
+    void PhysicsCollision::AddCollisionPair(BaseArbiter *arbiterKey)
     {
-        struct DeferredEvent
+        if (arbiterKey->mArbiterType < PhysicsArbiterType::ArbiterSS)
         {
-            CollisionCallback callback;
-            CollisionData data;
-        };
-
-        std::vector<DeferredEvent> deferredEvents;
-
-        {
-            std::lock_guard<std::mutex> lock(mMutex);
-
-            std::unordered_set<PairKey, PairKeyHash> currentPairs;
-            currentPairs.reserve(collideGroupVector.size());
-
-            struct CallbackEntry
-            {
-                BaseArbiter *arbiter;
-                CollisionBinding *binding;
-            };
-            std::vector<CallbackEntry> enterEntries;
-            std::vector<CallbackEntry> stayEntries;
-            std::vector<CallbackEntry> exitEntries;
-
-            enterEntries.reserve(collideGroupVector.size() * 2);
-            stayEntries.reserve(collideGroupVector.size() * 2);
-
-            for (const auto &arbiter : collideGroupVector)
-            {
-                if (arbiter->numContacts <= 0)
-                {
-                    continue;
-                }
-
-                PhysicsFormwork *obj1 = static_cast<PhysicsFormwork *>(arbiter->key.object1);
-                PhysicsFormwork *obj2 = static_cast<PhysicsFormwork *>(arbiter->key.object2);
-
-                if (obj1 == nullptr || obj2 == nullptr)
-                {
-                    continue;
-                }
-
-                if (!LayersOverlap(obj1, obj2))
-                {
-                    continue;
-                }
-
-                PairKey pairKey(obj1, obj2);
-                currentPairs.insert(pairKey);
-
-                bool isNew = (mActivePairs.find(pairKey) == mActivePairs.end());
-
-                auto it1 = mBindings.find(obj1);
-                auto it2 = mBindings.find(obj2);
-
-                CollisionBinding *bind1 = (it1 != mBindings.end()) ? &it1->second : nullptr;
-                CollisionBinding *bind2 = (it2 != mBindings.end()) ? &it2->second : nullptr;
-
-                if (isNew)
-                {
-                    if (bind1 && bind1->OnEnter)
-                    {
-                        enterEntries.push_back({arbiter, bind1});
-                    }
-                    if (bind2 && bind2->OnEnter)
-                    {
-                        enterEntries.push_back({arbiter, bind2});
-                    }
-                }
-
-                if (bind1 && bind1->OnStay)
-                {
-                    stayEntries.push_back({arbiter, bind1});
-                }
-                if (bind2 && bind2->OnStay)
-                {
-                    stayEntries.push_back({arbiter, bind2});
-                }
-            }
-
-            for (const auto &oldPair : mActivePairs)
-            {
-                if (currentPairs.find(oldPair) == currentPairs.end())
-                {
-                    PhysicsFormwork *obj1 = oldPair.a;
-                    PhysicsFormwork *obj2 = oldPair.b;
-
-                    auto it1 = mBindings.find(obj1);
-                    auto it2 = mBindings.find(obj2);
-
-                    if (it1 != mBindings.end() && it1->second.OnExit)
-                    {
-                        exitEntries.push_back({nullptr, &it1->second});
-                    }
-                    if (it2 != mBindings.end() && it2->second.OnExit)
-                    {
-                        exitEntries.push_back({nullptr, &it2->second});
-                    }
-                }
-            }
-
-            auto sortByPriority = [](const CallbackEntry &a, const CallbackEntry &b)
-            {
-                return a.binding->Priority > b.binding->Priority;
-            };
-
-            std::sort(enterEntries.begin(), enterEntries.end(), sortByPriority);
-            std::sort(stayEntries.begin(), stayEntries.end(), sortByPriority);
-            std::sort(exitEntries.begin(), exitEntries.end(), sortByPriority);
-
-            deferredEvents.reserve(enterEntries.size() + stayEntries.size() + exitEntries.size());
-
-            for (auto &entry : exitEntries)
-            {
-                if (entry.binding && entry.binding->OnExit)
-                {
-                    CollisionData data;
-                    if (entry.arbiter != nullptr)
-                    {
-                        PhysicsFormwork *self = static_cast<PhysicsFormwork *>(entry.arbiter->key.object1);
-                        data = BuildCollisionData(entry.arbiter, 0, self, nullptr);
-                    }
-                    deferredEvents.push_back({entry.binding->OnExit, data});
-                }
-            }
-
-            for (auto &entry : enterEntries)
-            {
-                if (entry.binding && entry.binding->OnEnter)
-                {
-                    for (int ci = 0; ci < entry.arbiter->numContacts; ++ci)
-                    {
-                        PhysicsFormwork *self = static_cast<PhysicsFormwork *>(entry.arbiter->key.object1);
-                        PhysicsFormwork *other = static_cast<PhysicsFormwork *>(entry.arbiter->key.object2);
-                        CollisionData data = BuildCollisionData(entry.arbiter, ci, self, other);
-                        deferredEvents.push_back({entry.binding->OnEnter, data});
-                    }
-                }
-            }
-
-            for (auto &entry : stayEntries)
-            {
-                if (entry.binding && entry.binding->OnStay)
-                {
-                    for (int ci = 0; ci < entry.arbiter->numContacts; ++ci)
-                    {
-                        PhysicsFormwork *self = static_cast<PhysicsFormwork *>(entry.arbiter->key.object1);
-                        PhysicsFormwork *other = static_cast<PhysicsFormwork *>(entry.arbiter->key.object2);
-                        CollisionData data = BuildCollisionData(entry.arbiter, ci, self, other);
-                        deferredEvents.push_back({entry.binding->OnStay, data});
-                    }
-                }
-            }
-
-            mActivePairs = std::move(currentPairs);
+            return;
         }
 
-        for (auto &deferred : deferredEvents)
+        auto Ait = mBindings.find((PhysicsFormwork *) (arbiterKey->mOriginalObject1));
+        if (Ait == mBindings.end())
         {
-            deferred.callback(deferred.data);
+            return;
+        }
+        auto Bit = mBindings.find((PhysicsFormwork *) (arbiterKey->mOriginalObject2));
+        if (Bit == mBindings.end())
+        {
+            return;
+        }
+
+        if (Bit->second.Layers & Ait->second.Layers) {
+            /*
+            if (Ait->second.Priority < Bit->second.Priority)
+            {
+                std::swap(Ait, Bit);
+            }*/
+
+            if (Ait->second.OnEnter)
+            {   
+                Ait->second.OnEnter(Ait->first, Bit->first, arbiterKey);
+            }
+            
+            if (Bit->second.OnEnter)
+            {
+                Bit->second.OnEnter(Ait->first, Bit->first, arbiterKey);
+            }
+
+            if ((Ait->second.OnStay != nullptr) || Bit->second.OnStay != nullptr) {
+                CollisionArbiter stayArbiter = {Ait->second, Bit->second, arbiterKey};
+                mCollisionArbiterStayS.push_back(stayArbiter);
+            }
+        }
+    }
+
+    void PhysicsCollision::ProcessCollisions()
+    {
+        for (auto &arbiter : mCollisionArbiterStayS)
+        {
+            if (arbiter.A_CollisionBinding.OnStay)
+            {
+                arbiter.A_CollisionBinding.OnStay((PhysicsFormwork *) (arbiter.arbiter->mOriginalObject1), (PhysicsFormwork *) (arbiter.arbiter->mOriginalObject2), arbiter.arbiter);
+            }
+            if (arbiter.B_CollisionBinding.OnStay)
+            {
+                arbiter.B_CollisionBinding.OnStay((PhysicsFormwork *) (arbiter.arbiter->mOriginalObject1), (PhysicsFormwork *) (arbiter.arbiter->mOriginalObject2), arbiter.arbiter);
+            }
+        }
+    }
+
+    // 移除碰撞对
+    void PhysicsCollision::RemoveCollisionPair(BaseArbiter *arbiterKey)
+    {
+        for (unsigned int i = 0; i < mCollisionArbiterStayS.size(); ++i)
+        {
+            if (mCollisionArbiterStayS[i].arbiter == arbiterKey)
+            {
+                if (mCollisionArbiterStayS[i].A_CollisionBinding.OnExit)
+                {
+                    mCollisionArbiterStayS[i].A_CollisionBinding.OnExit((PhysicsFormwork *) (arbiterKey->mOriginalObject1), (PhysicsFormwork *) (arbiterKey->mOriginalObject2), arbiterKey);
+                }
+                if (mCollisionArbiterStayS[i].B_CollisionBinding.OnExit)
+                {
+                    mCollisionArbiterStayS[i].B_CollisionBinding.OnExit((PhysicsFormwork *) (arbiterKey->mOriginalObject1), (PhysicsFormwork *) (arbiterKey->mOriginalObject2), arbiterKey);
+                }
+
+                mCollisionArbiterStayS[i] = mCollisionArbiterStayS[mCollisionArbiterStayS.size() - 1];
+                mCollisionArbiterStayS.pop_back();
+                break;
+            }
         }
     }
 
     void PhysicsCollision::Clear()
     {
-        std::lock_guard<std::mutex> lock(mMutex);
         mBindings.clear();
-        mActivePairs.clear();
-    }
-
-    CollisionBinding &PhysicsCollision::GetOrCreateBinding(PhysicsFormwork *object)
-    {
-        auto it = mBindings.find(object);
-        if (it == mBindings.end())
-        {
-            it = mBindings.emplace(object, CollisionBinding{}).first;
-            it->second.Layers = LayerMaskDefault;
-        }
-        return it->second;
-    }
-
-    const CollisionBinding &PhysicsCollision::GetBinding(PhysicsFormwork *object) const
-    {
-        static CollisionBinding defaultBinding;
-        auto it = mBindings.find(object);
-        if (it == mBindings.end())
-        {
-            return defaultBinding;
-        }
-        return it->second;
-    }
-
-    bool PhysicsCollision::LayersOverlap(PhysicsFormwork *a, PhysicsFormwork *b) const
-    {
-        LayerMask layersA = LayerMaskAll;
-        LayerMask layersB = LayerMaskAll;
-
-        auto itA = mBindings.find(a);
-        if (itA != mBindings.end())
-        {
-            layersA = itA->second.Layers;
-        }
-
-        auto itB = mBindings.find(b);
-        if (itB != mBindings.end())
-        {
-            layersB = itB->second.Layers;
-        }
-
-        return (layersA & layersB) != 0;
-    }
-
-    CollisionData PhysicsCollision::BuildCollisionData(const BaseArbiter *arbiter, int contactIndex,
-                                                        PhysicsFormwork *self, PhysicsFormwork *other) const
-    {
-        CollisionData data;
-        if (arbiter != nullptr && contactIndex >= 0 && contactIndex < arbiter->numContacts)
-        {
-            const Contact &contact = arbiter->contacts[contactIndex];
-            data.ContactPoint = contact.position;
-            data.Normal = contact.normal;
-            data.PenetrationDepth = (contact.separation < 0) ? -contact.separation : 0.0f;
-            data.NormalImpulse = contact.Pn;
-            data.TangentImpulse = contact.Pt;
-            data.Friction = contact.friction;
-        }
-
-        data.Self = static_cast<PhysicsFormwork *>(self);
-        data.Other = static_cast<PhysicsFormwork *>(other);
-
-        if (self && other)
-        {
-            data.RelativeVelocity = self->PFSpeed() - other->PFSpeed();
-        }
-
-        return data;
+        mCollisionArbiterStayS.clear();
     }
 
 }

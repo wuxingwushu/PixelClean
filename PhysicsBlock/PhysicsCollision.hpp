@@ -14,9 +14,16 @@ namespace PhysicsBlock
     {
         LayerMask Layers = LayerMaskAll;
         int Priority = 50;//默认优先级
-        CollisionCallback OnEnter = nullptr;
-        CollisionCallback OnStay = nullptr;
-        CollisionCallback OnExit = nullptr;
+        CollisionCallback OnEnter = nullptr; // 进入碰撞回调
+        CollisionCallback OnStay = nullptr; // 持续碰撞回调
+        CollisionCallback OnExit = nullptr; // 退出碰撞回调
+    };
+
+    struct CollisionArbiter
+    {
+        CollisionBinding A_CollisionBinding;
+        CollisionBinding B_CollisionBinding;
+        BaseArbiter *arbiter = nullptr;
     };
 
     struct PairKey
@@ -73,28 +80,54 @@ namespace PhysicsBlock
         PhysicsCollision() = default;
         ~PhysicsCollision() = default;
 
+        // 设置碰撞层级
         void SetCollisionLayers(PhysicsFormwork *object, LayerMask layers);
         LayerMask GetCollisionLayers(PhysicsFormwork *object) const;
+
+        // 设置碰撞优先级
         void SetCollisionPriority(PhysicsFormwork *object, int priority);
         int GetCollisionPriority(PhysicsFormwork *object) const;
+
+        // 添加碰撞监听
         void AddCollisionEnterListener(PhysicsFormwork *object, CollisionCallback callback);
         void AddCollisionStayListener(PhysicsFormwork *object, CollisionCallback callback);
         void AddCollisionExitListener(PhysicsFormwork *object, CollisionCallback callback);
+
+        // 移除所有碰撞监听
         void RemoveAllCollisionListeners(PhysicsFormwork *object);
+        // 移除指定对象的碰撞绑定
         void RemoveCollisionBinding(PhysicsFormwork *object);
-        void ProcessCollisions(const std::vector<BaseArbiter *> &collideGroupVector);
+
+        // 新增碰撞对
+        void AddCollisionPair(BaseArbiter *arbiterKey);
+        // 处理持续碰撞事件
+        void ProcessCollisions();
+        // 移除碰撞对
+        void RemoveCollisionPair(BaseArbiter *arbiterKey);
+
+        
+
+        // 清除所有碰撞绑定
         void Clear();
 
     private:
-        CollisionBinding &GetOrCreateBinding(PhysicsFormwork *object);
-        const CollisionBinding &GetBinding(PhysicsFormwork *object) const;
-        bool LayersOverlap(PhysicsFormwork *a, PhysicsFormwork *b) const;
-        CollisionData BuildCollisionData(const BaseArbiter *arbiter, int contactIndex,
-                                          PhysicsFormwork *self, PhysicsFormwork *other) const;
+        CollisionBinding &GetOrCreateBinding(PhysicsFormwork *object)
+        {
+            return mBindings[object];
+        }
+
+        const CollisionBinding &GetBinding(PhysicsFormwork *object) const
+        {
+            auto it = mBindings.find(object);
+            if (it != mBindings.end())
+                return it->second;
+            static const CollisionBinding defaultBinding{};
+            return defaultBinding;
+        }
 
         std::unordered_map<PhysicsFormwork *, CollisionBinding> mBindings;
-        std::unordered_set<PairKey, PairKeyHash> mActivePairs;
-        mutable std::mutex mMutex;
+
+        std::vector<CollisionArbiter> mCollisionArbiterStayS;
     };
 
 }

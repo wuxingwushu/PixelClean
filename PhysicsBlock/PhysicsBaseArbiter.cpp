@@ -17,21 +17,16 @@ namespace PhysicsBlock
      */
     void PhysicsBaseArbiterAA::Update(Contact *NewContacts, int numNewContacts)
     {
-        // 保留之前的冲量累积值
         for (size_t i = 0; i < numNewContacts; ++i)
         {
-            for (size_t j = 0; j < numContacts; ++j)
+            unsigned char idx = NewContacts[i].w_side;
+            if (idx < numContacts)
             {
-                if (NewContacts[i].w_side == contacts[j].w_side)
-                {
-                    NewContacts[i].Pn = contacts[j].Pn;
-                    NewContacts[i].Pt = contacts[j].Pt;
-                    break;
-                }
+                NewContacts[i].Pn = contacts[idx].Pn;
+                NewContacts[i].Pt = contacts[idx].Pt;
             }
         }
         
-        // 更新碰撞点信息
         for (size_t i = 0; i < numNewContacts; ++i)
         {
             contacts[i].normal = NewContacts[i].normal;
@@ -196,20 +191,15 @@ namespace PhysicsBlock
      */
     void PhysicsBaseArbiterAD::Update(Contact *NewContacts, int numNewContacts)
     {
-        // 保留之前的冲量累积值（用于帧间冲量缓存）
         for (size_t i = 0; i < numNewContacts; ++i)
         {
-            for (size_t j = 0; j < numContacts; ++j)
+            unsigned char idx = NewContacts[i].w_side;
+            if (idx < numContacts)
             {
-                if (NewContacts[i].w_side == contacts[j].w_side)
-                {
-                    NewContacts[i].Pn = contacts[j].Pn;
-                    NewContacts[i].Pt = contacts[j].Pt;
-                    break;
-                }
+                NewContacts[i].Pn = contacts[idx].Pn;
+                NewContacts[i].Pt = contacts[idx].Pt;
             }
         }
-        // 更新碰撞点信息（法向量、位置、分离距离、接触面标识、冲量累积）
         for (size_t i = 0; i < numNewContacts; ++i)
         {
             contacts[i].normal = NewContacts[i].normal;
@@ -370,20 +360,15 @@ namespace PhysicsBlock
      */
     void PhysicsBaseArbiterA::Update(Contact *NewContacts, int numNewContacts)
     {
-        // 保留之前的冲量累积值（用于帧间冲量缓存）
         for (size_t i = 0; i < numNewContacts; ++i)
         {
-            for (size_t j = 0; j < numContacts; ++j)
+            unsigned char idx = NewContacts[i].w_side;
+            if (idx < numContacts)
             {
-                if (NewContacts[i].w_side == contacts[j].w_side)
-                {
-                    NewContacts[i].Pn = contacts[j].Pn;
-                    NewContacts[i].Pt = contacts[j].Pt;
-                    break;
-                }
+                NewContacts[i].Pn = contacts[idx].Pn;
+                NewContacts[i].Pt = contacts[idx].Pt;
             }
         }
-        // 更新碰撞点信息（法向量、位置、分离距离、接触面标识、冲量累积）
         for (size_t i = 0; i < numNewContacts; ++i)
         {
             contacts[i].normal = NewContacts[i].normal;
@@ -527,20 +512,15 @@ namespace PhysicsBlock
      */
     void PhysicsBaseArbiterD::Update(Contact *NewContacts, int numNewContacts)
     {
-        // 保留之前的冲量累积值（用于帧间冲量缓存）
         for (size_t i = 0; i < numNewContacts; ++i)
         {
-            for (size_t j = 0; j < numContacts; ++j)
+            unsigned char idx = NewContacts[i].w_side;
+            if (idx < numContacts)
             {
-                if (NewContacts[i].w_side == contacts[j].w_side)
-                {
-                    NewContacts[i].Pn = contacts[j].Pn;
-                    NewContacts[i].Pt = contacts[j].Pt;
-                    break;
-                }
+                NewContacts[i].Pn = contacts[idx].Pn;
+                NewContacts[i].Pt = contacts[idx].Pt;
             }
         }
-        // 更新碰撞点信息（法向量、位置、分离距离、接触面标识、冲量累积）
         for (size_t i = 0; i < numNewContacts; ++i)
         {
             contacts[i].normal = NewContacts[i].normal;

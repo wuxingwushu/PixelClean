@@ -199,6 +199,12 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
         }
     };
 
+    struct CollideGroupEntry
+    {
+        BaseArbiter *arbiter = nullptr;
+        int vectorIndex = -1;
+    };
+
     /**
      * @brief 物理世界
      * @note 重力加速度， 网格风 */
@@ -229,7 +235,7 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
         std::vector<PhysicsLine *> PhysicsLineS;         // 物理线
         std::vector<PhysicsAssembly *> PhysicsAssemblyS; // 物理组装体
 
-        std::unordered_map<ArbiterKey, BaseArbiter *, ArbiterKeyHash> CollideGroupS; // 碰撞对-键值容器
+        std::unordered_map<ArbiterKey, CollideGroupEntry, ArbiterKeyHash> CollideGroupS; // 碰撞对-键值容器（含索引）
         std::vector<BaseArbiter *> CollideGroupVector;                               // 碰撞对数组
         std::vector<BaseArbiter *> NewCollideGroup;                                  // 新添加的碰撞对
         std::vector<ArbiterKey> DeleteCollideGroup;                                  // 删除的碰撞对

@@ -77,6 +77,11 @@ namespace PhysicsBlock
     PhysicsWorld::PhysicsWorld(Vec2_ gravityAcceleration, const bool wind) : GravityAcceleration(gravityAcceleration), WindBool(wind)
     {
         mGridSearch.SetThreadCount(std::thread::hardware_concurrency());
+#if ThreadPoolBool
+        const unsigned int xThreadNumHW = std::thread::hardware_concurrency();
+        const unsigned int xThreadNum = std::min(xThreadNumHW, 8u);
+        xTn.reserve(xThreadNum);
+#endif
     }
 
     PhysicsWorld::~PhysicsWorld()
@@ -91,7 +96,7 @@ namespace PhysicsBlock
 
         for (auto i : CollideGroupS)
         {
-            DeleteArbiter(i.second);
+            DeleteArbiter(i.second.arbiter);
         }
         CollideGroupS.clear();
         CollideGroupVector.clear();
@@ -169,7 +174,7 @@ namespace PhysicsBlock
 #endif
                 return;
             }
-            it->second->Update(Ba->contacts, Ba->numContacts);
+            it->second.arbiter->Update(Ba->contacts, Ba->numContacts);
         }
         else if (it != CollideGroupS.end())
         {
@@ -197,32 +202,29 @@ namespace PhysicsBlock
             {
                 continue;
             }
-            BaseArbiter *arb = it->second;
+            BaseArbiter *arb = it->second.arbiter;
+            int idx = it->second.vectorIndex;
             CollideGroupS.erase(it);
-            for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
+
+            mCollision.RemoveCollisionPair(arb);
+            DeleteArbiter(arb);
+            if (idx != (int)CollideGroupVector.size() - 1)
             {
-                if (CollideGroupVector[i] == arb)
-                {
-                    mCollision.RemoveCollisionPair(arb);
-                    DeleteArbiter(arb);
-                    if (i != (int)CollideGroupVector.size() - 1)
-                    {
-                        CollideGroupVector[i] = CollideGroupVector.back();
-                    }
-                    CollideGroupVector.pop_back();
-                    break;
-                }
+                CollideGroupVector[idx] = CollideGroupVector.back();
+                CollideGroupS[CollideGroupVector[idx]->key].vectorIndex = idx;
             }
+            CollideGroupVector.pop_back();
         }
         out.deleteGroup.clear();
 
         CollideGroupVector.reserve(CollideGroupVector.size() + out.newGroup.size());
         for (auto &J : out.newGroup)
         {
-            auto result = CollideGroupS.emplace(J->key, J);
+            auto result = CollideGroupS.emplace(J->key, CollideGroupEntry{J, 0});
             if (result.second)
             {
                 CollideGroupVector.push_back(J);
+                result.first->second.vectorIndex = (int)CollideGroupVector.size() - 1;
                 mCollision.AddCollisionPair(J);
             }
             else
@@ -245,32 +247,29 @@ namespace PhysicsBlock
             {
                 continue;
             }
-            BaseArbiter *arb = it->second;
+            BaseArbiter *arb = it->second.arbiter;
+            int idx = it->second.vectorIndex;
             CollideGroupS.erase(it);
-            for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
+
+            mCollision.RemoveCollisionPair(arb);
+            DeleteArbiter(arb);
+            if (idx != (int)CollideGroupVector.size() - 1)
             {
-                if (CollideGroupVector[i] == arb)
-                {
-                    mCollision.RemoveCollisionPair(arb);
-                    DeleteArbiter(arb);
-                    if (i != (int)CollideGroupVector.size() - 1)
-                    {
-                        CollideGroupVector[i] = CollideGroupVector.back();
-                    }
-                    CollideGroupVector.pop_back();
-                    break;
-                }
+                CollideGroupVector[idx] = CollideGroupVector.back();
+                CollideGroupS[CollideGroupVector[idx]->key].vectorIndex = idx;
             }
+            CollideGroupVector.pop_back();
         }
         DeleteCollideGroup.clear();
 
         CollideGroupVector.reserve(CollideGroupVector.size() + NewCollideGroup.size());
         for (auto &J : NewCollideGroup)
         {
-            auto result = CollideGroupS.emplace(J->key, J);
+            auto result = CollideGroupS.emplace(J->key, CollideGroupEntry{J, 0});
             if (result.second)
             {
                 CollideGroupVector.push_back(J);
+                result.first->second.vectorIndex = (int)CollideGroupVector.size() - 1;
                 mCollision.AddCollisionPair(J);
             }
             else
@@ -603,6 +602,7 @@ namespace PhysicsBlock
             };
             for (size_t di = 0; di < ApplyImpulseSize; ++di)
             {
+                xTn.reserve(xThreadNum);
                 for (size_t i = 0; i < xThreadNum; ++i)
                 {
                     xTn.push_back(mThreadPool.enqueue(ApplyImpulseXT_Fun, i, xThreadNum));
@@ -676,6 +676,7 @@ namespace PhysicsBlock
                 PhysicsLineS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
         };
+        xTn.reserve(xThreadNum);
         for (size_t i = 0; i < xThreadNum; ++i)
         {
             xTn.push_back(mThreadPool.enqueue(PhysicsPosXT_Fun, i, xThreadNum));
@@ -728,6 +729,7 @@ namespace PhysicsBlock
         }
 
         // 更新搜索网格树
+        xTn.reserve(xThreadNum);
         for (unsigned int i = 0; i < xThreadNum; ++i)
         {
             xTn.push_back(mThreadPool.enqueue(&GridSearch::UpDaraWorkeTask, &mGridSearch, xThreadNum, i));
@@ -745,6 +747,7 @@ namespace PhysicsBlock
         mCollideOutputs.resize(xThreadNum);
 
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
+        xTn.reserve(xThreadNum);
         for (unsigned int i = 0; i < xThreadNum; ++i)
         {
             mCollideOutputs[i].mThreadIndex = static_cast<unsigned char>(i);
@@ -961,6 +964,7 @@ namespace PhysicsBlock
                 CollideGroupVector[SizeD]->PreStep();
             }
         };
+        xTn.reserve(xThreadNum);
         for (size_t i = 0; i < xThreadNum; ++i)
         {
             xTn.push_back(mThreadPool.enqueue(PreStepXT_Fun, i, xThreadNum));
@@ -980,6 +984,7 @@ namespace PhysicsBlock
 #endif
 
         // 更新搜索网格树
+        xTn.reserve(xThreadNum);
         for (unsigned int i = 0; i < xThreadNum; ++i)
         {
             xTn.push_back(mThreadPool.enqueue(&GridSearch::UpDaraWorkeTask, &mGridSearch, xThreadNum, i));
@@ -997,6 +1002,7 @@ namespace PhysicsBlock
         mCollideOutputs.resize(xThreadNum);
 
         // 判断物体间的碰撞（不影响位置，所以可以不用强制等待完成）
+        xTn.reserve(xThreadNum);
         for (unsigned int i = 0; i < xThreadNum; ++i)
         {
             mCollideOutputs[i].mThreadIndex = static_cast<unsigned char>(i);
@@ -1096,17 +1102,17 @@ namespace PhysicsBlock
             {
                 if (it->first.object1 == shape || it->first.object2 == shape)
                 {
-                    for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
-                    {
-                        if (CollideGroupVector[i]->key == it->first)
-                        {
-                            DeleteArbiter(CollideGroupVector[i]);
-                            CollideGroupVector[i] = CollideGroupVector.back();
-                            CollideGroupVector.pop_back();
-                            break;
-                        }
-                    }
+                    BaseArbiter *arb = it->second.arbiter;
+                    int idx = it->second.vectorIndex;
                     it = CollideGroupS.erase(it);
+
+                    DeleteArbiter(arb);
+                    if (idx != (int)CollideGroupVector.size() - 1)
+                    {
+                        CollideGroupVector[idx] = CollideGroupVector.back();
+                        CollideGroupS[CollideGroupVector[idx]->key].vectorIndex = idx;
+                    }
+                    CollideGroupVector.pop_back();
                 }
                 else
                 {
@@ -1180,17 +1186,17 @@ namespace PhysicsBlock
             {
                 if (it->first.object1 == particle || it->first.object2 == particle)
                 {
-                    for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
-                    {
-                        if (CollideGroupVector[i]->key == it->first)
-                        {
-                            DeleteArbiter(CollideGroupVector[i]);
-                            CollideGroupVector[i] = CollideGroupVector.back();
-                            CollideGroupVector.pop_back();
-                            break;
-                        }
-                    }
+                    BaseArbiter *arb = it->second.arbiter;
+                    int idx = it->second.vectorIndex;
                     it = CollideGroupS.erase(it);
+
+                    DeleteArbiter(arb);
+                    if (idx != (int)CollideGroupVector.size() - 1)
+                    {
+                        CollideGroupVector[idx] = CollideGroupVector.back();
+                        CollideGroupS[CollideGroupVector[idx]->key].vectorIndex = idx;
+                    }
+                    CollideGroupVector.pop_back();
                 }
                 else
                 {
@@ -1273,17 +1279,17 @@ namespace PhysicsBlock
             {
                 if (it->first.object1 == circle || it->first.object2 == circle)
                 {
-                    for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
-                    {
-                        if (CollideGroupVector[i]->key == it->first)
-                        {
-                            DeleteArbiter(CollideGroupVector[i]);
-                            CollideGroupVector[i] = CollideGroupVector.back();
-                            CollideGroupVector.pop_back();
-                            break;
-                        }
-                    }
+                    BaseArbiter *arb = it->second.arbiter;
+                    int idx = it->second.vectorIndex;
                     it = CollideGroupS.erase(it);
+
+                    DeleteArbiter(arb);
+                    if (idx != (int)CollideGroupVector.size() - 1)
+                    {
+                        CollideGroupVector[idx] = CollideGroupVector.back();
+                        CollideGroupS[CollideGroupVector[idx]->key].vectorIndex = idx;
+                    }
+                    CollideGroupVector.pop_back();
                 }
                 else
                 {
@@ -1344,17 +1350,17 @@ namespace PhysicsBlock
             {
                 if (it->first.object1 == line || it->first.object2 == line)
                 {
-                    for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
-                    {
-                        if (CollideGroupVector[i]->key == it->first)
-                        {
-                            DeleteArbiter(CollideGroupVector[i]);
-                            CollideGroupVector[i] = CollideGroupVector.back();
-                            CollideGroupVector.pop_back();
-                            break;
-                        }
-                    }
+                    BaseArbiter *arb = it->second.arbiter;
+                    int idx = it->second.vectorIndex;
                     it = CollideGroupS.erase(it);
+
+                    DeleteArbiter(arb);
+                    if (idx != (int)CollideGroupVector.size() - 1)
+                    {
+                        CollideGroupVector[idx] = CollideGroupVector.back();
+                        CollideGroupS[CollideGroupVector[idx]->key].vectorIndex = idx;
+                    }
+                    CollideGroupVector.pop_back();
                 }
                 else
                 {

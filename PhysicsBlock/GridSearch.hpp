@@ -1,6 +1,7 @@
 #pragma once
 #include "PhysicsFormwork.hpp"
 #include <vector>
+#include <algorithm>
 
 namespace PhysicsBlock
 {
@@ -86,7 +87,7 @@ namespace PhysicsBlock
             }
             if (UpDataPtr != nullptr)
             {
-                delete UpDataPtr;
+                delete[] UpDataPtr;
             }
         }
 
@@ -302,7 +303,7 @@ namespace PhysicsBlock
             mThreadCount = threadCount;
             if (UpDataPtr != nullptr)
             {
-                delete UpDataPtr;
+                delete[] UpDataPtr;
             }
             UpDataPtr = new UpDataVector[threadCount];
         }
@@ -638,8 +639,18 @@ namespace PhysicsBlock
             unsigned int BlockSize = Grid.size() / ThreadSize;
             unsigned int BlockRemain = Grid.size() % ThreadSize;
 
-            unsigned int Start = BlockSize * ThreadID + (ThreadID < BlockRemain ? ThreadID : 0);
-            unsigned int End = Start + BlockSize + (ThreadID < BlockRemain ? 1 : 0);
+            int Start;
+            int End;
+            if (ThreadID < BlockRemain)
+            {
+                Start = ThreadID * (BlockSize + 1);
+                End = Start + BlockSize + 1;
+            }
+            else
+            {
+                Start = BlockRemain * (BlockSize + 1) + (ThreadID - BlockRemain) * BlockSize;
+                End = Start + BlockSize;
+            }
             for (unsigned int i = Start; i < End; ++i)
             {
                 for (size_t a = 0; a < Grid[i].size(); ++a)
@@ -677,8 +688,16 @@ namespace PhysicsBlock
             BlockSize = GridExtrovert.size() / ThreadSize;
             BlockRemain = GridExtrovert.size() % ThreadSize;
 
-            Start = BlockSize * ThreadID + (ThreadID < BlockRemain ? ThreadID : 0);
-            End = Start + BlockSize + (ThreadID < BlockRemain ? 1 : 0);
+            if (ThreadID < BlockRemain)
+            {
+                Start = ThreadID * (BlockSize + 1);
+                End = Start + BlockSize + 1;
+            }
+            else
+            {
+                Start = BlockRemain * (BlockSize + 1) + (ThreadID - BlockRemain) * BlockSize;
+                End = Start + BlockSize;
+            }
             // 更新网格外的对象（检查它们是否回到了网格范围内）
             for (size_t i = Start; i < End; ++i)
             {
@@ -687,7 +706,7 @@ namespace PhysicsBlock
 
                 if (index < Grid.size())
                 {
-                    ExcursionVector.push_back(index);
+                    ExcursionVector.push_back(i);
 
                     if (index >= Start && index < End)
                     {

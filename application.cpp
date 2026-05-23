@@ -147,7 +147,7 @@ namespace GAME {
 		mSwapChain = new VulKan::SwapChain(mDevice, mWindow, mWindowSurface, mCommandPool);//设置VulKan的工作细节
 		Global::mWidth = mSwapChain->getExtent().width;
 		Global::mHeight = mSwapChain->getExtent().height;
-		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
+		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 2000.0f);
 		mRenderPass = new VulKan::RenderPass(mDevice);//创建GPU画布描述
 		mImGuuiRenderPass = new VulKan::RenderPass(mDevice);
 		mImGuiLoadRenderPass = new VulKan::RenderPass(mDevice);
@@ -242,11 +242,7 @@ namespace GAME {
 		}
 
 		LOGI("initGame: step 2 - creating ParticleSystem");
-#if defined(__ANDROID__)
-		const int particleCount = 100;
-#else
 		const int particleCount = 1000;
-#endif
 		LOGI("initGame: step 2 - particleCount=%d (reduced on Android for mobile GPU compatibility)", particleCount);
 		mParticleSystem = new ParticleSystem(mDevice, particleCount);
 		mParticleSystem->initUniformManager(

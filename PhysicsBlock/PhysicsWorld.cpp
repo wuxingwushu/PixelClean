@@ -185,34 +185,52 @@ namespace PhysicsBlock
         DeleteArbiter(Ba);
     }
 
-    inline void PhysicsWorld::MergeCollideOutputs(std::vector<CollideOutput> &outputs)
-    {
-        size_t totalNew = 0;
-        size_t totalDel = 0;
-        for (const auto &out : outputs)
-        {
-            totalNew += out.newGroup.size();
-            totalDel += out.deleteGroup.size();
-        }
-
-        NewCollideGroup.reserve(NewCollideGroup.size() + totalNew);
-        DeleteCollideGroup.reserve(DeleteCollideGroup.size() + totalDel);
-
-        for (auto &out : outputs)
-        {
-            NewCollideGroup.insert(
-                NewCollideGroup.end(),
-                std::make_move_iterator(out.newGroup.begin()),
-                std::make_move_iterator(out.newGroup.end()));
-            DeleteCollideGroup.insert(
-                DeleteCollideGroup.end(),
-                std::make_move_iterator(out.deleteGroup.begin()),
-                std::make_move_iterator(out.deleteGroup.end()));
-        }
-    }
-
     inline void PhysicsWorld::ResolveCollideGroup()
     {
+#if ThreadPoolBool
+        for (auto &out : mCollideOutputs)
+        {
+            for (const auto &D : out.deleteGroup)
+        {
+            auto it = CollideGroupS.find(D);
+            if (it == CollideGroupS.end())
+            {
+                continue;
+            }
+            BaseArbiter *arb = it->second;
+            CollideGroupS.erase(it);
+            for (int i = 0; i < (int)CollideGroupVector.size(); ++i)
+            {
+                if (CollideGroupVector[i] == arb)
+                {
+                    DeleteArbiter(arb);
+                    if (i != (int)CollideGroupVector.size() - 1)
+                    {
+                        CollideGroupVector[i] = CollideGroupVector.back();
+                    }
+                    CollideGroupVector.pop_back();
+                    break;
+                }
+            }
+        }
+        out.deleteGroup.clear();
+
+        CollideGroupVector.reserve(CollideGroupVector.size() + out.newGroup.size());
+        for (auto &J : out.newGroup)
+        {
+            auto result = CollideGroupS.emplace(J->key, J);
+            if (result.second)
+            {
+                CollideGroupVector.push_back(J);
+            }
+            else
+            {
+                DeleteArbiter(J);
+            }
+        }
+        out.newGroup.clear();
+        }
+#else
         if (DeleteCollideGroup.empty() && NewCollideGroup.empty())
         {
             return;
@@ -257,6 +275,7 @@ namespace PhysicsBlock
             }
         }
         NewCollideGroup.clear();
+#endif
     }
 
     void PhysicsWorld::PhysicsEmulator(FLOAT_ time)
@@ -273,10 +292,8 @@ namespace PhysicsBlock
             tf.wait();
         }
         xTn.clear();
-
-        // 合并所有线程的碰撞输出
-        MergeCollideOutputs(mCollideOutputs);
 #endif
+        ResolveCollideGroup();
 
         auto tCollisionEnd = std::chrono::high_resolution_clock::now();
         mCollisionDetectionTimeMS = std::chrono::duration<float, std::milli>(tCollisionEnd - tEmulatorStart).count();
@@ -490,8 +507,6 @@ namespace PhysicsBlock
         FLOAT_ inv_dt = 1.0 / time;
 
         auto tPreStepStart = std::chrono::high_resolution_clock::now();
-
-        ResolveCollideGroup();
 
 #define Definite 0 // 是否需要确定性(暂时没法保证确定性，没有对解算的前后顺序进行排序)
 
@@ -753,10 +768,8 @@ namespace PhysicsBlock
             tf.wait();
         }
         xTn.clear();
-
-        // 合并所有线程的碰撞输出
-        MergeCollideOutputs(mCollideOutputs);
 #endif
+        ResolveCollideGroup();
 
                 // 碰撞检测
         const auto XT_Fun = [this](int T_Num, int Tx, CollideOutput *output)
@@ -930,7 +943,7 @@ namespace PhysicsBlock
             tlCollideOutput = nullptr;
         };
 
-        ResolveCollideGroup();
+        
 
 #if ThreadPoolBool
         // 预处理

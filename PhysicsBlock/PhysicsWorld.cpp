@@ -359,11 +359,9 @@ namespace PhysicsBlock
                         }
                         break;
                     case PhysicsObjectEnum::shape:
+                        if ((PhysicsShape *)PhysicsShapeS[SizeD] <= (PhysicsShape *)i &&
+                            PhysicsShapeS[SizeD]->radius <= ((PhysicsShape *)i)->radius) break;
                         if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
-                        if (PhysicsShapeS[SizeD] == ((PhysicsShape *)i))
-                        {
-                            break;
-                        }
                         if (!CollideAABB(PhysicsShapeS[SizeD], ((PhysicsShape *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsShapeS[SizeD]);
@@ -405,10 +403,9 @@ namespace PhysicsBlock
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
-                        if (PhysicsCircleS[SizeD] == ((PhysicsCircle *)i) || SameAssembly(PhysicsCircleS[SizeD], i))
-                        {
-                            break;
-                        }
+                        if ((PhysicsCircle *)PhysicsCircleS[SizeD] <= (PhysicsCircle *)i &&
+                        PhysicsCircleS[SizeD]->radius <= ((PhysicsCircle *)i)->radius) break;
+                        if (SameAssembly(PhysicsCircleS[SizeD], i)) break;
                         if (!CollideAABB(PhysicsCircleS[SizeD], ((PhysicsCircle *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
@@ -825,11 +822,9 @@ namespace PhysicsBlock
                         }
                         break;
                     case PhysicsObjectEnum::shape:
+                        if ((PhysicsShape *)PhysicsShapeS[SizeD] <= (PhysicsShape *)i &&
+                            PhysicsShapeS[SizeD]->radius <= ((PhysicsShape *)i)->radius) break;
                         if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
-                        if (PhysicsShapeS[SizeD] == ((PhysicsShape *)i))
-                        {
-                            break;
-                        }
                         if (!CollideAABB(PhysicsShapeS[SizeD], ((PhysicsShape *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsShape *)i), PhysicsShapeS[SizeD]);
@@ -861,10 +856,9 @@ namespace PhysicsBlock
                     switch (i->PFGetType())
                     {
                     case PhysicsObjectEnum::circle:
-                        if (PhysicsCircleS[SizeD] == ((PhysicsCircle *)i) || SameAssembly(PhysicsCircleS[SizeD], i))
-                        {
-                            break;
-                        }
+                        if ((PhysicsCircle *)PhysicsCircleS[SizeD] <= (PhysicsCircle *)i &&
+                        PhysicsCircleS[SizeD]->radius <= ((PhysicsCircle *)i)->radius) break;
+                        if (SameAssembly(PhysicsCircleS[SizeD], i)) break;
                         if (!CollideAABB(PhysicsCircleS[SizeD], ((PhysicsCircle *)i)))
                         {
                             ArbiterKey key = ArbiterKey(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);

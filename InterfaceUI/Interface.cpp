@@ -7,8 +7,6 @@
 #include <imgui/backends/imgui_impl_android.h>
 #endif
 
-#include "../NetworkTCP/Server.h"
-#include "../NetworkTCP/Client.h"
 #include "../DebugLog.h"
 #include <fstream>
 #include <sstream>
@@ -483,7 +481,6 @@ namespace GAME {
 			Global::ServerOrClient = true;
 			Global::GameMode = GameModsEnum::Maze_;
 			Global::GameResourceLoadingBool = true;
-			server::GetServer();
 		}
 
 		curY += btnH + spacing;
@@ -496,7 +493,6 @@ namespace GAME {
 			Global::ServerOrClient = false;
 			Global::GameMode = GameModsEnum::Maze_;
 			Global::GameResourceLoadingBool = true;
-			client::GetClient();
 		}
 
 		curY += btnH + spacing;
@@ -886,33 +882,7 @@ namespace GAME {
 
 			if (Global::MultiplePeopleMode) {
 				LOpcodeStr = LOpCode;
-				OpodeSize = LOpcodeStr.size();
-				char* NewChar = new char[OpodeSize + 1];
-				memcpy(NewChar, LOpCode, OpodeSize + 1);
-
-				LimitUse<ChatStrStruct*>* LUse;
-				ContinuousMap<evutil_socket_t, RoleSynchronizationData>* LRoleMap;
-				RoleSynchronizationData* LRoleData;
-
-				ChatStrStruct* LChatStrStruct = new ChatStrStruct;
-				LChatStrStruct->str = NewChar;
-				LChatStrStruct->size = OpodeSize + 1;
-
-				if (Global::ServerOrClient) {
-					LRoleMap = server::GetServer()->GetServerData();
-					LRoleData = LRoleMap->GetKeyData(0);
-					LUse = new LimitUse<ChatStrStruct*>(LChatStrStruct, LRoleMap->GetKeyNumber());
-					for (size_t i = 0; i < LRoleMap->GetKeyNumber(); ++i)
-					{
-						LRoleData[i].mBufferEventSingleData->mStr->add(LUse);
-					}
-				}
-				else
-				{
-					LRoleData = client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData();
-					LUse = new LimitUse<ChatStrStruct*>(LChatStrStruct, 1);
-					LRoleData->mBufferEventSingleData->mStr->add(LUse);
-				}
+				mChatBoxStr->add({ LOpcodeStr, std::chrono::steady_clock::now() });
 			}
 
 			OpodeSize = 0;

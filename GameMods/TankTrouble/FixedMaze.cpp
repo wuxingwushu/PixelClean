@@ -1,6 +1,4 @@
 #include "FixedMaze.h"
-#include "../../NetworkTCP/Server.h"
-#include "../../NetworkTCP/Client.h"
 #include "../../SoundEffect/SoundEffect.h"
 #include "../../BlockS/PixelS.h"
 #include "../../Tool/GenerateMaze.h"
@@ -14,21 +12,6 @@ namespace GAME {
 		FixedMaze* mClass = (FixedMaze*)mclass;
 		//破坏的像素
 		mClass->mPixelQueue->add({ x, y, Bool });//储存起来，统一上传
-		//同步
-		if (Global::MultiplePeopleMode) {
-			if (Global::ServerOrClient) {
-				RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
-				BufferEventSingleData* LBufferEventSingleData;
-				for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); ++i)
-				{
-					LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
-					LBufferEventSingleData->mLabyrinthPixel->add({ x,y,false });
-				}
-			}
-			else {
-				client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mLabyrinthPixel->add({ x,y,false });
-			}
-		}
 	}
 
 	FixedMaze::FixedMaze(SquarePhysics::SquarePhysics* squarePhysics):

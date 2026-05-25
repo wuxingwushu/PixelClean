@@ -1,8 +1,6 @@
 #include "SoloudTest.h"
 #include "../../GlobalVariable.h"
 #include "../../PhysicsBlock/BaseCalculate.hpp"
-#include "../../NetworkTCP/Server.h"
-#include "../../NetworkTCP/Client.h"
 #include "../../DebugLog.h"
 #include <chrono>
 #include <cmath>
@@ -1145,14 +1143,6 @@ namespace GAME
 
 	void SoloudTest::GameTCPLoop()
 	{
-		if (Global::MultiplePeopleMode) {
-			if (Global::ServerOrClient) {
-				event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
-			}
-			else {
-				event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
-			}
-		}
 	}
 
 	// ==================== 渲染辅助 ====================

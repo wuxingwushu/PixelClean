@@ -1,6 +1,8 @@
 #include "MazeMods.h"
-#include "../../NetworkTCP/Server.h"
-#include "../../NetworkTCP/Client.h"
+#include "../../NetworkTCP/Replication/ReplicationManager.h"
+#include "../../NetworkTCP/Replication/NetworkLayer.h"
+#include "MazeReplicationComponents.h"
+#include "MazeReplicationEvents.h"
 #include "../../Opcode/OpcodeFunction.h"
 #include "../../Physics/DestroyMode.h"
 #include "../../DebugLog.h"
@@ -36,13 +38,17 @@ namespace GAME
 		// 生成迷宫
 		mLabyrinth = new Labyrinth(mSquarePhysics);
 		mLabyrinth->InitLabyrinth(mDevice, 21, 21);
-		mLabyrinth->initUniformManager(
-			mDevice,
-			mSwapChain->getImageCount(),
-			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
-			&mCameraVPMatricesBuffer,
-			mSampler);
-		mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
+
+		if (!(Global::MultiplePeopleMode && !Global::ServerOrClient)) {
+			mLabyrinth->initUniformManager(
+				mDevice,
+				mSwapChain->getImageCount(),
+				mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
+				&mCameraVPMatricesBuffer,
+				mSampler);
+			mLabyrinth->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
+			mLabyrinthVulkanReady = true;
+		}
 
 		JPSPathfinding->SetObstaclesCallback(LabyrinthGetWallD, mLabyrinth);
 		AStarPathfinding->SetObstaclesCallback(LabyrinthGetWallD, mLabyrinth);
@@ -84,31 +90,111 @@ namespace GAME
 		ALine->Force = mGamePlayer->GetObjectCollision()->GetSpeedPointer();
 		ALine->Color = {0, 1.0f, 0, 1.0f};
 
+		// === 新 Replication 系统初始化 ===
 		if (Global::MultiplePeopleMode)
 		{
-			if (Global::ServerOrClient)
-			{
-				server::GetServer()->SetArms(mArms);
-				server::GetServer()->SetCrowd(mCrowd);
-				server::GetServer()->SetGamePlayer(mGamePlayer);
-				server::GetServer()->SetLabyrinth(mLabyrinth);
-				server::GetServer()->SetInterFace(InterFace);
-				if (mGamePlayer->GetRoleSynchronizationData() == nullptr)
-				{
-					RoleSynchronizationData *LRole = server::GetServer()->GetServerData()->New(0);
-					LRole->Key = 0;
-					LRole->mBufferEventSingleData = new BufferEventSingleData(100);
-					mGamePlayer->SetRoleSynchronizationData(LRole);
-					server::GetServer()->GetServerData()->SetPointerData(0, mGamePlayer);
-				}
+			auto& netLayer = NetworkLayer::Get();
+			NetworkRole role = Global::ServerOrClient
+				? NetworkRole::Server : NetworkRole::Client;
+			netLayer.Initialize(role, Global::ClientIP,
+								Global::ServerPort, Global::ClientPort);
+
+			auto& repMgr = ReplicationManager::Get();
+			repMgr.RegisterRemoteComponentType(
+				PlayerPositionComponent::kTypeId,
+				[]() -> std::unique_ptr<ReplicableComponent> {
+					return std::make_unique<PlayerPositionComponent>();
+				});
+			repMgr.RegisterRemoteComponentType(
+				PlayerBrokenComponent::kTypeId,
+				[]() -> std::unique_ptr<ReplicableComponent> {
+					return std::make_unique<PlayerBrokenComponent>();
+				});
+
+			repMgr.SetSendCallback([&netLayer](
+				evutil_socket_t targetFd,
+				const uint8_t* data, size_t size) {
+				netLayer.SendWithHeader(targetFd, 0, data, size);
+			});
+			repMgr.SetEventSendCallback([&netLayer](
+				evutil_socket_t targetFd,
+				const uint8_t* data, size_t size) {
+				netLayer.SendWithHeader(targetFd, 1, data, size);
+			});
+
+			evutil_socket_t myId = Global::ServerOrClient ? 0 : static_cast<evutil_socket_t>(1);
+
+			mLocalPlayerObj = repMgr.RegisterLocalObject(myId);
+			mPlayerPosComp = mLocalPlayerObj->AddComponent<PlayerPositionComponent>();
+			mPlayerBrokenComp = mLocalPlayerObj->AddComponent<PlayerBrokenComponent>();
+
+			repMgr.RegisterEventHandler(BulletShootEvent::kTypeId,
+				[this](evutil_socket_t sender, ByteReader& reader) {
+					BulletShootEvent evt;
+					evt.Deserialize(reader);
+					mArms->ShootBullets(evt.x, evt.y, evt.angle, 500, evt.bulletType);
+					if (Global::ServerOrClient)
+					{
+						ReplicationManager::Get().SendEvent(
+							static_cast<evutil_socket_t>(-1),
+							new BulletShootEvent(evt.x, evt.y, evt.angle, evt.bulletType));
+					}
+				});
+
+			repMgr.RegisterEventHandler(PixelDestroyEvent::kTypeId,
+				[this](evutil_socket_t sender, ByteReader& reader) {
+					PixelDestroyEvent evt;
+					evt.Deserialize(reader);
+					mLabyrinth->mPixelQueue->add(evt.pixel);
+					if (Global::ServerOrClient)
+					{
+						ReplicationManager::Get().SendEvent(
+							static_cast<evutil_socket_t>(-1),
+							new PixelDestroyEvent(evt.pixel));
+					}
+				});
+
+			repMgr.RegisterEventHandler(ChatEvent::kTypeId,
+				[this](evutil_socket_t sender, ByteReader& reader) {
+					ChatEvent evt;
+					evt.Deserialize(reader);
+					InterFace->mChatBoxStr->add({evt.message, std::chrono::steady_clock::now()});
+					if (Global::ServerOrClient)
+					{
+						ReplicationManager::Get().SendEvent(
+							static_cast<evutil_socket_t>(-1),
+							new ChatEvent(evt.message));
+					}
+				});
+
+			if (!Global::ServerOrClient) {
+				repMgr.RegisterEventHandler(LabyrinthInitDataEvent::kTypeId,
+					[this](evutil_socket_t, ByteReader& reader) {
+						auto evt = std::make_unique<LabyrinthInitDataEvent>();
+						evt->Deserialize(reader);
+						mPendingLabyrinthInit = std::move(evt);
+					});
 			}
-			else
-			{
-				client::GetClient()->SetArms(mArms);
-				client::GetClient()->SetCrowd(mCrowd);
-				client::GetClient()->SetGamePlayer(mGamePlayer);
-				client::GetClient()->SetLabyrinth(mLabyrinth);
-				client::GetClient()->SetInterFace(InterFace);
+
+			if (Global::ServerOrClient) {
+				repMgr.RegisterEventHandler(RequestLabyrinthInitEvent::kTypeId,
+					[this](evutil_socket_t senderFd, ByteReader&) {
+						auto* lab = mLabyrinth;
+						auto* evt = new LabyrinthInitDataEvent();
+						evt->numberX = lab->numberX;
+						evt->numberY = lab->numberY;
+						evt->blockTypesData.resize(lab->numberX * lab->numberY);
+						for (int ix = 0; ix < lab->numberX; ++ix) {
+							std::memcpy(&evt->blockTypesData[ix * lab->numberY],
+										lab->BlockTypeS[ix],
+										lab->numberY * sizeof(unsigned int));
+						}
+						evt->blockPixelsData.resize(lab->numberX * lab->numberY * 16 * 16);
+						std::memcpy(evt->blockPixelsData.data(), lab->BlockPixelS,
+									evt->blockPixelsData.size() * sizeof(int));
+
+						ReplicationManager::Get().SendEvent(senderFd, evt);
+					});
 			}
 		}
 
@@ -137,14 +223,7 @@ namespace GAME
 
 		if (Global::MultiplePeopleMode)
 		{
-			if (Global::ServerOrClient)
-			{
-				delete server::GetServer();
-			}
-			else
-			{
-				delete client::GetClient();
-			}
+			NetworkLayer::Get().Shutdown();
 			Global::MultiplePeopleMode = false;
 		}
 	}
@@ -251,13 +330,15 @@ namespace GAME
 
 	void MazeMods::GameCommandBuffers(unsigned int Format_i)
 	{
-		mLabyrinth->GetCommandBuffer(wThreadCommandBufferS, Format_i);
+		if (mLabyrinthVulkanReady) {
+			mLabyrinth->GetCommandBuffer(wThreadCommandBufferS, Format_i);
+		}
 
 		mParticleSystem->GetCommandBuffer(wThreadCommandBufferS, Format_i);
 		// 加到显示数组中
 		mCrowd->GetCommandBufferS(wThreadCommandBufferS, Format_i);
 
-		if (Global::MistSwitch)
+		if (Global::MistSwitch && mLabyrinthVulkanReady)
 		{
 			mLabyrinth->GetMistCommandBuffer(wThreadCommandBufferS, Format_i);
 		}
@@ -275,6 +356,24 @@ namespace GAME
 
 	void MazeMods::GameLoop(unsigned int mCurrentFrame)
 	{
+		if (mPendingLabyrinthInit) {
+			auto& d = *mPendingLabyrinthInit;
+			while (mLabyrinth->mPixelQueue->GetNumber() != 0) {
+				delete mLabyrinth->mPixelQueue->pop();
+			}
+			vkDeviceWaitIdle(mDevice->getDevice());
+			mLabyrinth->LoadLabyrinth(d.numberX, d.numberY,
+				d.blockPixelsData.data(), d.blockTypesData.data(),
+				mRenderPass, mSwapChain,
+				mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods),
+				&mCameraVPMatricesBuffer, mSampler);
+			mArms->GetSquarePhysics()->SetFixedSizeTerrain(
+				mLabyrinth->mFixedSizeTerrain);
+			mLabyrinthVulkanReady = true;
+			mPendingLabyrinthInit.reset();
+			mJustLoadedLabyrinth = true;
+		}
+
 		mAuxiliaryVision->Begin();
 
 		Global::GamePlayerX = mGamePlayer->GetObjectCollision()->GetPosX();
@@ -311,6 +410,7 @@ namespace GAME
 		mUVDynamicDiagram->AnimationEvent(TOOL::FPStime);
 		if (!Global::ServerOrClient)
 		{
+			vkDeviceWaitIdle(mDevice->getDevice());
 			mCrowd->NPCTimeoutDetection();
 		}
 		else
@@ -348,6 +448,12 @@ namespace GAME
 		mGamePlayer->UpData();												// 更新玩家伤痕
 		mCamera->setCameraPos(mGamePlayer->GetObjectCollision()->GetPos()); // 设置玩家位置
 
+		if (Global::MultiplePeopleMode && mPlayerPosComp) {
+			mPlayerPosComp->x.Set(mGamePlayer->GetObjectCollision()->GetPosX());
+			mPlayerPosComp->y.Set(mGamePlayer->GetObjectCollision()->GetPosY());
+			mPlayerPosComp->angle.Set(m_angle);
+		}
+
 		mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);
 
 		// 更新Camera变换矩阵
@@ -369,23 +475,18 @@ namespace GAME
 				if (LSObjectDecorator.Object == nullptr)
 				{
 					glm::dvec2 Armsdain = SquarePhysics::vec2angle(glm::dvec2{9.0f, 0.0f}, m_angle);
-					mArms->Shoot(mCamera->getCameraPos().x + Armsdain.x, mCamera->getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
+					if (!Global::MultiplePeopleMode || Global::ServerOrClient)
+					{
+						mArms->Shoot(mCamera->getCameraPos().x + Armsdain.x, mCamera->getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
+					}
 					if (Global::MultiplePeopleMode)
-					{ // 是否为多人模式
-						if (Global::ServerOrClient)
-						{ // 服务器还是客户端
-							RoleSynchronizationData *LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
-							BufferEventSingleData *LBufferEventSingleData;
-							for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); ++i)
-							{
-								LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
-								LBufferEventSingleData->mSubmitBullet->add({float(mCamera->getCameraPos().x + Armsdain.x), float(mCamera->getCameraPos().y + Armsdain.y), m_angle, AttackType});
-							}
-						}
-						else
-						{
-							client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->add({float(mCamera->getCameraPos().x + Armsdain.x), float(mCamera->getCameraPos().y + Armsdain.y), m_angle, AttackType});
-						}
+					{
+						ReplicationManager::Get().SendEvent(
+							static_cast<evutil_socket_t>(-1),
+							new BulletShootEvent(
+								float(mCamera->getCameraPos().x + Armsdain.x),
+								float(mCamera->getCameraPos().y + Armsdain.y),
+								m_angle, AttackType));
 					}
 				}
 			}
@@ -493,12 +594,18 @@ namespace GAME
 		mCrowd->TimeoutDetection(); // 检测玩家更新情况
 
 		static double MistContinuityFire = 0;
-		mLabyrinth->UpDateMaps();
+		if (mJustLoadedLabyrinth) {
+			MistContinuityFire = 0;
+			mJustLoadedLabyrinth = false;
+		}
+		if (mLabyrinthVulkanReady) {
+			mLabyrinth->UpDateMaps();
+		}
 
 		// 战争迷雾
 		TOOL::mTimer->StartTiming(u8"战争迷雾耗时 ", true);
 		MistContinuityFire += TOOL::FPStime;
-		if (MistContinuityFire > 0.02f && Global::MistSwitch)
+		if (MistContinuityFire > 0.02f && Global::MistSwitch && mLabyrinthVulkanReady)
 		{
 			MistContinuityFire = 0;
 			mLabyrinth->UpdataMist(int(mCamera->getCameraPos().x), int(mCamera->getCameraPos().y), m_angle + 0.7853981633975f - 1.57f);
@@ -514,7 +621,9 @@ namespace GAME
 		mGamePlayer->InitCommandBuffer();
 		mCrowd->ReconfigurationCommandBuffer();
 		mVisualEffect->initCommandBuffer();
-		mLabyrinth->ThreadUpdateCommandBuffer();
+		if (mLabyrinthVulkanReady) {
+			mLabyrinth->ThreadUpdateCommandBuffer();
+		}
 		mDamagePrompt->initCommandBuffer();
 		mUVDynamicDiagram->InitCommandBuffer();
 	}
@@ -533,15 +642,40 @@ namespace GAME
 	{
 		if (Global::MultiplePeopleMode)
 		{
-			if (Global::ServerOrClient)
+			NetworkLayer::Get().RunLoop();
+
+			ReplicationManager::Get().Tick();
+
+			ReplicationManager::Get().TickTimeouts(1000);
+
+			if (!Global::ServerOrClient && !mInitRequested)
 			{
-				event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
-			}
-			else
-			{
-				event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
+				mInitRequested = true;
+				ReplicationManager::Get().SendEvent(
+					static_cast<evutil_socket_t>(-1),
+					new RequestLabyrinthInitEvent());
 			}
 		}
+	}
+
+	void MazeMods::ProcessPendingLabyrinthInit()
+	{
+		if (!mPendingLabyrinthInit) return;
+		auto& d = *mPendingLabyrinthInit;
+		while (mLabyrinth->mPixelQueue->GetNumber() != 0) {
+			delete mLabyrinth->mPixelQueue->pop();
+		}
+		vkDeviceWaitIdle(mDevice->getDevice());
+		mLabyrinth->LoadLabyrinth(d.numberX, d.numberY,
+			d.blockPixelsData.data(), d.blockTypesData.data(),
+			mRenderPass, mSwapChain,
+			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods),
+			&mCameraVPMatricesBuffer, mSampler);
+		mArms->GetSquarePhysics()->SetFixedSizeTerrain(
+			mLabyrinth->mFixedSizeTerrain);
+		mLabyrinthVulkanReady = true;
+		mJustLoadedLabyrinth = true;
+		mPendingLabyrinthInit.reset();
 	}
 
 }

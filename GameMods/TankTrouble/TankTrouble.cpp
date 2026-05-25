@@ -1,6 +1,4 @@
 #include "TankTrouble.h"
-#include "../../NetworkTCP/Server.h"
-#include "../../NetworkTCP/Client.h"
 #include "../../Opcode/OpcodeFunction.h"
 #include "../../Physics/DestroyMode.h"
 #include "../../DebugLog.h"
@@ -102,34 +100,6 @@ namespace GAME
 		ALine->Force = mGamePlayer->GetObjectCollision()->GetSpeedPointer();
 		ALine->Color = {0, 1.0f, 0, 1.0f};
 
-		if (Global::MultiplePeopleMode)
-		{
-			if (Global::ServerOrClient)
-			{
-				server::GetServer()->SetArms(mArms);
-				server::GetServer()->SetCrowd(mCrowd);
-				server::GetServer()->SetGamePlayer(mGamePlayer);
-				// server::GetServer()->SetLabyrinth(mLabyrinth);
-				server::GetServer()->SetInterFace(InterFace);
-				if (mGamePlayer->GetRoleSynchronizationData() == nullptr)
-				{
-					RoleSynchronizationData *LRole = server::GetServer()->GetServerData()->New(0);
-					LRole->Key = 0;
-					LRole->mBufferEventSingleData = new BufferEventSingleData(100);
-					mGamePlayer->SetRoleSynchronizationData(LRole);
-					server::GetServer()->GetServerData()->SetPointerData(0, mGamePlayer);
-				}
-			}
-			else
-			{
-				client::GetClient()->SetArms(mArms);
-				client::GetClient()->SetCrowd(mCrowd);
-				client::GetClient()->SetGamePlayer(mGamePlayer);
-				// client::GetClient()->SetLabyrinth(mLabyrinth);
-				client::GetClient()->SetInterFace(InterFace);
-			}
-		}
-
 		// 给操作码对象赋值
 		Opcode::OpArms = mArms;
 		// Opcode::OpLabyrinth = mLabyrinth;
@@ -152,18 +122,7 @@ namespace GAME
 		delete mDamagePrompt;
 		delete mUVDynamicDiagram;
 
-		if (Global::MultiplePeopleMode)
-		{
-			if (Global::ServerOrClient)
-			{
-				delete server::GetServer();
-			}
-			else
-			{
-				delete client::GetClient();
-			}
-			Global::MultiplePeopleMode = false;
-		}
+		Global::MultiplePeopleMode = false;
 	}
 
 	void TankTrouble::MouseMove(double xpos, double ypos)
@@ -364,23 +323,6 @@ namespace GAME
 				{
 					glm::dvec2 Armsdain = SquarePhysics::vec2angle(glm::dvec2{9.0f, 0.0f}, m_angle);
 					mArms->Shoot(mCamera->getCameraPos().x + Armsdain.x, mCamera->getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
-					if (Global::MultiplePeopleMode)
-					{ // 是否为多人模式
-						if (Global::ServerOrClient)
-						{ // 服务器还是客户端
-							RoleSynchronizationData *LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
-							BufferEventSingleData *LBufferEventSingleData;
-							for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); ++i)
-							{
-								LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
-								LBufferEventSingleData->mSubmitBullet->add({float(mCamera->getCameraPos().x + Armsdain.x), float(mCamera->getCameraPos().y + Armsdain.y), m_angle, AttackType});
-							}
-						}
-						else
-						{
-							client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mSubmitBullet->add({float(mCamera->getCameraPos().x + Armsdain.x), float(mCamera->getCameraPos().y + Armsdain.y), m_angle, AttackType});
-						}
-					}
 				}
 			}
 			zuojian = mLeftMouseDown ? 1 : 0;
@@ -512,17 +454,6 @@ namespace GAME
 	// 游戏 TCP事件
 	void TankTrouble::GameTCPLoop()
 	{
-		if (Global::MultiplePeopleMode)
-		{
-			if (Global::ServerOrClient)
-			{
-				event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
-			}
-			else
-			{
-				event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
-			}
-		}
 	}
 
 }

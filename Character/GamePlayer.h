@@ -11,12 +11,10 @@
 #include "../Physics/SquarePhysics.h"
 #include "../Tool/Queue.h"
 #include "../GlobalStructural.h"
-#include "../NetworkTCP/StructTCP.h"
+#include <event2/util.h>
 #include "DamagePrompt.h"
 
 namespace GAME {
-
-	void PointerGamePlayer(RoleSynchronizationData* Data, void* mclass);
 
 	class GamePlayer
 	{
@@ -72,7 +70,8 @@ namespace GAME {
 		[[nodiscard]] VkCommandBuffer getCommandBuffer(int i)  const { return mBufferCopyCommandBuffer[i]->getCommandBuffer(); }
 
 		//获取钥匙
-		[[nodiscard]] evutil_socket_t GetKey() { return mSynchronizationData->Key; }
+		[[nodiscard]] evutil_socket_t GetKey() { return mKey; }
+		void SetKey(evutil_socket_t key) { mKey = key; }
 
 		//获取玩家破坏情况数据
 		[[nodiscard]] bool* GetBrokenData(){ return mBrokenData; }
@@ -84,25 +83,13 @@ namespace GAME {
 		//获取玩家是否阵亡
 		[[nodiscard]] bool GetDeathInBattle(){ return DeathInBattle; }
 
-		//设置同步数据结构指针
-		void SetRoleSynchronizationData(RoleSynchronizationData* SynchronizationData) {
-			mSynchronizationData = SynchronizationData;
-			mSynchronizationData->mBufferEventSingleData->mBrokenData = GetBrokenData();
-		}
-
-		RoleSynchronizationData* GetRoleSynchronizationData() {
-			return mSynchronizationData;
-		}
-
-	private://模型变换矩阵
+	private:
 		bool DeathInBattle = false;
 		ObjectUniform mUniform{};
-		bool* mBrokenData = nullptr; //破坏情况数据
+		bool* mBrokenData = nullptr;
+		evutil_socket_t mKey = -1;
 
-		//同步数据
-		RoleSynchronizationData* mSynchronizationData = nullptr;
-
-	public://受伤提示
+	public:
 		DamagePrompt* wDamagePrompt{ nullptr };
 
 		void SetDamagePrompt(DamagePrompt* damagePrompt) {

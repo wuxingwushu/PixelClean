@@ -1,6 +1,7 @@
 #include "Labyrinth.h"
-#include "../../NetworkTCP/Server.h"
-#include "../../NetworkTCP/Client.h"
+#include "../../NetworkTCP/Replication/ReplicationManager.h"
+#include "../../NetworkTCP/Replication/NetworkLayer.h"
+#include "../MazeMods/MazeReplicationEvents.h"
 #include "../../SoundEffect/SoundEffect.h"
 #include "../../BlockS/PixelS.h"
 #include "../../Tool/GenerateMaze.h"
@@ -8,25 +9,13 @@
 
 namespace GAME {
 
-
 	void Labyrinth_SetPixel(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* mclass) {
 		Labyrinth* mClass = (Labyrinth*)mclass;
-		//破坏的像素
-		mClass->mPixelQueue->add({ x, y, Bool });//储存起来，统一上传
-		//同步
+		mClass->mPixelQueue->add({ x, y, Bool });
 		if (Global::MultiplePeopleMode) {
-			if (Global::ServerOrClient) {
-				RoleSynchronizationData* LServerPos = server::GetServer()->GetServerData()->GetKeyData(0);
-				BufferEventSingleData* LBufferEventSingleData;
-				for (size_t i = 0; i < server::GetServer()->GetServerData()->GetKeyNumber(); ++i)
-				{
-					LBufferEventSingleData = LServerPos[i].mBufferEventSingleData;
-					LBufferEventSingleData->mLabyrinthPixel->add({ x,y,false });
-				}
-			}
-			else {
-				client::GetClient()->GetGamePlayer()->GetRoleSynchronizationData()->mBufferEventSingleData->mLabyrinthPixel->add({ x,y,false });
-			}
+			ReplicationManager::Get().SendEvent(
+				static_cast<evutil_socket_t>(-1),
+				new PixelDestroyEvent(PixelState{x, y, false}));
 		}
 	}
 
@@ -49,7 +38,9 @@ namespace GAME {
 		RecordingCommandBuffer(mRenderPass, mSwapChain, mPipeline);
 	}
 
-	void Labyrinth::LoadLabyrinth(int X, int Y, int* PixelData, unsigned int* BlockTypeData) {
+	void Labyrinth::LoadLabyrinth(int X, int Y, int* PixelData, unsigned int* BlockTypeData,
+		VulKan::RenderPass* renderPass, VulKan::SwapChain* swapChain, VulKan::Pipeline* pipeline,
+		std::vector<VulKan::Buffer*>* vpmBuffer, VulKan::Sampler* sampler) {
 		std::cout << "加载地图" << std::endl;
 		this->~Labyrinth();
 		numberX = X;
@@ -84,12 +75,12 @@ namespace GAME {
 		LabyrinthBuffer();
 		initUniformManager(
 			mDevice,
-			mSwapChain->getImageCount(),
-			mPipeline->DescriptorSetLayout,
-			mVPMstdBuffer,
-			mSampler
+			swapChain->getImageCount(),
+			pipeline->DescriptorSetLayout,
+			vpmBuffer,
+			sampler
 		);
-		RecordingCommandBuffer(mRenderPass, mSwapChain, mPipeline);
+		RecordingCommandBuffer(renderPass, swapChain, pipeline);
 	}
 
 
@@ -269,18 +260,20 @@ namespace GAME {
 		delete mMistDescriptorSet;
 		delete mDescriptorPool;
 
-		for (size_t i = 0; i < mUniformParams->size(); ++i)
-		{
-			if (i == 1) {
-				for (size_t ib = 0; ib < (*mUniformParams)[i]->mBuffers.size(); ++ib)
-				{
-					delete (*mUniformParams)[i]->mBuffers[ib];
+		if (mUniformParams) {
+			for (size_t i = 0; i < mUniformParams->size(); ++i)
+			{
+				if (i == 1) {
+					for (size_t ib = 0; ib < (*mUniformParams)[i]->mBuffers.size(); ++ib)
+					{
+						delete (*mUniformParams)[i]->mBuffers[ib];
+					}
 				}
+				delete (*mUniformParams)[i];
 			}
-			delete (*mUniformParams)[i];
+			mUniformParams->clear();
+			delete mUniformParams;
 		}
-		mUniformParams->clear();
-		delete mUniformParams;
 
 		//销毁迷雾
 		DeleteMist();

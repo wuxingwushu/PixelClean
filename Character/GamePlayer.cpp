@@ -2,15 +2,8 @@
 #include "../DebugLog.h"
 #include "../BlockS/PixelS.h"
 #include "../GlobalVariable.h"
-#include "../NetworkTCP/Server.h"
-#include "../NetworkTCP/Client.h"
 
 namespace GAME {
-
-	void PointerGamePlayer(RoleSynchronizationData* Data, void* mclass) {
-		GAME::GamePlayer* Gameclass = (GAME::GamePlayer*)mclass;
-		Gameclass->SetRoleSynchronizationData(Data);
-	}
 
 	void GamePlayerDestroyPixel(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* mclass) {
 		GamePlayer* Class = (GamePlayer*)mclass;
@@ -137,11 +130,6 @@ namespace GAME {
 
 	void GamePlayer::setGamePlayerMatrix(float time, const int& frameCount, bool mode)
 	{
-		if (mSynchronizationData != nullptr) {
-			mSynchronizationData->X = mObjectCollision->GetPosX();
-			mSynchronizationData->Y = mObjectCollision->GetPosY();
-			mSynchronizationData->ang = mObjectCollision->GetAngleFloat();
-		}
 		if (mUniform.StrikeState > 0) {
 			mUniform.StrikeState -= 0.5f * time;
 			if (mUniform.StrikeState < 0) {

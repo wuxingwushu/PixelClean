@@ -45,8 +45,10 @@ namespace GAME {
 
 		//重新生成迷宫
 		void AgainGenerateLabyrinth(int X, int Y);
-		//加载迷宫
-		void LoadLabyrinth(int X, int Y, int* PixelData, unsigned int* BlockTypeData);
+		//加载迷宫（首次初始化时需传入渲染上下文）
+		void LoadLabyrinth(int X, int Y, int* PixelData, unsigned int* BlockTypeData,
+			VulKan::RenderPass* renderPass, VulKan::SwapChain* swapChain, VulKan::Pipeline* pipeline,
+			std::vector<VulKan::Buffer*>* vpmBuffer, VulKan::Sampler* sampler);
 		//初始化迷宫
 		void InitLabyrinth(VulKan::Device* device, int X, int Y);
 		//迷宫缓存

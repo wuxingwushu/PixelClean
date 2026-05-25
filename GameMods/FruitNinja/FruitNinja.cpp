@@ -1,6 +1,4 @@
 #include "FruitNinja.h"
-#include "../../NetworkTCP/Server.h"
-#include "../../NetworkTCP/Client.h"
 #include "../../PhysicsBlock/BaseCalculate.hpp"
 #include "../../SoundEffect/SoundEffect.h"
 #include "../../GlobalVariable.h"
@@ -316,14 +314,6 @@ namespace GAME
 
 	void FruitNinja::GameTCPLoop()
 	{
-		if (Global::MultiplePeopleMode) {
-			if (Global::ServerOrClient) {
-				event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
-			}
-			else {
-				event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
-			}
-		}
 	}
 
 	void FruitNinja::SpawnFruit(float dt)

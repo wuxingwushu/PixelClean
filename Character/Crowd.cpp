@@ -20,8 +20,6 @@ namespace GAME {
 
 	bool NPCTimeoutCrowd(NPC* x, void* data) {
 		std::cout << "Timeout Player, 超时 NPC" << std::endl;
-		Crowd* LCrowd = (Crowd*)data;
-		LCrowd->GetRoleSynchronizationData()->Delete(x->GetKey());
 		delete x;
 		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 		return 1;
@@ -52,8 +50,6 @@ namespace GAME {
 		mNPCS = new ContinuousMap<evutil_socket_t, NPC*>(100, ContinuousMap_Timeout);
 		mNPCS->SetTimeoutTime(500);
 		mNPCS->SetTimeoutCallback(NPCTimeoutCrowd, this);
-		mNPCSynchronizationData = new ContinuousMap<evutil_socket_t, RoleSynchronizationData>(100, ContinuousMap_Timeout | ContinuousMap_Pointer);
-		mNPCSynchronizationData->SetPointerCallback(PointerGamePlayer);//（调整储存连续时，同时更新引用者）更新指针
 
 		mCommandPool = new VulKan::CommandPool(mDevice);
 	}
@@ -72,7 +68,6 @@ namespace GAME {
 		delete MapPlayerS;
 		delete mNPCS;
 
-		delete mNPCSynchronizationData;
 		delete mCommandPool;
 	}
 
@@ -142,14 +137,9 @@ namespace GAME {
 				mSampler
 			);
 			LGamePlayer->InitCommandBuffer();
-			RoleSynchronizationData* LRole = mNPCSynchronizationData->New(key);
-			LRole->Key = key;
-			LRole->mBufferEventSingleData = new BufferEventSingleData(100);
-			LGamePlayer->SetRoleSynchronizationData(LRole);
+			LGamePlayer->SetKey(key);
 			NPC** LNPC = mNPCS->New(key);
 			*LNPC = new NPC(LGamePlayer, wPathfinding, wArms);
-
-			mNPCSynchronizationData->SetPointerData(key, LGamePlayer);
 
 			Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 			return *LNPC;
@@ -170,14 +160,9 @@ namespace GAME {
 			mSampler
 		);
 		LGamePlayer->InitCommandBuffer();
-		RoleSynchronizationData* LRole = mNPCSynchronizationData->New(NPCID);
-		LRole->Key = NPCID;
-		LRole->mBufferEventSingleData = new BufferEventSingleData(100);
-		LGamePlayer->SetRoleSynchronizationData(LRole);
+		LGamePlayer->SetKey(NPCID);
 		NPC** LNPC = mNPCS->New(NPCID);
 		*LNPC = new NPC(LGamePlayer, wPathfinding, wArms);
-
-		mNPCSynchronizationData->SetPointerData(NPCID, LGamePlayer);
 
 		NPCID++;
 		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
@@ -192,7 +177,6 @@ namespace GAME {
 				evutil_socket_t K = LNPC[i]->GetKey();
 				delete LNPC[i];
 				mNPCS->Delete(K);
-				mNPCSynchronizationData->Delete(K);
 				i--;
 				continue;
 			}
@@ -207,7 +191,6 @@ namespace GAME {
 			LNPCkey = i->GetKey();
 			delete i;
 			mNPCS->Delete(LNPCkey);
-			mNPCSynchronizationData->Delete(LNPCkey);
 		}
 		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 	}

@@ -1,6 +1,4 @@
 #include "PhysicsTest.h"
-#include "../../NetworkTCP/Server.h"
-#include "../../NetworkTCP/Client.h"
 #include "../../Opcode/OpcodeFunction.h"
 #include "../../Physics/DestroyMode.h"
 #include "../../GlobalVariable.h"
@@ -714,17 +712,6 @@ namespace GAME
 	// 游戏 TCP事件
 	void PhysicsTest::GameTCPLoop()
 	{
-		if (Global::MultiplePeopleMode)
-		{
-			if (Global::ServerOrClient)
-			{
-				event_base_loop(server::GetServer()->GetEvent_Base(), EVLOOP_NONBLOCK);
-			}
-			else
-			{
-				event_base_loop(client::GetClient()->GetEvent_Base(), EVLOOP_ONCE);
-			}
-		}
 	}
 
 	void PhysicsTest::ShowStaticSquare(glm::dvec2 pos, double angle, glm::vec4 color)

@@ -1,7 +1,5 @@
 #include "application.h"
 #include "../DebugLog.h"
-#include "NetworkTCP/Server.h"
-#include "NetworkTCP/Client.h"
 #include "Opcode/OpcodeFunction.h"
 #include "GameMods/FruitNinja/FruitNinja.h"
 #if defined(__ANDROID__)
@@ -767,14 +765,6 @@ namespace GAME {
 			ImGui::Text(u8"攻击模式：%d (1 / 2 上下切换) ", AttackType);
 			//ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->GetObjectCollision()->GetSpeed().x, mGamePlayer->GetObjectCollision()->GetSpeed().y);
 			ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
-			/*if (Global::MultiplePeopleMode) {
-				if (Global::ServerOrClient) {
-					ImGui::Text(u8"S M：%d  |  %d", server::GetServer()->GetServerData()->GetNumber(), mCrowd->GetNumber());
-				}
-				else {
-					ImGui::Text(u8"C M：%d  |  %d", client::GetClient()->GetClientData()->GetNumber(), mCrowd->GetNumber());
-				}
-			}*/
 			InterFace->ImGuiShowFPS();
 			InterFace->ImGuiShowTiming();
 			ImGui::Text(u8"如果只看得到监视窗口去设置中关掉监视器 ! ");

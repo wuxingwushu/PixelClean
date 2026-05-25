@@ -69,10 +69,6 @@ namespace GAME {
 
 		void KillAll();
 
-		ContinuousMap<evutil_socket_t, RoleSynchronizationData>* GetRoleSynchronizationData() {
-			return mNPCSynchronizationData;
-		}
-
 	private:
 		//储存用来生成玩家
 		PathfindingDecorator* wPathfinding = nullptr;
@@ -89,7 +85,6 @@ namespace GAME {
 
 		unsigned int NPCID = 0;//分配 NPC ID
 		ContinuousMap<evutil_socket_t, NPC*>* mNPCS = nullptr;//NPC映射
-		ContinuousMap<evutil_socket_t, RoleSynchronizationData>* mNPCSynchronizationData;
 
 		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理
 

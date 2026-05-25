@@ -452,6 +452,24 @@ namespace GAME
 			mPlayerPosComp->x.Set(mGamePlayer->GetObjectCollision()->GetPosX());
 			mPlayerPosComp->y.Set(mGamePlayer->GetObjectCollision()->GetPosY());
 			mPlayerPosComp->angle.Set(m_angle);
+			mPlayerPosComp->ForceAllDirty();
+		}
+
+		if (Global::MultiplePeopleMode) {
+			auto& repMgr = ReplicationManager::Get();
+			repMgr.ForEachRemoteObject([this](ReplicableObject* obj) {
+				evutil_socket_t key = obj->GetNetworkId();
+				GamePlayer* player = mCrowd->GetGamePlayer(key);
+				if (!player) return;
+				auto* posComp = static_cast<PlayerPositionComponent*>(
+					obj->GetComponentByTypeId(PlayerPositionComponent::kTypeId));
+				if (posComp) {
+					auto* collision = player->GetObjectCollision();
+					collision->SetPos({static_cast<double>(posComp->x.Get()),
+									   static_cast<double>(posComp->y.Get())});
+					collision->PlayerTargetAngle(posComp->angle.Get());
+				}
+			});
 		}
 
 		mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);

@@ -205,7 +205,9 @@ namespace GAME
 		Opcode::OpGamePlayer = mGamePlayer;
 		Opcode::OpImGuiInterFace = InterFace;
 
-		mCrowd->AddNPC(-208, 60);
+		if (!(Global::MultiplePeopleMode && !Global::ServerOrClient)) {
+			mCrowd->AddNPC(-208, 60);
+		}
 	}
 
 	MazeMods::~MazeMods()
@@ -457,7 +459,7 @@ namespace GAME
 
 		if (Global::MultiplePeopleMode) {
 			auto& repMgr = ReplicationManager::Get();
-			repMgr.ForEachRemoteObject([this](ReplicableObject* obj) {
+			repMgr.ForEachRemoteObject([this, mCurrentFrame](ReplicableObject* obj) {
 				evutil_socket_t key = obj->GetNetworkId();
 				GamePlayer* player = mCrowd->GetGamePlayer(key);
 				if (!player) return;
@@ -468,6 +470,7 @@ namespace GAME
 					collision->SetPos({static_cast<double>(posComp->x.Get()),
 									   static_cast<double>(posComp->y.Get())});
 					collision->PlayerTargetAngle(posComp->angle.Get());
+					player->setGamePlayerMatrix(TOOL::FPStime, mCurrentFrame);
 				}
 			});
 		}

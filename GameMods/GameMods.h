@@ -42,6 +42,19 @@ inline int GetGameModeStableId(GameModsEnum mode) {
 	return -1;
 }
 
+inline bool GameModsSupportsMultiplayer(GameModsEnum mode) {
+	switch (mode) {
+		case Maze_:           return true;
+		case TankTrouble_:    return false;
+		case PhysicsTest_:    return false;
+		case SoloudTest_:     return false;
+		case RadianceCascades_: return false;
+		case FruitNinja_:     return false;
+		case Infinite_:       return false;
+	}
+	return false;
+}
+
 enum class GameKeyEnum : unsigned
 {
 	MOVE_LEFT = 0,

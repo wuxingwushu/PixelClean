@@ -266,7 +266,7 @@ namespace GAME {
 
 		float contentW = btnW + arrowBtn * 2 + spacing * 2;
 		float titleH = 80.0f * scale;
-		int numButtons = 4;
+		int numButtons = GameModsSupportsMultiplayer(Global::GameMode) ? 4 : 3;
 		float totalH = titleH + spacing * 2 + (btnH + spacing) * numButtons;
 
 		float startX = (Global::mWidth - contentW) * 0.5f;
@@ -327,13 +327,15 @@ namespace GAME {
 
 		float singleBtnX = (Global::mWidth - btnW) * 0.5f;
 
-		ImGui::SetCursorPos(ImVec2(singleBtnX, curY));
-		if (ImGui::Button(u8"多人游戏", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
-			InterfaceIndexes = MultiplePeopleInterface_Enum;
+		if (GameModsSupportsMultiplayer(Global::GameMode)) {
+			ImGui::SetCursorPos(ImVec2(singleBtnX, curY));
+			if (ImGui::Button(u8"多人游戏", ImVec2(btnW, btnH))) {
+				SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+				InterfaceIndexes = MultiplePeopleInterface_Enum;
+			}
+			curY += btnH + spacing;
 		}
 
-		curY += btnH + spacing;
 		ImGui::SetCursorPos(ImVec2(singleBtnX, curY));
 		if (ImGui::Button(u8"游戏设置", ImVec2(btnW, btnH))) {
 			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
@@ -479,7 +481,6 @@ namespace GAME {
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
 			Global::ServerOrClient = true;
-			Global::GameMode = GameModsEnum::Maze_;
 			Global::GameResourceLoadingBool = true;
 		}
 
@@ -491,7 +492,6 @@ namespace GAME {
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
 			Global::ServerOrClient = false;
-			Global::GameMode = GameModsEnum::Maze_;
 			Global::GameResourceLoadingBool = true;
 		}
 

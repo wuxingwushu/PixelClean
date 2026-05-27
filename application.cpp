@@ -707,7 +707,7 @@ namespace GAME {
 			Render();//根据录制的主指令缓存显示画面
 			TOOL::mTimer->StartEnd();
 		}
-		SoundEffect::SoundEffect::GetSoundEffect()->~SoundEffect();
+		SoundEffect::SoundEffect::GetSoundEffect()->Destroy();
 		//等待设备所以命令执行完毕才可以开始销毁，
 		vkDeviceWaitIdle(mDevice->getDevice());//等待命令执行完毕
 	}

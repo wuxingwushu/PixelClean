@@ -119,6 +119,7 @@ add_subdirectory(Vulkan)
 add_subdirectory(VulkanTool)
 add_subdirectory(InterfaceUI)
 add_subdirectory(BlockS)
+add_subdirectory(Audio)
 add_subdirectory(SoundEffect)
 add_subdirectory(NetworkTCP)
 add_subdirectory(Character)
@@ -161,6 +162,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		BlockSLib
 		ToolLib
 		SoundEffectLib
+		AudioEngineLib
 		NetworkTCPLib
 		CharacterLib
 		PhysicsLib
@@ -206,6 +208,7 @@ else()
 		BlockSLib 
 		ToolLib 
 		SoundEffectLib
+		AudioEngineLib
 		NetworkTCPLib
 		CharacterLib
 		PhysicsLib

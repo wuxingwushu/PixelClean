@@ -1632,7 +1632,7 @@ namespace PhysicsBlock
 						double nx = (x * PixelBlockEdgeSize + ix) * 0.05;
 						double ny = (y * PixelBlockEdgeSize + iy) * 0.05;
 						double val = noise->noise(nx, ny, 0.5);
-						bool collision = (val > 0.0);
+						bool collision = (val > 0.6);
 						grid->at(ix, iy).Entity = collision;
 						grid->at(ix, iy).Collision = collision;
 						grid->at(ix, iy).mass = 1.0;

@@ -18,7 +18,7 @@ namespace GAME
 	{
 		LOGD("PhysicsTest::PhysicsTest constructor");
 		// 添加视觉辅助
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 200000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
 			mCameraVPMatricesBuffer);

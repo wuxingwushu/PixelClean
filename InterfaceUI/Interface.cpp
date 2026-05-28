@@ -1,5 +1,5 @@
 #include "Interface.h"
-#include "../SoundEffect/SoundEffect.h"
+#include "../Audio/SoundEffect.h"
 #include "../Opcode/Opcode.h"
 #include "../Tool/trie.h"
 #include "../GlobalStructural.h"

@@ -69,7 +69,7 @@ endif()
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/PhysicsBlock.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Info.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs.json ${PROJECT_SOURCE_DIR}/.vs)# 设置的DLL文件路径
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./SoundEffect/Resources ${CMAKE_CURRENT_BINARY_DIR}/Resources)# 拷贝音效
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource/Music ${CMAKE_CURRENT_BINARY_DIR}/Resources)# 拷贝音效
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/InterfaceUI/Minecraft_AE.ttf ${CMAKE_CURRENT_BINARY_DIR})# 字体
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource ${CMAKE_CURRENT_BINARY_DIR}/Resource)# 数字资源
 
@@ -120,7 +120,7 @@ add_subdirectory(VulkanTool)
 add_subdirectory(InterfaceUI)
 add_subdirectory(BlockS)
 add_subdirectory(Audio)
-add_subdirectory(SoundEffect)
+#add_subdirectory(SoundEffect)
 add_subdirectory(NetworkTCP)
 add_subdirectory(Character)
 add_subdirectory(Physics)
@@ -161,7 +161,6 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		InterfaceUI
 		BlockSLib
 		ToolLib
-		SoundEffectLib
 		AudioEngineLib
 		NetworkTCPLib
 		CharacterLib
@@ -207,7 +206,6 @@ else()
 		InterfaceUI 
 		BlockSLib 
 		ToolLib 
-		SoundEffectLib
 		AudioEngineLib
 		NetworkTCPLib
 		CharacterLib

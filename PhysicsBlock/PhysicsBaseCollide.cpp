@@ -1,6 +1,5 @@
 #include "PhysicsBaseCollide.hpp"
 #include "BaseCalculate.hpp"
-#include "MapStatic.hpp"
 #include <cmath>
 
 namespace PhysicsBlock
@@ -276,6 +275,8 @@ namespace PhysicsBlock
      */
     unsigned int Collide(Contact *contacts, PhysicsShape *Shape, MapFormwork *Map)
     {
+        if (!Map) return 0;
+
         AngleMat Mat(Shape->angle);
         int ContactSize = 0;
         Vec2_ Drop, DropPos;
@@ -308,9 +309,9 @@ namespace PhysicsBlock
         }
 
         // 检测地形轮廓点与形状的碰撞（临时处理方法）
-        MapStatic *LMapStatic = (MapStatic *)Map;
         int KD = 1;
-        std::vector<MapOutline> Outline = LMapStatic->GetLightweightOutline(
+        Vec2_ mapCentrality = Map->FMGetCentrality();
+        std::vector<MapOutline> Outline = Map->FMGetLightweightOutline(
             ToInt(Shape->pos.x - Shape->radius) - KD,
             ToInt(Shape->pos.y - Shape->radius) - KD,
             ToInt(Shape->pos.x + Shape->radius) + KD,
@@ -318,7 +319,7 @@ namespace PhysicsBlock
 
         for (size_t i = 0; i < Outline.size(); ++i)
         {
-            Drop = Outline[i].pos - LMapStatic->centrality;
+            Drop = Outline[i].pos - mapCentrality;
             if (!Shape->DropCollision(Drop).Collision)
             {
                 continue;
@@ -357,6 +358,8 @@ namespace PhysicsBlock
      */
     unsigned int Collide(Contact *contacts, PhysicsParticle *Particle, MapFormwork *Map)
     {
+        if (!Map) return 0;
+
         // 首先检查点是否在地形碰撞区域内
         if (Map->FMGetCollide(Particle->pos))
         {
@@ -396,6 +399,8 @@ namespace PhysicsBlock
      */
     unsigned int Collide(Contact *contacts, PhysicsCircle *Circle, MapFormwork *Map)
     {
+        if (!Map) return 0;
+
         int ContactSize = 0;
 
         // 定义圆形四个方向的采样点
@@ -430,9 +435,9 @@ namespace PhysicsBlock
         }
 
         // 检测地形轮廓点与圆形的碰撞
-        MapStatic *LMapStatic = (MapStatic *)Map;
         int KD = 2;
-        std::vector<MapOutline> Outline = LMapStatic->GetLightweightOutline(
+        Vec2_ mapCentrality = Map->FMGetCentrality();
+        std::vector<MapOutline> Outline = Map->FMGetLightweightOutline(
             ToInt(Circle->pos.x - Circle->radius) - KD,
             ToInt(Circle->pos.y - Circle->radius) - KD,
             ToInt(Circle->pos.x + Circle->radius) + KD,
@@ -441,7 +446,7 @@ namespace PhysicsBlock
         FLOAT_ L;
         for (auto d : Outline)
         {
-            d.pos -= LMapStatic->centrality;
+            d.pos -= mapCentrality;
             d.pos = d.pos - Circle->pos;
             L = ModulusLength(d.pos);
             if ((Circle->radius * Circle->radius) > L)
@@ -866,6 +871,8 @@ namespace PhysicsBlock
      */
     unsigned int Collide(Contact *contacts, PhysicsLine *Line, MapFormwork *Map)
     {
+        if (!Map) return 0;
+
         unsigned int ContactSize = 0;
 
         Vec2_ pR = vec2angle({Line->radius, 0}, Line->angle);
@@ -875,9 +882,9 @@ namespace PhysicsBlock
         FLOAT_ len = ModulusLength(AB);
 
         // 检测地形轮廓边与线段的碰撞
-        MapStatic *LMapStatic = (MapStatic *)Map;
         int KD = 2;
-        std::vector<MapOutline> Outline = LMapStatic->GetLightweightOutline(
+        Vec2_ mapCentrality = Map->FMGetCentrality();
+        std::vector<MapOutline> Outline = Map->FMGetLightweightOutline(
             ToInt(Line->pos.x - Line->radius) - KD,
             ToInt(Line->pos.y - Line->radius) - KD,
             ToInt(Line->pos.x + Line->radius) + KD,
@@ -887,7 +894,7 @@ namespace PhysicsBlock
         Vec2_ beginDian;
         for (auto d : Outline)
         {
-            d.pos -= LMapStatic->centrality;
+            d.pos -= mapCentrality;
             beginDian = d.pos - (d.face * FLOAT_(0.5));
             if (segmentIntersection(begin, end, d.pos, beginDian, contacts->position))
             {

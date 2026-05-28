@@ -1,6 +1,6 @@
 #include "FruitNinja.h"
 #include "../../PhysicsBlock/BaseCalculate.hpp"
-#include "../../SoundEffect/SoundEffect.h"
+#include "../../Audio/SoundEffect.h"
 #include "../../GlobalVariable.h"
 #include "../../DebugLog.h"
 #include <algorithm>

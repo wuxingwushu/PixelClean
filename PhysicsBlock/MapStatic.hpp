@@ -8,17 +8,6 @@ namespace PhysicsBlock
 {
 
     /**
-     * @brief 地图轮廓结构体
-     * @details 用于存储地图轮廓点的信息
-     */
-    struct MapOutline
-    {
-        Vec2_ pos;  // 点位置
-        Vec2_ face; // 朝向（法线方向）
-        FLOAT_ F;   // 摩擦力
-    };
-
-    /**
      * @brief 静态地图类
      * @details 继承自 BaseGrid（处理网格数据）和 MapFormwork（地图框架接口）
      * 表示一个静态的物理地图，包含障碍物信息和碰撞检测功能
@@ -178,6 +167,10 @@ namespace PhysicsBlock
         virtual CollisionInfoD FMBresenhamDetection(Vec2_ start, Vec2_ end);
 
         virtual CollisionInfoI FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end);
+
+        virtual Vec2_ FMGetCentrality() override { return centrality; }
+        virtual std::vector<MapOutline> FMGetLightweightOutline(int x_, int y_, int w_, int h_) override { return GetLightweightOutline(x_, y_, w_, h_); }
+        virtual std::vector<MapOutline> FMGetOutline(int x_, int y_, int w_, int h_) override { return GetOutline(x_, y_, w_, h_); }
     };
 
 }

@@ -3,8 +3,8 @@
 #include "../GameMods.h"
 #include "Labyrinth.h"
 #include "../../Character/UVDynamicDiagram.h"
-#include "../../NetworkTCP/Replication/ReplicationManager.h"
-#include "../../NetworkTCP/Replication/NetworkLayer.h"
+#include "../../NetworkTCP/ReplicationManager.h"
+#include "../../NetworkTCP/NetworkLayer.h"
 #include "MazeReplicationComponents.h"
 #include "MazeReplicationEvents.h"
 #include <memory>

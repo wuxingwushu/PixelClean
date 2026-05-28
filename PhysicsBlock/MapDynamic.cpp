@@ -15,15 +15,18 @@ namespace PhysicsBlock
     MapDynamic::MapDynamic(const unsigned int Width, const unsigned int Height):
         width(Width), height(Height), mMovePlate(Width, Height, PixelBlockEdgeSize, Width / 2, Height / 2), 
         centrality({Width / 2 * PixelBlockEdgeSize, Height / 2 * PixelBlockEdgeSize}),
-        BaseGrid(Width, Height, nullptr)
+        BaseGrid(Width * PixelBlockEdgeSize, Height * PixelBlockEdgeSize, nullptr)
     {
         BaseGridBuffer = (BaseGrid *)new char[width * height * sizeof(BaseGrid)];
         GridBuffer = new GridBlock[width * height * PixelBlockEdgeSize * PixelBlockEdgeSize];
+        for (size_t i = 0; i < (width * height); ++i)
+        {
+            new(&BaseGridBuffer[i]) BaseGrid(PixelBlockEdgeSize, PixelBlockEdgeSize, &GridBuffer[PixelBlockEdgeSize * PixelBlockEdgeSize * i]);
+        }
         bool *DataBool = new bool[width * height];
         for (size_t i = 0; i < (width * height); ++i)
         {
             DataBool[i] = false;
-            //new(&BaseGridBuffer[i])BaseGrid(PixelBlockEdgeSize, PixelBlockEdgeSize, &GridBuffer[PixelBlockEdgeSize * PixelBlockEdgeSize * i]);
         }
 
 
@@ -100,30 +103,126 @@ namespace PhysicsBlock
 
     MapDynamic::~MapDynamic()
     {
+        for (size_t i = 0; i < (width * height); ++i)
+        {
+            BaseGridBuffer[i].~BaseGrid();
+        }
         delete (char *)BaseGridBuffer;
         delete GridBuffer;
     }
 
     CollisionInfoI MapDynamic::FMBresenhamDetection(glm::ivec2 start, glm::ivec2 end)
     {
-        return BresenhamDetection(start, end);
+        const unsigned int w = BaseGrid::width;
+        const unsigned int h = BaseGrid::height;
+        int sx = (start.x < end.x) ? 1 : -1;
+        int sy = (start.y < end.y) ? 1 : -1;
+        int dx = abs(end.x - start.x);
+        int dy = -abs(end.y - start.y);
+        int err = dx + dy;
+        while (true)
+        {
+            if (start.x >= 0 && start.y >= 0 && start.x < (int)w && start.y < (int)h)
+            {
+                GridBlock& block = at(start.x, start.y);
+                if (block.Collision)
+                {
+                    return {true, start, block.FrictionFactor};
+                }
+            }
+            if (end.x == start.x && end.y == start.y)
+            {
+                return {false, glm::ivec2{0, 0}, FLOAT_{}};
+            }
+            int e2 = err << 1;
+            if (e2 >= dy)
+            {
+                err += dy;
+                start.x += sx;
+            }
+            if (e2 <= dx)
+            {
+                err += dx;
+                start.y += sy;
+            }
+        }
     }
 
     CollisionInfoD MapDynamic::FMBresenhamDetection(Vec2_ start, Vec2_ end)
     {
-        // 偏移中心位置，对其网格坐标系
         start += centrality;
         end += centrality;
 
-        // 裁剪线段 让线段都在矩形内
-        PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start, end, width - 0.0001, height - 0.0001);
+        PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start, end, BaseGrid::width - 0.0001f, BaseGrid::height - 0.0001f);
         if (data.Focus)
         {
-            // 线段碰撞检测
-            CollisionInfoD info = BresenhamDetection(data.start, data.end);
-            if (info.Collision)
+            CollisionInfoI infoI = FMBresenhamDetection(ToInt(data.start), ToInt(data.end));
+            if (infoI.Collision)
             {
-                // 返回物理坐标系
+                CollisionInfoD info;
+                info.Friction = infoI.Friction;
+                info.Collision = true;
+                info.pos = infoI.pos;
+                FLOAT_ Difference = (end.x - start.x) / (start.y - end.y);
+                FLOAT_ invDifference = 1.0 / Difference;
+                FLOAT_ val = start.x - end.x;
+                if (val < 0)
+                {
+                    info.pos = {infoI.pos.x, ((end.x - infoI.pos.x) * invDifference) + end.y};
+                    info.Direction = CheckDirection::Left;
+                }
+                else if (val > 0)
+                {
+                    info.pos = {infoI.pos.x + 1, ((end.x - infoI.pos.x - 1) * invDifference) + end.y};
+                    info.Direction = CheckDirection::Right;
+                }
+                if ((val == 0) || (info.pos.y < infoI.pos.y) || (info.pos.y > (infoI.pos.y + 1)))
+                {
+                    val = start.y - end.y;
+                    if (val < 0)
+                    {
+                        info.pos = {(Difference * (end.y - infoI.pos.y)) + end.x, infoI.pos.y};
+                        info.Direction = CheckDirection::Down;
+                    }
+                    else if (val > 0)
+                    {
+                        info.pos = {(Difference * (end.y - infoI.pos.y - 1)) + end.x, infoI.pos.y + 1};
+                        info.Direction = CheckDirection::Up;
+                    }
+                    if (at(infoI.pos.x, infoI.pos.y + (CheckDirection::Down == info.Direction ? -1 : 1)).Collision)
+                    {
+                        val = start.x - end.x;
+                        if (val < 0)
+                        {
+                            info.pos = {infoI.pos.x, ((end.x - infoI.pos.x) * invDifference) + end.y};
+                            info.Direction = CheckDirection::Left;
+                        }
+                        else if (val > 0)
+                        {
+                            ++infoI.pos.x;
+                            info.pos = {infoI.pos.x, ((end.x - infoI.pos.x) * invDifference) + end.y};
+                            info.Direction = CheckDirection::Right;
+                        }
+                    }
+                }
+                else
+                {
+                    if (at(infoI.pos.x + (CheckDirection::Left == info.Direction ? -1 : 1), infoI.pos.y).Collision)
+                    {
+                        val = start.y - end.y;
+                        if (val < 0)
+                        {
+                            info.pos = {(Difference * (end.y - infoI.pos.y)) + end.x, infoI.pos.y};
+                            info.Direction = CheckDirection::Down;
+                        }
+                        else if (val > 0)
+                        {
+                            ++infoI.pos.y;
+                            info.pos = {(Difference * (end.y - infoI.pos.y)) + end.x, infoI.pos.y};
+                            info.Direction = CheckDirection::Up;
+                        }
+                    }
+                }
                 info.pos -= centrality;
                 return info;
             }
@@ -133,11 +232,104 @@ namespace PhysicsBlock
 
     CollisionInfoI MapDynamic::FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end)
     {
-        start.x = std::max(0, std::min(start.x, (int)width - 1));
-        start.y = std::max(0, std::min(start.y, (int)height - 1));
-        end.x = std::max(0, std::min(end.x, (int)width - 1));
-        end.y = std::max(0, std::min(end.y, (int)height - 1));
-        return BresenhamDetection(start, end);
+        start.x = std::max(0, std::min(start.x, (int)BaseGrid::width - 1));
+        start.y = std::max(0, std::min(start.y, (int)BaseGrid::height - 1));
+        end.x = std::max(0, std::min(end.x, (int)BaseGrid::width - 1));
+        end.y = std::max(0, std::min(end.y, (int)BaseGrid::height - 1));
+        return FMBresenhamDetection(start, end);
+    }
+
+    std::vector<MapOutline> MapDynamic::GetLightweightOutline(int x_, int y_, int w_, int h_)
+    {
+        x_ += centrality.x;
+        y_ += centrality.y;
+        w_ += centrality.x;
+        h_ += centrality.y;
+
+        std::vector<MapOutline> Outline;
+
+        for (int x = x_; x < w_; ++x)
+        {
+            for (int y = y_; y < h_; ++y)
+            {
+                if (!GetCollision(x, y))
+                {
+                    continue;
+                }
+                if (!GetCollision(x - 1, y - 1))
+                {
+                    if (GetCollision(x - 1, y) == GetCollision(x, y - 1))
+                    {
+                        Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
+                    }
+                }
+                else if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1))
+                {
+                    Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
+                }
+                if (!GetCollision(x, y + 1))
+                {
+                    if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1)))
+                    {
+                        Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
+                    }
+                }
+                if (!GetCollision(x + 1, y))
+                {
+                    if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1)))
+                    {
+                        Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
+                    }
+                }
+                if (!GetCollision(x + 1, y + 1))
+                {
+                    if ((GetCollision(x + 1, y) == GetCollision(x, y + 1)) && !GetCollision(x + 1, y))
+                    {
+                        Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
+                    }
+                }
+            }
+        }
+        return Outline;
+    }
+
+    std::vector<MapOutline> MapDynamic::GetOutline(int x_, int y_, int w_, int h_)
+    {
+        x_ += centrality.x;
+        y_ += centrality.y;
+        w_ += centrality.x;
+        h_ += centrality.y;
+
+        std::vector<MapOutline> Outline;
+
+        for (int x = x_; x < w_; ++x)
+        {
+            for (int y = y_; y < h_; ++y)
+            {
+                if (!GetCollision(x, y))
+                {
+                    continue;
+                }
+
+                if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1) || !GetCollision(x - 1, y - 1))
+                {
+                    Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
+                }
+                if (!GetCollision(x, y + 1))
+                {
+                    Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
+                }
+                if (!(GetCollision(x + 1, y - 1) || GetCollision(x + 1, y)))
+                {
+                    Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
+                }
+                if (!(GetCollision(x + 1, y) || GetCollision(x + 1, y + 1) || GetCollision(x, y + 1)))
+                {
+                    Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
+                }
+            }
+        }
+        return Outline;
     }
 
 }

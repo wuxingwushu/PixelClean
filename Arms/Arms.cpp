@@ -1,5 +1,5 @@
 #include "Arms.h"
-#include "../SoundEffect/SoundEffect.h"
+#include "../Audio/SoundEffect.h"
 #include "../GlobalVariable.h"
 #include "../Physics/DestroyMode.h"
 #include "../GlobalStructural.h"

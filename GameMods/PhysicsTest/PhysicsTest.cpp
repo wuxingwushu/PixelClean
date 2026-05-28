@@ -25,17 +25,8 @@ namespace GAME
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
 		PhysicsBlock::DemoFunS[0](&mPhysicsWorld, mCamera);
-		mMapStatic = (PhysicsBlock::MapStatic *)mPhysicsWorld->GetMapFormwork();
-		for (size_t x = 0; x < mMapStatic->width; x++)
-		{
-			for (size_t y = 0; y < mMapStatic->height; y++)
-			{
-				if (mMapStatic->at(x, y).Entity)
-				{
-					ShowStaticSquare(Vec2_{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
-				}
-			}
-		}
+		mMapFormwork = mPhysicsWorld->GetMapFormwork();
+		RenderMapOutline();
 
 		PhysicsBlock::AuxiliaryInfoRead();
 
@@ -206,19 +197,10 @@ namespace GAME
 			ResetBool = false;
 			item_current = item_Demo_idx;
 			PhysicsBlock::DemoFunS[item_Demo_idx](&mPhysicsWorld, mCamera);
-			mMapStatic = (PhysicsBlock::MapStatic *)mPhysicsWorld->GetMapFormwork();
+			mMapFormwork = mPhysicsWorld->GetMapFormwork();
 			PhysicsFormworkPtr = nullptr;
 			mAuxiliaryVision->ClearStaticLine(); // 清空上一个地图的静态网格
-			for (size_t x = 0; x < mMapStatic->width; x++)
-			{
-				for (size_t y = 0; y < mMapStatic->height; y++)
-				{
-					if (mMapStatic->at(x, y).Entity)
-					{
-						ShowStaticSquare(Vec2_{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
-					}
-				}
-			}
+			RenderMapOutline();
 
 			// Demo 切换后重建 GPU Buffer
 			if (mGPUInitialized && mPhysicsGPU) {
@@ -355,16 +337,7 @@ namespace GAME
 			{
 				// 地图发生变动
 				mAuxiliaryVision->ClearStaticLine(); // 清空上一个地图的静态网格
-				for (size_t x = 0; x < mMapStatic->width; x++)
-				{
-					for (size_t y = 0; y < mMapStatic->height; y++)
-					{
-						if (mMapStatic->at(x, y).Entity)
-						{
-							ShowStaticSquare(Vec2_{x, y} - mMapStatic->centrality, 0, {0, 1, 0, 1});
-						}
-					}
-				}
+				RenderMapOutline();
 			}
 		}
 
@@ -736,6 +709,27 @@ namespace GAME
 		mAuxiliaryVision->Line({pos, 0}, color, {pos + jiao2, 0}, color);
 		mAuxiliaryVision->Line({pos + jiao3, 0}, color, {pos + jiao1, 0}, color);
 		mAuxiliaryVision->Line({pos + jiao3, 0}, color, {pos + jiao2, 0}, color);
+	}
+
+	void PhysicsTest::RenderMapOutline()
+	{
+		glm::uvec2 mapSize = mMapFormwork->FMGetMapSize();
+		if (mapSize.x == 0 || mapSize.y == 0) return;
+
+		Vec2_ mapCentrality = mMapFormwork->FMGetCentrality();
+		int halfW = mMapFormwork->FMGetMapSize().x;
+		int halfH = mMapFormwork->FMGetMapSize().y;
+
+		for (size_t x = 0; x < halfW; x++)
+		{
+			for (size_t y = 0; y < halfH; y++)
+			{
+				if (mMapFormwork->FMGetGridBlock({ x, y }).Entity)
+				{
+					ShowStaticSquare(Vec2_{ x, y } - mapCentrality, 0, { 0, 1, 0, 1 });
+				}
+			}
+		}
 	}
 
 	void PhysicsTest::EditorMode(glm::vec2 huoqdedian)

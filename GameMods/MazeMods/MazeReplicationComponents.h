@@ -1,6 +1,6 @@
 #pragma once
-#include "../../NetworkTCP/Replication/ReplicableComponent.h"
-#include "../../NetworkTCP/Replication/ReplicatedProperty.h"
+#include "../../NetworkTCP/ReplicableComponent.h"
+#include "../../NetworkTCP/ReplicatedProperty.h"
 #include <event2/util.h>
 
 namespace GAME {

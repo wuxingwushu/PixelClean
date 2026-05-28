@@ -2,8 +2,8 @@
 #include "soloud.h"
 #include "soloud_wav.h"
 #include "soloud_midi.h"
-#include "../Audio/AudioEngine.h"
-#include "../Audio/AudioAsset.h"
+#include "AudioEngine.h"
+#include "AudioAsset.h"
 #include <string>
 
 struct SoundStruct

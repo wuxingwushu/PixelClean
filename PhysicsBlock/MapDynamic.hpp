@@ -13,6 +13,10 @@ namespace PhysicsBlock
      * @brief 动态地图 */
     class MapDynamic : public MapFormwork, public BaseGrid
     {
+    public:
+        typedef void (*_MapDynamicGenerateCallback)(BaseGrid** mT, int x, int y, void* Data);
+        typedef void (*_MapDynamicDeleteCallback)(BaseGrid** mT, void* Data);
+
     private:
         const unsigned int width;         // 板块 X 的数量
         const unsigned int height;        // 板块 Y 的数量
@@ -47,7 +51,12 @@ namespace PhysicsBlock
          * @param x 坐标x
          * @param y 坐标y
          * @return 格子 */
-        virtual GridBlock &at(int x, int y) { return (*mMovePlate.ExcursionGetPlate(x >> PixelBlockPowerMaxNum, y >> PixelBlockPowerMaxNum))->at(x & PixelBlockPowerMinNum, y & PixelBlockPowerMinNum); }
+        virtual GridBlock &at(int x, int y) {
+            BaseGrid **platePtr = mMovePlate.ExcursionGetPlate(x >> PixelBlockPowerMaxNum, y >> PixelBlockPowerMaxNum);
+            if (platePtr) return (*platePtr)->at(x & PixelBlockPowerMinNum, y & PixelBlockPowerMinNum);
+            static GridBlock emptyBlock{};
+            return emptyBlock;
+        }
         /**
          * @brief 获取格子
          * @param pos 坐标
@@ -74,6 +83,46 @@ namespace PhysicsBlock
             return mMovePlate.UpData(pos.x, pos.y);
         }
 
+        /**
+         * @brief 设置板块生成和销毁回调
+         * @param G 生成回调函数
+         * @param GData 生成回调的用户数据
+         * @param D 销毁回调函数
+         * @param DData 销毁回调的用户数据 */
+        inline void SetCallback(_MapDynamicGenerateCallback G, void* GData, _MapDynamicDeleteCallback D, void* DData) noexcept {
+            mMovePlate.SetCallback(G, GData, D, DData);
+        }
+
+        /**
+         * @brief 设置初始监测位置
+         * @param x 世界 X 坐标（像素）
+         * @param y 世界 Y 坐标（像素） */
+        inline void SetPos(float x, float y) noexcept {
+            mMovePlate.SetPos(x, y);
+        }
+
+        inline unsigned int GetPlateEdgeSize() const noexcept { return PixelBlockEdgeSize; }
+        inline unsigned int GetPlateCountX() const noexcept { return width; }
+        inline unsigned int GetPlateCountY() const noexcept { return height; }
+
+        /**
+         * @brief 获取轻量级轮廓
+         * @param x_ 起始X坐标（世界坐标）
+         * @param y_ 起始Y坐标（世界坐标）
+         * @param w_ 结束X坐标（世界坐标）
+         * @param h_ 结束Y坐标（世界坐标）
+         * @return 轮廓点向量 */
+        std::vector<MapOutline> GetLightweightOutline(int x_, int y_, int w_, int h_);
+
+        /**
+         * @brief 获取完整轮廓
+         * @param x_ 起始X坐标（世界坐标）
+         * @param y_ 起始Y坐标（世界坐标）
+         * @param w_ 结束X坐标（世界坐标）
+         * @param h_ 结束Y坐标（世界坐标）
+         * @return 轮廓点向量 */
+        std::vector<MapOutline> GetOutline(int x_, int y_, int w_, int h_);
+
         /*=========MapFormwork=========*/
 
         /**
@@ -85,7 +134,20 @@ namespace PhysicsBlock
          * @brief 获取地图模拟场大小
          * @return 地图大小
          * @note 单位：格子 */
-        virtual glm::uvec2 FMGetMapSize() { return glm::uvec2{ width * PixelBlockPowerMaxNum, height * PixelBlockPowerMaxNum }; }
+        virtual glm::uvec2 FMGetMapSize() { return glm::uvec2{ width * PixelBlockEdgeSize, height * PixelBlockEdgeSize }; }
+
+        virtual bool FMGetCollide(glm::ivec2 start) override {
+            if (start.x < 0 || start.y < 0 || start.x >= (int)(width * PixelBlockEdgeSize) || start.y >= (int)(height * PixelBlockEdgeSize)) { return false; }
+            return at(start.x, start.y).Collision;
+        }
+
+        virtual bool FMGetCollide(Vec2_ start) override {
+            start += centrality;
+            int x = (int)start.x;
+            int y = (int)start.y;
+            if (x < 0 || y < 0 || x >= (int)(width * PixelBlockEdgeSize) || y >= (int)(height * PixelBlockEdgeSize)) { return false; }
+            return at(x, y).Collision;
+        }
 
         /**
          * @brief 获取网格(不安全)
@@ -110,6 +172,10 @@ namespace PhysicsBlock
         virtual CollisionInfoD FMBresenhamDetection(Vec2_ start, Vec2_ end);
 
         virtual CollisionInfoI FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end);
+
+        virtual Vec2_ FMGetCentrality() override { return centrality; }
+        virtual std::vector<MapOutline> FMGetLightweightOutline(int x_, int y_, int w_, int h_) override { return GetLightweightOutline(x_, y_, w_, h_); }
+        virtual std::vector<MapOutline> FMGetOutline(int x_, int y_, int w_, int h_) override { return GetOutline(x_, y_, w_, h_); }
     };
 
 }

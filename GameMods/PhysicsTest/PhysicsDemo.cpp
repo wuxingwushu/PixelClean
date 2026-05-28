@@ -1,6 +1,8 @@
 #include "PhysicsDemo.h"
 #include "PhysicsLogBuffer.h"
 #include "../../DebugLog.h"
+#include "../../PhysicsBlock/MapDynamic.hpp"
+#include "../../Tool/PerlinNoise.h"
 #include <cstdio>
 
 namespace PhysicsBlock
@@ -1598,6 +1600,89 @@ namespace PhysicsBlock
 
 		PhysicsBlock::PhysicsCircle *centerBall = new PhysicsBlock::PhysicsCircle({0, 10}, 1.2, 3);
 		(*myPhysicsWorld)->AddObject(centerBall);
+	}
+
+	void PhysicsDemo22(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
+	{
+		if (*myPhysicsWorld != nullptr)
+		{
+			delete *myPhysicsWorld;
+		}
+		*myPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
+
+		const unsigned int PlateCountX = 50;
+		const unsigned int PlateCountY = 50;
+		const int MapPixelWidth = PlateCountX * PixelBlockEdgeSize;
+		const int MapPixelHeight = PlateCountY * PixelBlockEdgeSize;
+
+		mCamera->setCameraPos({0, 0, MapPixelWidth * 2.0f});
+
+		PhysicsBlock::MapDynamic *mMapDynamic = new PhysicsBlock::MapDynamic(PlateCountX, PlateCountY);
+
+		static PerlinNoise mPerlinNoise;
+
+		mMapDynamic->SetCallback(
+			[](PhysicsBlock::BaseGrid** mT, int x, int y, void* Data) {
+				PerlinNoise* noise = (PerlinNoise*)Data;
+				PhysicsBlock::BaseGrid* grid = *mT;
+				for (unsigned int ix = 0; ix < PixelBlockEdgeSize; ++ix)
+				{
+					for (unsigned int iy = 0; iy < PixelBlockEdgeSize; ++iy)
+					{
+						double nx = (x * PixelBlockEdgeSize + ix) * 0.05;
+						double ny = (y * PixelBlockEdgeSize + iy) * 0.05;
+						double val = noise->noise(nx, ny, 0.5);
+						bool collision = (val > 0.0);
+						grid->at(ix, iy).Entity = collision;
+						grid->at(ix, iy).Collision = collision;
+						grid->at(ix, iy).mass = 1.0;
+						grid->at(ix, iy).Healthpoint = 24;
+					}
+				}
+			},
+			&mPerlinNoise,
+			[](PhysicsBlock::BaseGrid** mT, void* Data) {
+				PhysicsBlock::BaseGrid* grid = *mT;
+				for (unsigned int ix = 0; ix < PixelBlockEdgeSize; ++ix)
+				{
+					for (unsigned int iy = 0; iy < PixelBlockEdgeSize; ++iy)
+					{
+						grid->at(ix, iy).Entity = false;
+						grid->at(ix, iy).Collision = false;
+					}
+				}
+			},
+			nullptr
+		);
+
+		mMapDynamic->SetPos(0, 0);
+		mMapDynamic->Updata({MapPixelWidth / 2.0f, MapPixelHeight / 2.0f});
+
+		(*myPhysicsWorld)->SetMapFormwork(mMapDynamic);
+
+		for (int i = 0; i < 25; ++i)
+		{
+			float bx = Random(MapPixelWidth * 0.2f, MapPixelWidth * 0.8f);
+			float by = Random(MapPixelHeight * 0.55f, MapPixelHeight * 0.9f);
+			PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape({bx, by}, {2, 2});
+			for (size_t k = 0; k < (box->width * box->height); ++k)
+			{
+				box->at(k).Entity = true;
+				box->at(k).Collision = true;
+				box->at(k).mass = 1;
+			}
+			box->UpdateAll();
+			box->angle = Random(0.0f, (float)M_PI);
+			(*myPhysicsWorld)->AddObject(box);
+		}
+
+		for (int i = 0; i < 15; ++i)
+		{
+			float cx = Random(MapPixelWidth * 0.2f, MapPixelWidth * 0.8f);
+			float cy = Random(MapPixelHeight * 0.55f, MapPixelHeight * 0.9f);
+			PhysicsBlock::PhysicsCircle *ball = new PhysicsBlock::PhysicsCircle({cx, cy}, Random(0.5f, 1.5f), 1);
+			(*myPhysicsWorld)->AddObject(ball);
+		}
 	}
 
 }

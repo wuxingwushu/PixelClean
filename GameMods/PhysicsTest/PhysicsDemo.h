@@ -71,6 +71,9 @@ namespace PhysicsBlock
 	// 触发器系统
 	void PhysicsDemo21(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
 
+	// 动态地图（无限生成）
+	void PhysicsDemo22(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+
 	using DemoFunction = void (*)(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
 	static DemoFunction DemoFunS[] = { 
 		PhysicsDemo0, 
@@ -94,7 +97,8 @@ namespace PhysicsBlock
 		PhysicsDemo18,
 		PhysicsDemo19,
 		PhysicsDemo20,
-		PhysicsDemo21
+		PhysicsDemo21,
+		PhysicsDemo22
 	 };
 	static const char* DemoNameS[] = { 
 		"外骨骼计算", 
@@ -118,7 +122,8 @@ namespace PhysicsBlock
 		"组合测试",
 		"碰撞回调系统",
 		"运动学物体",
-		"触发器系统"
+		"触发器系统",
+		"动态地图（无限生成）"
 	 };
 
 }

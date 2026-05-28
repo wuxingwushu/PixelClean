@@ -1,5 +1,5 @@
 #include "ReplicationManager.h"
-#include "../StructTCP.h"
+#include "StructTCP.h"
 
 // 单例访问
 ReplicationManager& ReplicationManager::Get() {

@@ -1,5 +1,5 @@
 #include "FixedMaze.h"
-#include "../../SoundEffect/SoundEffect.h"
+#include "../../Audio/SoundEffect.h"
 #include "../../BlockS/PixelS.h"
 #include "../../Tool/GenerateMaze.h"
 #include "../../DebugLog.h"

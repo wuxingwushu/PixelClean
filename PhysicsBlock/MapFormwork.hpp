@@ -1,8 +1,20 @@
 #pragma once
 #include "BaseStruct.hpp"
+#include <vector>
 
 namespace PhysicsBlock
 {
+
+    /**
+     * @brief 地图轮廓结构体
+     * @details 用于存储地图轮廓点的信息 */
+    struct MapOutline
+    {
+        Vec2_ pos;
+        Vec2_ face;
+        FLOAT_ F;
+    };
+
     /**
      * @brief 地图模板
      * @note 地图模板提示每个地图都应该有的函数功能 */
@@ -10,7 +22,7 @@ namespace PhysicsBlock
     {
     public:
         MapFormwork() {};
-        ~MapFormwork() {};
+        virtual ~MapFormwork() {};
 
         /**
          * @brief 获取对象类型
@@ -29,6 +41,11 @@ namespace PhysicsBlock
         virtual glm::uvec2 FMGetMapSize() { return glm::uvec2{0}; }
 
         /**
+         * @brief 获取地图中心位置
+         * @return 中心位置（用于坐标转换） */
+        virtual Vec2_ FMGetCentrality() { return {0, 0}; }
+
+        /**
          * @brief 获取网格是否有障碍物
          * @param start 网格位置
          * @return 是否碰撞（true: 碰撞） */
@@ -45,6 +62,24 @@ namespace PhysicsBlock
          * @param start 网格位置
          * @warning 范围不安全，超出会报错 */
         virtual GridBlock& FMGetGridBlock(glm::ivec2 start) = 0;
+
+        /**
+         * @brief 获取轻量级轮廓
+         * @param x_ 起始X坐标（世界坐标）
+         * @param y_ 起始Y坐标（世界坐标）
+         * @param w_ 结束X坐标（世界坐标）
+         * @param h_ 结束Y坐标（世界坐标）
+         * @return 轮廓点向量 */
+        virtual std::vector<MapOutline> FMGetLightweightOutline(int x_, int y_, int w_, int h_) { return {}; }
+
+        /**
+         * @brief 获取完整轮廓
+         * @param x_ 起始X坐标（世界坐标）
+         * @param y_ 起始Y坐标（世界坐标）
+         * @param w_ 结束X坐标（世界坐标）
+         * @param h_ 结束Y坐标（世界坐标）
+         * @return 轮廓点向量 */
+        virtual std::vector<MapOutline> FMGetOutline(int x_, int y_, int w_, int h_) { return {}; }
 
         /**
          * @brief 地图 线段(Bresenham) 检测

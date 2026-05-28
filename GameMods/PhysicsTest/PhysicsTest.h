@@ -62,11 +62,12 @@ namespace GAME
 	private: // 辅助绘制
 		void ShowStaticSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1, 0, 0, 1});
 		void ShowSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1, 0, 0, 1});
+		void RenderMapOutline();
 
 	private:
         bool PhysicsSwitch = true;							 // 物理世界的开关
         PhysicsBlock::PhysicsWorld *mPhysicsWorld = nullptr; // 物理世界
-        PhysicsBlock::MapStatic *mMapStatic;				 // 地图
+        PhysicsBlock::MapFormwork *mMapFormwork;				 // 地图
 
         // GPU 计算后端切换
         PhysicsBlock::PhysicsGPU* mPhysicsGPU = nullptr; // GPU 物理求解器

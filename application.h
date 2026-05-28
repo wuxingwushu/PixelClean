@@ -4,7 +4,7 @@
 
 #include "Camera.h"
 
-#include "SoundEffect/SoundEffect.h"
+#include "Audio/SoundEffect.h"
 
 #include "GameMods/Configuration.h"
 #include "GameMods/UnlimitednessMapMods/UnlimitednessMapMods.h"

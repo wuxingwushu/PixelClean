@@ -1,6 +1,6 @@
 #include "MazeMods.h"
-#include "../../NetworkTCP/Replication/ReplicationManager.h"
-#include "../../NetworkTCP/Replication/NetworkLayer.h"
+#include "../../NetworkTCP/ReplicationManager.h"
+#include "../../NetworkTCP/NetworkLayer.h"
 #include "MazeReplicationComponents.h"
 #include "MazeReplicationEvents.h"
 #include "../../Opcode/OpcodeFunction.h"

@@ -1,5 +1,5 @@
 #pragma once
-#include "../../NetworkTCP/Replication/EventTypes.h"
+#include "../../NetworkTCP/EventTypes.h"
 #include "../../GlobalStructural.h"
 #include <string>
 #include <vector>

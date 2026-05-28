@@ -51,7 +51,7 @@
 #include "../GameMods.h"
 #include "../../PhysicsBlock/PhysicsWorld.hpp"
 #include "../../PhysicsBlock/MapStatic.hpp"
-#include "../../SoundEffect/SoundEffect.h"
+#include "../../Audio/SoundEffect.h"
 #include "soloud.h"
 #include "soloud_wav.h"
 #include "soloud_bus.h"

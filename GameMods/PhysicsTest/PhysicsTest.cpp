@@ -20,7 +20,7 @@ namespace GAME
 	{
 		LOGD("PhysicsTest::PhysicsTest constructor");
 		// 添加视觉辅助
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 2000000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
 			mCameraVPMatricesBuffer);
@@ -724,19 +724,40 @@ namespace GAME
 	{
 		glm::uvec2 mapSize = mMapFormwork->FMGetMapSize();
 		if (mapSize.x == 0 || mapSize.y == 0) return;
-
-		Vec2_ mapCentrality = mMapFormwork->FMGetCentrality();
-		int halfW = mMapFormwork->FMGetMapSize().x;
-		int halfH = mMapFormwork->FMGetMapSize().y;
-
 		mAuxiliaryVision->ClearStaticLine();
-		for (size_t x = 0; x < halfW; x++)
-		{
-			for (size_t y = 0; y < halfH; y++)
+		
+		Vec2_ mapCentrality;
+		if (mPhysicsWorld->GetMapFormwork()->FMGetType() == PhysicsBlock::PhysicsObjectEnum::_MapDynamic) {
+			PhysicsBlock::MapDynamic* dynMap = (PhysicsBlock::MapDynamic*)(mPhysicsWorld->GetMapFormwork());
+			mapCentrality = dynMap->FMGetCentrality();
+
+			int startX = -(int)(dynMap->GetPlatePos().x);
+			int startY = -(int)(dynMap->GetPlatePos().y);
+			int endX = startX + (int)mapSize.x;
+			int endY = startY + (int)mapSize.y;
+
+			for (int x = startX; x < endX; x++)
 			{
-				if (mMapFormwork->FMGetGridBlock({ x, y }).Entity)
+				for (int y = startY; y < endY; y++)
 				{
-					ShowStaticSquare(Vec2_{ x, y } - mapCentrality, 0, { 0, 1, 0, 1 });
+					if (mMapFormwork->FMGetGridBlock({ x, y }).Entity)
+					{
+						ShowStaticSquare(Vec2_{ x, y } - mapCentrality, 0, { 0, 1, 0, 1 });
+					}
+				}
+			}
+		}
+		else {
+			mapCentrality = mMapFormwork->FMGetCentrality();
+
+			for (size_t x = 0; x < mapSize.x; x++)
+			{
+				for (size_t y = 0; y < mapSize.y; y++)
+				{
+					if (mMapFormwork->FMGetGridBlock({ x, y }).Entity)
+					{
+						ShowStaticSquare(Vec2_{ x, y } - mapCentrality, 0, { 0, 1, 0, 1 });
+					}
 				}
 			}
 		}

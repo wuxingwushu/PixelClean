@@ -105,6 +105,7 @@ namespace PhysicsBlock
             mMovePlate.ALLUpData(x, y);
         }
 
+        inline glm::ivec2 GetPlatePos() const noexcept { return glm::ivec2{ mMovePlate.GetPlateX(), mMovePlate.GetPlateY()}; }
         inline unsigned int GetPlateEdgeSize() const noexcept { return PixelBlockEdgeSize; }
         inline unsigned int GetPlateCountX() const noexcept { return width; }
         inline unsigned int GetPlateCountY() const noexcept { return height; }

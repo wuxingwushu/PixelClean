@@ -13,7 +13,7 @@ namespace PhysicsBlock
     }
 
     MapDynamic::MapDynamic(const unsigned int Width, const unsigned int Height):
-        width(Width), height(Height), mMovePlate(Width, Height, PixelBlockEdgeSize, Width / 2, Height / 2), 
+        width(Width), height(Height), mMovePlate(Width, Height, PixelBlockEdgeSize, 0, 0), 
         centrality({Width / 2 * PixelBlockEdgeSize, Height / 2 * PixelBlockEdgeSize}),
         BaseGrid(Width * PixelBlockEdgeSize, Height * PixelBlockEdgeSize, nullptr)
     {
@@ -113,8 +113,6 @@ namespace PhysicsBlock
 
     CollisionInfoI MapDynamic::FMBresenhamDetection(glm::ivec2 start, glm::ivec2 end)
     {
-        const unsigned int w = BaseGrid::width;
-        const unsigned int h = BaseGrid::height;
         int sx = (start.x < end.x) ? 1 : -1;
         int sy = (start.y < end.y) ? 1 : -1;
         int dx = abs(end.x - start.x);
@@ -122,13 +120,10 @@ namespace PhysicsBlock
         int err = dx + dy;
         while (true)
         {
-            if (start.x >= 0 && start.y >= 0 && start.x < (int)w && start.y < (int)h)
+            GridBlock& block = at(start.x, start.y);
+            if (block.Collision)
             {
-                GridBlock& block = at(start.x, start.y);
-                if (block.Collision)
-                {
-                    return {true, start, block.FrictionFactor};
-                }
+                return { true, start, block.FrictionFactor };
             }
             if (end.x == start.x && end.y == start.y)
             {
@@ -153,10 +148,7 @@ namespace PhysicsBlock
         start += centrality;
         end += centrality;
 
-        PhysicsBlock::SquareFocus data = PhysicsBlock::LineSquareFocus(start, end, BaseGrid::width - 0.0001f, BaseGrid::height - 0.0001f);
-        if (data.Focus)
-        {
-            CollisionInfoI infoI = FMBresenhamDetection(ToInt(data.start), ToInt(data.end));
+            CollisionInfoI infoI = FMBresenhamDetection(glm::ivec2(start), glm::ivec2(end));
             if (infoI.Collision)
             {
                 CollisionInfoD info;
@@ -226,7 +218,6 @@ namespace PhysicsBlock
                 info.pos -= centrality;
                 return info;
             }
-        }
         return {false};
     }
 
@@ -252,38 +243,38 @@ namespace PhysicsBlock
         {
             for (int y = y_; y < h_; ++y)
             {
-                if (!GetCollision(x, y))
+                if (!at(x, y).Entity)
                 {
                     continue;
                 }
-                if (!GetCollision(x - 1, y - 1))
+                if (!at(x - 1, y - 1).Entity)
                 {
-                    if (GetCollision(x - 1, y) == GetCollision(x, y - 1))
+                    if (at(x - 1, y).Entity == at(x, y - 1).Entity)
                     {
                         Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
                     }
                 }
-                else if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1))
+                else if (!at(x - 1, y).Entity || !at(x, y - 1).Entity)
                 {
                     Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
                 }
-                if (!GetCollision(x, y + 1))
+                if (!at(x, y + 1).Entity)
                 {
-                    if (!(GetCollision(x - 1, y) && !GetCollision(x - 1, y + 1)))
+                    if (!(at(x - 1, y).Entity && !at(x - 1, y + 1).Entity))
                     {
                         Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
                     }
                 }
-                if (!GetCollision(x + 1, y))
+                if (!at(x + 1, y).Entity)
                 {
-                    if ((!GetCollision(x, y - 1) && !GetCollision(x + 1, y - 1)))
+                    if ((!at(x, y - 1).Entity && !at(x + 1, y - 1).Entity))
                     {
                         Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
                     }
                 }
-                if (!GetCollision(x + 1, y + 1))
+                if (!at(x + 1, y + 1).Entity)
                 {
-                    if ((GetCollision(x + 1, y) == GetCollision(x, y + 1)) && !GetCollision(x + 1, y))
+                    if ((at(x + 1, y).Entity == at(x, y + 1).Entity) && !at(x + 1, y).Entity)
                     {
                         Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
                     }
@@ -306,24 +297,24 @@ namespace PhysicsBlock
         {
             for (int y = y_; y < h_; ++y)
             {
-                if (!GetCollision(x, y))
+                if (!at(x, y).Entity)
                 {
                     continue;
                 }
 
-                if (!GetCollision(x - 1, y) || !GetCollision(x, y - 1) || !GetCollision(x - 1, y - 1))
+                if (!at(x - 1, y).Entity || !at(x, y - 1).Entity || !at(x - 1, y - 1).Entity)
                 {
                     Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
                 }
-                if (!GetCollision(x, y + 1))
+                if (!at(x, y + 1).Entity)
                 {
                     Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
                 }
-                if (!(GetCollision(x + 1, y - 1) || GetCollision(x + 1, y)))
+                if (!(at(x + 1, y - 1).Entity || at(x + 1, y).Entity))
                 {
                     Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
                 }
-                if (!(GetCollision(x + 1, y) || GetCollision(x + 1, y + 1) || GetCollision(x, y + 1)))
+                if (!(at(x + 1, y).Entity || at(x + 1, y + 1).Entity || at(x, y + 1).Entity))
                 {
                     Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
                 }

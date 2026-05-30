@@ -74,13 +74,13 @@ public:
      * @brief   获取当前中心板块的世界 X 坐标
      * @return  返回中心板块左上角的世界 X 坐标
      */
-    [[nodiscard]] inline int GetPlateX() { return (mOriginX - mPosX) * mEdge; }
+    [[nodiscard]] inline int GetPlateX() const { return (mOriginX - mPosX) * mEdge; }
     
     /**
      * @brief   获取当前中心板块的世界 Y 坐标
      * @return  返回中心板块左上角的世界 Y 坐标
      */
-    [[nodiscard]] inline int GetPlateY() { return (mOriginY - mPosY) * mEdge; }
+    [[nodiscard]] inline int GetPlateY() const { return (mOriginY - mPosY) * mEdge; }
 
     /**
      * @brief   将世界 X 坐标转换为板块数组索引

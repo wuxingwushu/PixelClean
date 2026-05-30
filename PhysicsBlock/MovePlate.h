@@ -255,19 +255,23 @@ public:
         }
         else {
             // 移动量过大，全部重新生成
-            mPosX += Info.X;
-            mPosY += Info.Y;
-            for (size_t Nx = 0; Nx < mNumberX; ++Nx)
-            {
-                for (size_t Ny = 0; Ny < mNumberY; ++Ny)
-                {
-                    mDeleteCallback(PlateAt(Nx, Ny), mDeleteData);
-                    mGenerateCallback(PlateAt(Nx, Ny), (Nx + mPosX - mOriginX), (Ny + mPosY - mOriginY), mGenerateData);
-                }
-            }
+            ALLUpData(x, y);
             Info.UpData = true;
         }
         return Info;
+    }
+
+    void ALLUpData(double x, double y) {
+        mPosX = (x / mEdge);
+        mPosY = (y / mEdge);
+        for (size_t Nx = 0; Nx < mNumberX; ++Nx)
+        {
+            for (size_t Ny = 0; Ny < mNumberY; ++Ny)
+            {
+                mDeleteCallback(PlateAt(Nx, Ny), mDeleteData);
+                mGenerateCallback(PlateAt(Nx, Ny), (Nx + mPosX - mOriginX), (Ny + mPosY - mOriginY), mGenerateData);
+            }
+        }
     }
 
 private:

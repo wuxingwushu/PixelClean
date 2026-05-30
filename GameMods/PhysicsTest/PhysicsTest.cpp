@@ -5,6 +5,8 @@
 #include "../../PhysicsBlock/BaseCalculate.hpp"
 #include "../../PhysicsBlock/ImGuiPhysics.hpp"
 
+
+
 #include "PhysicsDemo.h"
 #include "PhysicsLogBuffer.h"
 #include "../../DebugLog.h"
@@ -420,6 +422,13 @@ namespace GAME
 		huoqdedian.x += mCamera->getCameraPos().x;
 		huoqdedian.y += mCamera->getCameraPos().y;
 
+		if (mPhysicsWorld->GetMapFormwork()->FMGetType() == PhysicsBlock::PhysicsObjectEnum::_MapDynamic) {
+			MovePlateInfo PlateInfo = ((PhysicsBlock::MapDynamic *)(mPhysicsWorld->GetMapFormwork()))->Updata({mCamera->getCameraPos().x,mCamera->getCameraPos().y});
+			if (PlateInfo.UpData) {
+				RenderMapOutline();
+			}
+		}
+
 		mAuxiliaryVision->Begin();
 
 		// 鼠标事件
@@ -720,6 +729,7 @@ namespace GAME
 		int halfW = mMapFormwork->FMGetMapSize().x;
 		int halfH = mMapFormwork->FMGetMapSize().y;
 
+		mAuxiliaryVision->ClearStaticLine();
 		for (size_t x = 0; x < halfW; x++)
 		{
 			for (size_t y = 0; y < halfH; y++)

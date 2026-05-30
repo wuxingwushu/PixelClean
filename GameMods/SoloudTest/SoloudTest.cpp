@@ -19,8 +19,8 @@ namespace GAME
 			mCameraVPMatricesBuffer);
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
-		mSoloud = SoundEffect::SoundEffect::GetSoundEffect()->GetSoloud();
-		SoundEffect::SoundEffect::GetSoundEffect()->StopAll();
+		mSoloud = GAME::Audio::AudioEngine::Get().GetSpatial().GetSoloud();
+		GAME::Audio::AudioEngine::Get().GetSpatial().StopAll();
 
 		CreateScene();
 		InitAudio();

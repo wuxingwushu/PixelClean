@@ -9,8 +9,6 @@
 #include "../../VulKanTool/PixelTexture.h"
 
 
-#include "../../GeneralCalculationGPU/GPU.h"
-
 #include "../../Physics/SquarePhysics.h"
 
 #include "../../Tool/PerlinNoise.h"

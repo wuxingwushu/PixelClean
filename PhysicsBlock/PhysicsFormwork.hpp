@@ -1,4 +1,5 @@
 #pragma once
+#include <climits>
 #include "BaseStruct.hpp"
 
 namespace PhysicsBlock
@@ -13,6 +14,7 @@ namespace PhysicsBlock
     public:
         PhysicsAssembly *assembly = nullptr;
         PhysicsObjectEnum type = PhysicsObjectEnum::Null;
+        unsigned int mGridIndex = UINT_MAX;
 
         PhysicsFormwork(){};
         ~PhysicsFormwork(){};

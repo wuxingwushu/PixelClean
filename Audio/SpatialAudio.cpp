@@ -2,11 +2,15 @@
 // Play3D 流程：加载 Asset → 申请 VoiceInfo → 获取 AudioSource → play3d（带 BusHandle）
 // → 配置衰减/多普勒 → 绑定 VoiceInfo。
 // Play2D 流程：加载 Asset → 申请 VoiceInfo → play(paused) → 设置 handle → unpause。
+// PlaySimple 流程：获取 Asset → 按类型设置循环 → play 直出 SoLoud（无总线路由）。
 // 遮挡模拟：occlusion 0=无遮挡(22000Hz低通) → 1=完全遮挡(400Hz低通)。
 #include "SpatialAudio.h"
 #include "soloud_biquadresonantfilter.h"
+#include "AudioEngine.h"
 #include "../DebugLog.h"
+#include "../Tool/Tool.h"
 #include <algorithm>
+#include <vector>
 
 namespace GAME::Audio {
 
@@ -212,6 +216,124 @@ SoLoud::handle SpatialAudioSystem::PlayDirect(SoLoud::AudioSource& source,
 void SpatialAudioSystem::Update(float /*deltaTime*/)
 {
     mVoiceManager.Update();
+}
+
+SoLoud::handle SpatialAudioSystem::PlaySimple(
+    const std::string& name,
+    SimpleSoundType type,
+    bool loop,
+    float volume,
+    float pan)
+{
+    AudioAsset* asset = mBank->Get(name);
+    if (!asset)
+    {
+        LOGE("[SpatialAudio] PlaySimple asset not found: %s", name.c_str());
+        return 0;
+    }
+
+    SoLoud::AudioSource* source = nullptr;
+    switch (type)
+    {
+        case SimpleSoundType::MP3:  source = asset->wav;  break;
+        case SimpleSoundType::MIDI:
+            if (!AudioEngine::Get().IsMidiFontLoaded())
+            {
+                LOGE("[SpatialAudio] MIDI font not loaded, cannot play: %s", name.c_str());
+                return 0;
+            }
+            source = asset->midi;
+            break;
+    }
+
+    if (!source)
+    {
+        LOGE("[SpatialAudio] PlaySimple null source for: %s", name.c_str());
+        return 0;
+    }
+
+    if (loop)
+    {
+        if (type == SimpleSoundType::MP3 && asset->wav)
+            asset->wav->setLooping(true);
+        else if (type == SimpleSoundType::MIDI && asset->midi)
+            asset->midi->setLooping(true);
+    }
+
+    SoLoud::handle h = mSoloud->play(*source, volume, pan);
+
+    if (loop)
+    {
+        if (type == SimpleSoundType::MP3 && asset->wav)
+            asset->wav->setLooping(false);
+        else if (type == SimpleSoundType::MIDI && asset->midi)
+            asset->midi->setLooping(false);
+    }
+
+    return h;
+}
+
+void SpatialAudioSystem::Pause(SoLoud::handle handle, bool paused)
+{
+    if (handle == 0)
+        mSoloud->setPauseAll(paused ? 1 : 0);
+    else
+        mSoloud->setPause(handle, paused ? 1 : 0);
+}
+
+void SpatialAudioSystem::StopAll()
+{
+    mSoloud->stopAll();
+}
+
+void SpatialAudioSystem::SetMasterVolume(float volume)
+{
+    mBusSystem->SetVolume(BusType::Master, volume);
+}
+
+void* SpatialAudioSystem::GetWav(const std::string& name)
+{
+    auto* asset = mBank->Get(name);
+    if (asset && asset->type == AssetType::Sample)
+        return asset->wav;
+    return nullptr;
+}
+
+void SpatialAudioSystem::LoadAllResources()
+{
+    auto& engine = AudioEngine::Get();
+    auto& bank = engine.GetBank();
+
+    std::vector<std::string> SoundMp3;
+    TOOL::FilePath("./Resource/Music", &SoundMp3, "mp3", "nullptr", nullptr);
+
+    for (size_t i = 0; i < SoundMp3.size(); ++i)
+    {
+        std::string filePath = "./Resource/Music/" + SoundMp3[i] + ".mp3";
+        auto* asset = bank.LoadSample(SoundMp3[i], filePath);
+        if (!asset)
+        {
+            LOGE("[SpatialAudio] Failed to load MP3: %s", SoundMp3[i].c_str());
+        }
+    }
+
+    std::vector<std::string> SoundMidi;
+    if (engine.IsMidiFontLoaded())
+    {
+        TOOL::FilePath("./Resource/Music", &SoundMidi, "mid", "nullptr", nullptr);
+
+        for (size_t i = 0; i < SoundMidi.size(); ++i)
+        {
+            std::string filePath = "./Resource/Music/" + SoundMidi[i] + ".mid";
+            auto* asset = bank.LoadMidi(SoundMidi[i], filePath, engine.GetMidiFont());
+            if (!asset)
+            {
+                LOGE("[SpatialAudio] Failed to load MIDI: %s", SoundMidi[i].c_str());
+            }
+        }
+    }
+
+    LOGD("[SpatialAudio] LoadAllResources complete — %zu assets loaded", bank.GetAssetCount());
 }
 
 } // namespace GAME::Audio

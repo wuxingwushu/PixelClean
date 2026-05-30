@@ -14,7 +14,7 @@
 
 namespace SoLoud
 {
-	int MidiInstance::tick(float *stream, int SampleCount)
+int MidiInstance::tick(float *stream, int SampleCount)
 	{
 		tml_message *mf = (tml_message *)mTrack;
 		tsf *sf = (tsf *)mParent->mSoundFont->mHandle;
@@ -50,14 +50,19 @@ namespace SoLoud
 			mTrack = mf;
 			tsf_render_float(sf, stream, SampleBlock, 0);
 		}
-		//std::cout << mf->time << std::endl;
-		return stream - begin;
+		return (int)(stream - begin);
 	}
 
 	MidiInstance::MidiInstance(Midi *aParent)
 	{
 		mParent = aParent;
 		mParent->mSoundFont->mHandle = tsf_load_memory((const void*)mParent->mSoundFont->mData, mParent->mSoundFont->mDataLen);
+		if (!mParent->mSoundFont->mHandle)
+		{
+			mTrack = nullptr;
+			mPlaying = false;
+			return;
+		}
 		mParent->mHandle = tml_load_memory((const void*)mParent->mData, mParent->mDataLen);
 
 		tsf_channel_set_bank_preset((tsf *)mParent->mSoundFont->mHandle, 9, 128, 0);

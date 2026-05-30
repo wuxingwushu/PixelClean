@@ -108,45 +108,120 @@ namespace PhysicsBlock
         }
     }
 
+    void PhysicsCollision::AddMapCollisionEnterListener(MapFormwork *object, MapCollisionCallback callback)
+    {
+        if (object == nullptr)
+        {
+            throw ArgumentNullException("object");
+        }
+        if (!callback)
+        {
+            throw ArgumentNullException("callback");
+        }
+        GetOrCreateMapBinding(object).OnEnter = std::move(callback);
+    }
+
+    void PhysicsCollision::AddMapCollisionStayListener(MapFormwork *object, MapCollisionCallback callback)
+    {
+        if (object == nullptr)
+        {
+            throw ArgumentNullException("object");
+        }
+        if (!callback)
+        {
+            throw ArgumentNullException("callback");
+        }
+        GetOrCreateMapBinding(object).OnStay = std::move(callback);
+    }
+
+    void PhysicsCollision::AddMapCollisionExitListener(MapFormwork *object, MapCollisionCallback callback)
+    {
+        if (object == nullptr)
+        {
+            throw ArgumentNullException("object");
+        }
+        if (!callback)
+        {
+            throw ArgumentNullException("callback");
+        }
+        GetOrCreateMapBinding(object).OnExit = std::move(callback);
+    }
+
+    void PhysicsCollision::RemoveAllMapCollisionListeners(MapFormwork *object)
+    {
+        if (object == nullptr)
+        {
+            throw ArgumentNullException("object");
+        }
+        mMapBindings.erase(object);
+    }
+
+    void PhysicsCollision::RemoveMapCollisionBinding(MapFormwork *object)
+    {
+        if (object == nullptr)
+        {
+            throw ArgumentNullException("object");
+        }
+        auto it = mMapBindings.find(object);
+        if (it != mMapBindings.end())
+        {
+            it->second.Layers = LayerMaskAll;
+            it->second.Priority = 50;
+        }
+    }
+
     void PhysicsCollision::AddCollisionPair(BaseArbiter *arbiterKey)
     {
-        if (arbiterKey->mArbiterType < PhysicsArbiterType::ArbiterSS)
+        if (arbiterKey->mArbiterType >= PhysicsArbiterType::ArbiterSS)
         {
-            return;
-        }
-
-        auto Ait = mBindings.find((PhysicsFormwork *) (arbiterKey->mOriginalObject1));
-        if (Ait == mBindings.end())
-        {
-            return;
-        }
-        auto Bit = mBindings.find((PhysicsFormwork *) (arbiterKey->mOriginalObject2));
-        if (Bit == mBindings.end())
-        {
-            return;
-        }
-
-        if (Bit->second.Layers & Ait->second.Layers) {
-            /*
-            if (Ait->second.Priority < Bit->second.Priority)
+            auto Ait = mBindings.find((PhysicsFormwork *) (arbiterKey->mOriginalObject1));
+            if (Ait == mBindings.end())
             {
-                std::swap(Ait, Bit);
-            }*/
-
-            if (Ait->second.OnEnter)
-            {   
-                Ait->second.OnEnter(Ait->first, Bit->first, arbiterKey);
+                return;
             }
-            
-            if (Bit->second.OnEnter)
+            auto Bit = mBindings.find((PhysicsFormwork *) (arbiterKey->mOriginalObject2));
+            if (Bit == mBindings.end())
             {
-                Bit->second.OnEnter(Ait->first, Bit->first, arbiterKey);
+                return;
             }
 
-            if ((Ait->second.OnStay != nullptr) || Bit->second.OnStay != nullptr) {
-                CollisionArbiter stayArbiter = {Ait->second, Bit->second, arbiterKey};
-                mCollisionArbiterStayS.push_back(stayArbiter);
+            if (Bit->second.Layers & Ait->second.Layers) {
+
+                if (Ait->second.OnEnter)
+                {   
+                    Ait->second.OnEnter(Ait->first, Bit->first, arbiterKey);
+                }
+                
+                if (Bit->second.OnEnter)
+                {
+                    Bit->second.OnEnter(Ait->first, Bit->first, arbiterKey);
+                }
+
+                if ((Ait->second.OnStay != nullptr) || Bit->second.OnStay != nullptr) {
+                    CollisionArbiter stayArbiter = {Ait->second, Bit->second, arbiterKey};
+                    mCollisionArbiterStayS.push_back(stayArbiter);
+                }
             }
+            return;
+        }
+
+        PhysicsFormwork *physObj = (PhysicsFormwork *)(arbiterKey->mOriginalObject1);
+        MapFormwork *mapObj = (MapFormwork *)(arbiterKey->mOriginalObject2);
+
+        auto Mit = mMapBindings.find(mapObj);
+        if (Mit == mMapBindings.end())
+        {
+            return;
+        }
+
+        if (Mit->second.OnEnter)
+        {
+            Mit->second.OnEnter(physObj, mapObj, arbiterKey);
+        }
+
+        if (Mit->second.OnStay != nullptr) {
+            MapCollisionArbiter stayArbiter = {Mit->second, arbiterKey};
+            mMapCollisionArbiterStayS.push_back(stayArbiter);
         }
     }
 
@@ -161,6 +236,14 @@ namespace PhysicsBlock
             if (arbiter.B_CollisionBinding.OnStay)
             {
                 arbiter.B_CollisionBinding.OnStay((PhysicsFormwork *) (arbiter.arbiter->mOriginalObject1), (PhysicsFormwork *) (arbiter.arbiter->mOriginalObject2), arbiter.arbiter);
+            }
+        }
+
+        for (auto &mapArbiter : mMapCollisionArbiterStayS)
+        {
+            if (mapArbiter.MapBinding.OnStay)
+            {
+                mapArbiter.MapBinding.OnStay((PhysicsFormwork *) (mapArbiter.arbiter->mOriginalObject1), (MapFormwork *) (mapArbiter.arbiter->mOriginalObject2), mapArbiter.arbiter);
             }
         }
     }
@@ -186,12 +269,29 @@ namespace PhysicsBlock
                 break;
             }
         }
+
+        for (unsigned int i = 0; i < mMapCollisionArbiterStayS.size(); ++i)
+        {
+            if (mMapCollisionArbiterStayS[i].arbiter == arbiterKey)
+            {
+                if (mMapCollisionArbiterStayS[i].MapBinding.OnExit)
+                {
+                    mMapCollisionArbiterStayS[i].MapBinding.OnExit((PhysicsFormwork *) (arbiterKey->mOriginalObject1), (MapFormwork *) (arbiterKey->mOriginalObject2), arbiterKey);
+                }
+
+                mMapCollisionArbiterStayS[i] = mMapCollisionArbiterStayS[mMapCollisionArbiterStayS.size() - 1];
+                mMapCollisionArbiterStayS.pop_back();
+                break;
+            }
+        }
     }
 
     void PhysicsCollision::Clear()
     {
         mBindings.clear();
         mCollisionArbiterStayS.clear();
+        mMapBindings.clear();
+        mMapCollisionArbiterStayS.clear();
     }
 
 }

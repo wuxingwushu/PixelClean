@@ -39,6 +39,11 @@ bool AudioEngine::Initialize()
     if (mMidiFont.load(TimGM6mb_sf2) != 0)
     {
         LOGE("[AudioEngine] Warning: failed to load SoundFont: %s", TimGM6mb_sf2);
+        mMidiFontLoaded = false;
+    }
+    else
+    {
+        mMidiFontLoaded = true;
     }
 
     // 3. 资源库

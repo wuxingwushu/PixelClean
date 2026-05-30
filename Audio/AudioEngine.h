@@ -44,6 +44,7 @@ public:
     SoLoud::Soloud& GetSoloud() { return mSoloud; }
     // MIDI 音色库（TimGM6mb.sf2），加载 MIDI 资源时使用
     SoLoud::SoundFont& GetMidiFont() { return mMidiFont; }
+    bool IsMidiFontLoaded() const { return mMidiFontLoaded; }
 
     AudioEngine(const AudioEngine&) = delete;
     AudioEngine& operator=(const AudioEngine&) = delete;
@@ -55,6 +56,7 @@ private:
     SoLoud::Soloud mSoloud;
     SoLoud::SoundFont mMidiFont;
     bool mInitialized = false;
+    bool mMidiFontLoaded = false;
 
     AudioBank* mBank = nullptr;
     BusSystem* mBusSystem = nullptr;

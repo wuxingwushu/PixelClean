@@ -1,6 +1,40 @@
 #include "Calculate.h"
-#include "../GeneralCalculationGPU/GPU.h"
 #include "../DebugLog.h"
+#include <cstdio>
+#include <cmath>
+
+uint32_t* readFile(uint32_t& length, const char* filename) {
+    FILE* fp = fopen(filename, "rb");
+    if (fp == NULL) {
+        LOGE("[Calculate] Could not find or open file: %s", filename);
+        length = 0;
+        return nullptr;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long filesize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    if (filesize <= 0) {
+        LOGE("[Calculate] File is empty: %s", filename);
+        fclose(fp);
+        length = 0;
+        return nullptr;
+    }
+
+    long filesizepadded = long(ceil(filesize / 4.0)) * 4;
+
+    char* str = new char[filesizepadded];
+    fread(str, filesize, sizeof(char), fp);
+    fclose(fp);
+
+    for (int i = filesize; i < filesizepadded; ++i) {
+        str[i] = 0;
+    }
+
+    length = filesizepadded;
+    return (uint32_t*)str;
+}
 
 namespace VulKan {
 

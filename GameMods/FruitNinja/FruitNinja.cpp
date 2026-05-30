@@ -1,6 +1,7 @@
 #include "FruitNinja.h"
 #include "../../PhysicsBlock/BaseCalculate.hpp"
-#include "../../Audio/SoundEffect.h"
+#include "../../Audio/SpatialAudio.h"
+#include "../../Audio/AudioEngine.h"
 #include "../../GlobalVariable.h"
 #include "../../DebugLog.h"
 #include <algorithm>
@@ -98,7 +99,7 @@ namespace GAME
 		mGameState = GameState::Playing;
 		mLastFrameTime = std::chrono::steady_clock::now();
 
-		SoundEffect::SoundEffect::GetSoundEffect()->Play("Impact", MP3, false, Global::SoundEffectsVolume * 0.3f, 0.0f);
+		Audio::AudioEngine::Get().GetSpatial().PlaySimple("Impact", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume * 0.3f, 0.0f);
 	}
 
 	void FruitNinja::MouseMove(double xpos, double ypos)
@@ -278,7 +279,7 @@ namespace GAME
 				if (mGameTimeElapsed >= GameDuration) {
 					mGameState = GameState::GameOver;
 					if (mScore > mHighScore) mHighScore = mScore;
-					SoundEffect::SoundEffect::GetSoundEffect()->Play("Impact", MP3, false, Global::SoundEffectsVolume * 0.5f, 0.0f);
+					Audio::AudioEngine::Get().GetSpatial().PlaySimple("Impact", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume * 0.5f, 0.0f);
 				}
 			}
 		}
@@ -453,7 +454,7 @@ namespace GAME
 		}
 
 		if (cutAny) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Impact", MP3, false, Global::SoundEffectsVolume * 0.4f, 0.0f);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Impact", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume * 0.4f, 0.0f);
 		}
 	}
 
@@ -650,7 +651,7 @@ namespace GAME
 		if (mLives <= 0) {
 			mGameState = GameState::GameOver;
 			if (mScore > mHighScore) mHighScore = mScore;
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Impact", MP3, false, Global::SoundEffectsVolume * 0.5f, 0.0f);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Impact", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume * 0.5f, 0.0f);
 		}
 	}
 

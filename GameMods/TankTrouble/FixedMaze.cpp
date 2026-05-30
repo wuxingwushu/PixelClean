@@ -1,5 +1,6 @@
 #include "FixedMaze.h"
-#include "../../Audio/SoundEffect.h"
+#include "../../Audio/SpatialAudio.h"
+#include "../../Audio/AudioEngine.h"
 #include "../../BlockS/PixelS.h"
 #include "../../Tool/GenerateMaze.h"
 #include "../../DebugLog.h"
@@ -315,7 +316,7 @@ namespace GAME {
 	void FixedMaze::UpDateMaps() {
 		if (mPixelQueue->GetNumber() != 0) {
 			//音效
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Impact", MP3, false, Global::SoundEffectsVolume, 0.0f);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Impact", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume, 0.0f);
 
 			PixelState* LPixel;
 			GetPixelSPointer();

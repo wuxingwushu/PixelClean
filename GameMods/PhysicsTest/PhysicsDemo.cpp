@@ -1636,7 +1636,6 @@ namespace PhysicsBlock
 						grid->at(ix, iy).Entity = collision;
 						grid->at(ix, iy).Collision = collision;
 						grid->at(ix, iy).mass = 1.0;
-						grid->at(ix, iy).Healthpoint = 24;
 					}
 				}
 			},
@@ -1656,7 +1655,7 @@ namespace PhysicsBlock
 		);
 
 		mMapDynamic->SetPos(0, 0);
-		mMapDynamic->Updata({MapPixelWidth / 2.0f, MapPixelHeight / 2.0f});
+		mMapDynamic->ALLUpData(0, 0);
 
 		(*myPhysicsWorld)->SetMapFormwork(mMapDynamic);
 

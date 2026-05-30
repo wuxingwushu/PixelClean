@@ -69,8 +69,6 @@ endif()
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/PhysicsBlock.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Info.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs.json ${PROJECT_SOURCE_DIR}/.vs)# 设置的DLL文件路径
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource/Music ${CMAKE_CURRENT_BINARY_DIR}/Resources)# 拷贝音效
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/InterfaceUI/Minecraft_AE.ttf ${CMAKE_CURRENT_BINARY_DIR})# 字体
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource ${CMAKE_CURRENT_BINARY_DIR}/Resource)# 数字资源
 
 # 查找 Vulkan SDK 下的 glslangValidator
@@ -126,7 +124,6 @@ add_subdirectory(Character)
 add_subdirectory(Physics)
 add_subdirectory(PhysicsBlock)
 add_subdirectory(Arms)
-add_subdirectory(GeneralCalculationGPU)
 add_subdirectory(Opcode)
 add_subdirectory(GameMods)
 add_subdirectory(GameMods/MazeMods)
@@ -166,7 +163,6 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		CharacterLib
 		PhysicsLib
 		ArmsLib
-		GeneralCalculationGPULib
 		OpcodeLib
 		GameModsLib
 		MazeModsLib
@@ -211,7 +207,6 @@ else()
 		CharacterLib
 		PhysicsLib
 		ArmsLib
-		GeneralCalculationGPULib
 		OpcodeLib
 		GameModsLib
 		MazeModsLib

@@ -26,6 +26,21 @@ namespace PhysicsBlock
         BaseArbiter *arbiter = nullptr;
     };
 
+    struct MapCollisionBinding
+    {
+        LayerMask Layers = LayerMaskAll;
+        int Priority = 50;
+        MapCollisionCallback OnEnter = nullptr;
+        MapCollisionCallback OnStay = nullptr;
+        MapCollisionCallback OnExit = nullptr;
+    };
+
+    struct MapCollisionArbiter
+    {
+        MapCollisionBinding MapBinding;
+        BaseArbiter *arbiter = nullptr;
+    };
+
     struct PairKey
     {
         PhysicsFormwork *a;
@@ -98,6 +113,13 @@ namespace PhysicsBlock
         // 移除指定对象的碰撞绑定
         void RemoveCollisionBinding(PhysicsFormwork *object);
 
+        // 地图碰撞监听
+        void AddMapCollisionEnterListener(MapFormwork *object, MapCollisionCallback callback);
+        void AddMapCollisionStayListener(MapFormwork *object, MapCollisionCallback callback);
+        void AddMapCollisionExitListener(MapFormwork *object, MapCollisionCallback callback);
+        void RemoveAllMapCollisionListeners(MapFormwork *object);
+        void RemoveMapCollisionBinding(MapFormwork *object);
+
         // 新增碰撞对
         void AddCollisionPair(BaseArbiter *arbiterKey);
         // 处理持续碰撞事件
@@ -125,9 +147,25 @@ namespace PhysicsBlock
             return defaultBinding;
         }
 
+        MapCollisionBinding &GetOrCreateMapBinding(MapFormwork *object)
+        {
+            return mMapBindings[object];
+        }
+
+        const MapCollisionBinding &GetMapBinding(MapFormwork *object) const
+        {
+            auto it = mMapBindings.find(object);
+            if (it != mMapBindings.end())
+                return it->second;
+            static const MapCollisionBinding defaultBinding{};
+            return defaultBinding;
+        }
+
         std::unordered_map<PhysicsFormwork *, CollisionBinding> mBindings;
+        std::unordered_map<MapFormwork *, MapCollisionBinding> mMapBindings;
 
         std::vector<CollisionArbiter> mCollisionArbiterStayS;
+        std::vector<MapCollisionArbiter> mMapCollisionArbiterStayS;
     };
 
 }

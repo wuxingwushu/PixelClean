@@ -1,7 +1,9 @@
-// 空间音频系统。封装 SoLoud 3D API，提供 3D/2D 音源播放和遮挡模拟。
+// 空间音频系统。封装 SoLoud 3D/2D API，提供 3D/2D 音源播放、遮挡模拟和资源管理。
 // Play3D 使用 SoLoud::play3d 根据声源位置/速度自动计算空间衰减和多普勒效应。
 // SetSourceOcclusion 通过调节低通滤波器频率模拟遮挡效果（完全遮挡 → 400Hz）。
-// 内部持有 VoiceManager 管理 3D 声部的生命周期和优先级偷取。
+// PlaySimple 提供简化的 2D 播放接口，自动处理循环和资源类型适配。
+// 内部持有 VoiceManager 管理声部的生命周期和优先级偷取。
+// LoadAllResources 在初始化后调用，从 ./Resources/ 目录加载所有 MP3/MIDI 资源。
 #pragma once
 #include "soloud.h"
 #include "AudioAsset.h"
@@ -10,6 +12,13 @@
 #include <string>
 
 namespace GAME::Audio {
+
+// 简化音效类型（兼容旧 SoundEffect 接口）
+enum class SimpleSoundType : uint8_t
+{
+    MP3  = 0,
+    MIDI = 1,
+};
 
 // 3D 声源配置
 struct Source3DConfig
@@ -58,10 +67,31 @@ public:
                           SoundPriority priority = SoundPriority::Critical,
                           BusType bus = BusType::UI);
 
+    // 简化播放接口：自动处理 MP3/MIDI 类型和循环设置
+    SoLoud::handle PlaySimple(const std::string& name,
+                              SimpleSoundType type,
+                              bool loop = false,
+                              float volume = 1.0f,
+                              float pan = 0.0f);
+
     // 更新已播放 3D 声源的位置/速度（如移动角色）
     void UpdateSource3D(SoLoud::handle handle, const Source3DConfig& config);
     // 设置声源遮挡系数 0~1，模拟墙壁遮挡
     void SetSourceOcclusion(SoLoud::handle handle, float occlusion);
+
+    // 暂停/恢复指定声源（handle=0 时暂停全部）
+    void Pause(SoLoud::handle handle = 0, bool paused = true);
+    // 停止所有正在播放的声音
+    void StopAll();
+    // 设置主控总线音量
+    void SetMasterVolume(float volume);
+    // 获取底层 SoLoud 引擎指针
+    SoLoud::Soloud* GetSoloud() { return mSoloud; }
+    // 按名称获取 Wav 指针（兼容旧接口）
+    void* GetWav(const std::string& name);
+
+    // 从 ./Resources/ 目录加载所有 MP3/MIDI 资源
+    void LoadAllResources();
 
     // 直接播放 AudioSource 到指定总线（底层 API）
     SoLoud::handle PlayDirect(SoLoud::AudioSource& source,

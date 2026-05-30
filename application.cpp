@@ -615,9 +615,23 @@ namespace GAME {
 	//主循环main
 	void Application::mainLoop() {
 		LOGD("mainLoop started");
-		SoundEffect::SoundEffect::GetSoundEffect()->Play("夜に駆ける", MIDI, true, Global::MusicVolume);
+		{
+			auto& engine = GAME::Audio::AudioEngine::Get();
+			if (!engine.Initialize())
+			{
+				LOGE("AudioEngine initialization failed");
+			}
+			else
+			{
+				engine.GetSpatial().LoadAllResources();
+				if (engine.IsMidiFontLoaded())
+				{
+					engine.GetSpatial().PlaySimple(u8"夜に駆ける", GAME::Audio::SimpleSoundType::MIDI, true, Global::MusicVolume);
+				}
+			}
+		}
 		while (!mWindow->shouldClose()) {//窗口被关闭结束循环
-			SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
+			GAME::Audio::AudioEngine::Get().Update(TOOL::FPStime);
 			PlayerForce = { 0,0 };
 			mWindow->pollEvents();//GLFW轮询事件
 			// 更新 ImGui 的 MousePos
@@ -707,7 +721,7 @@ namespace GAME {
 			Render();//根据录制的主指令缓存显示画面
 			TOOL::mTimer->StartEnd();
 		}
-		SoundEffect::SoundEffect::GetSoundEffect()->Destroy();
+		GAME::Audio::AudioEngine::Get().Shutdown();
 		//等待设备所以命令执行完毕才可以开始销毁，
 		vkDeviceWaitIdle(mDevice->getDevice());//等待命令执行完毕
 	}
@@ -1046,7 +1060,7 @@ namespace GAME {
 
 		mInitialized = true;
 		LOGI("initAfterSurface: mInitialized = true, initialization COMPLETE!");
-		SoundEffect::SoundEffect::GetSoundEffect()->Play("夜に駆ける", MIDI, true, Global::MusicVolume);
+		GAME::Audio::AudioEngine::Get().GetSpatial().PlaySimple(u8"夜に駆ける", GAME::Audio::SimpleSoundType::MIDI, true, Global::MusicVolume);
 	}
 
 	void Application::frameStep() {
@@ -1061,7 +1075,7 @@ namespace GAME {
 			firstFrame = false;
 		}
 
-		SoundEffect::SoundEffect::GetSoundEffect()->SoundEffectEvent();
+		GAME::Audio::AudioEngine::Get().Update(TOOL::FPStime);
 		PlayerForce = { 0,0 };
 		mWindow->pollEvents();
 		ImGuiIO& io = ImGui::GetIO();

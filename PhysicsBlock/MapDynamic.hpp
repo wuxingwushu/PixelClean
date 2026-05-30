@@ -20,7 +20,7 @@ namespace PhysicsBlock
     private:
         const unsigned int width;         // 板块 X 的数量
         const unsigned int height;        // 板块 Y 的数量
-        Vec2_ centrality{0, 0};      // 中心位置
+        Vec2_ centrality{0, 0};            // 中心位置
         MovePlate<BaseGrid *> mMovePlate; // 板块移动控制台
         BaseGrid *BaseGridBuffer;         // 所有板块网格
         GridBlock *GridBuffer;            // 每个板块网格的数据
@@ -99,6 +99,10 @@ namespace PhysicsBlock
          * @param y 世界 Y 坐标（像素） */
         inline void SetPos(float x, float y) noexcept {
             mMovePlate.SetPos(x, y);
+        }
+
+        inline void ALLUpData(float x, float y) noexcept {
+            mMovePlate.ALLUpData(x, y);
         }
 
         inline unsigned int GetPlateEdgeSize() const noexcept { return PixelBlockEdgeSize; }

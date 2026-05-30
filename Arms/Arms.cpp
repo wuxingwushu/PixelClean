@@ -1,5 +1,6 @@
 #include "Arms.h"
-#include "../Audio/SoundEffect.h"
+#include "../Audio/SpatialAudio.h"
+#include "../Audio/AudioEngine.h"
 #include "../GlobalVariable.h"
 #include "../Physics/DestroyMode.h"
 #include "../GlobalStructural.h"
@@ -33,7 +34,7 @@ namespace GAME {
 
 		unsigned char color[4] = { 0,255,0,125 };
 
-		SoundEffect::SoundEffect::GetSoundEffect()->Play("Pistol", MP3, false, Global::SoundEffectsVolume);
+		Audio::AudioEngine::Get().GetSpatial().PlaySimple("Pistol", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 
 		//std::cout << "X: " << x << "Y: " << y << "angle: " << angle << std::endl;
 		SquarePhysics::PixelCollision* LPixelCollision = new SquarePhysics::PixelCollision(1);//生成子弹物理模型

@@ -9,6 +9,7 @@
 namespace PhysicsBlock
 {
     class PhysicsFormwork;
+    class MapFormwork;
 
     /**
      * @brief 触发器事件类型枚举
@@ -131,6 +132,7 @@ namespace PhysicsBlock
      * @details 接受一个碰撞数据的常量引用作为参数
      */
     using CollisionCallback = std::function<void(const PhysicsFormwork *, const PhysicsFormwork *, const BaseArbiter *)>;
+    using MapCollisionCallback = std::function<void(const PhysicsFormwork *, const MapFormwork *, const BaseArbiter *)>;
 
     /**
      * @brief 基础异常类，用于物理引擎内部的参数验证失败

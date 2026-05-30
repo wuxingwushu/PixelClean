@@ -1,5 +1,6 @@
 #include "Interface.h"
-#include "../Audio/SoundEffect.h"
+#include "../Audio/SpatialAudio.h"
+#include "../Audio/AudioEngine.h"
 #include "../Opcode/Opcode.h"
 #include "../Tool/trie.h"
 #include "../GlobalStructural.h"
@@ -60,9 +61,9 @@ namespace GAME {
 		Font_cfg.OversampleH = 1;
 		Font_cfg.FontDataOwnedByAtlas = false;
 #if defined(_WIN32)
-		Font = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+		Font = io.Fonts->AddFontFromFileTTF("./Resource/Minecraft_AE.ttf", 16.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
 #elif defined(__ANDROID__)
-		Font = io.Fonts->AddFontFromFileTTF("./Minecraft_AE.ttf", 28.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
+		Font = io.Fonts->AddFontFromFileTTF("./Resource/Minecraft_AE.ttf", 28.0f, &Font_cfg, io.Fonts->GetGlyphRangesChineseFull());
 #endif
 
 #if defined(_WIN32)
@@ -295,7 +296,7 @@ namespace GAME {
 		float rowX = startX;
 		ImGui::SetCursorPos(ImVec2(rowX, curY));
 		if (ImGui::Button(u8"<", ImVec2(arrowBtn, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			int x = Global::GameMode - 1;
 			if (x < 0) {
 				Global::GameMode = GameModsEnum::Infinite_;
@@ -306,14 +307,14 @@ namespace GAME {
 		}
 		ImGui::SameLine(0.0f, spacing);
 		if (ImGui::Button(GameModsEnumName[Global::GameMode], ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			SetInterFaceBool();
 			Global::GameResourceLoadingBool = true;
 			InterfaceIndexes = ViceInterface_Enum;
 		}
 		ImGui::SameLine(0.0f, spacing);
 		if (ImGui::Button(u8">", ImVec2(arrowBtn, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			int x = Global::GameMode + 1;
 			if (x > GameModsEnum::Infinite_) {
 				Global::GameMode = (GameModsEnum)0;
@@ -330,7 +331,7 @@ namespace GAME {
 		if (GameModsSupportsMultiplayer(Global::GameMode)) {
 			ImGui::SetCursorPos(ImVec2(singleBtnX, curY));
 			if (ImGui::Button(u8"多人游戏", ImVec2(btnW, btnH))) {
-				SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+				Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 				InterfaceIndexes = MultiplePeopleInterface_Enum;
 			}
 			curY += btnH + spacing;
@@ -338,7 +339,7 @@ namespace GAME {
 
 		ImGui::SetCursorPos(ImVec2(singleBtnX, curY));
 		if (ImGui::Button(u8"游戏设置", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			SetBool = true;
 			InterfaceIndexes = SetInterface_Enum;
 			PreviousLayerInterface = MainInterface_Enum;
@@ -347,7 +348,7 @@ namespace GAME {
 		curY += btnH + spacing;
 		ImGui::SetCursorPos(ImVec2(singleBtnX, curY));
 		if (ImGui::Button(u8"退出游戏", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			mWindown->WindowClose();
 		}
 
@@ -411,14 +412,14 @@ namespace GAME {
 
 		ImGui::SetCursorPos(ImVec2(startX, curY));
 		if (ImGui::Button(u8"继续游戏", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			InterFaceBool = false;
 		}
 
 		curY += btnH + spacing;
 		ImGui::SetCursorPos(ImVec2(startX, curY));
 		if (ImGui::Button(u8"游戏设置", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			SetBool = true;
 			InterfaceIndexes = SetInterface_Enum;
 			PreviousLayerInterface = ViceInterface_Enum;
@@ -427,7 +428,7 @@ namespace GAME {
 		curY += btnH + spacing;
 		ImGui::SetCursorPos(ImVec2(startX, curY));
 		if (ImGui::Button(u8"返回主页", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			Global::GameResourceUninstallBool = true;
 			InterfaceIndexes = MainInterface_Enum;
 		}
@@ -435,7 +436,7 @@ namespace GAME {
 		curY += btnH + spacing;
 		ImGui::SetCursorPos(ImVec2(startX, curY));
 		if (ImGui::Button(u8"退出游戏", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			mWindown->WindowClose();
 		}
 
@@ -476,7 +477,7 @@ namespace GAME {
 
 		ImGui::SetCursorPos(ImVec2(startX, curY));
 		if (ImGui::Button(u8"服务器", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			SetInterFaceBool();
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
@@ -487,7 +488,7 @@ namespace GAME {
 		curY += btnH + spacing;
 		ImGui::SetCursorPos(ImVec2(startX, curY));
 		if (ImGui::Button(u8"客户端", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			SetInterFaceBool();
 			InterfaceIndexes = ViceInterface_Enum;
 			Global::MultiplePeopleMode = true;
@@ -498,7 +499,7 @@ namespace GAME {
 		curY += btnH + spacing;
 		ImGui::SetCursorPos(ImVec2(startX, curY));
 		if (ImGui::Button(u8"返回", ImVec2(btnW, btnH))) {
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = MainInterface_Enum;
 		}
 
@@ -656,8 +657,8 @@ namespace GAME {
 			if (SetSoundEffectsVolume > 10.0f) {
 				SetSoundEffectsVolume = 10.0f;
 			}
-			SoundEffect::SoundEffect::GetSoundEffect()->SetVolume(SetMusicVolume);
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, SetSoundEffectsVolume);
+			Audio::AudioEngine::Get().GetBusSystem().SetVolume(Audio::BusType::Music, SetMusicVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, SetSoundEffectsVolume);
 			if (Global::FullScreen != SetFullScreen) {
 				Global::FullScreen = SetFullScreen;
 				mWindown->SetWindow(SetFullScreen);
@@ -682,7 +683,7 @@ namespace GAME {
 		ImGui::SameLine(0.0f, spacing);
 		if (ImGui::Button(u8"返回", ImVec2(btnW, btnH))) {
 			Global::FontZoomRatio = SetFontZoomRatio;
-			SoundEffect::SoundEffect::GetSoundEffect()->Play("Tap1", MP3, false, Global::SoundEffectsVolume);
+			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			InterfaceIndexes = PreviousLayerInterface;
 		}
 

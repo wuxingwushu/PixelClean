@@ -4,6 +4,7 @@
 #include "../../Character/UVDynamicDiagram.h"
 #include "../../PhysicsBlock/PhysicsWorld.hpp"
 #include "../../PhysicsBlock/MapStatic.hpp"
+#include "../../PhysicsBlock/MapDynamic.hpp"
 #include "../../PhysicsBlock/PhysicsGPU.hpp"
 #include <map>
 

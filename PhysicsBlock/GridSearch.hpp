@@ -37,6 +37,13 @@ namespace PhysicsBlock
         std::vector<PhysicsFormwork *> GridExtrovert;
 
         /**
+         * @brief   所有对象扁平列表（对象中心式更新的基础）
+         * @details 存储所有已添加到网格的物理对象指针
+         *          UpData 直接遍历此列表而非所有 Grid cell
+         */
+        std::vector<PhysicsFormwork *> mAllObjects;
+
+        /**
          * @brief   四叉网格层数
          * @details 表示网格的最大细分层数，层数越多网格越精细
          *          第0层为根节点（整个空间），每增一层将空间四等分
@@ -353,6 +360,7 @@ namespace PhysicsBlock
 
             Grid.clear();
             Grid.resize(GridSize); // 调整网格容器大小
+            mAllObjects.clear();
         }
 
         /**
@@ -372,11 +380,14 @@ namespace PhysicsBlock
             if (index < Grid.size())
             {
                 at(index).push_back(atocr);
+                atocr->mGridIndex = index;
             }
             else
             {
                 GridExtrovert.push_back(atocr);
+                atocr->mGridIndex = UINT_MAX;
             }
+            mAllObjects.push_back(atocr);
         }
 
         /**
@@ -392,7 +403,17 @@ namespace PhysicsBlock
          */
         void Remove(PhysicsFormwork *atocr)
         {
-            unsigned int index = atIndex(atocr->PFGetPos(), atocr->PFGetCollisionR());
+            for (size_t i = 0; i < mAllObjects.size(); ++i)
+            {
+                if (mAllObjects[i] == atocr)
+                {
+                    mAllObjects[i] = mAllObjects.back();
+                    mAllObjects.pop_back();
+                    break;
+                }
+            }
+
+            unsigned int index = atocr->mGridIndex;
 
             if (index < Grid.size())
             {
@@ -586,61 +607,69 @@ namespace PhysicsBlock
          */
         void UpData()
         {
-            // 更新网格内的对象
-            for (size_t i = 0; i < Grid.size(); ++i)
+            for (size_t i = 0; i < mAllObjects.size(); ++i)
             {
-                for (size_t a = 0; a < Grid[i].size(); ++a)
+                PhysicsFormwork *Formwork = mAllObjects[i];
+                unsigned int newIndex = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
+                unsigned int oldIndex = Formwork->mGridIndex;
+
+                bool oldInGrid = (oldIndex < Grid.size());
+                bool newInGrid = (newIndex < Grid.size());
+
+                if (oldInGrid && newInGrid && newIndex == oldIndex)
+                    continue;
+
+                if (!oldInGrid && !newInGrid)
+                    continue;
+
+                if (oldInGrid)
                 {
-                    PhysicsFormwork *Formwork = Grid[i][a];
-                    unsigned int index = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
-
-                    if (i != index)
+                    auto &cell = Grid[oldIndex];
+                    for (size_t j = 0; j < cell.size(); ++j)
                     {
-                        // 对象移动到了不同的网格
-                        Grid[i][a] = Grid[i].back(); // swap-and-pop
-                        Grid[i].pop_back();
-                        --a; // 因为最后一个元素移到了当前位置，所以要重新检查当前位置
-
-                        if (index < Grid.size())
+                        if (cell[j] == Formwork)
                         {
-                            Grid[index].push_back(Formwork);
-                        }
-                        else
-                        {
-                            GridExtrovert.push_back(Formwork);
+                            cell[j] = cell.back();
+                            cell.pop_back();
+                            break;
                         }
                     }
                 }
-            }
-
-            // 更新网格外的对象（检查它们是否回到了网格范围内）
-            for (size_t i = 0; i < GridExtrovert.size(); ++i)
-            {
-                PhysicsFormwork *Formwork = GridExtrovert[i];
-                unsigned int index = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
-
-                if (index < Grid.size())
+                else
                 {
-                    // 对象回到了网格范围内
-                    GridExtrovert[i] = GridExtrovert.back(); // swap-and-pop
-                    GridExtrovert.pop_back();
-                    --i;
-                    Grid[index].push_back(Formwork);
+                    for (size_t j = 0; j < GridExtrovert.size(); ++j)
+                    {
+                        if (GridExtrovert[j] == Formwork)
+                        {
+                            GridExtrovert[j] = GridExtrovert.back();
+                            GridExtrovert.pop_back();
+                            break;
+                        }
+                    }
+                }
+
+                if (newInGrid)
+                {
+                    Grid[newIndex].push_back(Formwork);
+                    Formwork->mGridIndex = newIndex;
+                }
+                else
+                {
+                    GridExtrovert.push_back(Formwork);
+                    Formwork->mGridIndex = UINT_MAX;
                 }
             }
         }
 
         void UpDaraWorkeTask(unsigned int ThreadSize, unsigned int ThreadID)
         {
-            std::vector<std::pair<PhysicsFormwork *, unsigned int>>& FormworkIndex = UpDataPtr[ThreadID].FormworkIndex;
-            std::vector<PhysicsFormwork*>& FormworkExtrovert = UpDataPtr[ThreadID].FormworkExtrovert;
-            std::vector<unsigned int>& ExcursionVector = UpDataPtr[ThreadID].ExcursionVector;
+            auto& FormworkIndex = UpDataPtr[ThreadID].FormworkIndex;
 
-            unsigned int BlockSize = Grid.size() / ThreadSize;
-            unsigned int BlockRemain = Grid.size() % ThreadSize;
+            unsigned int BlockSize = mAllObjects.size() / ThreadSize;
+            unsigned int BlockRemain = mAllObjects.size() % ThreadSize;
 
-            int Start;
-            int End;
+            unsigned int Start;
+            unsigned int End;
             if (ThreadID < BlockRemain)
             {
                 Start = ThreadID * (BlockSize + 1);
@@ -651,104 +680,79 @@ namespace PhysicsBlock
                 Start = BlockRemain * (BlockSize + 1) + (ThreadID - BlockRemain) * BlockSize;
                 End = Start + BlockSize;
             }
+
             for (unsigned int i = Start; i < End; ++i)
             {
-                for (size_t a = 0; a < Grid[i].size(); ++a)
-                {
-                    PhysicsFormwork *Formwork = Grid[i][a];
-                    unsigned int index = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
+                PhysicsFormwork *Formwork = mAllObjects[i];
+                unsigned int newIndex = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
+                unsigned int oldIndex = Formwork->mGridIndex;
 
-                    if (i != index)
-                    {
-                        // 对象移动到了不同的网格
-                        Grid[i][a] = Grid[i].back(); // swap-and-pop
-                        Grid[i].pop_back();
-                        --a; // 因为最后一个元素移到了当前位置，所以要重新检查当前位置
+                bool oldInGrid = (oldIndex < Grid.size());
+                bool newInGrid = (newIndex < Grid.size());
 
-                        if (index < Grid.size())
-                        {
-                            if (index >= Start && index < End)
-                            {
-                                Grid[index].push_back(Formwork);
-                            }
-                            else
-                            {
-                                FormworkIndex.push_back({Formwork, index});
-                            }
-                        }
-                        else
-                        {
-                            FormworkExtrovert.push_back(Formwork);
-                        }
-                    }
-                }
-            }
+                if (oldInGrid && newInGrid && newIndex == oldIndex)
+                    continue;
 
+                if (!oldInGrid && !newInGrid)
+                    continue;
 
-            BlockSize = GridExtrovert.size() / ThreadSize;
-            BlockRemain = GridExtrovert.size() % ThreadSize;
-
-            if (ThreadID < BlockRemain)
-            {
-                Start = ThreadID * (BlockSize + 1);
-                End = Start + BlockSize + 1;
-            }
-            else
-            {
-                Start = BlockRemain * (BlockSize + 1) + (ThreadID - BlockRemain) * BlockSize;
-                End = Start + BlockSize;
-            }
-            // 更新网格外的对象（检查它们是否回到了网格范围内）
-            for (size_t i = Start; i < End; ++i)
-            {
-                PhysicsFormwork *Formwork = GridExtrovert[i];
-                unsigned int index = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
-
-                if (index < Grid.size())
-                {
-                    ExcursionVector.push_back(i);
-
-                    if (index >= Start && index < End)
-                    {
-                        Grid[index].push_back(Formwork);
-                    }
-                    else
-                    {
-                        FormworkIndex.push_back({Formwork, index});
-                    }
-                }
+                FormworkIndex.push_back({Formwork, newIndex});
             }
         }
 
         void UpDaraWorkeTaskEnd()
         {
-            for (unsigned int i = mThreadCount; i > 0; --i)
-            {
-                auto& ptr = UpDataPtr[i - 1];
-
-                for (size_t a = ptr.ExcursionVector.size(); a > 0; --a)
-                {
-                    GridExtrovert[ptr.ExcursionVector[a - 1]] = GridExtrovert.back();
-                    GridExtrovert.pop_back();
-                }
-                ptr.ExcursionVector.clear();
-
-                for (size_t a = 0; a < ptr.FormworkIndex.size(); ++a)
-                {
-                    Grid[ptr.FormworkIndex[a].second].push_back(ptr.FormworkIndex[a].first);
-                }
-                ptr.FormworkIndex.clear();
-            }
-
             for (unsigned int i = 0; i < mThreadCount; ++i)
             {
-                auto& ptr = UpDataPtr[i];
+                auto& FormworkIndex = UpDataPtr[i].FormworkIndex;
 
-                for (size_t a = 0; a < ptr.FormworkExtrovert.size(); ++a)
+                for (auto& entry : FormworkIndex)
                 {
-                    GridExtrovert.push_back(ptr.FormworkExtrovert[a]);
+                    PhysicsFormwork *Formwork = entry.first;
+                    unsigned int newIndex = entry.second;
+                    unsigned int oldIndex = Formwork->mGridIndex;
+
+                    bool oldInGrid = (oldIndex < Grid.size());
+                    bool newInGrid = (newIndex < Grid.size());
+
+                    if (oldInGrid)
+                    {
+                        auto& cell = Grid[oldIndex];
+                        for (size_t j = 0; j < cell.size(); ++j)
+                        {
+                            if (cell[j] == Formwork)
+                            {
+                                cell[j] = cell.back();
+                                cell.pop_back();
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (size_t j = 0; j < GridExtrovert.size(); ++j)
+                        {
+                            if (GridExtrovert[j] == Formwork)
+                            {
+                                GridExtrovert[j] = GridExtrovert.back();
+                                GridExtrovert.pop_back();
+                                break;
+                            }
+                        }
+                    }
+
+                    if (newInGrid)
+                    {
+                        Grid[newIndex].push_back(Formwork);
+                        Formwork->mGridIndex = newIndex;
+                    }
+                    else
+                    {
+                        GridExtrovert.push_back(Formwork);
+                        Formwork->mGridIndex = UINT_MAX;
+                    }
                 }
-                ptr.FormworkExtrovert.clear();
+                FormworkIndex.clear();
             }
         }
     };

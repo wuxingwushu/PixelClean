@@ -2,6 +2,7 @@
 out
 build
 *.sf2
+!TimGM6mb.sf2
 nul
 # Ignore all Environment subdirectories except whitelisted ones
 Environment/*

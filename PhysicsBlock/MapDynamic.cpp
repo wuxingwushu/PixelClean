@@ -145,9 +145,6 @@ namespace PhysicsBlock
 
     CollisionInfoD MapDynamic::FMBresenhamDetection(Vec2_ start, Vec2_ end)
     {
-        start += centrality;
-        end += centrality;
-
             CollisionInfoI infoI = FMBresenhamDetection(ToInt(start), ToInt(end));
             if (infoI.Collision)
             {
@@ -215,7 +212,6 @@ namespace PhysicsBlock
                         }
                     }
                 }
-                info.pos -= centrality;
                 return info;
             }
         return {false};
@@ -232,11 +228,6 @@ namespace PhysicsBlock
 
     std::vector<MapOutline> MapDynamic::GetLightweightOutline(int x_, int y_, int w_, int h_)
     {
-        x_ += centrality.x;
-        y_ += centrality.y;
-        w_ += centrality.x;
-        h_ += centrality.y;
-
         std::vector<MapOutline> Outline;
 
         for (int x = x_; x < w_; ++x)
@@ -286,11 +277,6 @@ namespace PhysicsBlock
 
     std::vector<MapOutline> MapDynamic::GetOutline(int x_, int y_, int w_, int h_)
     {
-        x_ += centrality.x;
-        y_ += centrality.y;
-        w_ += centrality.x;
-        h_ += centrality.y;
-
         std::vector<MapOutline> Outline;
 
         for (int x = x_; x < w_; ++x)

@@ -142,16 +142,11 @@ namespace PhysicsBlock
         virtual glm::uvec2 FMGetMapSize() { return glm::uvec2{ width * PixelBlockEdgeSize, height * PixelBlockEdgeSize }; }
 
         virtual bool FMGetCollide(glm::ivec2 start) override {
-            if (start.x < 0 || start.y < 0 || start.x >= (int)(width * PixelBlockEdgeSize) || start.y >= (int)(height * PixelBlockEdgeSize)) { return false; }
             return at(start.x, start.y).Collision;
         }
 
         virtual bool FMGetCollide(Vec2_ start) override {
-            start += centrality;
-            int x = (int)start.x;
-            int y = (int)start.y;
-            if (x < 0 || y < 0 || x >= (int)(width * PixelBlockEdgeSize) || y >= (int)(height * PixelBlockEdgeSize)) { return false; }
-            return at(x, y).Collision;
+            return at((int)start.x, (int)start.y).Collision;
         }
 
         /**
@@ -178,7 +173,7 @@ namespace PhysicsBlock
 
         virtual CollisionInfoI FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end);
 
-        virtual Vec2_ FMGetCentrality() override { return centrality; }
+        virtual Vec2_ FMGetCentrality() override { return {0, 0}; }
         virtual std::vector<MapOutline> FMGetLightweightOutline(int x_, int y_, int w_, int h_) override { return GetLightweightOutline(x_, y_, w_, h_); }
         virtual std::vector<MapOutline> FMGetOutline(int x_, int y_, int w_, int h_) override { return GetOutline(x_, y_, w_, h_); }
     };

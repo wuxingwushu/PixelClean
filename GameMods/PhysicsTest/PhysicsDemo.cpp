@@ -1661,8 +1661,8 @@ namespace PhysicsBlock
 
 		for (int i = 0; i < 25; ++i)
 		{
-			float bx = Random(MapPixelWidth * 0.2f, MapPixelWidth * 0.8f);
-			float by = Random(MapPixelHeight * 0.55f, MapPixelHeight * 0.9f);
+			float bx = Random(MapPixelWidth * 0.1f, MapPixelWidth * 0.9f) - MapPixelWidth * 0.5f;
+			float by = Random(MapPixelHeight * 0.1f, MapPixelHeight * 0.4f);
 			PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape({bx, by}, {2, 2});
 			for (size_t k = 0; k < (box->width * box->height); ++k)
 			{
@@ -1677,8 +1677,8 @@ namespace PhysicsBlock
 
 		for (int i = 0; i < 15; ++i)
 		{
-			float cx = Random(MapPixelWidth * 0.2f, MapPixelWidth * 0.8f);
-			float cy = Random(MapPixelHeight * 0.55f, MapPixelHeight * 0.9f);
+			float cx = Random(MapPixelWidth * 0.1f, MapPixelWidth * 0.9f) - MapPixelWidth * 0.5f;
+			float cy = Random(MapPixelHeight * 0.1f, MapPixelHeight * 0.4f);
 			PhysicsBlock::PhysicsCircle *ball = new PhysicsBlock::PhysicsCircle({cx, cy}, Random(0.5f, 1.5f), 1);
 			(*myPhysicsWorld)->AddObject(ball);
 		}

@@ -729,7 +729,6 @@ namespace GAME
 		Vec2_ mapCentrality;
 		if (mPhysicsWorld->GetMapFormwork()->FMGetType() == PhysicsBlock::PhysicsObjectEnum::_MapDynamic) {
 			PhysicsBlock::MapDynamic* dynMap = (PhysicsBlock::MapDynamic*)(mPhysicsWorld->GetMapFormwork());
-			mapCentrality = dynMap->FMGetCentrality();
 
 			int startX = -(int)(dynMap->GetPlatePos().x);
 			int startY = -(int)(dynMap->GetPlatePos().y);
@@ -742,7 +741,7 @@ namespace GAME
 				{
 					if (mMapFormwork->FMGetGridBlock({ x, y }).Entity)
 					{
-						ShowStaticSquare(Vec2_{ x, y } - mapCentrality, 0, { 0, 1, 0, 1 });
+						ShowStaticSquare(Vec2_{ x, y }, 0, { 0, 1, 0, 1 });
 					}
 				}
 			}

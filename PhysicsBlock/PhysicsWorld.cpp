@@ -717,12 +717,7 @@ namespace PhysicsBlock
         mCollision.ProcessCollisions();
 
         {
-            std::vector<PhysicsFormwork *> allObjects;
-            for (auto s : PhysicsShapeS) allObjects.push_back(s);
-            for (auto p : PhysicsParticleS) allObjects.push_back(p);
-            for (auto c : PhysicsCircleS) allObjects.push_back(c);
-            for (auto l : PhysicsLineS) allObjects.push_back(l);
-            mTrigger.ProcessTriggers(allObjects);
+            mTrigger.ProcessTriggers(mGridSearch);
         }
 
         // 更新搜索网格树

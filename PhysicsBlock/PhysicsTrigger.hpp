@@ -7,6 +7,7 @@
 
 namespace PhysicsBlock
 {
+    class GridSearch;
 
     /**
      * @brief 触发器条目配置
@@ -164,18 +165,19 @@ namespace PhysicsBlock
 
         /**
          * @brief 处理一帧的触发器事件分发
-         * @param allObjects 当前世界中所有需要检查的物理对象列表
-         * @details 遍历所有已注册触发器的检测区域，与传入的对象列表
-         * 进行重叠检测，触发 Enter / Stay / Exit 事件。
+         * @param gridSearch 网格搜索实例，用于高效查询触发器区域内的物体
+         * @details 遍历所有已注册触发器的检测区域，通过 GridSearch
+         * 空间索引获取区域附近的物体列表，再进行精确的 AABB 重叠检测，
+         * 触发 Enter / Stay / Exit 事件。
          *
          * 执行顺序：
-         * 1. 对每个已注册的触发器，检查其 Bounds 与对象位置的重叠
-         * 2. 通过层级掩码过滤不相关的对象
+         * 1. 对每个已注册的触发器，通过 GridSearch 查询 Bounds 范围内的物体
+         * 2. 对查询结果逐一进行精确的 AABB 包含检测
          * 3. 与上一帧状态对比，触发 Enter / Stay / Exit 回调
          *
          * @note 应在碰撞响应完成后调用，确保对象位置已更新。
          */
-        void ProcessTriggers(const std::vector<PhysicsFormwork *> &allObjects);
+        void ProcessTriggers(GridSearch &gridSearch);
 
         /**
          * @brief 清理所有已注册的触发器和回调

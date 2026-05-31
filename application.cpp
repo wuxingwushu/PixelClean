@@ -1060,7 +1060,20 @@ namespace GAME {
 
 		mInitialized = true;
 		LOGI("initAfterSurface: mInitialized = true, initialization COMPLETE!");
-		GAME::Audio::AudioEngine::Get().GetSpatial().PlaySimple(u8"夜に駆ける", GAME::Audio::SimpleSoundType::MIDI, true, Global::MusicVolume);
+
+		auto& engine = GAME::Audio::AudioEngine::Get();
+		if (!engine.Initialize())
+		{
+			LOGE("initAfterSurface: AudioEngine initialization failed");
+		}
+		else
+		{
+			engine.GetSpatial().LoadAllResources();
+			if (engine.IsMidiFontLoaded())
+			{
+				engine.GetSpatial().PlaySimple(u8"夜に駆ける", GAME::Audio::SimpleSoundType::MIDI, true, Global::MusicVolume);
+			}
+		}
 	}
 
 	void Application::frameStep() {

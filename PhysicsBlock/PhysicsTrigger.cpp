@@ -1,5 +1,6 @@
 #include "PhysicsTrigger.hpp"
 #include "PhysicsFormwork.hpp"
+#include "GridSearch.hpp"
 
 namespace PhysicsBlock
 {
@@ -116,7 +117,7 @@ namespace PhysicsBlock
         return GetConfig(object).TriggerLayers;
     }
 
-    void PhysicsTrigger::ProcessTriggers(const std::vector<PhysicsFormwork *> &allObjects)
+    void PhysicsTrigger::ProcessTriggers(GridSearch &gridSearch)
     {
         struct DeferredTriggerEvent
         {
@@ -137,6 +138,8 @@ namespace PhysicsBlock
             };
             std::vector<TriggerEvent> events;
 
+            std::vector<PhysicsFormwork *> nearbyObjects;
+
             for (auto &[triggerObj, config] : mConfigs)
             {
                 if (triggerObj == nullptr)
@@ -147,7 +150,11 @@ namespace PhysicsBlock
                 auto &activeOverlaps = mActiveOverlaps[triggerObj];
                 std::unordered_set<PhysicsFormwork *> currentOverlaps;
 
-                for (auto *obj : allObjects)
+                Vec2_ minPos = config.TriggerBounds.Center - config.TriggerBounds.HalfSize;
+                Vec2_ maxPos = config.TriggerBounds.Center + config.TriggerBounds.HalfSize;
+                gridSearch.Get(minPos, maxPos, nearbyObjects);
+
+                for (auto *obj : nearbyObjects)
                 {
                     if (obj == nullptr || obj == triggerObj)
                     {

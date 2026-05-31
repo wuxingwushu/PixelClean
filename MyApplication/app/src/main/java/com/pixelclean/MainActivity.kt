@@ -383,6 +383,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 if (hadGameTouch && gameTouchPointerIds.isEmpty()) {
                     nativeUpdateTouchState(1, 0)  // 所有游戏触摸点都已抬起
                 } else if (gameTouchPointerIds.isNotEmpty()) {
+                    for (i in 0 until event.pointerCount) {
+                        val pid = event.getPointerId(i)
+                        if (pid in gameTouchPointerIds) {
+                            nativeTouchEvent(2, event.getX(i), event.getY(i))
+                            break
+                        }
+                    }
                     updateTouchStateForGame()
                 }
             }

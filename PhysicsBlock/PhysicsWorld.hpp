@@ -226,6 +226,10 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
         glm::uvec2 GridWindSize{0};          // 网格风大小
         MapFormwork *wMapFormwork = nullptr; // 地图对象
         GridSearch mGridSearch;              // 网格搜索
+        Vec2_ mGridCenter{0};                // 上次重建时的网格中心
+        FLOAT_ mGridRebuildThreshold = 64.0f; // 网格重建距离阈值
+        Vec2_ mPendingGridCenter{0};         // 待应用的网格中心
+        bool mGridPositionDirty = false;     // 是否有待应用的网格位置更新
 
         std::vector<PhysicsShape *> PhysicsShapeS;       // 物理形状网格
         std::vector<PhysicsParticle *> PhysicsParticleS; // 物理点
@@ -427,9 +431,22 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
         }
 
         /**
-         * @brief 设置地图
-         * @param MapFormwork_ 地图指针 */
+         * @brief   设置地图
+         * @param   MapFormwork_ 地图指针 */
         void SetMapFormwork(MapFormwork *MapFormwork_);
+
+        /**
+         * @brief   根据焦点位置更新网格位置
+         * @param   focusPoint 焦点位置（如摄像机中心），世界坐标
+         * @details 仅当焦点与上次重建中心距离超过阈值时才触发网格重建
+         */
+        void UpdateGridPosition(Vec2_ focusPoint);
+
+        /**
+         * @brief   设置网格重建距离阈值
+         * @param   threshold 距离阈值，焦点移动超过此距离才触发网格重建
+         */
+        void SetGridRebuildThreshold(FLOAT_ threshold) { mGridRebuildThreshold = threshold; }
 
         /**
          * @brief 物理仿真

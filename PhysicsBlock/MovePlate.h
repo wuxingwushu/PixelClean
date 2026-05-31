@@ -243,15 +243,14 @@ public:
                 mPosY += Info.Y;
                 MovePlateY(Info.Y, Info.X);
                 Info.UpData = true;
-                return Info;
             }
             // 处理 X 方向移动
             if (Info.X != 0) {
                 mPosX += Info.X;
                 MovePlateX(Info.X);
                 Info.UpData = true;
-                return Info;
             }
+            return Info;
         }
         else {
             // 移动量过大，全部重新生成

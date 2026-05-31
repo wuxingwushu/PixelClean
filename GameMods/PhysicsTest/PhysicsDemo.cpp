@@ -1625,9 +1625,9 @@ namespace PhysicsBlock
 			[](PhysicsBlock::BaseGrid** mT, int x, int y, void* Data) {
 				PerlinNoise* noise = (PerlinNoise*)Data;
 				PhysicsBlock::BaseGrid* grid = *mT;
-				for (unsigned int ix = 0; ix < PixelBlockEdgeSize; ++ix)
+				for (int ix = 0; ix < PixelBlockEdgeSize; ++ix)
 				{
-					for (unsigned int iy = 0; iy < PixelBlockEdgeSize; ++iy)
+					for (int iy = 0; iy < PixelBlockEdgeSize; ++iy)
 					{
 						double nx = (x * PixelBlockEdgeSize + ix) * 0.05;
 						double ny = (y * PixelBlockEdgeSize + iy) * 0.05;

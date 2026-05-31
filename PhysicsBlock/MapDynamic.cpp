@@ -13,7 +13,7 @@ namespace PhysicsBlock
     }
 
     MapDynamic::MapDynamic(const unsigned int Width, const unsigned int Height):
-        width(Width), height(Height), mMovePlate(Width, Height, PixelBlockEdgeSize, 0, 0), 
+        width(Width), height(Height), mMovePlate(Width, Height, PixelBlockEdgeSize, Width / 2, Height / 2), 
         centrality({Width / 2 * PixelBlockEdgeSize, Height / 2 * PixelBlockEdgeSize}),
         BaseGrid(Width * PixelBlockEdgeSize, Height * PixelBlockEdgeSize, nullptr)
     {
@@ -148,7 +148,7 @@ namespace PhysicsBlock
         start += centrality;
         end += centrality;
 
-            CollisionInfoI infoI = FMBresenhamDetection(glm::ivec2(start), glm::ivec2(end));
+            CollisionInfoI infoI = FMBresenhamDetection(ToInt(start), ToInt(end));
             if (infoI.Collision)
             {
                 CollisionInfoD info;

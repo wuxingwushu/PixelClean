@@ -726,6 +726,11 @@ namespace PhysicsBlock
         }
 
         // 更新搜索网格树
+        if (mGridPositionDirty)
+        {
+            mGridSearch.UpdateGridOffset(mPendingGridCenter);
+            mGridPositionDirty = false;
+        }
         xTn.reserve(xThreadNum);
         for (unsigned int i = 0; i < xThreadNum; ++i)
         {
@@ -1023,6 +1028,7 @@ namespace PhysicsBlock
     {
         GridWindSize = MapFormwork_->FMGetMapSize();
         mGridSearch.SetMapRange(std::max(GridWindSize.x, GridWindSize.y));
+        mGridCenter = mGridSearch.GetGridCenter();
 
         wMapFormwork = MapFormwork_;
         if (!WindBool)
@@ -1037,6 +1043,16 @@ namespace PhysicsBlock
         for (size_t i = 0; i < (GridWindSize.x * GridWindSize.y); i++)
         {
             GridWind[i] = Vec2_{0};
+        }
+    }
+
+    void PhysicsWorld::UpdateGridPosition(Vec2_ focusPoint)
+    {
+        if (glm::distance(focusPoint, mGridCenter) > mGridRebuildThreshold)
+        {
+            mPendingGridCenter = focusPoint;
+            mGridCenter = focusPoint;
+            mGridPositionDirty = true;
         }
     }
 
@@ -1673,6 +1689,7 @@ namespace PhysicsBlock
             }
         }
         mGridSearch.SetMapRange(std::max(GridWindSize.x, GridWindSize.y));
+        mGridCenter = mGridSearch.GetGridCenter();
         if (data.find("PhysicsShapeS") != data.end())
         {
             for (size_t i = 0; i < data["PhysicsShapeS"].size(); ++i)

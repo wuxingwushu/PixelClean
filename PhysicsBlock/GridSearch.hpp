@@ -51,6 +51,13 @@ namespace PhysicsBlock
         int mStorey = 0;
 
         /**
+         * @brief   网格维度（最细层级网格坐标上限）
+         * @details 等于 SetMapRange 输入 Size 的 4 倍
+         *          有效网格坐标范围为 [0, mGridDim - 1]
+         */
+        unsigned int mGridDim = 0;
+
+        /**
          * @brief   相对世界坐标系的位置偏移量
          * @details 将世界坐标转换为网格坐标的偏移量，使负坐标也能正确映射
          *          例如世界范围是 [-Size/2, Size/2]，加上偏移后变成 [0, Size]
@@ -259,6 +266,15 @@ namespace PhysicsBlock
         {
             // 转换到网格坐标系（处理负坐标）
             xy += mExcursion;
+
+            // 将网格坐标 clamp 到有效范围，防止后续位运算溢出
+            // 超出网格范围的对象会被 Add/UpData 放入 GridExtrovert
+            FLOAT_ maxCoord = (FLOAT_)(mGridDim - 1);
+            if (xy.x < 0) xy.x = 0;
+            if (xy.y < 0) xy.y = 0;
+            if (xy.x > maxCoord) xy.x = maxCoord;
+            if (xy.y > maxCoord) xy.y = maxCoord;
+
             glm::ivec2 pos = (xy);
 
             // 确定应该放在哪一层
@@ -336,6 +352,7 @@ namespace PhysicsBlock
             }
 #endif
             Size *= 4;                               // 实际空间是输入的4倍
+            mGridDim = Size;                         // 记录网格维度，后续坐标 clamp 使用
             mExcursion = {Size / 2.0f, Size / 2.0f}; // 偏移量，使负坐标变为正坐标
             unsigned int GridSize = 1;               // 第0层的节点数
 
@@ -351,16 +368,44 @@ namespace PhysicsBlock
 
 #if CurerExcursionVector
             // 预计算每层的偏移量，避免运行时重复计算
-            ExcursionVector = new unsigned int[mStorey];
-            for (size_t i = 0; i < mStorey; i++)
+            ExcursionVector = new unsigned int[mStorey+1];
+            for (size_t i = 0; i <= mStorey; i++)
             {
                 ExcursionVector[i] = Excursion((int)i);
             }
 #endif
-
             Grid.clear();
             Grid.resize(GridSize); // 调整网格容器大小
             mAllObjects.clear();
+        }
+
+        /**
+         * @brief   移动网格中心到新位置
+         * @param   newCenter 新的网格中心（世界坐标）
+         * @details 更新偏移量并重建所有对象索引
+         *          网格范围大小保持不变，仅改变在世界空间中的位置
+         */
+        void MoveGridTo(Vec2_ newCenter)
+        {
+            FLOAT_ halfRange = mGridDim / 2.0f;
+            mExcursion = Vec2_{halfRange, halfRange} - newCenter;
+            UpData();
+        }
+
+        void UpdateGridOffset(Vec2_ newCenter)
+        {
+            FLOAT_ halfRange = mGridDim / 2.0f;
+            mExcursion = Vec2_{halfRange, halfRange} - newCenter;
+        }
+
+        /**
+         * @brief   获取当前网格中心（世界坐标）
+         * @return  网格中心在世界空间中的位置
+         */
+        Vec2_ GetGridCenter() const
+        {
+            FLOAT_ halfRange = mGridDim / 2.0f;
+            return Vec2_{halfRange, halfRange} - mExcursion;
         }
 
         /**
@@ -475,34 +520,23 @@ namespace PhysicsBlock
             // 坐标转换到网格坐标系
             Vec2_ S = Spos + mExcursion;
             Vec2_ E = Epos + mExcursion;
-            glm::uvec2 iS = glm::uvec2(S); // 转换为无符号整数网格坐标
-            glm::uvec2 iE = glm::uvec2(E);
 
-            // 计算坐标上限（用于边界检查）
-            unsigned int w = (unsigned int)(mExcursion.x + mExcursion.x - 1);
+            // 使用真实网格维度作为边界（而非从 mExcursion 推导）
+            unsigned int w = mGridDim - 1;
             bool Extrovert = false; // 标记查询范围是否超出网格边界
 
-            // 检查并处理超出边界的情况
-            if (iS.x > w)
-            {
-                Extrovert = true;
-                iS.x = w;
-            } // 左边界超出
-            if (iS.y > w)
-            {
-                Extrovert = true;
-                iS.y = w;
-            } // 下边界超出
-            if (iE.x > w)
-            {
-                Extrovert = true;
-                iE.x = w;
-            } // 右边界超出
-            if (iE.y > w)
-            {
-                Extrovert = true;
-                iE.y = w;
-            } // 上边界超出
+            // Clamp 到有效网格坐标范围，防止负数转 unsigned 回绕
+            if (S.x < 0) { Extrovert = true; S.x = 0; }
+            if (S.y < 0) { Extrovert = true; S.y = 0; }
+            if (E.x < 0) { Extrovert = true; E.x = 0; }
+            if (E.y < 0) { Extrovert = true; E.y = 0; }
+            if (S.x > w) { Extrovert = true; S.x = (FLOAT_)w; }
+            if (S.y > w) { Extrovert = true; S.y = (FLOAT_)w; }
+            if (E.x > w) { Extrovert = true; E.x = (FLOAT_)w; }
+            if (E.y > w) { Extrovert = true; E.y = (FLOAT_)w; }
+
+            glm::uvec2 iS = glm::uvec2(S); // 转换为无符号整数网格坐标
+            glm::uvec2 iE = glm::uvec2(E);
 
             // 如果查询范围超出边界，需要包含网格外容器中的所有对象
             if (Extrovert)
@@ -550,6 +584,14 @@ namespace PhysicsBlock
             Vec2_ atocr_pos = atocr->PFGetPos();
             FLOAT_ R = atocr->PFGetCollisionR();
             atocr_pos += mExcursion;
+
+            // Clamp 到有效网格坐标范围
+            FLOAT_ maxCoord = (FLOAT_)(mGridDim - 1);
+            if (atocr_pos.x < 0) atocr_pos.x = 0;
+            if (atocr_pos.y < 0) atocr_pos.y = 0;
+            if (atocr_pos.x > maxCoord) atocr_pos.x = maxCoord;
+            if (atocr_pos.y > maxCoord) atocr_pos.y = maxCoord;
+
             glm::ivec2 pos = (atocr_pos);
             int _storey = Storey(R);
             pos >>= _storey;

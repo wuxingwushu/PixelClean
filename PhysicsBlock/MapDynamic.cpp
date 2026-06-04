@@ -17,6 +17,7 @@ namespace PhysicsBlock
         centrality({Width / 2 * PixelBlockEdgeSize, Height / 2 * PixelBlockEdgeSize}),
         BaseGrid(Width * PixelBlockEdgeSize, Height * PixelBlockEdgeSize, nullptr)
     {
+        type = PhysicsObjectEnum::_MapDynamic;
         BaseGridBuffer = (BaseGrid *)new char[width * height * sizeof(BaseGrid)];
         GridBuffer = new GridBlock[width * height * PixelBlockEdgeSize * PixelBlockEdgeSize];
         for (size_t i = 0; i < (width * height); ++i)

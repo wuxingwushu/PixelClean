@@ -40,7 +40,7 @@ namespace PhysicsBlock
          * @brief 从 JSON 数据构造地图
          * @param data JSON 数据
          */
-        MapStatic(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : BaseGrid(data) { ContrarySerializationVec2(data, centrality); };
+        MapStatic(const nlohmann::json_abi_v3_12_0::basic_json<> &data) : BaseGrid(data) { type = PhysicsObjectEnum::_MapStatic; ContrarySerializationVec2(data, centrality); };
 #endif
     public:
         /**
@@ -57,7 +57,7 @@ namespace PhysicsBlock
          * @param Width 地图宽度（单位：格子）
          * @param Height 地图高度（单位：格子）
          */
-        MapStatic(const unsigned int Width, const unsigned int Height) : BaseGrid(Width, Height) {};
+        MapStatic(const unsigned int Width, const unsigned int Height) : BaseGrid(Width, Height) { type = PhysicsObjectEnum::_MapStatic; };
         
         /**
          * @brief 析构函数
@@ -94,13 +94,6 @@ namespace PhysicsBlock
         std::vector<MapOutline> GetOutline(int x_, int y_, int w_, int h_);
 
         /*=========MapFormwork=========*/
-
-        /**
-         * @brief 获取对象类型
-         * @return 物理对象类型，返回 PhysicsObjectEnum::_MapStatic
-         * @note 实现了 MapFormwork 中的虚函数
-         */
-        virtual PhysicsObjectEnum FMGetType() { return PhysicsObjectEnum::_MapStatic; }
 
         /**
          * @brief 获取地图模拟场大小

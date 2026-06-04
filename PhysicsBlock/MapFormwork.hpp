@@ -21,13 +21,15 @@ namespace PhysicsBlock
     class MapFormwork
     {
     public:
+        PhysicsObjectEnum type = PhysicsObjectEnum::Null;
+
         MapFormwork() {};
         virtual ~MapFormwork() {};
 
         /**
          * @brief 获取对象类型
          * @return PhysicsObjectEnum 类型 */
-        virtual PhysicsObjectEnum FMGetType() { return PhysicsObjectEnum::Null; }
+        PhysicsObjectEnum FMGetType() { return type; }
 
         /**
          * @brief 获取距离场

@@ -12,6 +12,7 @@ Environment/*
 !Environment/glfw/
 !Environment/imgui/
 !Environment/spdlog/
+!Environment/WaveFunctionCollapse/
 
 MyApplication/app/release/*
 MyApplication/app/src/main/assets/*

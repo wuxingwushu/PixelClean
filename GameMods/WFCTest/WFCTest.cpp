@@ -73,24 +73,28 @@ namespace GAME
 
 	// ==================== 邻接规则定义 ====================
 	//
-	// 每条规则 (tile1, 0, tile2, 0) 表示 tile1 和 tile2 可以在任意方向相邻。
-	// 因为 Symmetry::X 无旋转，TilingWFC 的内部机制会自动将同一规则
-	// 应用到上、下、左、右四个方向。
+	// 每条规则 (tile1, 0, tile2, 0, dirMask) 中的第 5 个参数是方向掩码，
+	// 指定这条规则适用于哪些方向：
+	//   DIR_UP(0x1)    — tile1 可以在 tile2 的上边
+	//   DIR_LEFT(0x2)  — tile1 可以在 tile2 的左边
+	//   DIR_RIGHT(0x4) — tile1 可以在 tile2 的右边
+	//   DIR_DOWN(0x8)  — tile1 可以在 tile2 的下边
+	// 用 | 组合：DIR_UP|DIR_DOWN 表示只在上边和下边。
+	// DIR_ALL(0xF) 表示 4 个方向都允许。
 	//
-	// 规则设计思路：
-	//   - 草地是"万能边缘"：可以接任何地形，充当过渡带
-	//   - 楼房只与草地、楼房、道路相邻（不能直接挨着水域/桥梁/树林）
-	//   - 水域只与草地、水域、桥梁相邻（桥梁是水域上的过道）
-	//   - 道路只与草地、楼房、道路、桥梁相邻（桥梁是道路过水域的延伸）
-	//   - 桥梁只与水域、道路、桥梁相邻（桥梁连接道路和水域）
-	//   - 树林只与草地、树林相邻（树林是独立区域，不直接接触建筑/道路）
+	// 因为 Symmetry::X 无旋转，规则的 tile1 和 tile2 只有 orientation 0。
 	// ====================================================================
 
 	void WFCTest::InitNeighborRules()
 	{
-		// 添加规则：两个 tile 可以相邻
+		// 添加双向规则（四个方向都允许）
 		auto AddRule = [this](unsigned a, unsigned b) {
-			mNeighbors.emplace_back(a, 0u, b, 0u);
+			mNeighbors.emplace_back(a, 0u, b, 0u, DIR_ALL);
+		};
+
+		// 添加单向规则（只允许在指定方向相邻）
+		auto AddRuleDir = [this](unsigned a, unsigned b, unsigned dirMask) {
+			mNeighbors.emplace_back(a, 0u, b, 0u, dirMask);
 		};
 
 		// ── 草地：可以与任何地形相邻（充当过渡带） ──
@@ -102,29 +106,35 @@ namespace GAME
 		AddRule(Grass, Forest);
 
 		// ── 楼房：与草地、楼房、道路相邻 ──
+		// 楼房只允许在道路的上下方（道路两侧是楼房，道路尽头是草地）
 		AddRule(Building, Building);
-		AddRule(Building, Road);
+		AddRule(Building, Grass);
+		AddRuleDir(Building, Road, DIR_UP | DIR_DOWN);
 
 		// ── 水域：与草地、水域、桥梁相邻 ──
 		AddRule(Water, Water);
-		AddRule(Water, Bridge);
+		AddRule(Water, Grass);
+		AddRuleDir(Water, Bridge, DIR_LEFT | DIR_RIGHT);
 
 		// ── 道路：与草地、楼房、道路、桥梁相邻 ──
 		AddRule(Road, Road);
-		AddRule(Road, Bridge);
+		AddRule(Road, Grass);
+		// 道路只在左右方向连接桥梁（道路→桥梁→水域的过渡）
+		AddRuleDir(Road, Bridge, DIR_LEFT | DIR_RIGHT);
 
 		// ── 桥梁：与水域、道路、桥梁相邻 ──
-		// （桥梁只存在于水域和道路的交界处）
 		AddRule(Bridge, Bridge);
+		// 桥梁只在水域的左右方向出现
+		AddRuleDir(Bridge, Water, DIR_UP | DIR_DOWN);
 
 		// ── 树林：与草地、树林相邻 ──
-		// （树林是独立区域，不直接接触建筑/道路/水域）
 		AddRule(Forest, Forest);
+		AddRule(Forest, Grass);
 
 		// 从 mNeighbors 推导 mAllowedNeighbors（用于 UI 显示）
 		mAllowedNeighbors.resize(TerrainCount);
-		for (auto& [a, oa, b, ob] : mNeighbors) {
-			(void)oa; (void)ob;
+		for (auto& [a, oa, b, ob, dm] : mNeighbors) {
+			(void)oa; (void)ob; (void)dm;
 			if (std::find(mAllowedNeighbors[a].begin(), mAllowedNeighbors[a].end(), b)
 				== mAllowedNeighbors[a].end()) {
 				mAllowedNeighbors[a].push_back(b);
@@ -136,7 +146,6 @@ namespace GAME
 				}
 			}
 		}
-		// 排序以保证 UI 显示一致
 		for (auto& list : mAllowedNeighbors) {
 			std::sort(list.begin(), list.end());
 		}
@@ -370,31 +379,44 @@ namespace GAME
 		ImGui::Separator();
 
 		// ---- 邻接规则表 ----
-		ImGui::TextColored({0.3f, 0.9f, 0.5f, 1.0f}, u8"── 邻接规则（每种地形四周可以有什么）──");
+		ImGui::TextColored({0.3f, 0.9f, 0.5f, 1.0f}, u8"── 邻接规则 ──");
 
-		// 用表格展示每条规则
-		if (ImGui::BeginTable("rules", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-			ImGui::TableSetupColumn(u8"地形", ImGuiTableColumnFlags_WidthFixed, 80);
-			ImGui::TableSetupColumn(u8"四周允许的类型", ImGuiTableColumnFlags_WidthStretch);
+		auto DirMaskToString = [](unsigned dm) -> const char* {
+			switch (dm) {
+			case DIR_UP:                   return u8"↑ 上";
+			case DIR_DOWN:                 return u8"↓ 下";
+			case DIR_LEFT:                 return u8"← 左";
+			case DIR_RIGHT:                return u8"→ 右";
+			case DIR_UP | DIR_DOWN:        return u8"↑↓ 上下";
+			case DIR_LEFT | DIR_RIGHT:     return u8"←→ 左右";
+			case DIR_UP | DIR_DOWN | DIR_LEFT:  return u8"↑↓← 上/下/左";
+			case DIR_UP | DIR_DOWN | DIR_RIGHT: return u8"↑↓→ 上/下/右";
+			case DIR_UP | DIR_LEFT | DIR_RIGHT: return u8"↑←→ 上/左/右";
+			case DIR_DOWN | DIR_LEFT | DIR_RIGHT: return u8"↓←→ 下/左/右";
+			case DIR_ALL:                  return u8"↑↓←→ 四周";
+			default:                       return u8"其他";
+			}
+		};
+
+		if (ImGui::BeginTable("rules", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+			ImGui::TableSetupColumn(u8"A", ImGuiTableColumnFlags_WidthFixed, 60);
+			ImGui::TableSetupColumn(u8"方向", ImGuiTableColumnFlags_WidthFixed, 90);
+			ImGui::TableSetupColumn(u8"B", ImGuiTableColumnFlags_WidthStretch);
 			ImGui::TableHeadersRow();
 
-			for (unsigned i = 0; i < TerrainCount; i++) {
+			for (auto& [a, oa, b, ob, dm] : mNeighbors) {
+				(void)oa; (void)ob;
 				ImGui::TableNextRow();
 				ImGui::TableSetColumnIndex(0);
-				auto& c0 = sTerrainColors[i];
-				ImGui::TextColored(ImVec4(c0.x, c0.y, c0.z, c0.w), u8"■ %s", sTerrainNames[i]);
+				auto& ca = sTerrainColors[a];
+				ImGui::TextColored(ImVec4(ca.x, ca.y, ca.z, ca.w), u8"■ %s", sTerrainNames[a]);
 
 				ImGui::TableSetColumnIndex(1);
-				auto& allowed = mAllowedNeighbors[i];
-				for (size_t j = 0; j < allowed.size(); j++) {
-					if (j > 0) ImGui::SameLine();
-					auto& c1 = sTerrainColors[allowed[j]];
-					ImGui::TextColored(ImVec4(c1.x, c1.y, c1.z, c1.w), u8"%s", sTerrainNames[allowed[j]]);
-					if (j < allowed.size() - 1) {
-						ImGui::SameLine();
-						ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.0f}, ",");
-					}
-				}
+				ImGui::TextColored({0.7f, 0.7f, 0.9f, 1.0f}, u8"%s", DirMaskToString(dm));
+
+				ImGui::TableSetColumnIndex(2);
+				auto& cb = sTerrainColors[b];
+				ImGui::TextColored(ImVec4(cb.x, cb.y, cb.z, cb.w), u8"■ %s", sTerrainNames[b]);
 			}
 			ImGui::EndTable();
 		}

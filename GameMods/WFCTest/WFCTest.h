@@ -81,8 +81,10 @@ namespace GAME
 		VulKan::AuxiliaryVision* mAuxiliaryVision = nullptr;
 
 		// TilingWFC 的图块和邻接规则
+		// 每条规则: (tile1, orientation1, tile2, orientation2, dirMask)
+		// dirMask: DIR_UP|DIR_LEFT|DIR_RIGHT|DIR_DOWN 的位组合
 		std::vector<Tile<unsigned>> mTiles;
-		std::vector<std::tuple<unsigned, unsigned, unsigned, unsigned>> mNeighbors;
+		std::vector<std::tuple<unsigned, unsigned, unsigned, unsigned, unsigned>> mNeighbors;
 
 		// 每个地形允许的邻接集合（用于 UI 显示，从 mNeighbors 推导）
 		// mAllowedNeighbors[terrain] = 所有可以相邻的地形集合

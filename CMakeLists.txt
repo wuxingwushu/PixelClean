@@ -110,6 +110,7 @@ add_custom_target(compile_shaders ALL
 add_subdirectory(Environment/glfw)
 add_subdirectory(Environment/libevent)
 add_subdirectory(Environment/zlib)
+add_subdirectory(Environment/WaveFunctionCollapse)
 add_subdirectory(Environment/spdlog)
 add_subdirectory(Environment/Soloud)
 add_subdirectory(Environment/imgui)
@@ -133,6 +134,7 @@ add_subdirectory(GameMods/PhysicsTest)
 add_subdirectory(GameMods/SoloudTest)
 add_subdirectory(GameMods/RadianceCascades)
 add_subdirectory(GameMods/FruitNinja)
+add_subdirectory(GameMods/WFCTest)
 add_subdirectory(Tool)#文件夹里面要有代码文件，不可以是空的，会报错
 
 
@@ -172,6 +174,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		SoloudTestLib
 		RadianceCascadesLib
 		FruitNinjaLib
+		WFCTestLib
 		glfw
 		libevent
 		imgui
@@ -184,6 +187,9 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 
 		# zlib 数据压缩
 		zlib
+
+		# WaveFunctionCollapse 波函数坍缩算法
+		WaveFunctionCollapse
 
 		# SpdLog 日志库
 		spdlog
@@ -216,6 +222,7 @@ else()
 		SoloudTestLib
 		RadianceCascadesLib
 		FruitNinjaLib
+		WFCTestLib
 		glfw
 		libevent
 		imgui
@@ -228,6 +235,9 @@ else()
 
 		# zlib 数据压缩
 		zlib
+
+		# WaveFunctionCollapse 波函数坍缩算法
+		WaveFunctionCollapse
 
 		# SpdLog 日志库
 		spdlog

@@ -16,6 +16,7 @@ enum GameModsEnum
 	SoloudTest_,
 	RadianceCascades_,
 	FruitNinja_,
+	WFCTest_,
 	Infinite_,
 };
 
@@ -26,6 +27,7 @@ static const char* GameModsEnumName[] = {
 	u8"SoLoud音效",
 	u8"辐射级联GI",
 	u8"水果忍者",
+	u8"WFC测试",
 	u8"无限",
 };
 
@@ -37,7 +39,8 @@ inline int GetGameModeStableId(GameModsEnum mode) {
 		case SoloudTest_:       return 3;
 		case RadianceCascades_: return 4;
 		case FruitNinja_:       return 5;
-		case Infinite_:         return 100;
+		case Infinite_:         return 6;
+		case WFCTest_:         return 200;
 	}
 	return -1;
 }
@@ -51,6 +54,7 @@ inline bool GameModsSupportsMultiplayer(GameModsEnum mode) {
 		case RadianceCascades_: return false;
 		case FruitNinja_:     return false;
 		case Infinite_:       return false;
+		case WFCTest_:       return false;
 	}
 	return false;
 }

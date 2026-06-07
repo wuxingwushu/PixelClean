@@ -80,6 +80,9 @@ namespace GAME {
 		case FruitNinja_:
 			GamePtr = new FruitNinja(*this);
 			break;
+		case WFCTest_:
+			GamePtr = new WFCTest(*this);
+			break;
 		default:
 			break;
 		}
@@ -111,6 +114,9 @@ namespace GAME {
 			break;
 		case FruitNinja_:
 			delete (FruitNinja*)mGameMods;
+			break;
+		case WFCTest_:
+			delete (WFCTest*)mGameMods;
 			break;
 		default:
 			break;

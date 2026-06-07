@@ -5,11 +5,31 @@
 namespace PhysicsBlock
 {
 
-    void PhysicsTrigger::AddTriggerListener(PhysicsFormwork *object, TriggerEventType type, TriggerCallback callback)
+    TriggerHandle PhysicsTrigger::CreateTrigger()
     {
-        if (object == nullptr)
+        std::lock_guard<std::mutex> lock(mMutex);
+        TriggerHandle handle = mNextHandle++;
+        mConfigs.emplace(handle, TriggerConfig{});
+        return handle;
+    }
+
+    void PhysicsTrigger::RemoveTrigger(TriggerHandle handle)
+    {
+        if (handle == InvalidTriggerHandle)
         {
-            throw ArgumentNullException("object");
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock(mMutex);
+        mConfigs.erase(handle);
+        mActiveOverlaps.erase(handle);
+    }
+
+    void PhysicsTrigger::AddTriggerListener(TriggerHandle handle, TriggerEventType type, TriggerCallback callback)
+    {
+        if (handle == InvalidTriggerHandle)
+        {
+            return;
         }
         if (!callback)
         {
@@ -17,7 +37,7 @@ namespace PhysicsBlock
         }
 
         std::lock_guard<std::mutex> lock(mMutex);
-        TriggerConfig &config = GetOrCreateConfig(object);
+        TriggerConfig &config = GetOrCreateConfig(handle);
 
         switch (type)
         {
@@ -33,15 +53,15 @@ namespace PhysicsBlock
         }
     }
 
-    void PhysicsTrigger::RemoveTriggerListener(PhysicsFormwork *object, TriggerEventType type)
+    void PhysicsTrigger::RemoveTriggerListener(TriggerHandle handle, TriggerEventType type)
     {
-        if (object == nullptr)
+        if (handle == InvalidTriggerHandle)
         {
-            throw ArgumentNullException("object");
+            return;
         }
 
         std::lock_guard<std::mutex> lock(mMutex);
-        auto it = mConfigs.find(object);
+        auto it = mConfigs.find(handle);
         if (it == mConfigs.end())
         {
             return;
@@ -61,60 +81,48 @@ namespace PhysicsBlock
         }
     }
 
-    void PhysicsTrigger::RemoveAllTriggerListeners(PhysicsFormwork *object)
+    void PhysicsTrigger::SetTriggerBounds(TriggerHandle handle, const Bounds &bounds)
     {
-        if (object == nullptr)
+        if (handle == InvalidTriggerHandle)
         {
-            throw ArgumentNullException("object");
+            return;
         }
 
         std::lock_guard<std::mutex> lock(mMutex);
-        mConfigs.erase(object);
-        mActiveOverlaps.erase(object);
+        GetOrCreateConfig(handle).TriggerBounds = bounds;
     }
 
-    void PhysicsTrigger::SetTriggerBounds(PhysicsFormwork *object, const Bounds &bounds)
+    Bounds PhysicsTrigger::GetTriggerBounds(TriggerHandle handle) const
     {
-        if (object == nullptr)
+        if (handle == InvalidTriggerHandle)
         {
-            throw ArgumentNullException("object");
+            return Bounds{};
         }
 
         std::lock_guard<std::mutex> lock(mMutex);
-        GetOrCreateConfig(object).TriggerBounds = bounds;
+        return GetConfig(handle).TriggerBounds;
     }
 
-    Bounds PhysicsTrigger::GetTriggerBounds(PhysicsFormwork *object) const
+    void PhysicsTrigger::SetTriggerLayers(TriggerHandle handle, LayerMask layers)
     {
-        if (object == nullptr)
+        if (handle == InvalidTriggerHandle)
         {
-            throw ArgumentNullException("object");
+            return;
         }
 
         std::lock_guard<std::mutex> lock(mMutex);
-        return GetConfig(object).TriggerBounds;
+        GetOrCreateConfig(handle).TriggerLayers = layers;
     }
 
-    void PhysicsTrigger::SetTriggerLayers(PhysicsFormwork *object, LayerMask layers)
+    LayerMask PhysicsTrigger::GetTriggerLayers(TriggerHandle handle) const
     {
-        if (object == nullptr)
+        if (handle == InvalidTriggerHandle)
         {
-            throw ArgumentNullException("object");
+            return LayerMaskAll;
         }
 
         std::lock_guard<std::mutex> lock(mMutex);
-        GetOrCreateConfig(object).TriggerLayers = layers;
-    }
-
-    LayerMask PhysicsTrigger::GetTriggerLayers(PhysicsFormwork *object) const
-    {
-        if (object == nullptr)
-        {
-            throw ArgumentNullException("object");
-        }
-
-        std::lock_guard<std::mutex> lock(mMutex);
-        return GetConfig(object).TriggerLayers;
+        return GetConfig(handle).TriggerLayers;
     }
 
     void PhysicsTrigger::ProcessTriggers(GridSearch &gridSearch)
@@ -131,7 +139,7 @@ namespace PhysicsBlock
 
             struct TriggerEvent
             {
-                PhysicsFormwork *triggerOwner;
+                TriggerHandle triggerHandle;
                 TriggerConfig *config;
                 PhysicsFormwork *targetObject;
                 TriggerEventType eventType;
@@ -140,14 +148,9 @@ namespace PhysicsBlock
 
             std::vector<PhysicsFormwork *> nearbyObjects;
 
-            for (auto &[triggerObj, config] : mConfigs)
+            for (auto &[handle, config] : mConfigs)
             {
-                if (triggerObj == nullptr)
-                {
-                    continue;
-                }
-
-                auto &activeOverlaps = mActiveOverlaps[triggerObj];
+                auto &activeOverlaps = mActiveOverlaps[handle];
                 std::unordered_set<PhysicsFormwork *> currentOverlaps;
 
                 Vec2_ minPos = config.TriggerBounds.Center - config.TriggerBounds.HalfSize;
@@ -156,7 +159,7 @@ namespace PhysicsBlock
 
                 for (auto *obj : nearbyObjects)
                 {
-                    if (obj == nullptr || obj == triggerObj)
+                    if (obj == nullptr)
                     {
                         continue;
                     }
@@ -174,13 +177,13 @@ namespace PhysicsBlock
                     {
                         if (config.OnTriggerEnter)
                         {
-                            events.push_back({triggerObj, &config, obj, TriggerEventType::Enter});
+                            events.push_back({handle, &config, obj, TriggerEventType::Enter});
                         }
                     }
 
                     if (config.OnTriggerStay)
                     {
-                        events.push_back({triggerObj, &config, obj, TriggerEventType::Stay});
+                        events.push_back({handle, &config, obj, TriggerEventType::Stay});
                     }
                 }
 
@@ -190,7 +193,7 @@ namespace PhysicsBlock
                     {
                         if (config.OnTriggerExit)
                         {
-                            events.push_back({triggerObj, &config, obj, TriggerEventType::Exit});
+                            events.push_back({handle, &config, obj, TriggerEventType::Exit});
                         }
                     }
                 }
@@ -239,20 +242,20 @@ namespace PhysicsBlock
         mActiveOverlaps.clear();
     }
 
-    TriggerConfig &PhysicsTrigger::GetOrCreateConfig(PhysicsFormwork *object)
+    TriggerConfig &PhysicsTrigger::GetOrCreateConfig(TriggerHandle handle)
     {
-        auto it = mConfigs.find(object);
+        auto it = mConfigs.find(handle);
         if (it == mConfigs.end())
         {
-            it = mConfigs.emplace(object, TriggerConfig{}).first;
+            it = mConfigs.emplace(handle, TriggerConfig{}).first;
         }
         return it->second;
     }
 
-    const TriggerConfig &PhysicsTrigger::GetConfig(PhysicsFormwork *object) const
+    const TriggerConfig &PhysicsTrigger::GetConfig(TriggerHandle handle) const
     {
         static TriggerConfig defaultConfig;
-        auto it = mConfigs.find(object);
+        auto it = mConfigs.find(handle);
         if (it == mConfigs.end())
         {
             return defaultConfig;

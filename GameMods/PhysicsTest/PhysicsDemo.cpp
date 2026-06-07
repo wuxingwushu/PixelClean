@@ -1499,48 +1499,30 @@ namespace PhysicsBlock
 		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
 		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
 
-		PhysicsBlock::PhysicsShape *triggerObj1 = new PhysicsBlock::PhysicsShape({-6, 5}, {2, 2});
-		for (size_t i = 0; i < (triggerObj1->width * triggerObj1->height); ++i)
-		{
-			triggerObj1->at(i).Entity = true;
-			triggerObj1->at(i).Collision = false;
-			triggerObj1->at(i).mass = FLOAT_MAX;
-		}
-		triggerObj1->UpdateAll();
-		triggerObj1->angle = 0;
-
+		PhysicsBlock::TriggerHandle hTrigger1 = (*myPhysicsWorld)->mTrigger.CreateTrigger();
 		Bounds triggerZone1({-6, 7}, {10, 4});
-		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(triggerObj1, triggerZone1);
+		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(hTrigger1, triggerZone1);
 
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj1, TriggerEventType::Enter,
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger1, TriggerEventType::Enter,
 			[](PhysicsFormwork *other) {
 				PhysicsLog("[Trigger Enter] Object entered Zone-1 at y=%.1f\n", other->PFGetPos().y);
 			});
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj1, TriggerEventType::Exit,
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger1, TriggerEventType::Exit,
 			[](PhysicsFormwork *other) {
 				PhysicsLog("[Trigger Exit] Object left Zone-1 at y=%.1f\n", other->PFGetPos().y);
 			});
 
-		PhysicsBlock::PhysicsShape *triggerObj2 = new PhysicsBlock::PhysicsShape({6, -2}, {2, 2});
-		for (size_t i = 0; i < (triggerObj2->width * triggerObj2->height); ++i)
-		{
-			triggerObj2->at(i).Entity = true;
-			triggerObj2->at(i).Collision = false;
-			triggerObj2->at(i).mass = FLOAT_MAX;
-		}
-		triggerObj2->UpdateAll();
-		triggerObj2->angle = 0;
-
+		PhysicsBlock::TriggerHandle hTrigger2 = (*myPhysicsWorld)->mTrigger.CreateTrigger();
 		Bounds triggerZone2({6, 0}, {8, 4});
-		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(triggerObj2, triggerZone2);
-		(*myPhysicsWorld)->mTrigger.SetTriggerLayers(triggerObj2, 1 << 0);
+		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(hTrigger2, triggerZone2);
+		(*myPhysicsWorld)->mTrigger.SetTriggerLayers(hTrigger2, 1 << 0);
 
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj2, TriggerEventType::Enter,
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger2, TriggerEventType::Enter,
 			[](PhysicsFormwork *other) {
 				PhysicsLog("[Trigger Enter] Object entered Zone-2 (Layer-0 only) at y=%.1f\n",
 					other->PFGetPos().y);
 			});
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj2, TriggerEventType::Stay,
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger2, TriggerEventType::Stay,
 			[](PhysicsFormwork *other) {
 				static int frameCount = 0;
 				if (++frameCount % 30 == 0)
@@ -1548,25 +1530,16 @@ namespace PhysicsBlock
 						other->PFGetPos().x, other->PFGetPos().y);
 			});
 
-		PhysicsBlock::PhysicsShape *triggerObj3 = new PhysicsBlock::PhysicsShape({0, -9}, {2, 2});
-		for (size_t i = 0; i < (triggerObj3->width * triggerObj3->height); ++i)
-		{
-			triggerObj3->at(i).Entity = true;
-			triggerObj3->at(i).Collision = false;
-			triggerObj3->at(i).mass = FLOAT_MAX;
-		}
-		triggerObj3->UpdateAll();
-		triggerObj3->angle = 0;
-
+		PhysicsBlock::TriggerHandle hTrigger3 = (*myPhysicsWorld)->mTrigger.CreateTrigger();
 		Bounds triggerZone3({0, -5}, {14, 6});
-		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(triggerObj3, triggerZone3);
+		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(hTrigger3, triggerZone3);
 
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj3, TriggerEventType::Enter,
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger3, TriggerEventType::Enter,
 			[](PhysicsFormwork *other) {
 				PhysicsLog("[Trigger Enter] Object entered Catch-Zone at (%.1f, %.1f)\n",
 					other->PFGetPos().x, other->PFGetPos().y);
 			});
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(triggerObj3, TriggerEventType::Exit,
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger3, TriggerEventType::Exit,
 			[](PhysicsFormwork *other) {
 				PhysicsLog("[Trigger Exit] Object escaped Catch-Zone\n");
 			});

@@ -622,9 +622,8 @@ namespace GAME
 		}
 
 		// 渲染触发器区域辅助视觉
-		for (const auto &[triggerObj, config] : mPhysicsWorld->mTrigger.GetConfigs())
+		for (const auto &[handle, config] : mPhysicsWorld->mTrigger.GetConfigs())
 		{
-			if (triggerObj == nullptr) continue;
 			Vec2_ min = config.TriggerBounds.Center - config.TriggerBounds.HalfSize;
 			Vec2_ max = config.TriggerBounds.Center + config.TriggerBounds.HalfSize;
 			glm::vec4 color = {1.0f, 0.5f, 0.0f, 1.0f};

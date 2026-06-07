@@ -1508,7 +1508,6 @@ namespace PhysicsBlock
 		}
 		triggerObj1->UpdateAll();
 		triggerObj1->angle = 0;
-		(*myPhysicsWorld)->AddObject(triggerObj1);
 
 		Bounds triggerZone1({-6, 7}, {10, 4});
 		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(triggerObj1, triggerZone1);
@@ -1531,7 +1530,6 @@ namespace PhysicsBlock
 		}
 		triggerObj2->UpdateAll();
 		triggerObj2->angle = 0;
-		(*myPhysicsWorld)->AddObject(triggerObj2);
 
 		Bounds triggerZone2({6, 0}, {8, 4});
 		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(triggerObj2, triggerZone2);
@@ -1559,7 +1557,6 @@ namespace PhysicsBlock
 		}
 		triggerObj3->UpdateAll();
 		triggerObj3->angle = 0;
-		(*myPhysicsWorld)->AddObject(triggerObj3);
 
 		Bounds triggerZone3({0, -5}, {14, 6});
 		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(triggerObj3, triggerZone3);

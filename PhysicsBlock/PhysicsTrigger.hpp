@@ -185,6 +185,13 @@ namespace PhysicsBlock
          */
         void Clear();
 
+        /**
+         * @brief 获取所有触发器配置（只读）
+         * @return 所有触发器的配置映射表
+         * @details 用于辅助视觉渲染等只读遍历场景。
+         */
+        const std::unordered_map<PhysicsFormwork *, TriggerConfig> &GetConfigs() const { return mConfigs; }
+
     private:
         /**
          * @brief 获取或创建指定对象的触发器配置

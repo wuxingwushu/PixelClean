@@ -1,13 +1,34 @@
 #include "WFCTest.h"
 #include "../../GlobalVariable.h"
 #include "../../DebugLog.h"
+#include <algorithm>
 
 namespace GAME
 {
 
+	// ==================== 地形名称与颜色 ====================
+
+	static const char* sTerrainNames[] = {
+		u8"草地",   // Grass
+		u8"楼房",   // Building
+		u8"水域",   // Water
+		u8"道路",   // Road
+		u8"桥梁",   // Bridge
+		u8"树林",   // Forest
+	};
+
+	static const glm::vec4 sTerrainColors[] = {
+		{0.25f, 0.70f, 0.25f, 1.0f}, // 草地 — 鲜绿色
+		{0.55f, 0.50f, 0.42f, 1.0f}, // 楼房 — 暖灰色
+		{0.18f, 0.45f, 0.85f, 1.0f}, // 水域 — 深蓝色
+		{0.35f, 0.35f, 0.35f, 1.0f}, // 道路 — 深灰色
+		{0.60f, 0.45f, 0.25f, 1.0f}, // 桥梁 — 木棕色
+		{0.10f, 0.50f, 0.15f, 1.0f}, // 树林 — 深绿色
+	};
+
 	// ==================== 构造 / 析构 ====================
 
-	WFCTest::WFCTest(Configuration wConfiguration) : Configuration{wConfiguration}, mInputPattern(10, 10)
+	WFCTest::WFCTest(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
 		LOGD("WFCTest::WFCTest constructor");
 
@@ -17,37 +38,8 @@ namespace GAME
 			mCameraVPMatricesBuffer);
 		mAuxiliaryVision->RecordingCommandBuffer(mRenderPass, mSwapChain);
 
-		// 创建输入图案：10x10 的城镇地图
-		// 0=草地  1=楼房  2=水域  3=道路(横)  4=道路(竖)  5=桥梁  6=树林
-		//
-		// 布局示意：
-		//   树林 树林 树林 草地 草地 草地 草地 草地 树林 树林
-		//   树林 树林 树林 草地 草地 草地 草地 草地 树林 树林
-		//   草地 草地 草地 草地 道路 楼房 楼房 草地 草地 草地
-		//   草地 草地 草地 草地 道路 楼房 楼房 草地 草地 草地
-		//   草地 草地 草地 草地 道路 草地 草地 草地 草地 草地
-		//   道路 道路 道路 道路 路口 道路 道路 道路 道路 道路
-		//   草地 草地 草地 草地 道路 草地 草地 草地 草地 草地
-		//   草地 草地 草地 草地 道路 楼房 楼房 草地 草地 草地
-		//   草地 草地 水域 水域 桥梁 水域 水域 水域 草地 草地
-		//   草地 草地 水域 水域 水域 水域 水域 水域 草地 草地
-		unsigned patternData[10][10] = {
-			{6, 6, 6, 0, 0, 0, 0, 0, 6, 6},
-			{0, 6, 0, 0, 4, 1, 1, 0, 6, 6},
-			{0, 0, 0, 0, 4, 1, 1, 0, 0, 0},
-			{0, 0, 0, 0, 4, 0, 0, 0, 0, 0},
-			{3, 3, 3, 3, 4, 3, 3, 3, 3, 3},
-			{0, 0, 0, 0, 4, 0, 0, 0, 0, 0},
-			{0, 0, 0, 0, 4, 1, 1, 0, 0, 0},
-			{0, 0, 2, 2, 5, 2, 2, 2, 0, 0},
-			{6, 0, 2, 2, 5, 2, 2, 2, 0, 6},
-			{6, 0, 0, 0, 0, 0, 0, 0, 0, 6},
-		};
-		for (unsigned y = 0; y < 10; y++) {
-			for (unsigned x = 0; x < 10; x++) {
-				mInputPattern.get(y, x) = patternData[y][x];
-			}
-		}
+		InitTiles();
+		InitNeighborRules();
 
 		mCamera->setCameraPos({0, 0, 70});
 		GenerateWFC();
@@ -59,34 +51,119 @@ namespace GAME
 		delete mAuxiliaryVision;
 	}
 
+	// ==================== 图块初始化 ====================
+
+	void WFCTest::InitTiles()
+	{
+		// 每种地形是一个 1x1 的 Tile，使用 Symmetry::X（无旋转对称）
+		// 桥梁权重较低，因为桥梁应该只在固定场景出现
+		auto makeTile = [](unsigned id, double weight) -> Tile<unsigned> {
+			Tile<unsigned> tile{{Array2D<unsigned>(1, 1)}, Symmetry::X, weight};
+			tile.data[0].get(0, 0) = id;
+			return tile;
+		};
+
+		mTiles.push_back(makeTile(TerrainType::Grass,    1.0));
+		mTiles.push_back(makeTile(TerrainType::Building, 1.0));
+		mTiles.push_back(makeTile(TerrainType::Water,    1.0));
+		mTiles.push_back(makeTile(TerrainType::Road,     1.0));
+		mTiles.push_back(makeTile(TerrainType::Bridge,   0.5));
+		mTiles.push_back(makeTile(TerrainType::Forest,   1.0));
+	}
+
+	// ==================== 邻接规则定义 ====================
+	//
+	// 每条规则 (tile1, 0, tile2, 0) 表示 tile1 和 tile2 可以在任意方向相邻。
+	// 因为 Symmetry::X 无旋转，TilingWFC 的内部机制会自动将同一规则
+	// 应用到上、下、左、右四个方向。
+	//
+	// 规则设计思路：
+	//   - 草地是"万能边缘"：可以接任何地形，充当过渡带
+	//   - 楼房只与草地、楼房、道路相邻（不能直接挨着水域/桥梁/树林）
+	//   - 水域只与草地、水域、桥梁相邻（桥梁是水域上的过道）
+	//   - 道路只与草地、楼房、道路、桥梁相邻（桥梁是道路过水域的延伸）
+	//   - 桥梁只与水域、道路、桥梁相邻（桥梁连接道路和水域）
+	//   - 树林只与草地、树林相邻（树林是独立区域，不直接接触建筑/道路）
+	// ====================================================================
+
+	void WFCTest::InitNeighborRules()
+	{
+		// 添加规则：两个 tile 可以相邻
+		auto AddRule = [this](unsigned a, unsigned b) {
+			mNeighbors.emplace_back(a, 0u, b, 0u);
+		};
+
+		// ── 草地：可以与任何地形相邻（充当过渡带） ──
+		AddRule(Grass, Grass);
+		AddRule(Grass, Building);
+		AddRule(Grass, Water);
+		AddRule(Grass, Road);
+		AddRule(Grass, Bridge);
+		AddRule(Grass, Forest);
+
+		// ── 楼房：与草地、楼房、道路相邻 ──
+		AddRule(Building, Building);
+		AddRule(Building, Road);
+
+		// ── 水域：与草地、水域、桥梁相邻 ──
+		AddRule(Water, Water);
+		AddRule(Water, Bridge);
+
+		// ── 道路：与草地、楼房、道路、桥梁相邻 ──
+		AddRule(Road, Road);
+		AddRule(Road, Bridge);
+
+		// ── 桥梁：与水域、道路、桥梁相邻 ──
+		// （桥梁只存在于水域和道路的交界处）
+		AddRule(Bridge, Bridge);
+
+		// ── 树林：与草地、树林相邻 ──
+		// （树林是独立区域，不直接接触建筑/道路/水域）
+		AddRule(Forest, Forest);
+
+		// 从 mNeighbors 推导 mAllowedNeighbors（用于 UI 显示）
+		mAllowedNeighbors.resize(TerrainCount);
+		for (auto& [a, oa, b, ob] : mNeighbors) {
+			(void)oa; (void)ob;
+			if (std::find(mAllowedNeighbors[a].begin(), mAllowedNeighbors[a].end(), b)
+				== mAllowedNeighbors[a].end()) {
+				mAllowedNeighbors[a].push_back(b);
+			}
+			if (a != b) {
+				if (std::find(mAllowedNeighbors[b].begin(), mAllowedNeighbors[b].end(), a)
+					== mAllowedNeighbors[b].end()) {
+					mAllowedNeighbors[b].push_back(a);
+				}
+			}
+		}
+		// 排序以保证 UI 显示一致
+		for (auto& list : mAllowedNeighbors) {
+			std::sort(list.begin(), list.end());
+		}
+	}
+
 	// ==================== WFC 生成 ====================
 
 	void WFCTest::GenerateWFC()
 	{
-		OverlappingWFCOptions options;
-		options.periodic_input = true;
+		TilingWFCOptions options;
 		options.periodic_output = mPeriodicOutput;
-		options.out_height = mOutHeight;
-		options.out_width = mOutWidth;
-		options.symmetry = mSymmetry;
-		options.ground = false;
-		options.pattern_size = mPatternSize;
 
-		OverlappingWFC<unsigned> wfc(mInputPattern, options, mSeed);
+		TilingWFC<unsigned> wfc(mTiles, mNeighbors, mOutHeight, mOutWidth, options, mSeed);
 
 		mOutput = wfc.run();
 
 		if (mOutput.has_value()) {
-			LOGD("WFCTest: WFC generation succeeded (%dx%d)", mOutWidth, mOutHeight);
+			LOGD("WFCTest: TilingWFC generation succeeded (%dx%d)", mOutWidth, mOutHeight);
 		} else {
-			LOGD("WFCTest: WFC generation failed, retrying with new seed...");
+			LOGD("WFCTest: TilingWFC generation failed, retrying with new seed...");
 			mSeed++;
-			OverlappingWFC<unsigned> wfc_retry(mInputPattern, options, mSeed);
+			TilingWFC<unsigned> wfc_retry(mTiles, mNeighbors, mOutHeight, mOutWidth, options, mSeed);
 			mOutput = wfc_retry.run();
 			if (mOutput.has_value()) {
-				LOGD("WFCTest: WFC retry succeeded");
+				LOGD("WFCTest: TilingWFC retry succeeded");
 			} else {
-				LOGD("WFCTest: WFC retry also failed");
+				LOGD("WFCTest: TilingWFC retry also failed");
 			}
 		}
 
@@ -94,34 +171,24 @@ namespace GAME
 		mNeedRegenerate = false;
 	}
 
-	// ==================== 颜色映射 ====================
+	// ==================== 颜色 / 名称 ====================
 
 	glm::vec4 WFCTest::GetColorForPixel(unsigned pixel) const
 	{
-		switch (pixel) {
-		case 0: return {0.25f, 0.70f, 0.25f, 1.0f}; // 草地 — 鲜绿色
-		case 1: return {0.55f, 0.50f, 0.42f, 1.0f}; // 楼房 — 暖灰色
-		case 2: return {0.18f, 0.45f, 0.85f, 1.0f}; // 水域 — 深蓝色
-		case 3: return {0.35f, 0.35f, 0.35f, 1.0f}; // 道路(横) — 深灰色
-		case 4: return {0.35f, 0.35f, 0.35f, 1.0f}; // 道路(竖) — 深灰色
-		case 5: return {0.60f, 0.45f, 0.25f, 1.0f}; // 桥梁 — 木棕色
-		case 6: return {0.10f, 0.50f, 0.15f, 1.0f}; // 树林 — 深绿色
-		default: return {0.5f, 0.5f, 0.5f, 1.0f};  // 未知 — 灰色
-		}
+		if (pixel < TerrainCount) return sTerrainColors[pixel];
+		return {0.5f, 0.5f, 0.5f, 1.0f};
 	}
 
 	const char* WFCTest::GetTerrainName(unsigned pixel) const
 	{
-		switch (pixel) {
-		case 0: return u8"草地";
-		case 1: return u8"楼房";
-		case 2: return u8"水域";
-		case 3: return u8"道路";
-		case 4: return u8"道路";
-		case 5: return u8"桥梁";
-		case 6: return u8"树林";
-		default: return u8"未知";
-		}
+		if (pixel < TerrainCount) return sTerrainNames[pixel];
+		return u8"未知";
+	}
+
+	std::vector<unsigned> WFCTest::GetAllowedNeighbors(unsigned terrain) const
+	{
+		if (terrain < mAllowedNeighbors.size()) return mAllowedNeighbors[terrain];
+		return {};
 	}
 
 	// ==================== 渲染 ====================
@@ -132,7 +199,6 @@ namespace GAME
 
 		auto& output = mOutput.value();
 
-		// 将地图居中，每个格子大小为 1x1
 		float offsetX = -(float)output.width / 2.0f;
 		float offsetY = -(float)output.height / 2.0f;
 
@@ -144,45 +210,7 @@ namespace GAME
 				float cx = offsetX + (float)x + 0.5f;
 				float cy = offsetY + (float)y + 0.5f;
 
-				// 绘制实心方块
-				glm::dvec3 p0 = {cx - 0.5, cy - 0.5, 0};
-				glm::dvec3 p1 = {cx + 0.5, cy - 0.5, 0};
-				glm::dvec3 p2 = {cx + 0.5, cy + 0.5, 0};
-				glm::dvec3 p3 = {cx - 0.5, cy + 0.5, 0};
-
-				mAuxiliaryVision->Line(p0, color, p1, color);
-				mAuxiliaryVision->Line(p1, color, p2, color);
-				mAuxiliaryVision->Line(p2, color, p3, color);
-				mAuxiliaryVision->Line(p3, color, p0, color);
-				mAuxiliaryVision->Line(p0, color, p2, color);
-				mAuxiliaryVision->Line(p1, color, p3, color);
-			}
-		}
-
-		// 绘制输入图案缩略图在右下角
-		float inputOffsetX = (float)mOutWidth / 2.0f + 2.0f;
-		float inputOffsetY = -(float)mOutHeight / 2.0f + (float)mInputPattern.height;
-
-		for (unsigned y = 0; y < mInputPattern.height; y++) {
-			for (unsigned x = 0; x < mInputPattern.width; x++) {
-				unsigned pixel = mInputPattern.get(y, x);
-				glm::vec4 color = GetColorForPixel(pixel);
-				color.a = 0.85f;
-
-				float cx = inputOffsetX + (float)x + 0.5f;
-				float cy = inputOffsetY + (float)y + 0.5f;
-
-				glm::dvec3 p0 = {cx - 0.5, cy - 0.5, 0};
-				glm::dvec3 p1 = {cx + 0.5, cy - 0.5, 0};
-				glm::dvec3 p2 = {cx + 0.5, cy + 0.5, 0};
-				glm::dvec3 p3 = {cx - 0.5, cy + 0.5, 0};
-
-				mAuxiliaryVision->Line(p0, color, p1, color);
-				mAuxiliaryVision->Line(p1, color, p2, color);
-				mAuxiliaryVision->Line(p2, color, p3, color);
-				mAuxiliaryVision->Line(p3, color, p0, color);
-				mAuxiliaryVision->Line(p0, color, p2, color);
-				mAuxiliaryVision->Line(p1, color, p3, color);
+				mAuxiliaryVision->Spot({cx, cy, 0}, 0.9f, color);
 			}
 		}
 	}
@@ -263,7 +291,6 @@ namespace GAME
 
 		mAuxiliaryVision->End();
 
-		// 相机平移
 		float camSpeed = 20.0f * (float)TOOL::FPStime;
 		glm::vec3 camPos = mCamera->getCameraPos();
 		if (mMoveLeft)  camPos.x -= camSpeed;
@@ -273,7 +300,6 @@ namespace GAME
 		mCameraTarget.x = camPos.x;
 		mCameraTarget.y = camPos.y;
 
-		// 平滑相机
 		glm::vec3 currentCamPos = mCamera->getCameraPos();
 		float smoothFactor = (float)(1.0 - std::exp(-20.0 * TOOL::FPStime));
 		glm::vec3 smoothedPos = currentCamPos + (mCameraTarget - currentCamPos) * smoothFactor;
@@ -305,7 +331,7 @@ namespace GAME
 
 	void WFCTest::GameUI()
 	{
-		ImGui::Begin(u8"WFC 波函数坍缩 — 城市地图生成");
+		ImGui::Begin(u8"WFC 波函数坍缩 — 城市地图生成 (TilingWFC)");
 
 		ImVec2 window_pos = ImGui::GetWindowPos();
 		ImVec2 window_size = ImGui::GetWindowSize();
@@ -316,8 +342,8 @@ namespace GAME
 
 		// ---- WFC 参数 ----
 		ImGui::TextColored({0.3f, 0.9f, 0.5f, 1.0f}, u8"── WFC 参数 ──");
-		ImGui::Text(u8"输入图案: 10x10  输出尺寸: %d x %d", mOutWidth, mOutHeight);
-		ImGui::Text(u8"图案大小: %d  对称性: %d  种子: %d", mPatternSize, mSymmetry, mSeed);
+		ImGui::Text(u8"图块数: %d  输出尺寸: %d x %d  种子: %d",
+			TerrainCount, mOutWidth, mOutHeight, mSeed);
 		ImGui::Text(u8"周期性输出: %s", mPeriodicOutput ? u8"是" : u8"否");
 
 		ImGui::Separator();
@@ -326,30 +352,52 @@ namespace GAME
 		ImGui::TextColored({0.3f, 0.7f, 1.0f, 1.0f}, u8"── 生成状态 ──");
 		if (mOutput.has_value()) {
 			ImGui::TextColored({0.4f, 1.0f, 0.4f, 1.0f}, u8"状态: 生成成功");
-			auto& output = mOutput.value();
 
-			// 统计各类型数量
-			int counts[7] = {};
+			auto& output = mOutput.value();
+			int counts[TerrainCount] = {};
 			for (unsigned i = 0; i < output.data.size(); i++) {
 				unsigned v = output.data[i];
-				if (v < 7) counts[v]++;
+				if (v < TerrainCount) counts[v]++;
 			}
-			ImGui::Text(u8"草地:%d  楼房:%d  水域:%d", counts[0], counts[1], counts[2]);
-			ImGui::Text(u8"道路:%d  桥梁:%d  树林:%d", counts[3] + counts[4], counts[5], counts[6]);
+			for (unsigned i = 0; i < TerrainCount; i++) {
+				auto& c = sTerrainColors[i];
+				ImGui::TextColored(ImVec4(c.x, c.y, c.z, c.w), u8"  ■ %s: %d", sTerrainNames[i], counts[i]);
+			}
 		} else {
 			ImGui::TextColored({1.0f, 0.4f, 0.4f, 1.0f}, u8"状态: 生成失败");
 		}
 
 		ImGui::Separator();
 
-		// ---- 图例 ----
-		ImGui::TextColored({0.7f, 0.7f, 0.7f, 1.0f}, u8"── 图例 ──");
-		ImGui::TextColored({0.25f, 0.70f, 0.25f, 1.0f}, u8"  ■ 草地");
-		ImGui::TextColored({0.55f, 0.50f, 0.42f, 1.0f}, u8"  ■ 楼房");
-		ImGui::TextColored({0.18f, 0.45f, 0.85f, 1.0f}, u8"  ■ 水域");
-		ImGui::TextColored({0.35f, 0.35f, 0.35f, 1.0f}, u8"  ■ 道路");
-		ImGui::TextColored({0.60f, 0.45f, 0.25f, 1.0f}, u8"  ■ 桥梁");
-		ImGui::TextColored({0.10f, 0.50f, 0.15f, 1.0f}, u8"  ■ 树林");
+		// ---- 邻接规则表 ----
+		ImGui::TextColored({0.3f, 0.9f, 0.5f, 1.0f}, u8"── 邻接规则（每种地形四周可以有什么）──");
+
+		// 用表格展示每条规则
+		if (ImGui::BeginTable("rules", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+			ImGui::TableSetupColumn(u8"地形", ImGuiTableColumnFlags_WidthFixed, 80);
+			ImGui::TableSetupColumn(u8"四周允许的类型", ImGuiTableColumnFlags_WidthStretch);
+			ImGui::TableHeadersRow();
+
+			for (unsigned i = 0; i < TerrainCount; i++) {
+				ImGui::TableNextRow();
+				ImGui::TableSetColumnIndex(0);
+				auto& c0 = sTerrainColors[i];
+				ImGui::TextColored(ImVec4(c0.x, c0.y, c0.z, c0.w), u8"■ %s", sTerrainNames[i]);
+
+				ImGui::TableSetColumnIndex(1);
+				auto& allowed = mAllowedNeighbors[i];
+				for (size_t j = 0; j < allowed.size(); j++) {
+					if (j > 0) ImGui::SameLine();
+					auto& c1 = sTerrainColors[allowed[j]];
+					ImGui::TextColored(ImVec4(c1.x, c1.y, c1.z, c1.w), u8"%s", sTerrainNames[allowed[j]]);
+					if (j < allowed.size() - 1) {
+						ImGui::SameLine();
+						ImGui::TextColored({0.5f, 0.5f, 0.5f, 1.0f}, ",");
+					}
+				}
+			}
+			ImGui::EndTable();
+		}
 
 		ImGui::Separator();
 
@@ -359,9 +407,7 @@ namespace GAME
 		ImGui::BulletText(u8"滚轮 — 缩放相机");
 		ImGui::BulletText(u8"1 — 切换周期性输出");
 		ImGui::BulletText(u8"2 — 重新生成 WFC");
-		ImGui::BulletText(u8"右下角显示输入图案");
 
-		// ---- 重新生成按钮 ----
 		ImGui::Separator();
 		if (ImGui::Button(u8"重新生成", {120, 30})) {
 			mNeedRegenerate = true;

@@ -4,11 +4,11 @@
  * WFCTest — 基于 WaveFunctionCollapse 库的 2D 城市地图生成测试 Demo
  *
  * 核心演示内容：
- *   1. OverlappingWFC — 使用重叠模式从输入图像生成更大的输出图像
- *   2. 输入图案：10x10 的城镇地图，包含 7 种地形：
- *      0=草地  1=楼房  2=水域  3=道路(横)  4=道路(竖)  5=桥梁  6=树林
- *   3. 输出：60x40 的自动生成城市地图，渲染为彩色方块网格
- *   4. 按 1 切换周期性输出，按 2 重新生成
+ *   1. TilingWFC — 使用显式邻接规则（Tile-based）生成地图
+ *   2. 6 种地形块：草地、楼房、水域、道路、桥梁、树林
+ *   3. 通过逐条规则定义每种地形四周可以有什么
+ *   4. 输出：60x40 的自动生成城市地图，渲染为彩色方块网格
+ *   5. 按 1 切换周期性输出，按 2 重新生成
  *
  * 操作方式：
  *   W/A/S/D — 平移相机
@@ -19,11 +19,25 @@
 
 #include "../Configuration.h"
 #include "../GameMods.h"
-#include "../../Environment/WaveFunctionCollapse/include/overlapping_wfc.hpp"
+#include "../../Environment/WaveFunctionCollapse/include/tiling_wfc.hpp"
 #include <random>
+#include <vector>
+#include <string>
 
 namespace GAME
 {
+
+	// 地形类型枚举
+	enum TerrainType : unsigned
+	{
+		Grass = 0,    // 草地
+		Building = 1, // 楼房
+		Water = 2,    // 水域
+		Road = 3,     // 道路
+		Bridge = 4,   // 桥梁
+		Forest = 5,   // 树林
+		TerrainCount = 6
+	};
 
 	class WFCTest : public GameMods, Configuration
 	{
@@ -42,6 +56,12 @@ namespace GAME
 		virtual void GameUI();
 
 	private:
+		// 初始化所有地形块和图块
+		void InitTiles();
+
+		// 定义邻接规则（逐条定义谁可以和谁相邻）
+		void InitNeighborRules();
+
 		// 生成 WFC 输出
 		void GenerateWFC();
 
@@ -54,19 +74,25 @@ namespace GAME
 		// 获取地形名称
 		const char* GetTerrainName(unsigned pixel) const;
 
+		// 获取某个地形可以相邻的地形列表（用于 UI 显示）
+		std::vector<unsigned> GetAllowedNeighbors(unsigned terrain) const;
+
 	private:
 		VulKan::AuxiliaryVision* mAuxiliaryVision = nullptr;
 
-		// WFC 输入图像
-		Array2D<unsigned> mInputPattern;
+		// TilingWFC 的图块和邻接规则
+		std::vector<Tile<unsigned>> mTiles;
+		std::vector<std::tuple<unsigned, unsigned, unsigned, unsigned>> mNeighbors;
+
+		// 每个地形允许的邻接集合（用于 UI 显示，从 mNeighbors 推导）
+		// mAllowedNeighbors[terrain] = 所有可以相邻的地形集合
+		std::vector<std::vector<unsigned>> mAllowedNeighbors;
 
 		// WFC 生成的输出图像
 		std::optional<Array2D<unsigned>> mOutput;
 
 		// WFC 选项
 		bool mPeriodicOutput = false;
-		unsigned mPatternSize = 3;
-		unsigned mSymmetry = 8;
 		unsigned mOutWidth = 60;
 		unsigned mOutHeight = 40;
 

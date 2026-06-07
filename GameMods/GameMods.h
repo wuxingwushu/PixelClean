@@ -39,8 +39,8 @@ inline int GetGameModeStableId(GameModsEnum mode) {
 		case SoloudTest_:       return 3;
 		case RadianceCascades_: return 4;
 		case FruitNinja_:       return 5;
-		case Infinite_:         return 6;
-		case WFCTest_:         return 200;
+		case WFCTest_:         return 6;
+		case Infinite_:         return 200;
 	}
 	return -1;
 }
@@ -53,8 +53,8 @@ inline bool GameModsSupportsMultiplayer(GameModsEnum mode) {
 		case SoloudTest_:     return false;
 		case RadianceCascades_: return false;
 		case FruitNinja_:     return false;
-		case Infinite_:       return false;
 		case WFCTest_:       return false;
+		case Infinite_:       return false;
 	}
 	return false;
 }

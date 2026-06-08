@@ -21,6 +21,7 @@ set(CMAKE_CXX_STANDARD 17)
 if(MSVC)
     add_compile_options(/wd4201)  # 禁用警告：非标准扩展使用了无名结构体/联合体
     add_compile_options(/utf-8)   # 设置源文件和执行字符集为UTF-8
+    add_compile_options(/FS)      # 允许多个编译进程同时写入同一个PDB文件
     add_compile_definitions(WIN32_LEAN_AND_MEAN NOMINMAX)  # Windows 宏 + GLM 全局一致配置
 endif()
 

@@ -39,6 +39,8 @@
 #define UVDynamicDiagramF_spv	ShaderPath"UVDynamicDiagramF.spv"
 #define UVDynamicDiagramG_spv	ShaderPath"UVDynamicDiagramG.spv"
 #define UVDynamicDiagramV_spv	ShaderPath"UVDynamicDiagramV.spv"
+#define BlockWorldV_spv			ShaderPath"BlockWorldShaderV.spv"
+#define BlockWorldF_spv			ShaderPath"BlockWorldShaderF.spv"
 #define Background_spv			ShaderPath"Background.spv"
 #define GridBackground_spv		ShaderPath"GridBackground.spv"
 #define _2D_GI_spv               ShaderPath"2D_GI.spv"

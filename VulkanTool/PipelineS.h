@@ -14,7 +14,8 @@ namespace VulKan {
 		CircleMods,
 		GifMods,
 		DamagePrompt,
-		UVDynamicDiagram
+		UVDynamicDiagram,
+		BlockWorldMods
 	};
 
 	class PipelineS

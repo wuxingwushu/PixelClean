@@ -14,6 +14,7 @@
 #include "GameMods/SoloudTest/SoloudTest.h"
 #include "GameMods/RadianceCascades/RadianceCascades.h"
 #include "GameMods/WFCTest/WFCTest.h"
+#include "GameMods/BlockWorld/BlockWorld.h"
 
 #if defined(__ANDROID__)
 struct ANativeWindow;

@@ -22,4 +22,7 @@ namespace VulKan {
 
 	//像素UV动画
 	Pipeline* UVDynamicDiagramPipeline(Pipeline* Pipeline, Device* Device);
+
+	//BlockWorld 方块世界
+	Pipeline* BlockWorldPipeline(Pipeline* Pipeline, Device* Device);
 }

@@ -1,6 +1,7 @@
 #include "application.h"
 #include "../DebugLog.h"
 #include "Opcode/OpcodeFunction.h"
+#include "GameMods/BlockWorld/BlockWorld.h"
 #include "GameMods/FruitNinja/FruitNinja.h"
 #if defined(__ANDROID__)
 #include <android/native_window.h>
@@ -81,10 +82,13 @@ namespace GAME {
 			GamePtr = new FruitNinja(*this);
 			break;
 		case WFCTest_:
-			GamePtr = new WFCTest(*this);
-			break;
-		default:
-			break;
+		GamePtr = new WFCTest(*this);
+		break;
+	case BlockWorld_:
+		GamePtr = new BlockWorld(*this);
+		break;
+	default:
+		break;
 		}
 		TOOL::FPStime = 0.00001;
 		return GamePtr;
@@ -116,9 +120,12 @@ namespace GAME {
 			delete (FruitNinja*)mGameMods;
 			break;
 		case WFCTest_:
-			delete (WFCTest*)mGameMods;
-			break;
-		default:
+		delete (WFCTest*)mGameMods;
+		break;
+	case BlockWorld_:
+		delete (BlockWorld*)mGameMods;
+		break;
+	default:
 			break;
 		}
 		mGameMods = nullptr;

@@ -17,6 +17,7 @@ enum GameModsEnum
 	RadianceCascades_,
 	FruitNinja_,
 	WFCTest_,
+	BlockWorld_,
 	Infinite_,
 };
 
@@ -28,6 +29,7 @@ static const char* GameModsEnumName[] = {
 	u8"辐射级联GI",
 	u8"水果忍者",
 	u8"WFC测试",
+	u8"Minecraft区块世界",
 	u8"无限",
 };
 
@@ -40,6 +42,7 @@ inline int GetGameModeStableId(GameModsEnum mode) {
 		case RadianceCascades_: return 4;
 		case FruitNinja_:       return 5;
 		case WFCTest_:         return 6;
+		case BlockWorld_:       return 7;
 		case Infinite_:         return 200;
 	}
 	return -1;
@@ -54,6 +57,7 @@ inline bool GameModsSupportsMultiplayer(GameModsEnum mode) {
 		case RadianceCascades_: return false;
 		case FruitNinja_:     return false;
 		case WFCTest_:       return false;
+		case BlockWorld_:     return false;
 		case Infinite_:       return false;
 	}
 	return false;

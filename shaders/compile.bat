@@ -41,6 +41,8 @@ mkdir "%OUTPUT_DIR%" 2>nul
 "%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagram.vert" -o "%OUTPUT_DIR%/UVDynamicDiagramV.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagram.frag" -o "%OUTPUT_DIR%/UVDynamicDiagramF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagram.geom" -o "%OUTPUT_DIR%/UVDynamicDiagramG.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%BlockWorldShader.vert" -o "%OUTPUT_DIR%/BlockWorldShaderV.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%BlockWorldShader.frag" -o "%OUTPUT_DIR%/BlockWorldShaderF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%Background.comp" -o "%OUTPUT_DIR%/Background.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%GridBackground.comp" -o "%OUTPUT_DIR%/GridBackground.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%CircleShader.vert" -o "%OUTPUT_DIR%/CircleShaderV.spv"

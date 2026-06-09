@@ -133,11 +133,10 @@ private:
     unsigned int mPlateOriginY;
     unsigned int mPlateOriginZ;
 
-    // === 相机 ===
-    glm::vec3 mCameraTarget{};
+    // === 相机（自由飞行模式）===
     float mCameraYaw = -45.0f;
     float mCameraPitch = -30.0f;
-    float mCameraDistance = 120.0f;
+    float mCameraSpeed = 20.0f;       // 移动速度（滚轮调节）
 
     // === 输入状态 ===
     bool mIsDragging = false;

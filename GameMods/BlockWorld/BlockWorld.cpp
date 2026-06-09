@@ -595,12 +595,11 @@ BlockWorld::BlockWorld(Configuration wConfiguration)
 
     mChunkPlate.SetCallback(OnChunkGenerate, this, OnChunkDelete, this);
 
-    // 相机设置：注视地形表面中心
+    // 自由飞行相机：设置初始位置（地形中心偏上方，俯瞰地形）
     // 5x5x5 网格，CHUNK_SIZE=32 → 世界坐标范围 0~160
-    mCameraTarget = glm::vec3(80.0f, 80.0f, 80.0f);
     mCameraYaw = -45.0f;
     mCameraPitch = -30.0f;
-    mCameraDistance = 150.0f;
+    mCameraSpeed = 20.0f;
 
     // 板块位置：GameLoop 中 UpData 的 Z 固定为 0，所以这里 SetPos Z 也设为 0
     // 避免首帧产生 Z 偏移导致所有区块被移动删除
@@ -631,6 +630,8 @@ BlockWorld::BlockWorld(Configuration wConfiguration)
     // 一次性构建所有顶点
     RebuildAllVertexData();
 
+    // 设置自由飞行相机的初始位置（地形中心偏上方）
+    mCamera->setCameraPos(glm::vec3(80.0f, 120.0f, 80.0f));
     UpdateCamera();
 
     // 关键：必须在构造函数中录制二级指令缓冲，否则第一帧画面为空
@@ -658,13 +659,15 @@ void BlockWorld::UpdateCamera() {
     float pitchRad = glm::radians(mCameraPitch);
     float yawRad = glm::radians(mCameraYaw);
 
-    glm::vec3 dir;
-    dir.x = cos(pitchRad) * sin(yawRad);
-    dir.y = sin(pitchRad);
-    dir.z = cos(pitchRad) * cos(yawRad);
+    // 自由飞行相机：视线方向 = (cos(pitch)*sin(yaw), sin(pitch), cos(pitch)*cos(yaw))
+    glm::vec3 front;
+    front.x = cos(pitchRad) * sin(yawRad);
+    front.y = sin(pitchRad);
+    front.z = cos(pitchRad) * cos(yawRad);
 
-    glm::vec3 camPos = mCameraTarget - dir * mCameraDistance;
-    mCamera->lookAt(camPos, mCameraTarget - camPos, glm::vec3(0.0f, 1.0f, 0.0f));
+    // 相机位置 + 视线方向 → 设置朝向
+    glm::vec3 camPos = mCamera->getCameraPos();
+    mCamera->lookAt(camPos, front, glm::vec3(0.0f, 1.0f, 0.0f));
     mCamera->update();
 }
 
@@ -718,31 +721,54 @@ void BlockWorld::MouseButton(MouseBtn button, InputState State) {
 void BlockWorld::MouseRoller(int z) {
     if (Global::ClickWindow) return;
 
-    mCameraDistance += z * 5.0f;
-    mCameraDistance = std::max(5.0f, std::min(mCameraDistance, 500.0f));
-    UpdateCamera();
+    mCameraSpeed += z * 5.0f;
+    mCameraSpeed = std::max(1.0f, std::min(mCameraSpeed, 200.0f));
 }
 
 void BlockWorld::KeyDown(GameKeyEnum moveDirection) {
-    float moveSpeed = 20.0f * TOOL::FPStime;
+    float moveSpeed = mCameraSpeed * TOOL::FPStime;
 
-    // 根据相机朝向（yaw）计算 XZ 水平面的移动方向
+    // ========================================================================
+    // 自由飞行相机方向计算
+    // ========================================================================
+    float pitchRad = glm::radians(mCameraPitch);
     float yawRad = glm::radians(mCameraYaw);
-    glm::vec3 forward(sin(yawRad), 0.0f, cos(yawRad));     // 相机前方（XZ 平面）
-    glm::vec3 right(cos(yawRad), 0.0f, -sin(yawRad));      // 相机右方（XZ 平面）
 
+    // 视线方向（3D 单位向量）：视线指哪，W/S 就往哪飞
+    glm::vec3 forward(
+        cos(pitchRad) * sin(yawRad),
+        sin(pitchRad),
+        cos(pitchRad) * cos(yawRad)
+    );
+
+    // 右方向 = cross(世界上方向, 视线方向)，保证始终水平
+    glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+    glm::vec3 right = glm::normalize(glm::cross(worldUp, forward));
+
+    glm::vec3 camPos = mCamera->getCameraPos();
+
+    // ========================================================================
+    // 按键移动：直接在3D空间中平移相机位置
+    // ========================================================================
     switch (moveDirection) {
     case GameKeyEnum::MOVE_LEFT:
-        mCameraTarget -= right * moveSpeed;
+        camPos += right * moveSpeed;       // A键：向右平移
         break;
     case GameKeyEnum::MOVE_RIGHT:
-        mCameraTarget += right * moveSpeed;
+        camPos -= right * moveSpeed;       // D键：向左平移
         break;
     case GameKeyEnum::MOVE_FRONT:
-        mCameraTarget += forward * moveSpeed;
+        camPos += forward * moveSpeed;     // W键：沿视线前进
         break;
     case GameKeyEnum::MOVE_BACK:
-        mCameraTarget -= forward * moveSpeed;
+        camPos -= forward * moveSpeed;     // S键：沿视线后退
+        break;
+    case GameKeyEnum::MOVE_UP:
+    case GameKeyEnum::SPACE:
+        camPos.y += moveSpeed;             // 空格：Y轴上升
+        break;
+    case GameKeyEnum::MOVE_DOWN:
+        camPos.y -= moveSpeed;             // Shift：Y轴下降
         break;
     case GameKeyEnum::ESC:
         if (Global::ConsoleBool) {
@@ -755,7 +781,9 @@ void BlockWorld::KeyDown(GameKeyEnum moveDirection) {
     default:
         break;
     }
-    UpdateCamera();
+
+    mCamera->setCameraPos(camPos);
+    // setCameraPos 内部已调用 update()，无需再调 UpdateCamera
 }
 
 // ============================================================================
@@ -770,9 +798,9 @@ void BlockWorld::GameCommandBuffers(unsigned int Format_i) {
 }
 
 void BlockWorld::GameLoop(unsigned int mCurrentFrame) {
-    // Z 固定为 0：地形高度由噪声计算，板块不需要在 Z 方向移动
-    MovePlate3DInfo plateInfo = mChunkPlate.UpData(
-        mCameraTarget.x, mCameraTarget.y, 0);
+    // 区块板块追踪相机在 X/Z 水平面的位置 + Y 高度
+    glm::vec3 camPos = mCamera->getCameraPos();
+    MovePlate3DInfo plateInfo = mChunkPlate.UpData(camPos.x, camPos.y, camPos.z);
 
     if (plateInfo.UpData) {
         CleanupOutOfRangeChunks();
@@ -811,8 +839,9 @@ void BlockWorld::GameUI() {
         Global::ClickWindow = true;
     }
 
-    ImGui::Text(u8"相机目标: (%.1f, %.1f, %.1f)", mCameraTarget.x, mCameraTarget.y, mCameraTarget.z);
-    ImGui::Text(u8"相机距离: %.1f", mCameraDistance);
+    glm::vec3 camPos = mCamera->getCameraPos();
+    ImGui::Text(u8"相机位置: (%.1f, %.1f, %.1f)", camPos.x, camPos.y, camPos.z);
+    ImGui::Text(u8"飞行速度: %.1f", mCameraSpeed);
     ImGui::Text(u8"视角: 偏航=%.1f° 俯仰=%.1f°", mCameraYaw, mCameraPitch);
     ImGui::Text(u8"激活区块数: %zu", mChunkMap.size());
     ImGui::Text(u8"顶点数: %u / %u", mVertexCount, mVertexCapacity);
@@ -831,9 +860,11 @@ void BlockWorld::GameUI() {
 
     ImGui::Separator();
     ImGui::Text(u8"操作说明:");
-    ImGui::Text(u8"  WASD      - 移动相机（流式加载新区块）");
+    ImGui::Text(u8"  WASD      - 自由飞行（视线方向移动）");
+    ImGui::Text(u8"  Space     - Z轴上升");
+    ImGui::Text(u8"  Shift     - Z轴下降");
     ImGui::Text(u8"  右键拖拽  - 旋转视角");
-    ImGui::Text(u8"  滚轮      - 缩放");
+    ImGui::Text(u8"  滚轮      - 调节飞行速度");
     ImGui::Text(u8"  ESC       - 返回菜单");
 
     ImGui::End();

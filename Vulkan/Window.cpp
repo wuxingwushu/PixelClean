@@ -240,6 +240,16 @@ namespace VulKan {
 			mApp->KeyDown(GameKeyEnum::MOVE_RIGHT);
 		}
 
+		// 持续触发：空格 → 上升（自由飞行相机）
+		if (glfwGetKey(mWindow, GLFW_KEY_SPACE) == GLFW_PRESS) {
+			mApp->KeyDown(GameKeyEnum::MOVE_UP);
+		}
+
+		// 持续触发：左Shift → 下降
+		if (glfwGetKey(mWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+			mApp->KeyDown(GameKeyEnum::MOVE_DOWN);
+		}
+
 		if (glfwGetKey(mWindow, GLFW_KEY_1) == GLFW_PRESS && glfwGetKey(mWindow, GLFW_KEY_1) != KeysRisingEdgeTrigger_0) {
 			mApp->KeyDown(GameKeyEnum::Key_1);
 		}

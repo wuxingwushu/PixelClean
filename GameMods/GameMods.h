@@ -69,6 +69,8 @@ enum class GameKeyEnum : unsigned
 	MOVE_RIGHT,
 	MOVE_FRONT,
 	MOVE_BACK,
+	MOVE_UP,
+	MOVE_DOWN,
 	ESC,
 	Key_1,
 	Key_2,

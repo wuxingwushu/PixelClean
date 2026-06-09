@@ -11,13 +11,6 @@
 
 namespace GAME {
 
-// 确定性哈希函数：将坐标映射到种子
-static int deterministicHash(int x, int y, int z) {
-    int h = x * 374761393 + y * 668265263 + z * 1274126177;
-    h = (h ^ (h >> 13)) * 1274126177;
-    return (h ^ (h >> 16)) & 0x7FFFFFFF;
-}
-
 // ============================================================================
 // 静态回调
 // ============================================================================
@@ -33,21 +26,46 @@ void BlockWorld::OnChunkGenerate(int /*mT*/, int x, int y, int z, void* Data) {
 
     ChunkData* chunk = new ChunkData(x, y, z);
 
-    // 使用世界坐标计算确定性种子
-    int seed = deterministicHash(x, y, z);
     chunk->generateTerrain(
+        // 基础噪声
         self->mContinentalNoise,
-        self->mHillsNoise,
-        self->mDetailNoise,
-        self->mCaveNoise,
         self->mErosionNoise,
-        seed
+        self->mDetailNoise,
+
+        // 密度场噪声 (3D)
+        self->mDensityNoise1,
+        self->mDensityNoise2,
+        self->mDensityNoise3,
+        self->mRidgeNoise,
+
+        // 群系噪声 (2D)
+        self->mTemperatureNoise,
+        self->mHumidityNoise,
+        self->mWeirdnessNoise,
+
+        // 洞穴噪声
+        self->mCheeseCaveNoise,
+        self->mSpaghettiCaveNoise,
+        self->mNoodleCaveNoise,
+        self->mCaveWarpX,
+        self->mCaveWarpY,
+        self->mCaveWarpZ,
+        self->mRavineNoise,
+
+        // 含水层噪声
+        self->mAquiferNoise,
+        self->mAquiferBarrierNoise,
+
+        // 河流噪声
+        self->mRiverNoise,
+
+        0
     );
 
     self->mChunkMap[key] = chunk;
     self->mVertexDataDirty = true;
 
-    LOGD("BlockWorld: Chunk generated at (%d, %d, %d), seed=%d", x, y, z, seed);
+    LOGD("BlockWorld: Chunk generated at (%d, %d, %d)", x, y, z);
 }
 
 void BlockWorld::OnChunkDelete(int /*mT*/, void* Data) {
@@ -138,6 +156,12 @@ static glm::vec4 getBlockColor(int blockType) {
         return {0.2f, 0.3f, 0.8f, 0.5f};
     case BlockType::Snow:
         return {0.9f, 0.95f, 1.0f, 1.0f};
+    case BlockType::Log:
+        return {0.4f, 0.25f, 0.1f, 1.0f};   // 棕色树干
+    case BlockType::Leaves:
+        return {0.15f, 0.5f, 0.1f, 1.0f};    // 绿色树叶
+    case BlockType::Cactus:
+        return {0.2f, 0.55f, 0.15f, 1.0f};   // 深绿色仙人掌
     case BlockType::Air:
     default:
         return {0, 0, 0, 0};
@@ -206,24 +230,36 @@ void BlockWorld::BuildChunkVertices(ChunkData* chunk, std::vector<BlockVertex>& 
         for (int y = 0; y < CS; y++) {
             for (int z = 0; z < CS; z++) {
                 int blockType = chunk->get(x, y, z);
-                if (!chunk->isSolid(x, y, z)) continue;
+                if (blockType == (int)BlockType::Air) continue;
 
                 int wx = baseX + x;
                 int wy = baseY + y;
                 int wz = baseZ + z;
 
-                // 面剔除：只有相邻不是固体才渲染面
-                if (!chunk->isSolid(x, y, z + 1) && GetBlockAtWorld(wx, wy, wz + 1) == (int)BlockType::Air)
+                bool isWater = (blockType == (int)BlockType::Water);
+
+                // 水方块：只在相邻是 Air 时渲染面
+                // 固体方块：相邻非固体且世界邻居为 Air 时渲染
+                auto shouldRender = [&](int lx, int ly, int lz, int wnx, int wny, int wnz) -> bool {
+                    if (isWater) {
+                        return GetBlockAtWorld(wnx, wny, wnz) == (int)BlockType::Air;
+                    } else {
+                        return !chunk->isSolid(lx, ly, lz) &&
+                               GetBlockAtWorld(wnx, wny, wnz) == (int)BlockType::Air;
+                    }
+                };
+
+                if (shouldRender(x, y, z + 1, wx, wy, wz + 1))
                     BuildBlockFaceVertices(wx, wy, wz, 0, blockType, out);
-                if (!chunk->isSolid(x, y, z - 1) && GetBlockAtWorld(wx, wy, wz - 1) == (int)BlockType::Air)
+                if (shouldRender(x, y, z - 1, wx, wy, wz - 1))
                     BuildBlockFaceVertices(wx, wy, wz, 1, blockType, out);
-                if (!chunk->isSolid(x - 1, y, z) && GetBlockAtWorld(wx - 1, wy, wz) == (int)BlockType::Air)
+                if (shouldRender(x - 1, y, z, wx - 1, wy, wz))
                     BuildBlockFaceVertices(wx, wy, wz, 2, blockType, out);
-                if (!chunk->isSolid(x + 1, y, z) && GetBlockAtWorld(wx + 1, wy, wz) == (int)BlockType::Air)
+                if (shouldRender(x + 1, y, z, wx + 1, wy, wz))
                     BuildBlockFaceVertices(wx, wy, wz, 3, blockType, out);
-                if (!chunk->isSolid(x, y - 1, z) && GetBlockAtWorld(wx, wy - 1, wz) == (int)BlockType::Air)
+                if (shouldRender(x, y - 1, z, wx, wy - 1, wz))
                     BuildBlockFaceVertices(wx, wy, wz, 4, blockType, out);
-                if (!chunk->isSolid(x, y + 1, z) && GetBlockAtWorld(wx, wy + 1, wz) == (int)BlockType::Air)
+                if (shouldRender(x, y + 1, z, wx, wy + 1, wz))
                     BuildBlockFaceVertices(wx, wy, wz, 5, blockType, out);
             }
         }
@@ -309,33 +345,113 @@ void BlockWorld::RebuildAllVertexData() {
 void BlockWorld::InitBlockWorldPipeline() {
     LOGD("BlockWorld: InitBlockWorldPipeline, capacity=%u", mVertexCapacity);
 
+    // === 基础噪声 ===
     mContinentalNoise = new FastNoiseLite();
     mContinentalNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
     mContinentalNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
     mContinentalNoise->SetFractalOctaves(4);
     mContinentalNoise->SetFrequency(0.015f);
 
-    mHillsNoise = new FastNoiseLite();
-    mHillsNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
-    mHillsNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mHillsNoise->SetFractalOctaves(3);
-    mHillsNoise->SetFrequency(0.04f);
+    mErosionNoise = new FastNoiseLite();
+    mErosionNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mErosionNoise->SetFrequency(0.01f);
 
     mDetailNoise = new FastNoiseLite();
     mDetailNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
     mDetailNoise->SetFrequency(0.04f);
 
-    mCaveNoise = new FastNoiseLite();
-    mCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_Cellular);
-    mCaveNoise->SetCellularDistanceFunction(FastNoiseLite::CellularDistanceFunction_EuclideanSq);
-    mCaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mCaveNoise->SetFractalOctaves(2);
-    mCaveNoise->SetFrequency(0.06f);
+    // === 密度场噪声 (3D) ===
+    mDensityNoise1 = new FastNoiseLite();
+    mDensityNoise1->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mDensityNoise1->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mDensityNoise1->SetFractalOctaves(6);
+    mDensityNoise1->SetFrequency(0.003f);
 
-    mErosionNoise = new FastNoiseLite();
-    mErosionNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mErosionNoise->SetFrequency(0.01f);
+    mDensityNoise2 = new FastNoiseLite();
+    mDensityNoise2->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mDensityNoise2->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mDensityNoise2->SetFractalOctaves(4);
+    mDensityNoise2->SetFrequency(0.01f);
 
+    mDensityNoise3 = new FastNoiseLite();
+    mDensityNoise3->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mDensityNoise3->SetFrequency(0.04f);
+
+    mRidgeNoise = new FastNoiseLite();
+    mRidgeNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mRidgeNoise->SetFractalType(FastNoiseLite::FractalType_Ridged);
+    mRidgeNoise->SetFractalOctaves(3);
+    mRidgeNoise->SetFrequency(0.01f);
+
+    // === 群系噪声 (2D) ===
+    mTemperatureNoise = new FastNoiseLite();
+    mTemperatureNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mTemperatureNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mTemperatureNoise->SetFractalOctaves(3);
+    mTemperatureNoise->SetFrequency(0.0008f);
+
+    mHumidityNoise = new FastNoiseLite();
+    mHumidityNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mHumidityNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mHumidityNoise->SetFractalOctaves(3);
+    mHumidityNoise->SetFrequency(0.0008f);
+
+    mWeirdnessNoise = new FastNoiseLite();
+    mWeirdnessNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mWeirdnessNoise->SetFrequency(0.001f);
+
+    // === 洞穴噪声 ===
+    mCheeseCaveNoise = new FastNoiseLite();
+    mCheeseCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mCheeseCaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mCheeseCaveNoise->SetFractalOctaves(4);
+    mCheeseCaveNoise->SetFrequency(0.02f);
+
+    mSpaghettiCaveNoise = new FastNoiseLite();
+    mSpaghettiCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mSpaghettiCaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mSpaghettiCaveNoise->SetFractalOctaves(3);
+    mSpaghettiCaveNoise->SetFrequency(0.05f);
+
+    mNoodleCaveNoise = new FastNoiseLite();
+    mNoodleCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mNoodleCaveNoise->SetFrequency(0.08f);
+
+    mCaveWarpX = new FastNoiseLite();
+    mCaveWarpX->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mCaveWarpX->SetFrequency(0.03f);
+
+    mCaveWarpY = new FastNoiseLite();
+    mCaveWarpY->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mCaveWarpY->SetFrequency(0.03f);
+
+    mCaveWarpZ = new FastNoiseLite();
+    mCaveWarpZ->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mCaveWarpZ->SetFrequency(0.03f);
+
+    mRavineNoise = new FastNoiseLite();
+    mRavineNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mRavineNoise->SetFrequency(0.02f);
+
+    // === 含水层噪声 ===
+    mAquiferNoise = new FastNoiseLite();
+    mAquiferNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mAquiferNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mAquiferNoise->SetFractalOctaves(3);
+    mAquiferNoise->SetFrequency(0.015f);
+
+    mAquiferBarrierNoise = new FastNoiseLite();
+    mAquiferBarrierNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mAquiferBarrierNoise->SetFrequency(0.03f);
+
+    // === 河流噪声 ===
+    mRiverNoise = new FastNoiseLite();
+    mRiverNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mRiverNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mRiverNoise->SetFractalOctaves(4);
+    mRiverNoise->SetFrequency(0.003f);
+
+    // === Vulkan 资源 ===
     mVertexBuffer = new VulKan::Buffer(
         mDevice,
         mVertexCapacity * sizeof(BlockVertex),
@@ -371,11 +487,37 @@ void BlockWorld::InitBlockWorldPipeline() {
 void BlockWorld::DestroyBlockWorldPipeline() {
     LOGD("BlockWorld: DestroyBlockWorldPipeline");
 
-    delete mErosionNoise; mErosionNoise = nullptr;
-    delete mCaveNoise; mCaveNoise = nullptr;
-    delete mDetailNoise; mDetailNoise = nullptr;
-    delete mHillsNoise; mHillsNoise = nullptr;
-    delete mContinentalNoise; mContinentalNoise = nullptr;
+    // 基础噪声
+    delete mRiverNoise;          mRiverNoise = nullptr;
+
+    // 含水层
+    delete mAquiferBarrierNoise; mAquiferBarrierNoise = nullptr;
+    delete mAquiferNoise;        mAquiferNoise = nullptr;
+
+    // 洞穴
+    delete mRavineNoise;         mRavineNoise = nullptr;
+    delete mCaveWarpZ;           mCaveWarpZ = nullptr;
+    delete mCaveWarpY;           mCaveWarpY = nullptr;
+    delete mCaveWarpX;           mCaveWarpX = nullptr;
+    delete mNoodleCaveNoise;     mNoodleCaveNoise = nullptr;
+    delete mSpaghettiCaveNoise;  mSpaghettiCaveNoise = nullptr;
+    delete mCheeseCaveNoise;     mCheeseCaveNoise = nullptr;
+
+    // 群系
+    delete mWeirdnessNoise;      mWeirdnessNoise = nullptr;
+    delete mHumidityNoise;       mHumidityNoise = nullptr;
+    delete mTemperatureNoise;    mTemperatureNoise = nullptr;
+
+    // 密度场
+    delete mRidgeNoise;          mRidgeNoise = nullptr;
+    delete mDensityNoise3;       mDensityNoise3 = nullptr;
+    delete mDensityNoise2;       mDensityNoise2 = nullptr;
+    delete mDensityNoise1;       mDensityNoise1 = nullptr;
+
+    // 基础
+    delete mDetailNoise;         mDetailNoise = nullptr;
+    delete mErosionNoise;        mErosionNoise = nullptr;
+    delete mContinentalNoise;    mContinentalNoise = nullptr;
 
     DestroyBlockWorldVulkanResources();
 }
@@ -449,19 +591,19 @@ BlockWorld::BlockWorld(Configuration wConfiguration)
     , mPlateOriginY(CHUNK_ORIGIN_Y)
     , mPlateOriginZ(CHUNK_ORIGIN_Z)
 {
-    LOGD("BlockWorld::BlockWorld constructor (Minecraft-style with FastNoiseLite)");
+    LOGD("BlockWorld::BlockWorld constructor (Advanced Terrain v2)");
 
     mChunkPlate.SetCallback(OnChunkGenerate, this, OnChunkDelete, this);
 
     // 相机设置：注视地形表面中心
-    // 板块中心在 chunk(1, 1, 0)，3x3x3 网格覆盖 world X:0-95, Y:0-95, Z:0-95
-    mCameraTarget = glm::vec3(48.0f, 48.0f, 45.0f);
+    // 5x5x5 网格，CHUNK_SIZE=32 → 世界坐标范围 0~160
+    mCameraTarget = glm::vec3(80.0f, 80.0f, 80.0f);
     mCameraYaw = -45.0f;
     mCameraPitch = -30.0f;
-    mCameraDistance = 140.0f;
+    mCameraDistance = 150.0f;
 
-    // 板块位置：用世界坐标设置（内部会除以 CHUNK_EDGE 转换为 chunk 坐标）
-    // chunk(1, 1, 0) = 世界(32, 32, 0)
+    // 板块位置：GameLoop 中 UpData 的 Z 固定为 0，所以这里 SetPos Z 也设为 0
+    // 避免首帧产生 Z 偏移导致所有区块被移动删除
     mChunkPlate.SetPos(
         (float)(mPlateOriginX * CHUNK_EDGE),
         (float)(mPlateOriginY * CHUNK_EDGE),
@@ -577,30 +719,30 @@ void BlockWorld::MouseRoller(int z) {
     if (Global::ClickWindow) return;
 
     mCameraDistance += z * 5.0f;
-    mCameraDistance = std::max(5.0f, std::min(mCameraDistance, 300.0f));
+    mCameraDistance = std::max(5.0f, std::min(mCameraDistance, 500.0f));
     UpdateCamera();
 }
 
 void BlockWorld::KeyDown(GameKeyEnum moveDirection) {
     float moveSpeed = 20.0f * TOOL::FPStime;
 
-    // 根据相机朝向（yaw）计算 XY 平面的移动方向
+    // 根据相机朝向（yaw）计算 XZ 水平面的移动方向
     float yawRad = glm::radians(mCameraYaw);
-    glm::vec3 forwardXY(sin(yawRad), cos(yawRad), 0.0f);
-    glm::vec3 rightXY(cos(yawRad), -sin(yawRad), 0.0f);
+    glm::vec3 forward(sin(yawRad), 0.0f, cos(yawRad));     // 相机前方（XZ 平面）
+    glm::vec3 right(cos(yawRad), 0.0f, -sin(yawRad));      // 相机右方（XZ 平面）
 
     switch (moveDirection) {
     case GameKeyEnum::MOVE_LEFT:
-        mCameraTarget -= rightXY * moveSpeed;
+        mCameraTarget -= right * moveSpeed;
         break;
     case GameKeyEnum::MOVE_RIGHT:
-        mCameraTarget += rightXY * moveSpeed;
+        mCameraTarget += right * moveSpeed;
         break;
     case GameKeyEnum::MOVE_FRONT:
-        mCameraTarget += forwardXY * moveSpeed;
+        mCameraTarget += forward * moveSpeed;
         break;
     case GameKeyEnum::MOVE_BACK:
-        mCameraTarget -= forwardXY * moveSpeed;
+        mCameraTarget -= forward * moveSpeed;
         break;
     case GameKeyEnum::ESC:
         if (Global::ConsoleBool) {
@@ -647,6 +789,7 @@ void BlockWorld::GameLoop(unsigned int mCurrentFrame) {
     // 更新 Camera 变换矩阵到 GPU
     VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[mCurrentFrame]->getPersistentMappedPtr();
     mVPMatrices->mViewMatrix = mCamera->getViewMatrix();
+    mVPMatrices->mProjectionMatrix = mCamera->getProjectMatrix();
 }
 
 void BlockWorld::GameRecordCommandBuffers() {
@@ -660,7 +803,7 @@ void BlockWorld::GameTCPLoop() {
 }
 
 void BlockWorld::GameUI() {
-    ImGui::Begin(u8"Minecraft 风格区块世界 (FastNoiseLite)");
+    ImGui::Begin(u8"BlockWorld 高级地形生成 v2 (FastNoiseLite)");
     ImVec2 window_pos = ImGui::GetWindowPos();
     ImVec2 window_size = ImGui::GetWindowSize();
     if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
@@ -676,18 +819,15 @@ void BlockWorld::GameUI() {
     ImGui::Text(u8"区块网格: %dx%dx%d", CHUNK_COUNT_X, CHUNK_COUNT_Y, CHUNK_COUNT_Z);
     ImGui::Text(u8"区块大小: %dx%dx%d", (int)ChunkData::CHUNK_SIZE,
                (int)ChunkData::CHUNK_SIZE, (int)ChunkData::CHUNK_SIZE);
-    ImGui::Text(u8"板块中心 (chunk): (%d, %d, %d)",
-               mChunkPlate.GetPosX(), mChunkPlate.GetPosY(), mChunkPlate.GetPosZ());
-    ImGui::Text(u8"海平面高度: %d", ChunkData::WATER_LEVEL);
-    ImGui::Text(u8"地形高度范围: ~3-75 (跨3个Z层)");
 
     ImGui::Separator();
-    ImGui::Text(u8"噪声层 (FastNoiseLite):");
-    ImGui::BulletText("大陆噪声: OpenSimplex2 fBm, 频率 0.015");
-    ImGui::BulletText("丘陵噪声: OpenSimplex2S fBm, 频率 0.04");
-    ImGui::BulletText("细节噪声: Perlin 3D, 频率 0.04 (打破分层)");
-    ImGui::BulletText("洞穴噪声: Cellular 3D, 频率 0.06");
-    ImGui::BulletText("侵蚀噪声: OpenSimplex2, 频率 0.01");
+    ImGui::Text(u8"===== 地形生成系统 =====");
+    ImGui::Text(u8"密度场: Spline (大陆度→高度) + 山脊 + 3D 噪声");
+    ImGui::Text(u8"生物群系: 温度+湿度+大陆度+侵蚀度+奇异性 → 18种群系");
+    ImGui::Text(u8"洞穴: Domain Warping + Cheese/Spaghetti/Noodle/Ravine 四层");
+    ImGui::Text(u8"含水层: 3D噪声驱动局部水位 + 隔水层");
+    ImGui::Text(u8"河流: 2D噪声过零点检测 + 地形侵蚀 + 水填充");
+    ImGui::Text(u8"植被: 群系驱动 橡树/云杉/仙人掌");
 
     ImGui::Separator();
     ImGui::Text(u8"操作说明:");

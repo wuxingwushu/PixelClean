@@ -13,13 +13,13 @@
 namespace GAME {
 
 // 区块网格配置
-constexpr unsigned int CHUNK_COUNT_X = 3;
-constexpr unsigned int CHUNK_COUNT_Y = 3;
-constexpr unsigned int CHUNK_COUNT_Z = 3;
+constexpr unsigned int CHUNK_COUNT_X = 5;
+constexpr unsigned int CHUNK_COUNT_Y = 5;
+constexpr unsigned int CHUNK_COUNT_Z = 5;
 constexpr unsigned int CHUNK_EDGE = ChunkData::CHUNK_SIZE;
-constexpr unsigned int CHUNK_ORIGIN_X = 1;
-constexpr unsigned int CHUNK_ORIGIN_Y = 1;
-constexpr unsigned int CHUNK_ORIGIN_Z = 0;
+constexpr unsigned int CHUNK_ORIGIN_X = 2;
+constexpr unsigned int CHUNK_ORIGIN_Y = 2;
+constexpr unsigned int CHUNK_ORIGIN_Z = 2;
 
 // 顶点类型别名
 using BlockVertex = VulKan::AuxiliaryLineSpot;
@@ -93,12 +93,37 @@ private:
     // 相机控制
     void UpdateCamera();
 
-    // === 噪声生成器 ===
-    FastNoiseLite* mContinentalNoise = nullptr;
-    FastNoiseLite* mHillsNoise = nullptr;
-    FastNoiseLite* mDetailNoise = nullptr;
-    FastNoiseLite* mCaveNoise = nullptr;
-    FastNoiseLite* mErosionNoise = nullptr;
+    // === 基础噪声 (2D) ===
+    FastNoiseLite* mContinentalNoise = nullptr;   // 大陆度
+    FastNoiseLite* mErosionNoise = nullptr;       // 侵蚀度
+    FastNoiseLite* mDetailNoise = nullptr;        // 细节/扰动 (3D)
+
+    // === 密度场噪声 (3D) ===
+    FastNoiseLite* mDensityNoise1 = nullptr;
+    FastNoiseLite* mDensityNoise2 = nullptr;
+    FastNoiseLite* mDensityNoise3 = nullptr;
+    FastNoiseLite* mRidgeNoise = nullptr;          // 山脊 (2D)
+
+    // === 群系噪声 (2D) ===
+    FastNoiseLite* mTemperatureNoise = nullptr;
+    FastNoiseLite* mHumidityNoise = nullptr;
+    FastNoiseLite* mWeirdnessNoise = nullptr;
+
+    // === 洞穴噪声 ===
+    FastNoiseLite* mCheeseCaveNoise = nullptr;     // 奶酪洞穴 (3D)
+    FastNoiseLite* mSpaghettiCaveNoise = nullptr;  // 面条洞穴 (3D)
+    FastNoiseLite* mNoodleCaveNoise = nullptr;     // 细面条洞穴 (3D)
+    FastNoiseLite* mCaveWarpX = nullptr;           // 域扭曲 X (3D)
+    FastNoiseLite* mCaveWarpY = nullptr;           // 域扭曲 Y (3D)
+    FastNoiseLite* mCaveWarpZ = nullptr;           // 域扭曲 Z (3D)
+    FastNoiseLite* mRavineNoise = nullptr;         // 裂谷 (2D)
+
+    // === 含水层噪声 ===
+    FastNoiseLite* mAquiferNoise = nullptr;        // 含水层 (3D)
+    FastNoiseLite* mAquiferBarrierNoise = nullptr; // 隔水层 (3D)
+
+    // === 河流噪声 ===
+    FastNoiseLite* mRiverNoise = nullptr;          // 河流 (2D)
 
     // === 区块管理 ===
     using ChunkKey = std::tuple<int, int, int>;

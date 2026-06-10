@@ -518,6 +518,23 @@ namespace GAME
 						mAuxiliaryVision->Spot({i->pos + angleMat.Rotary(i->OutlineSet[d]), 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OutlineColor));
 					}
 				}
+				// 辅助显示最大外骨骼点质心
+				if (PhysicsBlock::Auxiliary_MaxOutlineCentreMassBool)
+				{
+					PhysicsBlock::AngleMat angleMat(i->angle);
+					for (size_t d = 0; d < i->OutlineSize; ++d)
+					{
+						mAuxiliaryVision->Spot({i->pos + angleMat.Rotary(i->MaxOutlineCentreMass[d]), 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_MaxOutlineCentreMassColor));
+					}
+				}
+				if (PhysicsBlock::Auxiliary_MaxOutlineCentreMassBool & PhysicsBlock::Auxiliary_OutlineBool) 
+				{
+					PhysicsBlock::AngleMat angleMat(i->angle);
+					for (size_t d = 0; d < i->OutlineSize; ++d)
+					{
+						mAuxiliaryVision->Line({i->pos + angleMat.Rotary(i->MaxOutlineCentreMass[d]), 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + angleMat.Rotary(i->OutlineSet[d]), 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
+					}
+				}
 			}
 		}
 		// 渲染物理点

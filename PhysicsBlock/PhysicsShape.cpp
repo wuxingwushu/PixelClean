@@ -195,7 +195,7 @@ namespace PhysicsBlock
         {
             UpdateInfo();
         }
-        UpdateOutline(CentreMass);
+        UpdateMinOutline(CentreMass);
         UpdateCollisionR();
     }
 

@@ -16,7 +16,10 @@ namespace PhysicsBlock
          * @brief 轮廓点集合
          * @details 存储轮廓点的坐标
          */
-        Vec2_ *OutlineSet;       
+        Vec2_ *OutlineSet;
+        
+        // 轮廓点对应最大贪婪网格的中间位置
+        Vec2_ *MaxOutlineCentreMass;
         
         /**
          * @brief 轮廓点对应摩擦力集合
@@ -77,6 +80,13 @@ namespace PhysicsBlock
          */
         void UpdateLightweightOutline(Vec2_ CentreMass_);
 
+        /**
+         * @brief 更新外轮廓点集合（最小版）
+         * @param CentreMass_ 质心位置
+         * @details 遍历所有网格，计算最小版的外轮廓点（减少点数），并将轮廓点坐标转换为相对于质心的坐标
+         */
+        void UpdateMinOutline(Vec2_ CentreMass_);
+
     private:
         /**
          * @brief 外轮廓处理单元（完整版）
@@ -93,6 +103,24 @@ namespace PhysicsBlock
          * @details 检查指定格子的四个角是否为轮廓点（更严格的条件），如果是则添加到轮廓集合中
          */
         void LightweightOutlineUnit(int x, int y);
+
+        /**
+         * @brief 外轮廓处理单元（最小版）
+         * @param x 格子坐标x
+         * @param y 格子坐标y
+         * @details 检查指定格子的四个角是否为轮廓点（更严格的条件），如果是则添加到轮廓集合中
+         */
+        void MinOutlineUnit(int x, int y);
+
+        /**
+         * @brief 计算最大贪婪网格的中间位置
+         * @param x 格子坐标x
+         * @param y 格子坐标y
+         * @return 最大贪婪网格的中间位置
+         * @details 计算包含指定格子的最大贪婪网格的中间位置，用于更新 MaxOutlineCentreMass
+         */
+        Vec2_ MaxOutlineCentre(int x, int y);
+        
     };
 
 }

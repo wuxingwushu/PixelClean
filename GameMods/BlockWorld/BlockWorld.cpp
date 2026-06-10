@@ -19,7 +19,7 @@ void BlockWorld::OnChunkGenerate(int /*mT*/, int x, int y, int z, void* Data) {
     BlockWorld* self = (BlockWorld*)Data;
     if (!self) return;
 
-    auto key = std::make_tuple(x, y, z);
+    auto key = ChunkKeyPack(x, y, z);
     if (self->mChunkMap.find(key) != self->mChunkMap.end()) {
         return;
     }
@@ -63,7 +63,7 @@ void BlockWorld::OnChunkGenerate(int /*mT*/, int x, int y, int z, void* Data) {
     );
 
     self->mChunkMap[key] = chunk;
-    self->mVertexDataDirty = true;
+    self->MarkChunkDirty(x, y, z);  // 自身 + 6 邻居标记脏
 
     LOGD("BlockWorld: Chunk generated at (%d, %d, %d)", x, y, z);
 }
@@ -92,7 +92,7 @@ int BlockWorld::GetBlockAtWorld(int wx, int wy, int wz) {
         chunkZ = (wz - ChunkData::CHUNK_SIZE + 1) / (int)ChunkData::CHUNK_SIZE;
     }
 
-    auto it = mChunkMap.find(std::make_tuple(chunkX, chunkY, chunkZ));
+    auto it = mChunkMap.find(ChunkKeyPack(chunkX, chunkY, chunkZ));
     if (it == mChunkMap.end()) {
         return 0;
     }
@@ -104,16 +104,80 @@ int BlockWorld::GetBlockAtWorld(int wx, int wy, int wz) {
     return it->second->get(localX, localY, localZ);
 }
 
+// ============================================================================
+// ChunkFlatLookup 实现 (O3: 快速邻居查询)
+// ============================================================================
+
+void ChunkFlatLookup::build(
+    const std::unordered_map<int64_t, ChunkData*, ChunkKeyHash>& chunkMap,
+    int platePosX, int platePosY, int platePosZ,
+    unsigned int plateOriginX, unsigned int plateOriginY, unsigned int plateOriginZ)
+{
+    std::memset(grid, 0, sizeof(grid));
+
+    originWorldX = platePosX - (int)plateOriginX;
+    originWorldY = platePosY - (int)plateOriginY;
+    originWorldZ = platePosZ - (int)plateOriginZ;
+
+    for (auto& pair : chunkMap) {
+        int cx, cy, cz;
+        ChunkKeyUnpack(pair.first, cx, cy, cz);
+
+        int ix = cx - originWorldX;
+        int iy = cy - originWorldY;
+        int iz = cz - originWorldZ;
+
+        if (ix >= 0 && ix < CX && iy >= 0 && iy < CY && iz >= 0 && iz < CZ) {
+            grid[ix][iy][iz] = pair.second;
+        }
+    }
+}
+
+// ============================================================================
+// 区块脏标记（增量顶点更新 — 方案 B + C）
+// ============================================================================
+
+void BlockWorld::MarkChunkDirty(ChunkData* chunk) {
+    if (!chunk) return;
+    MarkChunkDirty(chunk->worldX, chunk->worldY, chunk->worldZ);
+}
+
+void BlockWorld::MarkChunkDirty(int cx, int cy, int cz) {
+    static const int neighbors[7][3] = {
+        { 0,  0,  0},   // 自身
+        {+1,  0,  0}, {-1,  0,  0},  // ±X
+        { 0, +1,  0}, { 0, -1,  0},  // ±Y
+        { 0,  0, +1}, { 0,  0, -1},  // ±Z
+    };
+
+    for (int i = 0; i < 7; i++) {
+        int nx = cx + neighbors[i][0];
+        int ny = cy + neighbors[i][1];
+        int nz = cz + neighbors[i][2];
+        auto it = mChunkMap.find(ChunkKeyPack(nx, ny, nz));
+        if (it != mChunkMap.end()) {
+            it->second->vertexDirty = true;
+        }
+    }
+    mVertexDataDirty = true;
+}
+
+void BlockWorld::InvalidateAllChunkVertices() {
+    for (auto& pair : mChunkMap) {
+        pair.second->vertexDirty = true;
+    }
+    mVertexDataDirty = true;
+}
+
 void BlockWorld::CleanupOutOfRangeChunks() {
-    std::vector<std::tuple<int, int, int>> toRemove;
+    std::vector<ChunkKey> toRemove;
     int platePosX = mChunkPlate.GetPosX();
     int platePosY = mChunkPlate.GetPosY();
     int platePosZ = mChunkPlate.GetPosZ();
 
     for (auto& pair : mChunkMap) {
-        int cx = std::get<0>(pair.first);
-        int cy = std::get<1>(pair.first);
-        int cz = std::get<2>(pair.first);
+        int cx, cy, cz;
+        ChunkKeyUnpack(pair.first, cx, cy, cz);
 
         int relX = cx - platePosX + (int)mPlateOriginX;
         int relY = cy - platePosY + (int)mPlateOriginY;
@@ -127,13 +191,21 @@ void BlockWorld::CleanupOutOfRangeChunks() {
     }
 
     if (!toRemove.empty()) {
+        // 先标记脏：被删区块的邻居需要重建边界顶点
+        for (auto& key : toRemove) {
+            int kx, ky, kz;
+            ChunkKeyUnpack(key, kx, ky, kz);
+            MarkChunkDirty(kx, ky, kz);
+        }
+        // 再删除
         for (auto& key : toRemove) {
             delete mChunkMap[key];
             mChunkMap.erase(key);
-            LOGD("BlockWorld: Chunk removed at (%d, %d, %d)",
-                 std::get<0>(key), std::get<1>(key), std::get<2>(key));
+            int kx, ky, kz;
+            ChunkKeyUnpack(key, kx, ky, kz);
+            LOGD("BlockWorld: Chunk removed at (%d, %d, %d)", kx, ky, kz);
         }
-        mVertexDataDirty = true;
+        // mVertexDataDirty 已在 MarkChunkDirty 中设置
     }
 }
 
@@ -266,34 +338,95 @@ void BlockWorld::BuildChunkVertices(ChunkData* chunk, std::vector<BlockVertex>& 
     }
 }
 
-void BlockWorld::RebuildAllVertexData() {
-    LOGD("BlockWorld: RebuildAllVertexData, chunks=%zu", mChunkMap.size());
+// O3: 快速版 BuildChunkVertices — 使用 ChunkFlatLookup 替代 GetBlockAtWorld
+void BlockWorld::BuildChunkVertices(ChunkData* chunk, std::vector<BlockVertex>& out,
+                                    const ChunkFlatLookup& lookup) {
+    if (!chunk || !chunk->generated) return;
 
-    std::vector<BlockVertex> vertices;
-    vertices.reserve(mVertexCapacity);
+    const int CS = ChunkData::CHUNK_SIZE;
+    int baseX = chunk->worldX * CS;
+    int baseY = chunk->worldY * CS;
+    int baseZ = chunk->worldZ * CS;
+
+    for (int x = 0; x < CS; x++) {
+        for (int y = 0; y < CS; y++) {
+            for (int z = 0; z < CS; z++) {
+                int blockType = chunk->get(x, y, z);
+                if (blockType == (int)BlockType::Air) continue;
+
+                int wx = baseX + x;
+                int wy = baseY + y;
+                int wz = baseZ + z;
+
+                bool isWater = (blockType == (int)BlockType::Water);
+
+                // 使用 ChunkFlatLookup 替代 GetBlockAtWorld
+                auto shouldRender = [&](int lx, int ly, int lz, int wnx, int wny, int wnz) -> bool {
+                    if (isWater) {
+                        return lookup.getBlockAt(wnx, wny, wnz) == (int)BlockType::Air;
+                    } else {
+                        return !chunk->isSolid(lx, ly, lz) &&
+                               lookup.getBlockAt(wnx, wny, wnz) == (int)BlockType::Air;
+                    }
+                };
+
+                if (shouldRender(x, y, z + 1, wx, wy, wz + 1))
+                    BuildBlockFaceVertices(wx, wy, wz, 0, blockType, out);
+                if (shouldRender(x, y, z - 1, wx, wy, wz - 1))
+                    BuildBlockFaceVertices(wx, wy, wz, 1, blockType, out);
+                if (shouldRender(x - 1, y, z, wx - 1, wy, wz))
+                    BuildBlockFaceVertices(wx, wy, wz, 2, blockType, out);
+                if (shouldRender(x + 1, y, z, wx + 1, wy, wz))
+                    BuildBlockFaceVertices(wx, wy, wz, 3, blockType, out);
+                if (shouldRender(x, y - 1, z, wx, wy - 1, wz))
+                    BuildBlockFaceVertices(wx, wy, wz, 4, blockType, out);
+                if (shouldRender(x, y + 1, z, wx, wy + 1, wz))
+                    BuildBlockFaceVertices(wx, wy, wz, 5, blockType, out);
+            }
+        }
+    }
+}
+
+void BlockWorld::RebuildAllVertexData() {
+    LOGD("BlockWorld: RebuildAllVertexData (incremental), chunks=%zu", mChunkMap.size());
 
     auto start = std::chrono::high_resolution_clock::now();
 
+    // ====== 阶段 0: 构建快速查找表（O(N), N=125） ======
+    ChunkFlatLookup chunkLookup;
+    chunkLookup.build(mChunkMap,
+                      mChunkPlate.GetPosX(), mChunkPlate.GetPosY(), mChunkPlate.GetPosZ(),
+                      mPlateOriginX, mPlateOriginY, mPlateOriginZ);
+
+    // ====== 阶段 1: 增量重建脏区块 ======
+    unsigned int dirtyCount = 0;
+    unsigned int totalVertexCount = 0;
+
     for (auto& pair : mChunkMap) {
-        BuildChunkVertices(pair.second, vertices);
+        ChunkData* chunk = pair.second;
+
+        if (chunk->vertexDirty) {
+            dirtyCount++;
+            // 重建顶点到该区块的独立缓存（使用快速 lookup）
+            chunk->cachedVertices.clear();
+            BuildChunkVertices(chunk, chunk->cachedVertices, chunkLookup);
+            chunk->vertexDirty = false;
+        }
+
+        // 累加总顶点数（用于容量检查和偏移计算）
+        totalVertexCount += (unsigned int)chunk->cachedVertices.size();
     }
 
-    mVertexCount = vertices.size();
-    LOGD("BlockWorld: vertex count = %u (capacity %u)", mVertexCount, mVertexCapacity);
+    LOGD("BlockWorld: %u/%zu chunks rebuilt (incremental)", dirtyCount, mChunkMap.size());
 
-    if (vertices.empty()) {
-        mVertexDataDirty = false;
-        return;
-    }
-
-    // 处理容量超出
-    if (vertices.size() > mVertexCapacity) {
-        LOGW("BlockWorld: vertex count exceeds capacity (%zu > %u), expanding",
-             vertices.size(), mVertexCapacity);
-        mVertexCapacity = (unsigned int)(vertices.size() * 2 + 1000000);
+    // ====== 阶段 2: 容量检查与扩容 ======
+    if (totalVertexCount > mVertexCapacity) {
+        LOGW("BlockWorld: vertex count exceeds capacity (%u > %u), expanding",
+             totalVertexCount, mVertexCapacity);
+        mVertexCapacity = totalVertexCount * 2 + 1000000;
         DestroyBlockWorldVulkanResources();
 
-        // 手动重新分配资源，避免递归调用
+        // 手动重新分配资源
         mVertexBuffer = new VulKan::Buffer(
             mDevice,
             mVertexCapacity * sizeof(BlockVertex),
@@ -326,14 +459,39 @@ void BlockWorld::RebuildAllVertexData() {
         }
     }
 
+    // ====== 阶段 3: 拼接所有区块缓存为单一顶点数组 ======
+    if (totalVertexCount == 0) {
+        mVertexCount = 0;
+        mVertexDataDirty = false;
+        return;
+    }
+
+    std::vector<BlockVertex> merged;
+    merged.reserve(totalVertexCount);
+
+    for (auto& pair : mChunkMap) {
+        ChunkData* chunk = pair.second;
+        if (!chunk->cachedVertices.empty()) {
+            chunk->cachedVertexOffset = (unsigned int)merged.size();
+            merged.insert(merged.end(),
+                          chunk->cachedVertices.begin(),
+                          chunk->cachedVertices.end());
+        } else {
+            chunk->cachedVertexOffset = 0;
+        }
+    }
+
+    mVertexCount = (unsigned int)merged.size();
+
     if (mVertexBuffer) {
-        mVertexBuffer->updateBufferByStage(vertices.data(),
-            vertices.size() * sizeof(BlockVertex));
+        mVertexBuffer->updateBufferByStage(merged.data(),
+            merged.size() * sizeof(BlockVertex));
     }
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    LOGD("BlockWorld: Rebuild done in %lld ms", (long long)duration.count());
+    LOGD("BlockWorld: Incremental rebuild done in %lld ms (dirty=%u, vertices=%u)",
+         (long long)duration.count(), dirtyCount, mVertexCount);
 
     mVertexDataDirty = false;
 }

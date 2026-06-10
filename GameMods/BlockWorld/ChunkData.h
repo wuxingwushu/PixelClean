@@ -84,9 +84,15 @@ struct ChunkData {
 
     int blocks[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE]{};
 
+    // === 顶点增量更新缓存 ===
+    bool vertexDirty = true;                     // 顶点需要重建标记
+    std::vector<BlockVertex> cachedVertices;     // 缓存的顶点数据
+    unsigned int cachedVertexOffset = 0;         // 在大缓冲中的偏移（顶点数，用于拼接）
+
     ChunkData(int wx, int wy, int wz)
         : worldX(wx), worldY(wy), worldZ(wz) {
         std::memset(blocks, 0, sizeof(blocks));
+        cachedVertices.reserve(20000);  // 预分配减少 realloc
     }
 
     int get(int x, int y, int z) const {
@@ -336,22 +342,41 @@ struct ChunkData {
             }
         }
 
-        // ====== Pass 3: 含水层填充 ======
+        // ====== Pass 3: 统一表层水填充（全球海平面） ======
+        // 所有低于 WATER_LEVEL 的空气方块统一填充为水
+        // 这保证了同一区域（甚至全局）水面高度统一
         for (unsigned int x = 0; x < CHUNK_SIZE; x++) {
             for (unsigned int z = 0; z < CHUNK_SIZE; z++) {
+                for (unsigned int y = 0; y < CHUNK_SIZE; y++) {
+                    int& bt = blocks[x][y][z];
+                    if (bt != (int)BlockType::Air) continue;
+                    int worldY = baseWorldY + (int)y;
+                    if (worldY <= WATER_LEVEL) {
+                        bt = (int)BlockType::Water;
+                    }
+                }
+            }
+        }
+
+        // ====== Pass 4: 含水层填充（仅地表以下、海平面以上的洞穴水体） ======
+        for (unsigned int x = 0; x < CHUNK_SIZE; x++) {
+            for (unsigned int z = 0; z < CHUNK_SIZE; z++) {
+                float terrainSurface = erodedHeightCache[x][z];
                 for (unsigned int y = 0; y < CHUNK_SIZE; y++) {
                     int& bt = blocks[x][y][z];
                     if (bt != (int)BlockType::Air) continue;
                     float wx = (float)(baseWorldX + (int)x);
                     float wy = (float)(baseWorldY + (int)y);
                     float wz = (float)(baseWorldZ + (int)z);
+                    // 仅在地表以下（地下洞穴）才填充含水层
+                    if (wy >= terrainSurface) continue;
                     fillAquifers(wx, wy, wz, aquiferNoise, aquiferBarrierNoise,
                                  continentalNoise, bt);
                 }
             }
         }
 
-        // ====== Pass 4: 河流水填充 ======
+        // ====== Pass 5: 河流水填充 ======
         for (unsigned int x = 0; x < CHUNK_SIZE; x++) {
             for (unsigned int z = 0; z < CHUNK_SIZE; z++) {
                 float wx = (float)(baseWorldX + (int)x);
@@ -370,18 +395,23 @@ struct ChunkData {
             }
         }
 
-        // ====== Pass 5: 树木生成 ======
+        // ====== Pass 6: 树木生成 ======
         // 只在距离区块边界至少 3 格的位置生成，避免跨区块问题
         for (unsigned int x = 3; x < CHUNK_SIZE - 3; x++) {
             for (unsigned int z = 3; z < CHUNK_SIZE - 3; z++) {
-                // 找地表 Y
+                // 找地表 Y：从上往下扫描，找到第一个非空气、非水、非树木类方块
+                // 跳过树木类方块（Log/Leaves/Cactus），避免在已有的树上再堆树
                 int surfaceY = -1;
                 for (int y = CS - 1; y >= 0; y--) {
                     int bt = blocks[x][y][z];
-                    if (bt != (int)BlockType::Air && bt != (int)BlockType::Water) {
-                        surfaceY = y;
-                        break;
+                    if (bt == (int)BlockType::Air || bt == (int)BlockType::Water
+                        || bt == (int)BlockType::Log
+                        || bt == (int)BlockType::Leaves
+                        || bt == (int)BlockType::Cactus) {
+                        continue;
                     }
+                    surfaceY = y;
+                    break;
                 }
                 if (surfaceY < 0) continue;
 

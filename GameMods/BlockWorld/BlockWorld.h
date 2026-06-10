@@ -4,6 +4,10 @@
 #include "../GameMods.h"
 #include "../../Tool/MovePlate.h"
 #include "../../VulkanTool/AuxiliaryVision.h"
+
+// 顶点类型别名（必须在 ChunkData.h 之前定义，因为 ChunkData 的缓存依赖此类型）
+using BlockVertex = VulKan::AuxiliaryLineSpot;
+
 #include "ChunkData.h"
 #include <glm/glm.hpp>
 #include <unordered_map>
@@ -21,15 +25,74 @@ constexpr unsigned int CHUNK_ORIGIN_X = 2;
 constexpr unsigned int CHUNK_ORIGIN_Y = 2;
 constexpr unsigned int CHUNK_ORIGIN_Z = 2;
 
-// 顶点类型别名
-using BlockVertex = VulKan::AuxiliaryLineSpot;
+// O6: ChunkKey = int64 打包三个坐标（每个坐标 21-bit，足够覆盖 ±1e6 chunk ≈ ±3e7 方块）
+// 21 × 3 = 63 < 64 bits，刚好放下
+inline constexpr int64_t ChunkKeyPack(int x, int y, int z) {
+    // 将 x/y/z 符号扩展到 21 位并打包
+    // shift to non-negative: add 1<<20, 范围 [0, 2^21-1]
+    uint64_t ux = (uint64_t)(x + (1 << 20));
+    uint64_t uy = (uint64_t)(y + (1 << 20));
+    uint64_t uz = (uint64_t)(z + (1 << 20));
+    return (int64_t)((ux << 42) | (uy << 21) | uz);
+}
 
-// chunk map 的哈希函数（必须在 BlockWorld 类之前完整定义）
+inline constexpr void ChunkKeyUnpack(int64_t key, int& x, int& y, int& z) {
+    uint64_t u = (uint64_t)key;
+    uint64_t ux = (u >> 42) & ((1ULL << 21) - 1);
+    uint64_t uy = (u >> 21) & ((1ULL << 21) - 1);
+    uint64_t uz = u & ((1ULL << 21) - 1);
+    x = (int)ux - (1 << 20);
+    y = (int)uy - (1 << 20);
+    z = (int)uz - (1 << 20);
+}
+
 struct ChunkKeyHash {
-    size_t operator()(const std::tuple<int, int, int>& key) const {
-        return std::get<0>(key) * 73856093
-             ^ std::get<1>(key) * 19349663
-             ^ std::get<2>(key) * 83492791;
+    size_t operator()(int64_t key) const {
+        // 直接使用打包好的 int64 作为哈希值，已经混合了三个坐标
+        return (size_t)key;
+    }
+};
+
+// 顶点构建期间的快速邻居查询表 (5x5x5)
+struct ChunkFlatLookup {
+    static constexpr int CX = (int)CHUNK_COUNT_X;  // 5
+    static constexpr int CY = (int)CHUNK_COUNT_Y;  // 5
+    static constexpr int CZ = (int)CHUNK_COUNT_Z;  // 5
+    static constexpr int CS = (int)ChunkData::CHUNK_SIZE;  // 32
+
+    ChunkData* grid[CX][CY][CZ]{};
+    int originWorldX = 0;
+    int originWorldY = 0;
+    int originWorldZ = 0;
+
+    void build(
+        const std::unordered_map<int64_t, ChunkData*, ChunkKeyHash>& chunkMap,
+        int platePosX, int platePosY, int platePosZ,
+        unsigned int plateOriginX, unsigned int plateOriginY, unsigned int plateOriginZ);
+
+    inline int getBlockAt(int wx, int wy, int wz) const {
+        int cx = wx / CS;
+        int cy = wy / CS;
+        int cz = wz / CS;
+
+        if (wx < 0) cx = (wx - CS + 1) / CS;
+        if (wy < 0) cy = (wy - CS + 1) / CS;
+        if (wz < 0) cz = (wz - CS + 1) / CS;
+
+        int ix = cx - originWorldX;
+        int iy = cy - originWorldY;
+        int iz = cz - originWorldZ;
+
+        if (ix < 0 || ix >= CX || iy < 0 || iy >= CY || iz < 0 || iz >= CZ)
+            return (int)BlockType::Air;
+
+        ChunkData* chunk = grid[ix][iy][iz];
+        if (!chunk) return (int)BlockType::Air;
+
+        int lx = wx - cx * CS;
+        int ly = wy - cy * CS;
+        int lz = wz - cz * CS;
+        return chunk->get(lx, ly, lz);
     }
 };
 
@@ -77,11 +140,18 @@ private:
     int GetBlockAtWorld(int wx, int wy, int wz);
     void CleanupOutOfRangeChunks();
 
+    // 区块管理（增量顶点更新）
+    void MarkChunkDirty(ChunkData* chunk);
+    void MarkChunkDirty(int cx, int cy, int cz);
+    void InvalidateAllChunkVertices();
+
     // 顶点构建
     void BuildBlockFaceVertices(
         int wx, int wy, int wz, int face, int blockType,
         std::vector<BlockVertex>& out);
     void BuildChunkVertices(ChunkData* chunk, std::vector<BlockVertex>& out);
+    void BuildChunkVertices(ChunkData* chunk, std::vector<BlockVertex>& out,
+                            const ChunkFlatLookup& lookup);  // O3: 快速版
     void RebuildAllVertexData();
 
     // 渲染管线
@@ -126,7 +196,7 @@ private:
     FastNoiseLite* mRiverNoise = nullptr;          // 河流 (2D)
 
     // === 区块管理 ===
-    using ChunkKey = std::tuple<int, int, int>;
+    using ChunkKey = int64_t;  // O6: 打包坐标 int64 替代 std::tuple
     std::unordered_map<ChunkKey, ChunkData*, ChunkKeyHash> mChunkMap;
     MovePlate3D<int> mChunkPlate;
     unsigned int mPlateOriginX;

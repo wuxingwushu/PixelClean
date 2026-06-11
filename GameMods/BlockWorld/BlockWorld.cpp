@@ -19,53 +19,30 @@ void BlockWorld::OnChunkGenerate(int /*mT*/, int x, int y, int z, void* Data) {
     BlockWorld* self = (BlockWorld*)Data;
     if (!self) return;
 
+    // 检查是否已存在（快速路径，避免无谓的队列操作）
     auto key = ChunkKeyPack(x, y, z);
     if (self->mChunkMap.find(key) != self->mChunkMap.end()) {
         return;
     }
 
-    ChunkData* chunk = new ChunkData(x, y, z);
-
-    chunk->generateTerrain(
-        // 基础噪声
-        self->mContinentalNoise,
-        self->mErosionNoise,
-        self->mDetailNoise,
-
-        // 密度场噪声 (3D)
-        self->mDensityNoise1,
-        self->mDensityNoise2,
-        self->mDensityNoise3,
-        self->mRidgeNoise,
-
-        // 群系噪声 (2D)
-        self->mTemperatureNoise,
-        self->mHumidityNoise,
-        self->mWeirdnessNoise,
-
-        // 洞穴噪声
-        self->mCheeseCaveNoise,
-        self->mSpaghettiCaveNoise,
-        self->mNoodleCaveNoise,
-        self->mCaveWarpX,
-        self->mCaveWarpY,
-        self->mCaveWarpZ,
-        self->mRavineNoise,
-
-        // 含水层噪声
-        self->mAquiferNoise,
-        self->mAquiferBarrierNoise,
-
-        // 河流噪声
-        self->mRiverNoise,
-
-        0
-    );
-
-    self->mChunkMap[key] = chunk;
-    self->MarkChunkDirty(x, y, z);  // 自身 + 6 邻居标记脏
-
-    LOGD("BlockWorld: Chunk generated at (%d, %d, %d)", x, y, z);
+    // 异步生成：请求入队后立即返回，不阻塞主线程
+    if (self->mTerrainPipeline) {
+        self->mTerrainPipeline->requestChunk(x, y, z);
+    } else {
+        // 回退：如果 Pipeline 未初始化，使用旧的同步方式
+        ChunkData* chunk = new ChunkData(x, y, z);
+        chunk->generateTerrain(
+            self->mContinentalNoise, self->mErosionNoise, self->mDetailNoise,
+            self->mDensityNoise1, self->mDensityNoise2, self->mDensityNoise3, self->mRidgeNoise,
+            self->mTemperatureNoise, self->mHumidityNoise, self->mWeirdnessNoise,
+            self->mCheeseCaveNoise, self->mSpaghettiCaveNoise, self->mNoodleCaveNoise,
+            self->mCaveWarpX, self->mCaveWarpY, self->mCaveWarpZ, self->mRavineNoise,
+            self->mAquiferNoise, self->mAquiferBarrierNoise,
+            self->mRiverNoise, 0);
+        self->mChunkMap[key] = chunk;
+        self->MarkChunkDirty(x, y, z);
+        LOGD("BlockWorld: Chunk generated (sync fallback) at (%d, %d, %d)", x, y, z);
+    }
 }
 
 void BlockWorld::OnChunkDelete(int /*mT*/, void* Data) {
@@ -770,7 +747,11 @@ BlockWorld::BlockWorld(Configuration wConfiguration)
     // 初始化渲染管线和噪声源
     InitBlockWorldPipeline();
 
-    // 初始生成所有区块
+    // ====== 初始化异步地形生成流水线 ======
+    mTerrainPipeline = std::make_unique<TerrainGenPipeline>(0); // 0 = 自动检测核心数
+    mTerrainPipeline->initialize(*this);
+
+    // ====== 初始生成所有区块 (异步请求，非阻塞) ======
     int platePosX = mChunkPlate.GetPosX();
     int platePosY = mChunkPlate.GetPosY();
     int platePosZ = mChunkPlate.GetPosZ();
@@ -780,13 +761,13 @@ BlockWorld::BlockWorld(Configuration wConfiguration)
                 int wx = (int)x + platePosX - (int)mPlateOriginX;
                 int wy = (int)y + platePosY - (int)mPlateOriginY;
                 int wz = (int)z + platePosZ - (int)mPlateOriginZ;
-                OnChunkGenerate(0, wx, wy, wz, this);
+                mTerrainPipeline->requestChunk(wx, wy, wz);
             }
         }
     }
 
-    // 一次性构建所有顶点
-    RebuildAllVertexData();
+    // 注意：不再在此处同步调用 RebuildAllVertexData()
+    // Chunk生成完成后在 GameLoop 中异步消费 + 触发顶点重建
 
     // 设置自由飞行相机的初始位置（地形中心偏上方）
     mCamera->setCameraPos(glm::vec3(80.0f, 120.0f, 80.0f));
@@ -801,8 +782,16 @@ BlockWorld::BlockWorld(Configuration wConfiguration)
 BlockWorld::~BlockWorld() {
     LOGD("BlockWorld::~BlockWorld destructor");
 
+    // 1. 先关闭异步流水线（等待所有Worker退出，避免访问已销毁的噪声实例）
+    if (mTerrainPipeline) {
+        mTerrainPipeline->shutdown();
+        mTerrainPipeline.reset();
+    }
+
+    // 2. 销毁渲染管线（清理噪声实例）
     DestroyBlockWorldPipeline();
 
+    // 3. 清理Chunk
     for (auto& pair : mChunkMap) {
         delete pair.second;
     }
@@ -956,14 +945,34 @@ void BlockWorld::GameCommandBuffers(unsigned int Format_i) {
 }
 
 void BlockWorld::GameLoop(unsigned int mCurrentFrame) {
-    // 区块板块追踪相机在 X/Z 水平面的位置 + Y 高度
+    // ====== 阶段 1: 板块追踪 ======
     glm::vec3 camPos = mCamera->getCameraPos();
     MovePlate3DInfo plateInfo = mChunkPlate.UpData(camPos.x, camPos.y, camPos.z);
 
+    // ====== 阶段 2: 消费已完成的异步Chunk ======
+    if (mTerrainPipeline) {
+        auto readyChunks = mTerrainPipeline->pollResults();
+        if (!readyChunks.empty()) {
+            for (auto& chunk : readyChunks) {
+                auto key = ChunkKeyPack(chunk->worldX, chunk->worldY, chunk->worldZ);
+                // 安全检查：不覆盖已存在的Chunk
+                if (mChunkMap.find(key) == mChunkMap.end()) {
+                    ChunkData* raw = chunk.release();
+                    mChunkMap[key] = raw;
+                    MarkChunkDirty(raw);
+                    LOGD("BlockWorld: async chunk ready at (%d,%d,%d)",
+                         raw->worldX, raw->worldY, raw->worldZ);
+                }
+            }
+        }
+    }
+
+    // ====== 阶段 3: 清理超出范围的Chunk ======
     if (plateInfo.UpData) {
         CleanupOutOfRangeChunks();
     }
 
+    // ====== 阶段 4: 脏顶点重建 ======
     if (mVertexDataDirty) {
         RebuildAllVertexData();
         // 顶点数据变化后必须重新录制二级指令缓冲
@@ -986,6 +995,14 @@ void BlockWorld::GameStopInterfaceLoop(unsigned int /*mCurrentFrame*/) {
 }
 
 void BlockWorld::GameTCPLoop() {
+}
+
+unsigned int BlockWorld::GetPendingChunks() const {
+    return mTerrainPipeline ? mTerrainPipeline->pendingCount() : 0;
+}
+
+unsigned int BlockWorld::GetActiveWorkers() const {
+    return mTerrainPipeline ? mTerrainPipeline->activeCount() : 0;
 }
 
 void BlockWorld::GameUI() {
@@ -1015,6 +1032,12 @@ void BlockWorld::GameUI() {
     ImGui::Text(u8"含水层: 3D噪声驱动局部水位 + 隔水层");
     ImGui::Text(u8"河流: 2D噪声过零点检测 + 地形侵蚀 + 水填充");
     ImGui::Text(u8"植被: 群系驱动 橡树/云杉/仙人掌");
+
+    ImGui::Separator();
+    ImGui::Text(u8"===== 异步生成状态 =====");
+    ImGui::Text(u8"等待生成: %u", GetPendingChunks());
+    ImGui::Text(u8"正在生成: %u", GetActiveWorkers());
+    ImGui::Text(u8"Worker线程: %u", mTerrainPipeline ? mTerrainPipeline->workerCount() : 0);
 
     ImGui::Separator();
     ImGui::Text(u8"操作说明:");

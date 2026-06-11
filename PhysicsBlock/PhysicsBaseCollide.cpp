@@ -174,7 +174,7 @@ namespace PhysicsBlock
             Drop = ShapeA->OutlineSet[i];
             Drop = Mat.Rotary(Drop);
             DropPos = ShapeA->pos + Drop;
-            CollisionInfoD info = ShapeB->PsBresenhamDetection(ShapeA->OldPos, DropPos);
+            CollisionInfoD info = ShapeB->PsBresenhamDetection(ShapeA->OldPos + Mat.Rotary(ShapeA->MaxOutlineCentreMass[i]), DropPos);
             if (info.Collision)
             {
                 // 计算分离距离
@@ -204,7 +204,7 @@ namespace PhysicsBlock
             Drop = ShapeB->OutlineSet[i];
             Drop = Mat.Rotary(Drop);
             DropPos = ShapeB->pos + Drop;
-            CollisionInfoD info = ShapeA->PsBresenhamDetection(ShapeB->OldPos, DropPos);
+            CollisionInfoD info = ShapeA->PsBresenhamDetection(ShapeB->OldPos + Mat.Rotary(ShapeB->MaxOutlineCentreMass[i]), DropPos);
             if (info.Collision)
             {
                 if (info.Direction & 0x1)
@@ -287,7 +287,7 @@ namespace PhysicsBlock
             Drop = Shape->OutlineSet[i];
             Drop = Mat.Rotary(Drop);
             DropPos = Shape->pos + Drop;
-            CollisionInfoD info = Map->FMBresenhamDetection(Shape->OldPos, DropPos);
+            CollisionInfoD info = Map->FMBresenhamDetection(Shape->OldPos + Mat.Rotary(Shape->MaxOutlineCentreMass[i]), DropPos);
             if (info.Collision)
             {
                 if (info.Direction & 0x1)

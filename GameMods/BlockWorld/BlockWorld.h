@@ -6,9 +6,13 @@
 #include "../../VulkanTool/AuxiliaryVision.h"
 
 // 顶点类型别名（必须在 ChunkData.h 之前定义，因为 ChunkData 的缓存依赖此类型）
+#ifndef BLOCK_VERTEX_ALIAS_DEFINED
+#define BLOCK_VERTEX_ALIAS_DEFINED
 using BlockVertex = VulKan::AuxiliaryLineSpot;
+#endif
 
 #include "ChunkData.h"
+#include "TerrainGenPipeline.h"
 #include <glm/glm.hpp>
 #include <unordered_map>
 #include <tuple>
@@ -97,6 +101,7 @@ struct ChunkFlatLookup {
 };
 
 class BlockWorld : public GameMods, Configuration {
+    friend struct ThreadNoiseSet;  // 允许 TerrainGenPipeline 克隆噪声实例
 public:
     explicit BlockWorld(Configuration wConfiguration);
     ~BlockWorld();
@@ -130,6 +135,10 @@ public:
 
     // 游戏界面
     virtual void GameUI();
+
+    // 异步流水线状态（供 UI 展示）
+    unsigned int GetPendingChunks() const;
+    unsigned int GetActiveWorkers() const;
 
 private:
     // 静态回调
@@ -202,6 +211,9 @@ private:
     unsigned int mPlateOriginX;
     unsigned int mPlateOriginY;
     unsigned int mPlateOriginZ;
+
+    // === 异步地形生成流水线（方案A+C融合） ===
+    std::unique_ptr<TerrainGenPipeline> mTerrainPipeline;
 
     // === 相机（自由飞行模式）===
     float mCameraYaw = -45.0f;

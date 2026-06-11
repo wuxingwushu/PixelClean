@@ -70,6 +70,37 @@ namespace PhysicsBlock
 		PhysicsShape1->UpdateAll();
 		PhysicsShape1->angle = 0;
 		(*myPhysicsWorld)->AddObject(PhysicsShape1);
+
+		PhysicsShape1 = new PhysicsBlock::PhysicsShape({ -2, 6 }, { 4, 4 });
+		for (size_t i = 0; i < (PhysicsShape1->width * PhysicsShape1->height); ++i)
+		{
+			PhysicsShape1->at(i).Collision = true;
+			PhysicsShape1->at(i).Entity = true;
+			PhysicsShape1->at(i).mass = 1;
+		}
+		for (size_t x = 1; x < PhysicsShape1->width - 1; ++x)
+		{
+			for (size_t y = 1; y < PhysicsShape1->height - 1; ++y)
+			{
+				PhysicsShape1->at(x, y).Collision = false;
+				PhysicsShape1->at(x, y).Entity = false;
+				PhysicsShape1->at(x, y).mass = 1;
+			}
+		}
+		PhysicsShape1->UpdateAll();
+		PhysicsShape1->angle = 3.14 / 4;
+		(*myPhysicsWorld)->AddObject(PhysicsShape1);
+
+		PhysicsBlock::PhysicsShape* PhysicsShape2 = new PhysicsBlock::PhysicsShape({ -0.5, 7.5 }, { 1, 1 });
+		for (size_t i = 0; i < (PhysicsShape2->width * PhysicsShape2->height); ++i)
+		{
+			PhysicsShape2->at(i).Collision = true;
+			PhysicsShape2->at(i).Entity = true;
+			PhysicsShape2->at(i).mass = 1;
+		}
+		PhysicsShape2->UpdateAll();
+		PhysicsShape2->angle = 0;
+		(*myPhysicsWorld)->AddObject(PhysicsShape2);
 	}
 
 	void PhysicsDemo1(PhysicsWorld **myPhysicsWorld, Camera *mCamera)

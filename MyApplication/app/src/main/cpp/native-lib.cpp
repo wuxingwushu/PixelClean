@@ -51,6 +51,7 @@ enum AndroidKeyCode {
     AKC_KEY_2         = 3,   // 数字键 2（游戏自定义功能，各 Mode 可复用）
     AKC_SPACE         = 4,   // 空格键（跳跃 / 确认 / 交互等通用操作）
     AKC_TOGGLE_MOUSE  = 5,   // 切换鼠标模式（指针锁定 / 释放切换）
+    AKC_SHIFT         = 6,   // Shift键（下降 / 潜行等）
 };
 
 // ----------------------------------------------------------------------------
@@ -410,6 +411,9 @@ Java_com_pixelclean_MainActivity_nativeKeyRequest(
             break;
         case AKC_TOGGLE_MOUSE:
             Global::AndroidRequestToggleMouse = true;
+            break;
+        case AKC_SHIFT:
+            Global::AndroidRequestMoveDown = true;
             break;
         default:
             LOGW("nativeKeyRequest: unknown keyCode %d", keyCode);

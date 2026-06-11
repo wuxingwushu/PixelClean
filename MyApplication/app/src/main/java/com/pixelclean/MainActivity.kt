@@ -828,6 +828,20 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 showJoystick = false,
                 buttons = emptyList()
             ),
+            GameModeId.WFCTest to ModeConfig(     // WFC 测试模式
+                showJoystick = false,
+                buttons = emptyList()
+            ),
+            GameModeId.BlockWorld to ModeConfig(  // 区块世界模式（飞行探索）
+                showJoystick = true,
+                buttons = listOf(
+                    ButtonSpec("↑", 4, Color.argb(120, 60, 140, 200)),    // SPACE → 上升
+                    ButtonSpec("↓", 6, Color.argb(120, 200, 140, 60)),    // SHIFT → 下降
+                    ButtonSpec("👁", 5, Color.argb(120, 140, 80, 220)),   // 切换视角拖拽
+                    ButtonSpec("/", 1, Color.argb(120, 100, 180, 100)),   // 控制台
+                    ButtonSpec("✕", 0, Color.argb(120, 200, 80, 80))     // ESC → 菜单
+                )
+            ),
             GameModeId.Infinite to ModeConfig(     // 无限模式（需要完整控制）
                 showJoystick = true,
                 buttons = listOf(
@@ -1142,6 +1156,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             const val SoloudTest = 3        // 音频引擎（SoLoud）测试模式
             const val RadianceCascades = 4  // 辐射级联（Radiance Cascades）渲染演示
             const val FruitNinja = 5        // 水果忍者模式
+            const val WFCTest = 6           // WFC 测试模式
+            const val BlockWorld = 7         // 区块世界模式（Minecraft-like）
             const val Infinite = 100        // 无限模式（无尽生存/挑战）
         }
 

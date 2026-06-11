@@ -72,6 +72,68 @@ inline float erosionSpline(float e) {
 inline float normalizeNoise(float v) { return (v + 1.0f) * 0.5f; }
 
 // ============================================================================
+// 地形生成参数（所有可调参数集中管理）
+// ============================================================================
+struct TerrainGenParams {
+    int seed = 1337;
+
+    // === 基础噪声 (2D) ===
+    float continentalFrequency = 0.015f;
+    int   continentalOctaves = 4;
+    float erosionFrequency = 0.01f;
+    float detailFrequency = 0.04f;
+
+    // === 密度场噪声 (3D) ===
+    float density1Frequency = 0.003f;
+    int   density1Octaves = 6;
+    float density2Frequency = 0.01f;
+    int   density2Octaves = 4;
+    float density3Frequency = 0.04f;
+    float ridgeFrequency = 0.01f;
+    int   ridgeOctaves = 3;
+
+    // === 群系噪声 (2D) ===
+    float temperatureFrequency = 0.0008f;
+    int   temperatureOctaves = 3;
+    float humidityFrequency = 0.0008f;
+    int   humidityOctaves = 3;
+    float weirdnessFrequency = 0.001f;
+
+    // === 洞穴噪声 ===
+    float cheeseCaveFrequency = 0.02f;
+    int   cheeseCaveOctaves = 4;
+    float spaghettiCaveFrequency = 0.05f;
+    int   spaghettiCaveOctaves = 3;
+    float noodleCaveFrequency = 0.08f;
+    float caveWarpFrequency = 0.03f;
+    float ravineFrequency = 0.02f;
+
+    // === 含水层噪声 ===
+    float aquiferFrequency = 0.015f;
+    int   aquiferOctaves = 3;
+    float aquiferBarrierFrequency = 0.03f;
+
+    // === 河流噪声 ===
+    float riverFrequency = 0.003f;
+    int   riverOctaves = 4;
+
+    // === 总开关 ===
+    bool  cavesEnabled = true;
+    bool  aquifersEnabled = true;
+    bool  riversEnabled = true;
+    bool  treesEnabled = true;
+
+    // === 水位 ===
+    int   waterLevel = 32;
+
+    // === 地形高度缩放 ===
+    float terrainHeightScale = 1.0f;
+
+    // === 洞穴扭曲强度 ===
+    float caveWarpStrength = 0.5f;
+};
+
+// ============================================================================
 // ChunkData
 // ============================================================================
 struct ChunkData {
@@ -188,6 +250,7 @@ struct ChunkData {
     // 主地形生成
     // ========================================================================
     void generateTerrain(
+        const TerrainGenParams& params,
         // 基础噪声
         FastNoiseLite* continentalNoise, // 大陆度 (2D)
         FastNoiseLite* erosionNoise,     // 侵蚀度 (2D)
@@ -218,14 +281,14 @@ struct ChunkData {
         FastNoiseLite* aquiferBarrierNoise,
 
         // 河流噪声
-        FastNoiseLite* riverNoise,
-
-        int /*seed*/)
+        FastNoiseLite* riverNoise)
     {
         const int CS = (int)CHUNK_SIZE;
         int baseWorldX = worldX * CS;
         int baseWorldY = worldY * CS;
         int baseWorldZ = worldZ * CS;
+        const int waterLevel = params.waterLevel;
+        const float terrainScale = params.terrainHeightScale;
 
         // 预存每列 (x,z) 的群系信息和侵蚀后高度，供后续阶段使用
         BiomeType biomeCache[CHUNK_SIZE][CHUNK_SIZE];
@@ -259,28 +322,29 @@ struct ChunkData {
                 float baseH  = continentalSpline(continentalVal);
                 float erosionF = erosionSpline(erosionVal);
                 float ridgeOff = std::abs(ridgeVal) * 30.0f;
-                float finalHeight = (baseH + ridgeOff) * erosionF;
+                float finalHeight = (baseH + ridgeOff) * erosionF * terrainScale;
 
                 // 群系高度修正
                 switch (biome) {
                     case BiomeType::Mountains:
                     case BiomeType::SnowyMountains:
-                        finalHeight += 20.0f; break;
+                        finalHeight += 20.0f * terrainScale; break;
                     case BiomeType::GravellyMountains:
-                        finalHeight += 15.0f; break;
+                        finalHeight += 15.0f * terrainScale; break;
                     case BiomeType::Jungle:
-                        finalHeight += 8.0f;  break;
+                        finalHeight += 8.0f * terrainScale;  break;
                     case BiomeType::Swamp:
-                        finalHeight -= 5.0f;  break;
+                        finalHeight -= 5.0f * terrainScale;  break;
                     case BiomeType::Ocean:
                     case BiomeType::DeepOcean:
-                        finalHeight -= 15.0f; break;
+                        finalHeight -= 15.0f * terrainScale; break;
                     default: break;
                 }
 
                 // --- 1d. 河流侵蚀 ---
-                float erodedHeight = applyRiverErosion(wx, wz, finalHeight,
-                                                       riverNoise, continentalNoise);
+                float erodedHeight = params.riversEnabled
+                    ? applyRiverErosion(wx, wz, finalHeight, riverNoise, continentalNoise)
+                    : finalHeight;
                 erodedHeightCache[x][z] = erodedHeight;
 
                 for (unsigned int y = 0; y < CHUNK_SIZE; y++) {
@@ -304,7 +368,7 @@ struct ChunkData {
                     } else {
                         int depthBelowSurface = (int)(erodedHeight - worldY);
                         if (depthBelowSurface <= 1) {
-                            blocks[x][y][z] = getSurfaceBlockAt(biome, worldY, WATER_LEVEL);
+                            blocks[x][y][z] = getSurfaceBlockAt(biome, worldY, waterLevel);
                         } else if (depthBelowSurface <= 6) {
                             blocks[x][y][z] = (int)BlockType::Dirt;
                         } else if (depthBelowSurface <= 25) {
@@ -318,25 +382,35 @@ struct ChunkData {
         }
 
         // ====== Pass 2: 洞穴掏空 ======
-        int maxWorldY = baseWorldY + CS;
-        for (unsigned int x = 0; x < CHUNK_SIZE; x++) {
-            for (unsigned int z = 0; z < CHUNK_SIZE; z++) {
-                for (unsigned int y = 0; y < CHUNK_SIZE; y++) {
-                    if (blocks[x][y][z] == (int)BlockType::Air) continue;
-                    if (blocks[x][y][z] == (int)BlockType::Bedrock) continue;
+        if (params.cavesEnabled) {
+            int maxWorldY = baseWorldY + CS;
+            for (unsigned int x = 0; x < CHUNK_SIZE; x++) {
+                for (unsigned int z = 0; z < CHUNK_SIZE; z++) {
+                    for (unsigned int y = 0; y < CHUNK_SIZE; y++) {
+                        if (blocks[x][y][z] == (int)BlockType::Air) continue;
+                        if (blocks[x][y][z] == (int)BlockType::Bedrock) continue;
 
-                    float wx = (float)(baseWorldX + (int)x);
-                    float wy = (float)(baseWorldY + (int)y);
-                    float wz = (float)(baseWorldZ + (int)z);
+                        float wx = (float)(baseWorldX + (int)x);
+                        float wy = (float)(baseWorldY + (int)y);
+                        float wz = (float)(baseWorldZ + (int)z);
 
-                    if (isCheeseCave(wx, wy, wz, cheeseCaveNoise,
-                                     caveWarpX, caveWarpY, caveWarpZ, maxWorldY) ||
-                        isSpaghettiCave(wx, wy, wz, spaghettiCaveNoise,
-                                        caveWarpX, caveWarpY, caveWarpZ) ||
-                        isNoodleCave(wx, wy, wz, noodleCaveNoise,
-                                     caveWarpX, caveWarpY, caveWarpZ) ||
-                        isRavine(wx, wy, wz, ravineNoise, maxWorldY)) {
-                        blocks[x][y][z] = (int)BlockType::Air;
+                        // 应用域扭曲强度参数
+                        float wwx = wx, wwy = wy, wwz = wz;
+                        if (params.caveWarpStrength > 0.0f) {
+                            wwx += caveWarpX->GetNoise(wx, wy, wz) * params.caveWarpStrength * 15.0f;
+                            wwy += caveWarpY->GetNoise(wx, wy, wz) * params.caveWarpStrength * 15.0f;
+                            wwz += caveWarpZ->GetNoise(wx, wy, wz) * params.caveWarpStrength * 15.0f;
+                        }
+
+                        if (isCheeseCave(wwx, wwy, wwz, cheeseCaveNoise,
+                                         caveWarpX, caveWarpY, caveWarpZ, maxWorldY) ||
+                            isSpaghettiCave(wwx, wwy, wwz, spaghettiCaveNoise,
+                                            caveWarpX, caveWarpY, caveWarpZ) ||
+                            isNoodleCave(wwx, wwy, wwz, noodleCaveNoise,
+                                         caveWarpX, caveWarpY, caveWarpZ) ||
+                            isRavine(wwx, wwy, wwz, ravineNoise, maxWorldY)) {
+                            blocks[x][y][z] = (int)BlockType::Air;
+                        }
                     }
                 }
             }
@@ -351,7 +425,7 @@ struct ChunkData {
                     int& bt = blocks[x][y][z];
                     if (bt != (int)BlockType::Air) continue;
                     int worldY = baseWorldY + (int)y;
-                    if (worldY <= WATER_LEVEL) {
+                    if (worldY <= waterLevel) {
                         bt = (int)BlockType::Water;
                     }
                 }
@@ -359,44 +433,45 @@ struct ChunkData {
         }
 
         // ====== Pass 4: 含水层填充（仅地表以下、海平面以上的洞穴水体） ======
-        for (unsigned int x = 0; x < CHUNK_SIZE; x++) {
-            for (unsigned int z = 0; z < CHUNK_SIZE; z++) {
-                float terrainSurface = erodedHeightCache[x][z];
-                for (unsigned int y = 0; y < CHUNK_SIZE; y++) {
-                    int& bt = blocks[x][y][z];
-                    if (bt != (int)BlockType::Air) continue;
-                    float wx = (float)(baseWorldX + (int)x);
-                    float wy = (float)(baseWorldY + (int)y);
-                    float wz = (float)(baseWorldZ + (int)z);
-                    // 仅在地表以下（地下洞穴）才填充含水层
-                    if (wy >= terrainSurface) continue;
-                    fillAquifers(wx, wy, wz, aquiferNoise, aquiferBarrierNoise,
-                                 continentalNoise, bt);
+        if (params.aquifersEnabled) {
+            for (unsigned int x = 0; x < CHUNK_SIZE; x++) {
+                for (unsigned int z = 0; z < CHUNK_SIZE; z++) {
+                    float terrainSurface = erodedHeightCache[x][z];
+                    for (unsigned int y = 0; y < CHUNK_SIZE; y++) {
+                        int& bt = blocks[x][y][z];
+                        if (bt != (int)BlockType::Air) continue;
+                        float wx = (float)(baseWorldX + (int)x);
+                        float wy = (float)(baseWorldY + (int)y);
+                        float wz = (float)(baseWorldZ + (int)z);
+                        if (wy >= terrainSurface) continue;
+                        fillAquifers(wx, wy, wz, aquiferNoise, aquiferBarrierNoise,
+                                     continentalNoise, bt);
+                    }
                 }
             }
         }
 
         // ====== Pass 5: 河流水填充 ======
-        for (unsigned int x = 0; x < CHUNK_SIZE; x++) {
-            for (unsigned int z = 0; z < CHUNK_SIZE; z++) {
-                float wx = (float)(baseWorldX + (int)x);
-                float wz = (float)(baseWorldZ + (int)z);
-
-                // 使用 Pass 1 缓存的侵蚀后高度（已含群系修正和河流侵蚀）
-                float baseHeight = erodedHeightCache[x][z];
-
-                for (unsigned int y = 0; y < CHUNK_SIZE; y++) {
-                    int& bt = blocks[x][y][z];
-                    if (bt != (int)BlockType::Air) continue;
-                    float wy = (float)(baseWorldY + (int)y);
-                    fillRiverWater(wx, wy, wz, baseHeight,
-                                   riverNoise, continentalNoise, bt);
+        if (params.riversEnabled) {
+            for (unsigned int x = 0; x < CHUNK_SIZE; x++) {
+                for (unsigned int z = 0; z < CHUNK_SIZE; z++) {
+                    float wx = (float)(baseWorldX + (int)x);
+                    float wz = (float)(baseWorldZ + (int)z);
+                    float baseHeight = erodedHeightCache[x][z];
+                    for (unsigned int y = 0; y < CHUNK_SIZE; y++) {
+                        int& bt = blocks[x][y][z];
+                        if (bt != (int)BlockType::Air) continue;
+                        float wy = (float)(baseWorldY + (int)y);
+                        fillRiverWater(wx, wy, wz, baseHeight,
+                                       riverNoise, continentalNoise, bt);
+                    }
                 }
             }
         }
 
         // ====== Pass 6: 树木生成 ======
         // 只在距离区块边界至少 3 格的位置生成，避免跨区块问题
+        if (params.treesEnabled) {
         for (unsigned int x = 3; x < CHUNK_SIZE - 3; x++) {
             for (unsigned int z = 3; z < CHUNK_SIZE - 3; z++) {
                 // 找地表 Y：从上往下扫描，找到第一个非空气、非水、非树木类方块
@@ -420,7 +495,7 @@ struct ChunkData {
                 float terrainH = (float)(baseWorldY + surfaceY);
                 BiomeType biome = biomeCache[x][z];
 
-                if (shouldPlaceTree(wx, wz, biome, detailNoise, terrainH, WATER_LEVEL)) {
+                if (shouldPlaceTree(wx, wz, biome, detailNoise, terrainH, waterLevel)) {
                     float treeRnd = normalizeNoise(detailNoise->GetNoise(wx * 100.0f, wz * 100.0f));
                     TreeType treeType = getTreeTypeForBiome(biome, treeRnd);
 
@@ -441,6 +516,7 @@ struct ChunkData {
                     }
                 }
             }
+        }
         }
 
         generated = true;

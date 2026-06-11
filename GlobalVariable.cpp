@@ -43,6 +43,7 @@ void MainCommandBufferUpdateRequest() {
 	bool AndroidRequestKey2 = false;
 	bool AndroidRequestSpace = false;
 	bool AndroidRequestToggleMouse = false;
+	bool AndroidRequestMoveDown = false;
 	bool AndroidKey_W = false;
 	bool AndroidKey_S = false;
 	bool AndroidKey_A = false;

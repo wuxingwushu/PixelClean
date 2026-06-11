@@ -38,6 +38,7 @@ void MainCommandBufferUpdateRequest();//全部 MainCommandBuffer 需要更新;
 	extern bool AndroidRequestKey2;			// 请求按键 2
 	extern bool AndroidRequestSpace;		// 请求空格
 	extern bool AndroidRequestToggleMouse;	// 请求切换鼠标模式 (~)
+	extern bool AndroidRequestMoveDown;		// 请求下降 (Shift)
 	extern bool AndroidKey_W;				// W 键按下状态
 	extern bool AndroidKey_S;				// S 键按下状态
 	extern bool AndroidKey_A;				// A 键按下状态

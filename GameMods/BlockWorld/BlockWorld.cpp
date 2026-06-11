@@ -32,13 +32,14 @@ void BlockWorld::OnChunkGenerate(int /*mT*/, int x, int y, int z, void* Data) {
         // 回退：如果 Pipeline 未初始化，使用旧的同步方式
         ChunkData* chunk = new ChunkData(x, y, z);
         chunk->generateTerrain(
+            self->mTerrainParams,
             self->mContinentalNoise, self->mErosionNoise, self->mDetailNoise,
             self->mDensityNoise1, self->mDensityNoise2, self->mDensityNoise3, self->mRidgeNoise,
             self->mTemperatureNoise, self->mHumidityNoise, self->mWeirdnessNoise,
             self->mCheeseCaveNoise, self->mSpaghettiCaveNoise, self->mNoodleCaveNoise,
             self->mCaveWarpX, self->mCaveWarpY, self->mCaveWarpZ, self->mRavineNoise,
             self->mAquiferNoise, self->mAquiferBarrierNoise,
-            self->mRiverNoise, 0);
+            self->mRiverNoise);
         self->mChunkMap[key] = chunk;
         self->MarkChunkDirty(x, y, z);
         LOGD("BlockWorld: Chunk generated (sync fallback) at (%d, %d, %d)", x, y, z);
@@ -474,117 +475,198 @@ void BlockWorld::RebuildAllVertexData() {
 }
 
 // ============================================================================
+// 噪声参数配置
+// ============================================================================
+
+void BlockWorld::SetupAllNoiseFromParams() {
+    const auto& p = mTerrainParams;
+
+    // === 基础噪声 ===
+    mContinentalNoise->SetSeed(p.seed);
+    mContinentalNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mContinentalNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mContinentalNoise->SetFractalOctaves(p.continentalOctaves);
+    mContinentalNoise->SetFrequency(p.continentalFrequency);
+
+    mErosionNoise->SetSeed(p.seed + 1);
+    mErosionNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mErosionNoise->SetFrequency(p.erosionFrequency);
+
+    mDetailNoise->SetSeed(p.seed + 2);
+    mDetailNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mDetailNoise->SetFrequency(p.detailFrequency);
+
+    // === 密度场噪声 (3D) ===
+    mDensityNoise1->SetSeed(p.seed + 10);
+    mDensityNoise1->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mDensityNoise1->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mDensityNoise1->SetFractalOctaves(p.density1Octaves);
+    mDensityNoise1->SetFrequency(p.density1Frequency);
+
+    mDensityNoise2->SetSeed(p.seed + 11);
+    mDensityNoise2->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mDensityNoise2->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mDensityNoise2->SetFractalOctaves(p.density2Octaves);
+    mDensityNoise2->SetFrequency(p.density2Frequency);
+
+    mDensityNoise3->SetSeed(p.seed + 12);
+    mDensityNoise3->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mDensityNoise3->SetFrequency(p.density3Frequency);
+
+    mRidgeNoise->SetSeed(p.seed + 13);
+    mRidgeNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mRidgeNoise->SetFractalType(FastNoiseLite::FractalType_Ridged);
+    mRidgeNoise->SetFractalOctaves(p.ridgeOctaves);
+    mRidgeNoise->SetFrequency(p.ridgeFrequency);
+
+    // === 群系噪声 (2D) ===
+    mTemperatureNoise->SetSeed(p.seed + 20);
+    mTemperatureNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mTemperatureNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mTemperatureNoise->SetFractalOctaves(p.temperatureOctaves);
+    mTemperatureNoise->SetFrequency(p.temperatureFrequency);
+
+    mHumidityNoise->SetSeed(p.seed + 21);
+    mHumidityNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mHumidityNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mHumidityNoise->SetFractalOctaves(p.humidityOctaves);
+    mHumidityNoise->SetFrequency(p.humidityFrequency);
+
+    mWeirdnessNoise->SetSeed(p.seed + 22);
+    mWeirdnessNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mWeirdnessNoise->SetFrequency(p.weirdnessFrequency);
+
+    // === 洞穴噪声 ===
+    mCheeseCaveNoise->SetSeed(p.seed + 30);
+    mCheeseCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mCheeseCaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mCheeseCaveNoise->SetFractalOctaves(p.cheeseCaveOctaves);
+    mCheeseCaveNoise->SetFrequency(p.cheeseCaveFrequency);
+
+    mSpaghettiCaveNoise->SetSeed(p.seed + 31);
+    mSpaghettiCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mSpaghettiCaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mSpaghettiCaveNoise->SetFractalOctaves(p.spaghettiCaveOctaves);
+    mSpaghettiCaveNoise->SetFrequency(p.spaghettiCaveFrequency);
+
+    mNoodleCaveNoise->SetSeed(p.seed + 32);
+    mNoodleCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mNoodleCaveNoise->SetFrequency(p.noodleCaveFrequency);
+
+    mCaveWarpX->SetSeed(p.seed + 33);
+    mCaveWarpX->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mCaveWarpX->SetFrequency(p.caveWarpFrequency);
+
+    mCaveWarpY->SetSeed(p.seed + 34);
+    mCaveWarpY->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mCaveWarpY->SetFrequency(p.caveWarpFrequency);
+
+    mCaveWarpZ->SetSeed(p.seed + 35);
+    mCaveWarpZ->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mCaveWarpZ->SetFrequency(p.caveWarpFrequency);
+
+    mRavineNoise->SetSeed(p.seed + 36);
+    mRavineNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mRavineNoise->SetFrequency(p.ravineFrequency);
+
+    // === 含水层噪声 ===
+    mAquiferNoise->SetSeed(p.seed + 40);
+    mAquiferNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mAquiferNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mAquiferNoise->SetFractalOctaves(p.aquiferOctaves);
+    mAquiferNoise->SetFrequency(p.aquiferFrequency);
+
+    mAquiferBarrierNoise->SetSeed(p.seed + 41);
+    mAquiferBarrierNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    mAquiferBarrierNoise->SetFrequency(p.aquiferBarrierFrequency);
+
+    // === 河流噪声 ===
+    mRiverNoise->SetSeed(p.seed + 50);
+    mRiverNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    mRiverNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+    mRiverNoise->SetFractalOctaves(p.riverOctaves);
+    mRiverNoise->SetFrequency(p.riverFrequency);
+}
+
+void BlockWorld::RegenerateAllChunks() {
+    LOGD("BlockWorld: RegenerateAllChunks");
+
+    // 1. 等待 GPU 完成所有操作
+    vkDeviceWaitIdle(mDevice->getDevice());
+
+    // 2. 关闭旧流水线（等待所有 worker 线程退出）
+    if (mTerrainPipeline) {
+        mTerrainPipeline->shutdown();
+        mTerrainPipeline.reset();
+    }
+
+    // 3. 清空所有区块数据
+    for (auto& pair : mChunkMap) {
+        delete pair.second;
+    }
+    mChunkMap.clear();
+    mVertexCount = 0;
+    mVertexDataDirty = true;
+
+    // 4. 重新配置噪声实例
+    SetupAllNoiseFromParams();
+
+    // 5. 创建新流水线并初始化
+    mTerrainPipeline = std::make_unique<TerrainGenPipeline>(0);
+    mTerrainPipeline->initialize(*this);
+
+    // 6. 重新请求所有区块
+    int platePosX = mChunkPlate.GetPosX();
+    int platePosY = mChunkPlate.GetPosY();
+    int platePosZ = mChunkPlate.GetPosZ();
+    for (unsigned int x = 0; x < CHUNK_COUNT_X; x++) {
+        for (unsigned int y = 0; y < CHUNK_COUNT_Y; y++) {
+            for (unsigned int z = 0; z < CHUNK_COUNT_Z; z++) {
+                int wx = (int)x + platePosX - (int)mPlateOriginX;
+                int wy = (int)y + platePosY - (int)mPlateOriginY;
+                int wz = (int)z + platePosZ - (int)mPlateOriginZ;
+                mTerrainPipeline->requestChunk(wx, wy, wz);
+            }
+        }
+    }
+
+    // 7. 重新录制指令缓冲
+    RecordBlockWorldCommandBuffers();
+
+    LOGD("BlockWorld: RegenerateAllChunks done, %zu chunks requested", 
+         CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z);
+}
+
+// ============================================================================
 // 渲染管线初始化
 // ============================================================================
 
 void BlockWorld::InitBlockWorldPipeline() {
     LOGD("BlockWorld: InitBlockWorldPipeline, capacity=%u", mVertexCapacity);
 
-    // === 基础噪声 ===
+    // === 创建所有噪声实例并配置 ===
     mContinentalNoise = new FastNoiseLite();
-    mContinentalNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mContinentalNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mContinentalNoise->SetFractalOctaves(4);
-    mContinentalNoise->SetFrequency(0.015f);
-
     mErosionNoise = new FastNoiseLite();
-    mErosionNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mErosionNoise->SetFrequency(0.01f);
-
     mDetailNoise = new FastNoiseLite();
-    mDetailNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    mDetailNoise->SetFrequency(0.04f);
-
-    // === 密度场噪声 (3D) ===
     mDensityNoise1 = new FastNoiseLite();
-    mDensityNoise1->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    mDensityNoise1->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mDensityNoise1->SetFractalOctaves(6);
-    mDensityNoise1->SetFrequency(0.003f);
-
     mDensityNoise2 = new FastNoiseLite();
-    mDensityNoise2->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    mDensityNoise2->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mDensityNoise2->SetFractalOctaves(4);
-    mDensityNoise2->SetFrequency(0.01f);
-
     mDensityNoise3 = new FastNoiseLite();
-    mDensityNoise3->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    mDensityNoise3->SetFrequency(0.04f);
-
     mRidgeNoise = new FastNoiseLite();
-    mRidgeNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mRidgeNoise->SetFractalType(FastNoiseLite::FractalType_Ridged);
-    mRidgeNoise->SetFractalOctaves(3);
-    mRidgeNoise->SetFrequency(0.01f);
-
-    // === 群系噪声 (2D) ===
     mTemperatureNoise = new FastNoiseLite();
-    mTemperatureNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mTemperatureNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mTemperatureNoise->SetFractalOctaves(3);
-    mTemperatureNoise->SetFrequency(0.0008f);
-
     mHumidityNoise = new FastNoiseLite();
-    mHumidityNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mHumidityNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mHumidityNoise->SetFractalOctaves(3);
-    mHumidityNoise->SetFrequency(0.0008f);
-
     mWeirdnessNoise = new FastNoiseLite();
-    mWeirdnessNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mWeirdnessNoise->SetFrequency(0.001f);
-
-    // === 洞穴噪声 ===
     mCheeseCaveNoise = new FastNoiseLite();
-    mCheeseCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    mCheeseCaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mCheeseCaveNoise->SetFractalOctaves(4);
-    mCheeseCaveNoise->SetFrequency(0.02f);
-
     mSpaghettiCaveNoise = new FastNoiseLite();
-    mSpaghettiCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mSpaghettiCaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mSpaghettiCaveNoise->SetFractalOctaves(3);
-    mSpaghettiCaveNoise->SetFrequency(0.05f);
-
     mNoodleCaveNoise = new FastNoiseLite();
-    mNoodleCaveNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    mNoodleCaveNoise->SetFrequency(0.08f);
-
     mCaveWarpX = new FastNoiseLite();
-    mCaveWarpX->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mCaveWarpX->SetFrequency(0.03f);
-
     mCaveWarpY = new FastNoiseLite();
-    mCaveWarpY->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mCaveWarpY->SetFrequency(0.03f);
-
     mCaveWarpZ = new FastNoiseLite();
-    mCaveWarpZ->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mCaveWarpZ->SetFrequency(0.03f);
-
     mRavineNoise = new FastNoiseLite();
-    mRavineNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mRavineNoise->SetFrequency(0.02f);
-
-    // === 含水层噪声 ===
     mAquiferNoise = new FastNoiseLite();
-    mAquiferNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    mAquiferNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mAquiferNoise->SetFractalOctaves(3);
-    mAquiferNoise->SetFrequency(0.015f);
-
     mAquiferBarrierNoise = new FastNoiseLite();
-    mAquiferBarrierNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    mAquiferBarrierNoise->SetFrequency(0.03f);
-
-    // === 河流噪声 ===
     mRiverNoise = new FastNoiseLite();
-    mRiverNoise->SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mRiverNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
-    mRiverNoise->SetFractalOctaves(4);
-    mRiverNoise->SetFrequency(0.003f);
+
+    SetupAllNoiseFromParams();
 
     // === Vulkan 资源 ===
     mVertexBuffer = new VulKan::Buffer(
@@ -658,6 +740,11 @@ void BlockWorld::DestroyBlockWorldPipeline() {
 }
 
 void BlockWorld::DestroyBlockWorldVulkanResources() {
+    // 必须等待 GPU 完成所有操作，否则 Validation Layer 后台线程
+    // 在异步处理已提交的 command buffer 时会访问已释放的资源，
+    // 导致 SubStateManager::SubState() 中 std::map 查找时空指针崩溃。
+    vkDeviceWaitIdle(mDevice->getDevice());
+
     if (mBlockCommandBuffers) {
         for (size_t i = 0; i < mSwapChain->getImageCount(); ++i) {
             delete mBlockCommandBuffers[i];
@@ -1006,7 +1093,7 @@ unsigned int BlockWorld::GetActiveWorkers() const {
 }
 
 void BlockWorld::GameUI() {
-    ImGui::Begin(u8"BlockWorld 高级地形生成 v2 (FastNoiseLite)");
+    ImGui::Begin(u8"BlockWorld 地形生成控制");
     ImVec2 window_pos = ImGui::GetWindowPos();
     ImVec2 window_size = ImGui::GetWindowSize();
     if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
@@ -1014,39 +1101,101 @@ void BlockWorld::GameUI() {
         Global::ClickWindow = true;
     }
 
+    auto& p = mTerrainParams;
+
+    // ========== 状态栏 ==========
     glm::vec3 camPos = mCamera->getCameraPos();
-    ImGui::Text(u8"相机位置: (%.1f, %.1f, %.1f)", camPos.x, camPos.y, camPos.z);
-    ImGui::Text(u8"飞行速度: %.1f", mCameraSpeed);
-    ImGui::Text(u8"视角: 偏航=%.1f° 俯仰=%.1f°", mCameraYaw, mCameraPitch);
-    ImGui::Text(u8"激活区块数: %zu", mChunkMap.size());
-    ImGui::Text(u8"顶点数: %u / %u", mVertexCount, mVertexCapacity);
-    ImGui::Text(u8"区块网格: %dx%dx%d", CHUNK_COUNT_X, CHUNK_COUNT_Y, CHUNK_COUNT_Z);
-    ImGui::Text(u8"区块大小: %dx%dx%d", (int)ChunkData::CHUNK_SIZE,
-               (int)ChunkData::CHUNK_SIZE, (int)ChunkData::CHUNK_SIZE);
+    ImGui::Text(u8"相机: (%.0f, %.0f, %.0f)  速度: %.0f  区块: %zu  顶点: %u/%u  待生成: %u",
+               camPos.x, camPos.y, camPos.z, mCameraSpeed,
+               mChunkMap.size(), mVertexCount, mVertexCapacity, GetPendingChunks());
 
+    // ========== 重新生成按钮 ==========
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.5f, 0.1f, 1.0f));
+    if (ImGui::Button(u8"应用参数并重新生成地图", ImVec2(-1, 40))) {
+        RegenerateAllChunks();
+    }
+    ImGui::PopStyleColor(3);
+    ImGui::Spacing();
     ImGui::Separator();
-    ImGui::Text(u8"===== 地形生成系统 =====");
-    ImGui::Text(u8"密度场: Spline (大陆度→高度) + 山脊 + 3D 噪声");
-    ImGui::Text(u8"生物群系: 温度+湿度+大陆度+侵蚀度+奇异性 → 18种群系");
-    ImGui::Text(u8"洞穴: Domain Warping + Cheese/Spaghetti/Noodle/Ravine 四层");
-    ImGui::Text(u8"含水层: 3D噪声驱动局部水位 + 隔水层");
-    ImGui::Text(u8"河流: 2D噪声过零点检测 + 地形侵蚀 + 水填充");
-    ImGui::Text(u8"植被: 群系驱动 橡树/云杉/仙人掌");
 
+    // ========== 种子 ==========
+    ImGui::InputInt(u8"随机种子", &p.seed, 1, 100);
+    if (ImGui::Button(u8"随机种子")) {
+        p.seed = (int)std::chrono::steady_clock::now().time_since_epoch().count();
+    }
     ImGui::Separator();
-    ImGui::Text(u8"===== 异步生成状态 =====");
-    ImGui::Text(u8"等待生成: %u", GetPendingChunks());
-    ImGui::Text(u8"正在生成: %u", GetActiveWorkers());
-    ImGui::Text(u8"Worker线程: %u", mTerrainPipeline ? mTerrainPipeline->workerCount() : 0);
 
-    ImGui::Separator();
-    ImGui::Text(u8"操作说明:");
-    ImGui::Text(u8"  WASD      - 自由飞行（视线方向移动）");
-    ImGui::Text(u8"  Space     - Z轴上升");
-    ImGui::Text(u8"  Shift     - Z轴下降");
-    ImGui::Text(u8"  右键拖拽  - 旋转视角");
-    ImGui::Text(u8"  滚轮      - 调节飞行速度");
-    ImGui::Text(u8"  ESC       - 返回菜单");
+    // ========== 基础噪声 ==========
+    if (ImGui::CollapsingHeader(u8"基础噪声 (2D)", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::SliderFloat(u8"大陆度频率", &p.continentalFrequency, 0.001f, 0.1f, "%.4f");
+        ImGui::SliderInt(u8"大陆度八倍频", &p.continentalOctaves, 1, 8);
+        ImGui::SliderFloat(u8"侵蚀度频率", &p.erosionFrequency, 0.001f, 0.1f, "%.4f");
+        ImGui::SliderFloat(u8"细节频率", &p.detailFrequency, 0.001f, 0.2f, "%.4f");
+    }
+
+    // ========== 密度场噪声 ==========
+    if (ImGui::CollapsingHeader(u8"密度场噪声 (3D)", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::SliderFloat(u8"低频密度频率", &p.density1Frequency, 0.0005f, 0.02f, "%.4f");
+        ImGui::SliderInt(u8"低频密度八倍频", &p.density1Octaves, 1, 8);
+        ImGui::SliderFloat(u8"中频密度频率", &p.density2Frequency, 0.001f, 0.05f, "%.4f");
+        ImGui::SliderInt(u8"中频密度八倍频", &p.density2Octaves, 1, 8);
+        ImGui::SliderFloat(u8"高频密度频率", &p.density3Frequency, 0.01f, 0.2f, "%.4f");
+        ImGui::SliderFloat(u8"山脊噪声频率", &p.ridgeFrequency, 0.001f, 0.05f, "%.4f");
+        ImGui::SliderInt(u8"山脊八倍频", &p.ridgeOctaves, 1, 6);
+    }
+
+    // ========== 群系噪声 ==========
+    if (ImGui::CollapsingHeader(u8"群系噪声 (2D)")) {
+        ImGui::SliderFloat(u8"温度频率", &p.temperatureFrequency, 0.0001f, 0.01f, "%.5f");
+        ImGui::SliderInt(u8"温度八倍频", &p.temperatureOctaves, 1, 6);
+        ImGui::SliderFloat(u8"湿度频率", &p.humidityFrequency, 0.0001f, 0.01f, "%.5f");
+        ImGui::SliderInt(u8"湿度八倍频", &p.humidityOctaves, 1, 6);
+        ImGui::SliderFloat(u8"奇异性频率", &p.weirdnessFrequency, 0.0001f, 0.01f, "%.5f");
+    }
+
+    // ========== 洞穴噪声 ==========
+    if (ImGui::CollapsingHeader(u8"洞穴噪声")) {
+        ImGui::Checkbox(u8"启用洞穴", &p.cavesEnabled);
+        if (p.cavesEnabled) {
+            ImGui::SliderFloat(u8"奶酪洞穴频率", &p.cheeseCaveFrequency, 0.005f, 0.1f, "%.4f");
+            ImGui::SliderInt(u8"奶酪洞穴八倍频", &p.cheeseCaveOctaves, 1, 6);
+            ImGui::SliderFloat(u8"面条洞穴频率", &p.spaghettiCaveFrequency, 0.01f, 0.5f, "%.4f");
+            ImGui::SliderInt(u8"面条洞穴八倍频", &p.spaghettiCaveOctaves, 1, 6);
+            ImGui::SliderFloat(u8"细面条洞穴频率", &p.noodleCaveFrequency, 0.01f, 0.5f, "%.4f");
+            ImGui::SliderFloat(u8"洞穴扭曲频率", &p.caveWarpFrequency, 0.005f, 0.1f, "%.4f");
+            ImGui::SliderFloat(u8"洞穴扭曲强度", &p.caveWarpStrength, 0.0f, 2.0f, "%.2f");
+            ImGui::SliderFloat(u8"裂谷频率", &p.ravineFrequency, 0.005f, 0.1f, "%.4f");
+        }
+    }
+
+    // ========== 含水层 ==========
+    if (ImGui::CollapsingHeader(u8"含水层")) {
+        ImGui::Checkbox(u8"启用含水层", &p.aquifersEnabled);
+        if (p.aquifersEnabled) {
+            ImGui::SliderFloat(u8"含水层频率", &p.aquiferFrequency, 0.005f, 0.1f, "%.4f");
+            ImGui::SliderInt(u8"含水层八倍频", &p.aquiferOctaves, 1, 6);
+            ImGui::SliderFloat(u8"隔水层频率", &p.aquiferBarrierFrequency, 0.01f, 0.2f, "%.4f");
+        }
+    }
+
+    // ========== 河流 ==========
+    if (ImGui::CollapsingHeader(u8"河流")) {
+        ImGui::Checkbox(u8"启用河流", &p.riversEnabled);
+        if (p.riversEnabled) {
+            ImGui::SliderFloat(u8"河流频率", &p.riverFrequency, 0.001f, 0.02f, "%.4f");
+            ImGui::SliderInt(u8"河流八倍频", &p.riverOctaves, 1, 6);
+        }
+    }
+
+    // ========== 其他 ==========
+    if (ImGui::CollapsingHeader(u8"其他设置")) {
+        ImGui::SliderInt(u8"水位高度", &p.waterLevel, 0, 100);
+        ImGui::SliderFloat(u8"地形高度缩放", &p.terrainHeightScale, 0.1f, 3.0f, "%.2f");
+        ImGui::Checkbox(u8"生成树木", &p.treesEnabled);
+    }
 
     ImGui::End();
 }

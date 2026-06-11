@@ -165,238 +165,260 @@ namespace GAME
 	void PhysicsTest::GameUI()
 	{
 		//ImGui::ShowDemoWindow();
-		ImGui::Begin(u8"编辑");
+		// ──────────── 主控制面板（合并"编辑"、"属性"、"日志输出"为一个窗口） ────────────
+		ImGui::Begin(u8"物理模拟控制面板");
 		ImVec2 window_pos = ImGui::GetWindowPos();
 		ImVec2 window_size = ImGui::GetWindowSize();
 		if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
 			((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
-			Global::ClickWindow = true; // 鼠标在窗口上
-		}
-		if (ImGui::Button(EditorModeBool ? u8"关闭编辑" : u8"开启编辑"))
-		{
-			EditorModeBool = !EditorModeBool;
-		}
-		ImGui::Combo(u8"物体", &item_object, objectName, IM_ARRAYSIZE(objectName));
-		ImGui::End();
-
-		ImGui::Begin(u8"属性");
-		window_pos = ImGui::GetWindowPos();
-		window_size = ImGui::GetWindowSize();
-		if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
-			((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
-			Global::ClickWindow = true; // 鼠标在窗口上
-		}
-		// 设置位置，让窗口靠右
-		ImGui::SetWindowPos(ImVec2(Global::mWidth - window_size.x, 0));
-
-		static int item_Demo_idx = IM_ARRAYSIZE(PhysicsBlock::DemoNameS) - 1; // ImGui::Combo Demo序号
-		static int item_current = item_Demo_idx + 1;						  // 储存当前Demo序号
-		ImGui::Combo("Demo", &item_Demo_idx, PhysicsBlock::DemoNameS, IM_ARRAYSIZE(PhysicsBlock::DemoNameS));
-		// Demo序号 是否发生改变
-		static bool ResetBool = false;
-		if ((item_current != item_Demo_idx) || ResetBool)
-		{
-			ResetBool = false;
-			item_current = item_Demo_idx;
-			PhysicsBlock::DemoFunS[item_Demo_idx](&mPhysicsWorld, mCamera);
-			mMapFormwork = mPhysicsWorld->GetMapFormwork();
-			PhysicsFormworkPtr = nullptr;
-			mAuxiliaryVision->ClearStaticLine(); // 清空上一个地图的静态网格
-			RenderMapOutline();
-
-			// Demo 切换后重建 GPU Buffer
-			if (mGPUInitialized && mPhysicsGPU) {
-				delete mPhysicsGPU;
-				mPhysicsGPU = new PhysicsBlock::PhysicsGPU(mDevice, mPhysicsWorld);
-				mPhysicsGPU->Initialize();
-				mGPUInitialized = mPhysicsGPU->IsReady();
-				if (mGPUInitialized) {
-					mPhysicsWorld->SetGPU(mPhysicsGPU);
-				}
-			}
-
-			mPhysicsWorld->SetUseGPUApplyImpulse(mUseGPUApplyImpulse);
-		}
-		if (ImGui::Button("重置")) {
-			ResetBool = true;
-		}
-		if (ImGui::Button("保存"))
-		{
-			auto jsondata = nlohmann::json::parse(R"({})");
-			mPhysicsWorld->JsonSerialization(jsondata);
-			std::ofstream outFile("./JSON.json", std::ios::out | std::ios::trunc); // 文件覆盖模式
-			outFile << jsondata.dump();
-			outFile.close();
-		}
-		if (ImGui::Button("读取"))
-		{
-			PhysicsFormworkPtr = nullptr;
-			if (mPhysicsWorld != nullptr)
-			{
-				delete mPhysicsWorld;
-			}
-			std::ofstream outFile("./JSON.json", std::ios::in);
-			std::stringstream buff{};
-			buff << outFile.rdbuf();
-			outFile.close();
-			auto jsondata = nlohmann::json::parse(buff);
-			mPhysicsWorld = new PhysicsBlock::PhysicsWorld(jsondata);
-		}
-
-		if (ImGui::Button(PhysicsSwitch ? u8"关闭物理" : u8"开启物理"))
-		{
-			PhysicsSwitch = !PhysicsSwitch;
-		}
-		// === CPU/GPU 计算后端切换 ===
-		if (mGPUInitialized) {
-			ImGui::Separator();
-			ImGui::Text(u8"计算后端");
-
-			int gpuMode = mUseGPUApplyImpulse ? 1 : 0;
-			if (ImGui::RadioButton(u8"CPU（原有求解器）", &gpuMode, 0)) {
-				mUseGPUApplyImpulse = false;
-				mPhysicsWorld->SetUseGPUApplyImpulse(false);
-				PhysicsLog("[Switch] ApplyImpulse backend: CPU\n");
-			}
-			ImGui::SameLine();
-			if (ImGui::RadioButton(u8"GPU（Compute Shader）", &gpuMode, 1)) {
-				mUseGPUApplyImpulse = true;
-				mPhysicsWorld->SetUseGPUApplyImpulse(true);
-				PhysicsLog("[Switch] ApplyImpulse backend: GPU\n");
-			}
-
-			ImVec4 green  = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
-			ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
-
-			ImGui::TextColored(yellow, u8"  碰撞检测 耗时: %.3f ms", mPhysicsWorld->GetCollisionDetectionTimeMS());
-			ImGui::TextColored(yellow, u8"  预处理   耗时: %.3f ms", mPhysicsWorld->GetPreStepTimeMS());
-			ImGui::TextColored(yellow, u8"  冲量求解 耗时: %.3f ms", mPhysicsWorld->GetApplyImpulseCPUTimeMS());
-			if (mUseGPUApplyImpulse) {
-				if (mPhysicsGPU->GetGPUExecuteTimeMS() > 0.0f) {
-					ImGui::TextColored(green, u8"    CPU→GPU 耗时: %.3f ms", mPhysicsGPU->GetCPUUploadTimeMS());
-					ImGui::TextColored(green, u8"    GPU 计算 耗时: %.3f ms", mPhysicsGPU->GetGPUExecuteTimeMS());
-					ImGui::TextColored(green, u8"    GPU→CPU 耗时: %.3f ms", mPhysicsGPU->GetGPUReadbackTimeMS());
-				}
-			}
-			ImGui::TextColored(yellow, u8"  位置更新 耗时: %.3f ms", mPhysicsWorld->GetPositionUpdateTimeMS());
-			ImGui::TextColored(yellow, u8"  后处理   耗时: %.3f ms", mPhysicsWorld->GetPostProcessTimeMS());
-
-
-			ImGui::Text(u8"  物体数: %d  Arbiter: %d  Joint: %d  Junction: %d",
-				(int)(mPhysicsWorld->PhysicsShapeS.size() +
-				      mPhysicsWorld->PhysicsCircleS.size() +
-				      mPhysicsWorld->PhysicsParticleS.size() +
-				      mPhysicsWorld->PhysicsLineS.size()),
-				(int)mPhysicsWorld->CollideGroupVector.size(),
-				(int)mPhysicsWorld->PhysicsJointS.size(),
-				(int)mPhysicsWorld->BaseJunctionS.size()
-			);
-		} else {
-			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
-				u8"GPU 未就绪（检查 Vulkan 设备 / shader 编译）");
-		}
-		if (ImGui::Button(PhysicsAssistantInformation ? u8"关闭物理辅助视觉" : u8"开启物理辅助视觉"))
-		{
-			PhysicsAssistantInformation = !PhysicsAssistantInformation;
-		}
-		if (PhysicsAssistantInformation)
-		{
-			// 物理辅助显示参数的控制UI
-			PhysicsBlock::PhysicsAuxiliaryColorUI();
-		}
-
-		ImGui::Text(u8"世界总动能：%f", mPhysicsWorld->GetWorldEnergy());
-
-		if (PhysicsFormworkPtr)
-		{
-			switch (PhysicsFormworkPtr->PFGetType())
-			{
-			case PhysicsBlock::PhysicsObjectEnum::shape:
-				ImGui::Text(u8"Shape");
-				PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr);
-				break;
-			case PhysicsBlock::PhysicsObjectEnum::particle:
-				ImGui::Text(u8"Particle");
-				PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr);
-				break;
-			case PhysicsBlock::PhysicsObjectEnum::circle:
-				ImGui::Text(u8"Circle");
-				PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsCircle *)PhysicsFormworkPtr);
-				break;
-			case PhysicsBlock::PhysicsObjectEnum::line:
-				ImGui::Text(u8"Line");
-				PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsLine *)PhysicsFormworkPtr);
-				break;
-			default:
-				ImGui::Text(u8"nullptr");
-				break;
-			}
-		}
-		else
-		{
-			ImGui::Text(u8"World");
-			if (PhysicsBlock::PhysicsUI(mPhysicsWorld))
-			{
-				// 地图发生变动
-				mAuxiliaryVision->ClearStaticLine(); // 清空上一个地图的静态网格
-				RenderMapOutline();
-			}
-		}
-
-		ImGui::End();
-
-		ImGui::Begin(u8"日志输出", &ShowLogPanel);
-		window_pos = ImGui::GetWindowPos();
-		window_size = ImGui::GetWindowSize();
-		if (((window_pos.x < CursorPosX) && ((window_pos.x + window_size.x) > CursorPosX)) &&
-			((window_pos.y < CursorPosY) && ((window_pos.y + window_size.y) > CursorPosY))) {
 			Global::ClickWindow = true;
 		}
+		ImGui::SetWindowSize(ImVec2(420, 600), ImGuiCond_FirstUseEver);
+		ImGui::SetWindowPos(ImVec2(Global::mWidth - 420, 0), ImGuiCond_FirstUseEver);
 
-		ImGui::SetWindowSize(ImVec2(Global::mWidth * 0.4f, LogPanelHeight), ImGuiCond_FirstUseEver);
-
-		ImGui::Checkbox(u8"自动滚动", &AutoScrollLog);
-		ImGui::SameLine();
-		if (ImGui::Button(u8"清空日志"))
+		if (ImGui::BeginTabBar("MainTabBar"))
 		{
-			PhysicsBlock::PhysicsLogBuffer::GetInstance().Clear();
-		}
-		ImGui::Separator();
-
-		static ImGuiTextFilter logFilter;
-		logFilter.Draw(u8"过滤");
-
-		const float footerHeightToReserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetStyle().ScrollbarSize;
-		ImGui::BeginChild("LogScrollRegion", ImVec2(0, -footerHeightToReserve), false, ImGuiWindowFlags_HorizontalScrollbar);
-
-		auto& logBuffer = PhysicsBlock::PhysicsLogBuffer::GetInstance();
-		static std::vector<std::string> cachedLogs;
-		static size_t lastLogCount = 0;
-
-		if (logBuffer.GetLogCount() != lastLogCount)
-		{
-			cachedLogs.clear();
-			for (size_t i = 0; i < logBuffer.GetLogCount(); ++i)
+			// ========== 标签页 1: 编辑 ==========
+			if (ImGui::BeginTabItem(u8"编辑"))
 			{
-				cachedLogs.push_back(logBuffer.GetLog(i));
-			}
-			lastLogCount = cachedLogs.size();
-		}
+				if (ImGui::Button(EditorModeBool ? u8"关闭编辑" : u8"开启编辑"))
+				{
+					EditorModeBool = !EditorModeBool;
+				}
+				ImGui::Combo(u8"物体", &item_object, objectName, IM_ARRAYSIZE(objectName));
+				ImGui::Spacing();
 
-		for (const auto& log : cachedLogs)
-		{
-			if (logFilter.PassFilter(log.c_str()))
+				// GPU计算后端切换
+				if (mGPUInitialized)
+				{
+					ImGui::SeparatorText(u8"计算后端");
+					int gpuMode = mUseGPUApplyImpulse ? 1 : 0;
+					if (ImGui::RadioButton(u8"CPU（原有求解器）", &gpuMode, 0)) {
+						mUseGPUApplyImpulse = false;
+						mPhysicsWorld->SetUseGPUApplyImpulse(false);
+						PhysicsLog("[Switch] ApplyImpulse backend: CPU\n");
+					}
+					ImGui::SameLine();
+					if (ImGui::RadioButton(u8"GPU（Compute Shader）", &gpuMode, 1)) {
+						mUseGPUApplyImpulse = true;
+						mPhysicsWorld->SetUseGPUApplyImpulse(true);
+						PhysicsLog("[Switch] ApplyImpulse backend: GPU\n");
+					}
+				}
+
+				// 模拟控制
+				ImGui::SeparatorText(u8"模拟控制");
+				if (ImGui::Button(PhysicsSwitch ? u8"关闭物理" : u8"开启物理"))
+				{
+					PhysicsSwitch = !PhysicsSwitch;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button(PhysicsAssistantInformation ? u8"关闭辅助视觉" : u8"开启辅助视觉"))
+				{
+					PhysicsAssistantInformation = !PhysicsAssistantInformation;
+				}
+
+				if (PhysicsAssistantInformation)
+				{
+					ImGui::Spacing();
+					ImGui::TextDisabled(u8"辅助视觉参数");
+					PhysicsBlock::PhysicsAuxiliaryColorUI();
+				}
+
+				// 文件IO
+				ImGui::SeparatorText(u8"文件操作");
+				if (ImGui::Button("保存"))
+				{
+					auto jsondata = nlohmann::json::parse(R"({})");
+					mPhysicsWorld->JsonSerialization(jsondata);
+					std::ofstream outFile("./JSON.json", std::ios::out | std::ios::trunc);
+					outFile << jsondata.dump();
+					outFile.close();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("读取"))
+				{
+					PhysicsFormworkPtr = nullptr;
+					if (mPhysicsWorld != nullptr)
+					{
+						delete mPhysicsWorld;
+					}
+					std::ifstream inFile("./JSON.json", std::ios::in);
+					std::stringstream buff{};
+					buff << inFile.rdbuf();
+					inFile.close();
+					auto jsondata = nlohmann::json::parse(buff);
+					mPhysicsWorld = new PhysicsBlock::PhysicsWorld(jsondata);
+				}
+
+				ImGui::EndTabItem();
+			}
+
+			// ========== 标签页 2: 属性 ==========
+			if (ImGui::BeginTabItem(u8"属性"))
 			{
-				ImGui::TextUnformatted(log.c_str());
+				// Demo 选择
+				static int item_Demo_idx = IM_ARRAYSIZE(PhysicsBlock::DemoNameS) - 1;
+				static int item_current = item_Demo_idx + 1;
+				ImGui::Combo("示例场景", &item_Demo_idx, PhysicsBlock::DemoNameS, IM_ARRAYSIZE(PhysicsBlock::DemoNameS));
+				static bool ResetBool = false;
+				if ((item_current != item_Demo_idx) || ResetBool)
+				{
+					ResetBool = false;
+					item_current = item_Demo_idx;
+					PhysicsBlock::DemoFunS[item_Demo_idx](&mPhysicsWorld, mCamera);
+					mMapFormwork = mPhysicsWorld->GetMapFormwork();
+					PhysicsFormworkPtr = nullptr;
+					mAuxiliaryVision->ClearStaticLine();
+					RenderMapOutline();
+
+					if (mGPUInitialized && mPhysicsGPU) {
+						delete mPhysicsGPU;
+						mPhysicsGPU = new PhysicsBlock::PhysicsGPU(mDevice, mPhysicsWorld);
+						mPhysicsGPU->Initialize();
+						mGPUInitialized = mPhysicsGPU->IsReady();
+						if (mGPUInitialized) {
+							mPhysicsWorld->SetGPU(mPhysicsGPU);
+						}
+					}
+					mPhysicsWorld->SetUseGPUApplyImpulse(mUseGPUApplyImpulse);
+				}
+				if (ImGui::Button("重置场景")) {
+					ResetBool = true;
+				}
+
+				// 性能统计
+				ImGui::Spacing();
+				ImGui::SeparatorText(u8"性能统计");
+				ImVec4 green  = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
+				ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
+
+				ImGui::TextColored(yellow, u8"碰撞检测  耗时: %.3f ms", mPhysicsWorld->GetCollisionDetectionTimeMS());
+				ImGui::TextColored(yellow, u8"预处理    耗时: %.3f ms", mPhysicsWorld->GetPreStepTimeMS());
+				ImGui::TextColored(yellow, u8"冲量求解  耗时: %.3f ms", mPhysicsWorld->GetApplyImpulseCPUTimeMS());
+				if (mUseGPUApplyImpulse && mGPUInitialized) {
+					if (mPhysicsGPU->GetGPUExecuteTimeMS() > 0.0f) {
+						ImGui::TextColored(green, u8"  CPU→GPU 耗时: %.3f ms", mPhysicsGPU->GetCPUUploadTimeMS());
+						ImGui::TextColored(green, u8"  GPU 计算 耗时: %.3f ms", mPhysicsGPU->GetGPUExecuteTimeMS());
+						ImGui::TextColored(green, u8"  GPU→CPU 耗时: %.3f ms", mPhysicsGPU->GetGPUReadbackTimeMS());
+					}
+				}
+				ImGui::TextColored(yellow, u8"位置更新  耗时: %.3f ms", mPhysicsWorld->GetPositionUpdateTimeMS());
+				ImGui::TextColored(yellow, u8"后处理    耗时: %.3f ms", mPhysicsWorld->GetPostProcessTimeMS());
+
+				// 场景统计
+				ImGui::Spacing();
+				ImGui::SeparatorText(u8"场景统计");
+				ImGui::Text(u8"物体总数: %d",
+					(int)(mPhysicsWorld->PhysicsShapeS.size() +
+					      mPhysicsWorld->PhysicsCircleS.size() +
+					      mPhysicsWorld->PhysicsParticleS.size() +
+					      mPhysicsWorld->PhysicsLineS.size()));
+				ImGui::Text(u8"碰撞对: %d    关节: %d    连接点: %d",
+					(int)mPhysicsWorld->CollideGroupVector.size(),
+					(int)mPhysicsWorld->PhysicsJointS.size(),
+					(int)mPhysicsWorld->BaseJunctionS.size());
+				ImGui::Text(u8"世界总动能: %.6f", mPhysicsWorld->GetWorldEnergy());
+
+				if (!mGPUInitialized) {
+					ImGui::Spacing();
+					ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
+						u8"GPU 未就绪（检查 Vulkan 设备 / shader 编译）");
+				}
+
+				// 选中对象属性
+				ImGui::Spacing();
+				ImGui::SeparatorText(u8"选中对象属性");
+				if (PhysicsFormworkPtr)
+				{
+					const char* typeName = u8"未知";
+					switch (PhysicsFormworkPtr->PFGetType())
+					{
+					case PhysicsBlock::PhysicsObjectEnum::shape:    typeName = u8"网格形状"; break;
+					case PhysicsBlock::PhysicsObjectEnum::particle: typeName = u8"粒子";     break;
+					case PhysicsBlock::PhysicsObjectEnum::circle:  typeName = u8"圆形";     break;
+					case PhysicsBlock::PhysicsObjectEnum::line:    typeName = u8"线段";     break;
+					default: break;
+					}
+					ImGui::Text(u8"类型: %s", typeName);
+					ImGui::Spacing();
+
+					switch (PhysicsFormworkPtr->PFGetType())
+					{
+					case PhysicsBlock::PhysicsObjectEnum::shape:
+						PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsShape *)PhysicsFormworkPtr); break;
+					case PhysicsBlock::PhysicsObjectEnum::particle:
+						PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsParticle *)PhysicsFormworkPtr); break;
+					case PhysicsBlock::PhysicsObjectEnum::circle:
+						PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsCircle *)PhysicsFormworkPtr); break;
+					case PhysicsBlock::PhysicsObjectEnum::line:
+						PhysicsBlock::PhysicsUI((PhysicsBlock::PhysicsLine *)PhysicsFormworkPtr); break;
+					default: break;
+					}
+				}
+				else
+				{
+					ImGui::Text(u8"当前选中: 整个物理世界");
+					if (PhysicsBlock::PhysicsUI(mPhysicsWorld))
+					{
+						mAuxiliaryVision->ClearStaticLine();
+						RenderMapOutline();
+					}
+				}
+
+				ImGui::EndTabItem();
 			}
-		}
 
-		if (AutoScrollLog && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-		{
-			ImGui::SetScrollHereY(1.0f);
-		}
+			// ========== 标签页 3: 日志输出 ==========
+			if (ImGui::BeginTabItem(u8"日志输出"))
+			{
+				ImGui::Checkbox(u8"自动滚动", &AutoScrollLog);
+				ImGui::SameLine();
+				if (ImGui::Button(u8"清空日志"))
+				{
+					PhysicsBlock::PhysicsLogBuffer::GetInstance().Clear();
+				}
+				ImGui::Separator();
 
-		ImGui::EndChild();
+				static ImGuiTextFilter logFilter;
+				logFilter.Draw(u8"过滤");
+
+				const float footerHeightToReserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetStyle().ScrollbarSize;
+				ImGui::BeginChild("LogScrollRegion", ImVec2(0, -footerHeightToReserve), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+				auto& logBuffer = PhysicsBlock::PhysicsLogBuffer::GetInstance();
+				static std::vector<std::string> cachedLogs;
+				static size_t lastLogCount = 0;
+
+				if (logBuffer.GetLogCount() != lastLogCount)
+				{
+					cachedLogs.clear();
+					for (size_t i = 0; i < logBuffer.GetLogCount(); ++i)
+					{
+						cachedLogs.push_back(logBuffer.GetLog(i));
+					}
+					lastLogCount = cachedLogs.size();
+				}
+
+				for (const auto& log : cachedLogs)
+				{
+					if (logFilter.PassFilter(log.c_str()))
+					{
+						ImGui::TextUnformatted(log.c_str());
+					}
+				}
+
+				if (AutoScrollLog && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+				{
+					ImGui::SetScrollHereY(1.0f);
+				}
+
+				ImGui::EndChild();
+				ImGui::EndTabItem();
+			}
+
+			ImGui::EndTabBar();
+		}
 
 		ImGui::End();
 

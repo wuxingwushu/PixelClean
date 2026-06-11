@@ -124,6 +124,9 @@ private:
     std::vector<std::thread> mWorkers;
     std::vector<ThreadNoiseSet> mThreadNoises;
 
+    // 地形生成参数
+    TerrainGenParams mParams;
+
     // 已请求但未完成的Chunk坐标集合（用于去重）
     std::unordered_set<int64_t> mInflightChunks;
     mutable std::mutex mInflightMutex;

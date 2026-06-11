@@ -82,9 +82,7 @@ namespace GAME
 		int mWinWidth = 0;
 		int mWinHeight = 0;
 
-		bool ShowLogPanel = true;							 // 是否显示日志面板
 		bool AutoScrollLog = true;							 // 是否自动滚动日志
-		float LogPanelHeight = 200.0f;						 // 日志面板高度
 
 		PhysicsBlock::PhysicsFormwork *PhysicsFormworkPtr = nullptr; // 选择的物理对象
 

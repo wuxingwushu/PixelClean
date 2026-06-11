@@ -106,6 +106,14 @@ public:
     explicit BlockWorld(Configuration wConfiguration);
     ~BlockWorld();
 
+    // 地形生成参数（定义在 ChunkData.h，可调参数集中管理）
+    TerrainGenParams mTerrainParams;
+
+    // 配置噪声实例从参数
+    void SetupAllNoiseFromParams();
+    // 重新生成整个地图（修改参数后调用）
+    void RegenerateAllChunks();
+
     // 鼠标移动事件
     virtual void MouseMove(double xpos, double ypos);
 
@@ -238,7 +246,7 @@ private:
 
     // === 顶点数据 ===
     unsigned int mVertexCount = 0;
-    unsigned int mVertexCapacity = 10000000;
+    unsigned int mVertexCapacity = 30000000;  // 预分配足够容量以减少初始加载时的重新分配
     bool mVertexDataDirty = false;
 };
 

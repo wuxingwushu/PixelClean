@@ -120,6 +120,9 @@ TerrainGenPipeline::~TerrainGenPipeline() {
 void TerrainGenPipeline::initialize(const BlockWorld& bw) {
     if (mInitialized) return;
 
+    // 复制地形生成参数
+    mParams = bw.mTerrainParams;
+
     mThreadNoises.reserve(mNumWorkers);
     for (unsigned int i = 0; i < mNumWorkers; i++) {
         mThreadNoises.push_back(ThreadNoiseSet::cloneFrom(bw));
@@ -177,6 +180,10 @@ void TerrainGenPipeline::shutdown() {
 
     mRequestQueue.shutdown();
 
+    // 必须在 join 之前设置 mInitialized = false，否则 workerLoop 中
+    // 检查 mInitialized 永不为 false，worker 永远不会退出，造成死锁。
+    mInitialized = false;
+
     for (auto& t : mWorkers) {
         if (t.joinable()) {
             t.join();
@@ -185,7 +192,6 @@ void TerrainGenPipeline::shutdown() {
     mWorkers.clear();
 
     mThreadNoises.clear();
-    mInitialized = false;
 
     LOGD("TerrainGenPipeline: shutdown complete");
 }
@@ -227,6 +233,7 @@ std::unique_ptr<ChunkData> TerrainGenPipeline::executeJob(const TerrainJob& job,
     ThreadNoiseSet& ns = mThreadNoises[workerId];
 
     chunk->generateTerrain(
+        mParams,
         ns.continentalNoise.get(),
         ns.erosionNoise.get(),
         ns.detailNoise.get(),
@@ -246,8 +253,7 @@ std::unique_ptr<ChunkData> TerrainGenPipeline::executeJob(const TerrainJob& job,
         ns.ravineNoise.get(),
         ns.aquiferNoise.get(),
         ns.aquiferBarrierNoise.get(),
-        ns.riverNoise.get(),
-        0
+        ns.riverNoise.get()
     );
 
     return chunk;

@@ -316,6 +316,11 @@ namespace VulKan {
 			mApp->KeyDown(GameKeyEnum::SPACE);
 			Global::AndroidRequestSpace = false;
 		}
+
+		if (Global::AndroidRequestMoveDown) {
+			mApp->KeyDown(GameKeyEnum::MOVE_DOWN);
+			Global::AndroidRequestMoveDown = false;
+		}
 #endif
 	}
 }

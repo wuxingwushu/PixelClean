@@ -284,7 +284,7 @@ public:
 		}
 		else
 		{
-			for (int ix = 0; ix < (int)mNumberY; ++ix)
+			for (int ix = 0; ix < (int)mNumberX; ++ix)
 			{
 				for (int iz = sZ; iz < eZ; ++iz)
 				{
@@ -321,7 +321,7 @@ public:
 					}
 					for (int iz = 0; iz < (int)(mNumberZ - uZ); ++iz)
 					{
-						at(ix, iy, iz) = at(ix, iy + uZ, iz);
+						at(ix, iy, iz) = at(ix, iy, iz + uZ);
 					}
 					for (int iz = (int)(mNumberZ - uZ); iz < (int)mNumberZ; ++iz)
 					{
@@ -334,7 +334,7 @@ public:
 		}
 		else
 		{
-			for (int ix = 0; ix < (int)mNumberY; ++ix)
+			for (int ix = 0; ix < (int)mNumberX; ++ix)
 			{
 				for (int iy = 0; iy < (int)mNumberY; ++iy)
 				{
@@ -348,7 +348,7 @@ public:
 					}
 					for (int iz = 0; iz < -uZ; ++iz)
 					{
-						at(ix, iy, iz) = LPlate[iy];
+						at(ix, iy, iz) = LPlate[iz];
 						mDeleteCallback(at(ix, iy, iz), mDeleteData);
 						mGenerateCallback(at(ix, iy, iz), (ix + mPosX - mOriginX), (iy + mPosY - mOriginY), (iz + mPosZ - mOriginZ), mGenerateData);
 					}

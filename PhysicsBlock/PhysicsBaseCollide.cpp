@@ -242,7 +242,7 @@ namespace PhysicsBlock
         {
             CollisionInfoD info;
             // 使用反向射线检测碰撞点（避免点在形状内部时无法检测）
-            info = Shape->PsBresenhamDetection(Particle->pos - (Shape->pos - Particle->pos), Particle->pos);
+            info = Shape->PsBresenhamDetection(Particle->OldPos, Particle->pos);
             if (info.Collision)
             {
                 if (info.Direction & 0x1)
@@ -258,6 +258,9 @@ namespace PhysicsBlock
                 contacts->position = info.pos;
                 contacts->normal = -vec2angle({-1, 0}, (info.Direction * (M_PI / 2)) + Shape->angle);
                 contacts->w_side = 0;
+                // 处理点卡在地形内部的情况
+                Particle->OldPos = info.pos + (contacts->normal * FLOAT_(0.1));
+                Particle->OldPosUpDataBool = false;
                 return 1;
             }
         }

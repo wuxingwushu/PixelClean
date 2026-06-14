@@ -5,14 +5,14 @@
 
 namespace GAME {
 
-	void UVDynamicDiagramDestroyPixel(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* mclass) {
+	void UVDynamicDiagramDestroyPixel(int x, int y, bool Bool, PhysicsBlock::PhysicsFormwork* Object, void* mclass) {
 		UVDynamicDiagram* LUVDynamicDiagram = (UVDynamicDiagram*)mclass;
 		
 		std::cout << "破坏: " << x << " - " << y << " : " << LUVDynamicDiagram->GetPixelIndex(x, y) << std::endl;
 	}
 
-	UVDynamicDiagram::UVDynamicDiagram(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, std::vector<VulKan::Buffer*> VPMstdBuffer, SquarePhysics::SquarePhysics* SquarePhysics)
-		:wPipeline(pipeline), wSwapChain(swapChain), wRenderPass(renderPass), wSquarePhysics(SquarePhysics)
+	UVDynamicDiagram::UVDynamicDiagram(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, std::vector<VulKan::Buffer*> VPMstdBuffer, PhysicsBlock::PhysicsWorld* PhysicsWorld)
+		:wPipeline(pipeline), wSwapChain(swapChain), wRenderPass(renderPass), wSquarePhysics(PhysicsWorld)
 	{
 		mCommandPool = new VulKan::CommandPool(device);
 		mCommandBuffer = new VulKan::CommandBuffer*[wSwapChain->getImageCount()];
@@ -48,6 +48,9 @@ namespace GAME {
 
 		
 
+		/* IndexAnimationGrid is old engine concept - temporarily disabled
+		// TODO: Extract animation grid to rendering layer
+
 		mIndexAnimationGrid = new SquarePhysics::IndexAnimationGrid(3, 3, 1, 8);
 		SquarePhysics::PixelAttribute* pixelAttribute = mIndexAnimationGrid->mPixelAttributeS;
 		pixelAttribute[0].Collision = true;
@@ -60,6 +63,7 @@ namespace GAME {
 		mIndexAnimationGrid->SetCollisionCallback(UVDynamicDiagramDestroyPixel, this);
 		mIndexAnimationGrid->OutlineCalculate();
 		wSquarePhysics->AddObjectCollision(mIndexAnimationGrid);
+*/
 
 		mUVDynamicDiagramStruct.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(20.0f, 20.0f, 0.0f));
 		mUVDynamicDiagramStruct.UnitSize = 9;

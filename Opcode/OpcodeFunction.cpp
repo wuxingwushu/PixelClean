@@ -118,7 +118,7 @@ namespace Opcode {
 		if (CodeS->GetNumber() == 2) {
 			OpCrowd->KillAll();
 			OpLabyrinth->AgainGenerateLabyrinth(OpConverter<int>(*CodeS->pop()), OpConverter<int>(*CodeS->pop()));
-			OpGamePlayer->GetObjectCollision()->SetPos(OpLabyrinth->GetLegitimateGeneratePos());
+			OpGamePlayer->GetObjectCollision()->pos = OpLabyrinth->GetLegitimateGeneratePos();
 		}
 		else
 		{

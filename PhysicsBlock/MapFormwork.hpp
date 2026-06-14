@@ -98,6 +98,30 @@ namespace PhysicsBlock
         virtual CollisionInfoD FMBresenhamDetection(Vec2_ start, Vec2_ end) { return CollisionInfoD{}; }
 
         virtual CollisionInfoI FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end) { return CollisionInfoI{}; }
+
+        /**
+         * @brief 安全地设置单个格子碰撞状态（带边界检查）
+         * @param pos 网格坐标
+         * @param state true=开启碰撞, false=关闭碰撞
+         * @return true=状态发生了变更, false=坐标越界或状态未变
+         */
+        virtual bool SafeSetCollision(glm::ivec2 pos, bool state) = 0;
+
+        /**
+         * @brief 设置指定像素的摩擦系数
+         * @param x 网格坐标 X
+         * @param y 网格坐标 Y
+         * @param friction 摩擦系数值
+         */
+        virtual void SetFriction(int x, int y, FLOAT_ friction) = 0;
+
+        /**
+         * @brief 获取指定像素的摩擦系数
+         * @param x 网格坐标 X
+         * @param y 网格坐标 Y
+         * @return 摩擦系数值，如果坐标越界返回 0
+         */
+        virtual FLOAT_ GetFriction(int x, int y) = 0;
     };
 
 }

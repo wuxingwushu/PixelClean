@@ -135,6 +135,24 @@ namespace PhysicsBlock
     using MapCollisionCallback = std::function<void(const PhysicsFormwork *, const MapFormwork *, const BaseArbiter *)>;
 
     /**
+     * @brief 子弹/粒子命中地形时的回调
+     * @param hitPos 碰撞发生的网格坐标（世界坐标）
+     * @param angle 子弹入射角度（弧度）
+     * @param bullet 命中地形的子弹/粒子对象
+     * @param userData 用户自定义数据指针
+     * @details 游戏层在此回调中实现破坏逻辑：
+     * 1. 根据子弹类型（通过 userData 传递）计算破坏范围
+     * 2. 调用 MapFormwork::SafeSetCollision() 逐个清除像素
+     * 3. 更新贴图数据、寻路数据等渲染层信息
+     */
+    using TerrainHitCallback = std::function<void(
+        glm::ivec2 hitPos,              // 碰撞网格坐标
+        FLOAT_ angle,                   // 子弹入射角度
+        PhysicsFormwork* bullet,        // 子弹对象
+        void* userData                  // 用户数据
+    )>;
+
+    /**
      * @brief 基础异常类，用于物理引擎内部的参数验证失败
      */
     class PhysicsException : public std::runtime_error

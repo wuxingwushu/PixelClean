@@ -10,7 +10,7 @@
 
 namespace GAME {
 
-	void Labyrinth_SetPixel(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* mclass) {
+	static void Labyrinth_SetPixel_2(int x, int y, bool Bool, PhysicsBlock::PhysicsFormwork* Object, void* mclass) {
 		Labyrinth* mClass = (Labyrinth*)mclass;
 		mClass->mPixelQueue->add({ x, y, Bool });
 		if (Global::MultiplePeopleMode) {
@@ -20,7 +20,7 @@ namespace GAME {
 		}
 	}
 
-	Labyrinth::Labyrinth(SquarePhysics::SquarePhysics* squarePhysics):
+	Labyrinth::Labyrinth(PhysicsBlock::PhysicsWorld* squarePhysics):
 		wSquarePhysics(squarePhysics)
 	{
 		LOGD("Labyrinth::Labyrinth constructor");
@@ -167,9 +167,16 @@ namespace GAME {
 	}
 
 	void Labyrinth::LabyrinthBuffer() {
-		mFixedSizeTerrain = new SquarePhysics::FixedSizeTerrain(numberX * 16, numberY * 16, 1);
-		mFixedSizeTerrain->SetCollisionCallback(Labyrinth_SetPixel, this);
-		wSquarePhysics->SetFixedSizeTerrain(mFixedSizeTerrain);//添加地图碰撞
+		mFixedSizeTerrain = new PhysicsBlock::MapStatic(numberX * 16, numberY * 16);
+		mFixedSizeTerrain->SetCollisionChangeCallback(
+			[](glm::ivec2 pos, bool newState, void* userData) {
+				if (!newState) {
+					Labyrinth_SetPixel_2(pos.x, pos.y, false, nullptr, userData);
+				}
+			},
+			this
+		);
+		wSquarePhysics->SetMapFormwork(mFixedSizeTerrain);//添加地图碰撞
 
 		int Ax = -((numberX / 2) * 16);
 		int Ay = -((numberY / 2) * 16);
@@ -177,8 +184,7 @@ namespace GAME {
 		int By = (numberY * 16) + Ay;
 		mOriginX = (unsigned int)(-Ax + 8);
 		mOriginY = (unsigned int)(-Ay + 8);
-		mFixedSizeTerrain->SetOrigin(mOriginX, mOriginY);
-
+		mFixedSizeTerrain->SetCentrality({(float)mOriginX, (float)mOriginY});
 
 
 
@@ -245,6 +251,9 @@ namespace GAME {
 		delete[] PixelWallNumber;
 
 		//销毁地面碰撞系统
+		if (wSquarePhysics != nullptr) {
+			wSquarePhysics->SetMapFormwork(nullptr);
+		}
 		delete mFixedSizeTerrain;
 
 		//销毁 网格 UV 点索引
@@ -330,7 +339,7 @@ namespace GAME {
 							memcpy(&mPixelS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))], 4);
 							MixColors(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))]);
 							//memcpy(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[2][((pX * 16 * 4) + (pY * 4))], 4);
-							mFixedSizeTerrain->at({ x * 16 + pX, y * 16 + pY })->Collision = true;
+							mFixedSizeTerrain->at(x * 16 + pX, y * 16 + pY).Collision = true;
 						}else{
 							/*if (BlockTypeS[x][y] >= TextureNumber) {
 								std::cout << "Error: BlockTypeS > " << TextureNumber << "。  BlockTypeS = " << BlockTypeS[x][y] << std::endl;
@@ -338,7 +347,7 @@ namespace GAME {
 							memcpy(&mPixelS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))], 4);
 							MixColors(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))]);
 							//memcpy(&mMistS[(((x * 16) + pX) * numberY * 16 * 4) + (((y * 16) + pY) * 4)], &pixelS[BlockTypeS[x][y]][((pX * 16 * 4) + (pY * 4))], 4);
-							mFixedSizeTerrain->at({ x * 16 + pX, y * 16 + pY })->Collision = false;
+							mFixedSizeTerrain->at(x * 16 + pX, y * 16 + pY).Collision = false;
 						}
 					}
 				}

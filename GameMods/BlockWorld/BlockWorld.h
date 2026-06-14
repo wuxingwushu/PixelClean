@@ -5,12 +5,7 @@
 #include "../../Tool/MovePlate.h"
 #include "../../VulkanTool/AuxiliaryVision.h"
 
-// 顶点类型别名（必须在 ChunkData.h 之前定义，因为 ChunkData 的缓存依赖此类型）
-#ifndef BLOCK_VERTEX_ALIAS_DEFINED
-#define BLOCK_VERTEX_ALIAS_DEFINED
-using BlockVertex = VulKan::AuxiliaryLineSpot;
-#endif
-
+#include "BlockVertex.h"
 #include "ChunkData.h"
 #include "TerrainGenPipeline.h"
 #include <glm/glm.hpp>

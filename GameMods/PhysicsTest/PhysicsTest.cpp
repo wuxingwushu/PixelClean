@@ -1,6 +1,6 @@
 #include "PhysicsTest.h"
 #include "../../Opcode/OpcodeFunction.h"
-#include "../../Physics/DestroyMode.h"
+// DestroyMode now in game layer (old: #include "../../Physics/DestroyMode.h")
 #include "../../GlobalVariable.h"
 #include "../../PhysicsBlock/BaseCalculate.hpp"
 #include "../../PhysicsBlock/ImGuiPhysics.hpp"

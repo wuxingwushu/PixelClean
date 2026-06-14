@@ -39,8 +39,8 @@ namespace GAME {
 		}
 
 		//设置物理
-		void SteSquarePhysics(SquarePhysics::SquarePhysics* SquarePhysics) {
-			mSquarePhysics = SquarePhysics;
+		void SteSquarePhysics(PhysicsBlock::PhysicsWorld* PhysicsWorld) {
+			mSquarePhysics = PhysicsWorld;
 			MapPlayerS->SetDeleteCallback(DeleteCrowd, mSquarePhysics);//销毁时，随便把物理模拟中的也一并销毁
 			MapPlayerS->SetTimeoutCallback(TimeoutCrowd, nullptr);
 			MapPlayerS->SetTimeoutTime(1000);
@@ -86,7 +86,7 @@ namespace GAME {
 		unsigned int NPCID = 0;//分配 NPC ID
 		ContinuousMap<evutil_socket_t, NPC*>* mNPCS = nullptr;//NPC映射
 
-		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理
+		PhysicsBlock::PhysicsWorld* mSquarePhysics = nullptr;//物理
 
 		Arms* wArms = nullptr;//武器
 	};

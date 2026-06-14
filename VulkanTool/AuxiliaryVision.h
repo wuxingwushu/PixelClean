@@ -49,8 +49,8 @@ namespace VulKan
 
 	struct AuxiliaryForceData
 	{
-		glm::dvec2 *pos{nullptr};
-		glm::dvec2 *Force{nullptr};
+		glm::vec2 *pos{nullptr};
+		glm::vec2 *Force{nullptr};
 		glm::vec4 Color{};
 	};
 
@@ -238,7 +238,7 @@ namespace VulKan
 		unsigned int LineMax = 0;
 		unsigned int mLineRecordedCount = 0;
 		ContinuousMap<glm::dvec2 *, AuxiliaryLineData> *ContinuousAuxiliaryLine = nullptr;
-		ContinuousMap<glm::dvec2 *, AuxiliaryForceData> *ContinuousAuxiliaryForce = nullptr;
+		ContinuousMap<glm::vec2 *, AuxiliaryForceData> *ContinuousAuxiliaryForce = nullptr;
 		ContinuousMap<void *, StaticAuxiliaryLineData> *StaticContinuousAuxiliaryLine = nullptr;
 		StaticVertexTracker mLineStaticVertex{};
 		bool mStaticLineCallbackUpData = false;

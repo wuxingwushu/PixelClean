@@ -109,7 +109,7 @@ namespace {
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 		ContinuousAuxiliaryLine = new ContinuousMap<glm::dvec2*, AuxiliaryLineData>(Number);
-		ContinuousAuxiliaryForce = new ContinuousMap<glm::dvec2*, AuxiliaryForceData>(Number);
+		ContinuousAuxiliaryForce = new ContinuousMap<glm::vec2*, AuxiliaryForceData>(Number);
 		StaticContinuousAuxiliaryLine = new ContinuousMap<void*, StaticAuxiliaryLineData>(Number, ContinuousMap_New);
 		mLinePersistentPtr = static_cast<AuxiliaryLineSpot*>(AuxiliaryLineS->getPersistentMappedPtr());
 		for (size_t i = 0; i < (Number * 2); ++i)

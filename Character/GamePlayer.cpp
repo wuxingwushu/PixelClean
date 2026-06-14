@@ -5,41 +5,46 @@
 
 namespace GAME {
 
-	void GamePlayerDestroyPixel(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* mclass) {
+	void GamePlayerDestroyPixel(int x, int y, bool Bool, PhysicsBlock::PhysicsFormwork* Object, void* mclass) {
 		GamePlayer* Class = (GamePlayer*)mclass;
 		Class->mPixelQueue->add({x,y, Bool });
 		if (Class->wDamagePrompt != nullptr) {
-			Class->wDamagePrompt->AddDamagePrompt(Object->GetSpeedAngleFloat());
+			Vec2_ spd = Object->PFSpeed();
+			Class->wDamagePrompt->AddDamagePrompt(atan2f(spd.y, spd.x));
 		}
 	}
 
 	GamePlayer::GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, 
-		SquarePhysics::SquarePhysics* SquarePhysics, float X, float Y)
+		PhysicsBlock::PhysicsWorld* PhysicsWorld, float X, float Y)
 	{
 		mPipeline = pipeline;
 		mSwapChain = swapChain;
 		mRenderPass = renderPass;
-		mSquarePhysics = SquarePhysics;
+		mSquarePhysics = PhysicsWorld;
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(X, Y, 0.0f));//位移矩阵
 
 		mPixelQueue = new Queue<PixelState>(100);
 
-		mObjectCollision = new SquarePhysics::ObjectCollision(16, 16, 1);
+		mObjectCollision = new PhysicsBlock::PhysicsShape(Vec2_{X, Y}, glm::ivec2{16, 16});
 		mBrokenData = new bool[16 * 16];
 		for (size_t x = 0; x < 16; ++x)
 		{
 			for (size_t y = 0; y < 16; ++y)
 			{
-				mObjectCollision->at({ x,y })->Collision = true;
+				mObjectCollision->at({ x,y }).Entity = true;
+				mObjectCollision->at({ x,y }).Collision = true;
+				mObjectCollision->at({ x,y }).mass = 1.0;
+				mObjectCollision->at({ x,y }).FrictionFactor = 0.2f;
 				mBrokenData[x * 16 + y] = true;
 			}
 		}
-		mObjectCollision->OutlineCalculate();//计算外骨架
-		mObjectCollision->SetOrigin(8, 8);//设置原点
-		mObjectCollision->SetPos({ X, Y });//设置位置
-		mObjectCollision->SetFrictionCoefficient(1.0f);//设置摩擦系数
-		mObjectCollision->SetCollisionCallback(GamePlayerDestroyPixel, this);//设置回调函数
-		mSquarePhysics->AddObjectCollision(mObjectCollision);//添加玩家碰撞
+		mObjectCollision->UpdateAll();//计算外骨架
+		// mObjectCollision->SetOrigin(8, 8);//设置原点 (PhysicsBlock uses CentreMass)
+		mObjectCollision->pos = Vec2_{ X, Y };//设置位置
+	mObjectCollision->friction = 1.0f;//设置摩擦系数
+	// TODO: PhysicsBlock uses global PhysicsCollision callback system instead of per-object SetCollisionCallback
+	// mObjectCollision->SetCollisionCallback(GamePlayerDestroyPixel, this);//设置回调函数
+	mSquarePhysics->AddObject(mObjectCollision);//添加玩家碰撞
 
 		std::vector<float> mPositions = {
 			-8.0f, -8.0f, 0.0f,
@@ -83,7 +88,9 @@ namespace GAME {
 
 	GamePlayer::~GamePlayer()
 	{
-		mSquarePhysics->RemoveObjectCollision(mObjectCollision);//移除玩家碰撞
+		if (mSquarePhysics != nullptr) {
+			mSquarePhysics->RemoveObject(mObjectCollision);//移除玩家碰撞
+		}
 
 		if (mPositionBuffer != nullptr) {
 			delete mPositionBuffer;
@@ -95,7 +102,7 @@ namespace GAME {
 			delete mIndexBuffer;
 		}
 		if (mBrokenData != nullptr) {
-			delete mBrokenData;
+			delete[] mBrokenData;
 		}
 
 		for (VulKan::UniformParameter* UPData : mUniformParams) {
@@ -125,7 +132,7 @@ namespace GAME {
 			delete mBufferCopyCommandPool;
 		}
 		
-		delete mObjectCollision;
+		mObjectCollision = nullptr;
 	}
 
 	void GamePlayer::setGamePlayerMatrix(float time, const int& frameCount, bool mode)
@@ -136,8 +143,8 @@ namespace GAME {
 				mUniform.StrikeState = 0;
 			}
 		}
-		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(mObjectCollision->GetPosX(), mObjectCollision->GetPosY(), 0.0f));//位移矩阵
-		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, (float)glm::radians(mObjectCollision->GetAngleFloat() * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
+		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(mObjectCollision->pos.x, mObjectCollision->pos.y, 0.0f));//位移矩阵
+		mUniform.mModelMatrix = glm::rotate(mUniform.mModelMatrix, (float)glm::radians(mObjectCollision->angle * 180.0f / 3.14f), glm::vec3(0.0f, 0.0f, 1.0f));
 		if (mode) {
 			for (int i = 0; i < frameCount; ++i) {
 				mUniformParams[1]->mBuffers[i]->updateBufferByMap((void*)(&mUniform), sizeof(ObjectUniform));

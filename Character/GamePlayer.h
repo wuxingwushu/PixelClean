@@ -8,7 +8,8 @@
 #include "../Vulkan/swapChain.h"
 #include "../Vulkan/renderPass.h"
 
-#include "../Physics/SquarePhysics.h"
+#include "../PhysicsBlock/PhysicsWorld.hpp"
+#include "../PhysicsBlock/PhysicsShape.hpp"
 #include "../Tool/Queue.h"
 #include "../GlobalStructural.h"
 #include <event2/util.h>
@@ -20,7 +21,7 @@ namespace GAME {
 	{
 	public:
 		GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, 
-			SquarePhysics::SquarePhysics* SquarePhysics, float X, float Y);
+			PhysicsBlock::PhysicsWorld* PhysicsWorld, float X, float Y);
 		~GamePlayer();
 
 		//初始化描述符
@@ -118,10 +119,10 @@ namespace GAME {
 		VulKan::SwapChain* mSwapChain = nullptr;
 		VulKan::RenderPass* mRenderPass = nullptr;
 
-		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理
-		SquarePhysics::ObjectCollision* mObjectCollision = nullptr;
+		PhysicsBlock::PhysicsWorld* mSquarePhysics = nullptr;//物理
+		PhysicsBlock::PhysicsShape* mObjectCollision = nullptr;
 	public://物理
-		SquarePhysics::ObjectCollision* GetObjectCollision() {
+		PhysicsBlock::PhysicsShape* GetObjectCollision() {
 			return mObjectCollision;
 		}
 		Queue<PixelState>* mPixelQueue = nullptr;

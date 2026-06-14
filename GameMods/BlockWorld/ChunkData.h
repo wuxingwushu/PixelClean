@@ -1,5 +1,6 @@
 #pragma once
 
+#include "BlockVertex.h"
 #include "../../Tool/FastNoiseLite.h"
 #include <cstring>
 #include <cmath>

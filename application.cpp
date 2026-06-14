@@ -269,8 +269,8 @@ namespace GAME {
 
 		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleSystem, particleCount);
 
-		LOGI("initGame: step 3 - creating SquarePhysics");
-		mSquarePhysics = new SquarePhysics::SquarePhysics(400, 400);
+		LOGI("initGame: step 3 - creating PhysicsWorld");
+		mSquarePhysics = new PhysicsBlock::PhysicsWorld(Vec2_{0, 0}, false);
 
 		LOGI("initGame: step 4 - creating Arms");
 		mArms = new Arms(mParticleSystem, particleCount);

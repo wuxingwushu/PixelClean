@@ -3,7 +3,7 @@
 #include "../Vulkan/descriptorSet.h"
 #include "../Vulkan/pipeline.h"
 #include "../Vulkan/swapChain.h"
-#include "../Physics/SquarePhysics.h"
+#include "../PhysicsBlock/PhysicsWorld.hpp"
 
 
 namespace GAME {
@@ -18,7 +18,7 @@ namespace GAME {
 	class UVDynamicDiagram
 	{
 	public:
-		UVDynamicDiagram(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, std::vector<VulKan::Buffer*> VPMstdBuffer, SquarePhysics::SquarePhysics* SquarePhysics);
+		UVDynamicDiagram(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, std::vector<VulKan::Buffer*> VPMstdBuffer, PhysicsBlock::PhysicsWorld* PhysicsWorld);
 		~UVDynamicDiagram();
 
 		void InitCommandBuffer();
@@ -36,6 +36,9 @@ namespace GAME {
 			mPositionToData->endupdateBufferByMap();
 		}
 
+		// AnimationEvent temporarily disabled - IndexAnimationGrid is old engine concept
+		// TODO: Extract animation grid to rendering layer
+		/*
 		//动画事件
 		void AnimationEvent(float time) {
 			AccumulatedTime += time;
@@ -55,12 +58,14 @@ namespace GAME {
 			}
 			mPositionToData->endupdateBufferByMap();
 		}
+		*/
 
 		int GetPixelIndex(int x, int y) {
 			return uvdh[9 * mUVDynamicDiagramStruct.CurrentFrame + (x * 3 + y)];
 		}
 
-		SquarePhysics::IndexAnimationGrid* mIndexAnimationGrid{ nullptr };
+		// SquarePhysics::IndexAnimationGrid* mIndexAnimationGrid{ nullptr }; // Old engine concept - removed
+		// TODO: Extract animation grid to rendering layer
 
 	private:
 		UVDynamicDiagramStruct mUVDynamicDiagramStruct{};
@@ -82,7 +87,7 @@ namespace GAME {
 		VulKan::Pipeline* wPipeline{ nullptr };
 		VulKan::SwapChain* wSwapChain{ nullptr };
 		VulKan::RenderPass* wRenderPass{ nullptr };
-		SquarePhysics::SquarePhysics* wSquarePhysics{ nullptr };
+		PhysicsBlock::PhysicsWorld* wSquarePhysics{ nullptr };
 
 
 		int uvdh[72] = {

@@ -7,7 +7,8 @@
 #include "../../Vulkan/pipeline.h"
 
 
-#include "../../Physics/SquarePhysics.h"
+#include "../../PhysicsBlock/PhysicsWorld.hpp"
+#include "../../PhysicsBlock/MapDynamic.hpp"
 
 #include "../../Tool/PerlinNoise.h"
 #include "../../BlockS/PixelS.h"
@@ -54,7 +55,7 @@ namespace GAME {
 	{
 	public:
 
-		Dungeon(VulKan::Device* device, unsigned int X, unsigned int Y, SquarePhysics::SquarePhysics* squarePhysics, float GamePlayerX, float GamePlayerY);
+		Dungeon(VulKan::Device* device, unsigned int X, unsigned int Y, PhysicsBlock::PhysicsWorld* squarePhysics, float GamePlayerX, float GamePlayerY);
 		~Dungeon();
 
 		//初始化描述符
@@ -89,13 +90,13 @@ namespace GAME {
 		}
 
 		//根据输入的位置对区块位置进行更新
-		inline MovePlate2DInfo UpPos(float x, float y) {
-			return mMoveTerrain->UpDataPos(x, y);
+		inline MovePlateInfo UpPos(float x, float y) {
+			return mMoveTerrain->Updata(Vec2_{x, y});
 		}
 
 		//根据世界坐标获取对于的区块
-		inline SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* GetTerrain(float x, float y) {
-			return mMoveTerrain->CalculateGetRigidBodyAndModel(x, y);
+		inline PhysicsBlock::MapDynamic* GetTerrain(float x, float y) {
+			return mMoveTerrain;
 		}
 
 		unsigned int wFrameCount{ 0 };//帧缓冲数
@@ -111,25 +112,31 @@ namespace GAME {
 		
 		//获取对于墙壁数量指针
 		inline short* GetPixelWallPointer(int x, int y) {
-			return &(mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)]);
+			int blockX = x / 16;
+			int blockY = y / 16;
+			if (blockX < 0 || blockX >= (int)mNumberX || blockY < 0 || blockY >= (int)mNumberY) {
+				return nullptr;
+			}
+			int localX = x % 16;
+			int localY = y % 16;
+			return &mTextureAndBuffer[blockX][blockY].PixelWallNumber[localX * 16 + localY];
 		}
 		/*******************************************************/
 		//获取对于墙壁数量
 		inline virtual bool GetPixelWallNumber(unsigned int x, unsigned int y) {
-			if ((x < (mNumberX * 16)) && (y < (mNumberY * 16))) {
-				return mMoveTerrain->GetRigidBodyAndModel(x / 16, y / 16)->mModel->PixelWallNumber[((x % 16) * 16) + (y % 16)] <= 0;
-			}
-			else {
-				return false;
-			}
+			// TODO: MapDynamic PixelWallNumber access needs redesign
+			return false;
 		}
 		//射线检测
-		virtual SquarePhysics::CollisionInfo RadialCollisionDetection(int x, int y, int Ex, int Ey) {
-			return mMoveTerrain->RadialCollisionDetection({ x,y }, { Ex,Ey });
+		virtual PhysicsBlock::CollisionInfoI RadialCollisionDetection(int x, int y, int Ex, int Ey) {
+			return mMoveTerrain->FMBresenhamDetection(glm::ivec2{x, y}, glm::ivec2{Ex, Ey});
 		};
 		/*******************************************************/
 		//计算点附近的墙壁数量
 		void PixelWallNumberCalculate(short* PixelWallNumber, int x, int y) {
+			if (PixelWallNumber == nullptr) {
+				return;
+			}
 			int posX, posY;
 			int Range1A = (x < 9 ? -x : -9), Range1B = ((x + 10) >(mNumberX * 16) ? ((mNumberX * 16) - x) : 10);
 			int Range2A = (y < 9 ? -y : -9), Range2B = ((y + 10) > (mNumberY * 16) ? ((mNumberY * 16) - y) : 10);
@@ -140,7 +147,7 @@ namespace GAME {
 				for (int iy = Range2A; iy < Range2B; ++iy)
 				{
 					posY = y + iy;
-					if (mMoveTerrain->GetRigidBodyAndModel(posX / 16, posY / 16)->mGridDecorator.GetFixedCollisionCompensateBool({ posX % 16, posY % 16 })) {
+					if (mMoveTerrain->at(posX, posY).Collision) {
 						++(*PixelWallNumber);
 					}
 				}
@@ -160,12 +167,18 @@ namespace GAME {
 				{
 					posY = y + iy;
 					LData = GetPixelWallPointer(posX, posY);
-					if (*LData > 0) {
+					if (LData != nullptr && *LData > 0) {
 						--(*LData);
 					}
 				}
 			}
 		}
+
+		/**
+		 * @brief 地形碰撞状态变化回调（由 MapDynamic::SafeSetCollision 触发）
+		 * @param pos 网格坐标（世界坐标）
+		 * @param newState 新的碰撞状态（false 表示被破坏） */
+		void OnTerrainCollisionChanged(glm::ivec2 pos, bool newState);
 
 		//计算一个区块所有像素的墙壁数
 		void BlockPixelWallNumber(int x, int y) {
@@ -184,7 +197,10 @@ namespace GAME {
 						PixelWallNumberCalculate(GetPixelWallPointer(posX, posY), posX, posY);
 					}
 					else {
-						*GetPixelWallPointer(posX, posY) = 1;
+						short* ptr = GetPixelWallPointer(posX, posY);
+						if (ptr != nullptr) {
+							*ptr = 1;
+						}
 					}
 				}
 			}
@@ -331,7 +347,7 @@ namespace GAME {
 		VulKan::CommandPool* mCommandPool{ nullptr };		//指令池
 		VulKan::CommandBuffer** mCommandBuffer{ nullptr };	//指令缓存
 	public:
-		SquarePhysics::MoveTerrain<TextureAndBuffer>* mMoveTerrain{ nullptr };//地图物理模型
+		PhysicsBlock::MapDynamic* mMoveTerrain{ nullptr };//地图物理模型
 	private:
 		DungeonDestroyStruct** mDungeonDestroyStruct{ nullptr };
 	private://储存数据
@@ -339,7 +355,7 @@ namespace GAME {
 		VulKan::RenderPass* wRenderPass{ nullptr };
 		VulKan::Pipeline* wPipeline{ nullptr };
 		VulKan::SwapChain* wSwapChain{ nullptr };
-		SquarePhysics::SquarePhysics* wSquarePhysics{ nullptr };
+		PhysicsBlock::PhysicsWorld* wSquarePhysics{ nullptr };
 		VkDescriptorSetLayout wDescriptorSetLayout;
 		std::vector<VulKan::Buffer*> wVPMstdBuffer;//玩家相机的变化矩阵
 	};

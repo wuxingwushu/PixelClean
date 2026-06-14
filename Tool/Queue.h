@@ -49,9 +49,9 @@ public:
     };
 
     ~Queue() {
-        delete mQueue;
+        delete[] mQueue;
         if (mFlags_ & Queue_Timeout) {
-            delete mTimeS;
+            delete[] mTimeS;
         }
     };
 
@@ -136,7 +136,7 @@ public:
             ++PQueue;
             ++LQueue;
         }
-        delete mQueue;
+        delete[] mQueue;
         mQueue = WQueue;
         if (mFlags_ & Queue_Timeout) {
             std::chrono::steady_clock::time_point* PTimeS = mTimeS;
@@ -148,7 +148,7 @@ public:
                 ++PTimeS;
                 ++LTimeS;
             }
-            delete mTimeS;
+            delete[] mTimeS;
             mTimeS = WTimeS;
         }
 

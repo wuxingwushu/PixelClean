@@ -352,9 +352,9 @@ public:
             ++PDataS;
             ++LDataS;
         }
-        delete KeyS;
+        delete[] KeyS;
         KeyS = WKeyS;
-        delete DataS;
+        delete[] DataS;
         DataS = WDataS;
 
         
@@ -368,7 +368,7 @@ public:
                 ++PTimeS;
                 ++LTimeS;
             }
-            delete TimeS;
+            delete[] TimeS;
             TimeS = WTimeS;
         }
         if (mFlags & ContinuousMap_Pointer) {
@@ -381,7 +381,7 @@ public:
                 ++PPointerData;
                 ++LPointerData;
             }
-            delete mPointerData;
+            delete[] mPointerData;
             mPointerData = WPointerData;
         }
 

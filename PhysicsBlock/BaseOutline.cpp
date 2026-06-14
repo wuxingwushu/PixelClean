@@ -28,9 +28,9 @@ namespace PhysicsBlock
      */
     BaseOutline::~BaseOutline()
     {
-        delete OutlineSet;
-        delete FrictionSet;
-        delete MaxOutlineCentreMass;
+        delete[] OutlineSet;
+        delete[] FrictionSet;
+        delete[] MaxOutlineCentreMass;
     }
 
     /**

@@ -414,6 +414,14 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
         }
 
         /**
+         * @brief 获取碰撞回调管理器
+         * @return 碰撞回调管理器的引用 */
+        PhysicsCollision &GetCollision()
+        {
+            return mCollision;
+        }
+
+        /**
          * @brief 获取位置上的对象
          * @param pos 位置
          * @return 对象指针

@@ -202,4 +202,37 @@ namespace PhysicsBlock
         return Outline;
     }
 
+    bool MapStatic::SafeSetCollision(glm::ivec2 pos, bool state)
+    {
+        if (pos.x < 0 || pos.y < 0 || (unsigned int)pos.x >= width || (unsigned int)pos.y >= height)
+            return false;
+        GridBlock &block = at(pos.x, pos.y);
+        if (block.Collision != state) {
+            block.Collision = state;
+            if (!state) {
+                block.Entity = false;
+                block.Healthpoint = 0;
+            }
+            if (mCollisionChangeCallback) {
+                mCollisionChangeCallback(pos, state, mCollisionChangeUserData);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void MapStatic::SetFriction(int x, int y, FLOAT_ friction)
+    {
+        if (x < 0 || y < 0 || (unsigned int)x >= width || (unsigned int)y >= height)
+            return;
+        at(x, y).FrictionFactor = friction;
+    }
+
+    FLOAT_ MapStatic::GetFriction(int x, int y)
+    {
+        if (x < 0 || y < 0 || (unsigned int)x >= width || (unsigned int)y >= height)
+            return FLOAT_{};
+        return at(x, y).FrictionFactor;
+    }
+
 }

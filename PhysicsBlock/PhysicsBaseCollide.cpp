@@ -364,7 +364,7 @@ namespace PhysicsBlock
         if (!Map) return 0;
 
         // 首先检查点是否在地形碰撞区域内
-        if (Map->FMGetCollide(Particle->pos))
+        if (Map->FMGetCollide(ToInt(Particle->pos)))
         {
             CollisionInfoD info = Map->FMBresenhamDetection(Particle->OldPos, Particle->pos);
             if (info.Collision)

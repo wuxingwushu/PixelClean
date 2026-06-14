@@ -230,42 +230,49 @@ void BlockWorld::BuildBlockFaceVertices(
     float z = (float)wz;
 
     glm::vec3 v0, v1, v2, v3;
+    glm::vec3 normal;
 
     switch (face) {
         case 0: // 前面 (Z+) - 从外向里看顺时针 (CW)
             v0 = {x, y, z + 1}; v1 = {x, y + 1, z + 1};
             v2 = {x + 1, y + 1, z + 1}; v3 = {x + 1, y, z + 1};
+            normal = {0.0f, 0.0f, 1.0f};
             break;
         case 1: // 后面 (Z-) - 从外向里看顺时针 (CW)
             v0 = {x, y, z}; v1 = {x + 1, y, z};
             v2 = {x + 1, y + 1, z}; v3 = {x, y + 1, z};
+            normal = {0.0f, 0.0f, -1.0f};
             break;
         case 2: // 左面 (X-) - 从外向里看顺时针 (CW)
             v0 = {x, y, z}; v1 = {x, y + 1, z};
             v2 = {x, y + 1, z + 1}; v3 = {x, y, z + 1};
+            normal = {-1.0f, 0.0f, 0.0f};
             break;
         case 3: // 右面 (X+) - 从外向里看顺时针 (CW)
             v0 = {x + 1, y, z + 1}; v1 = {x + 1, y + 1, z + 1};
             v2 = {x + 1, y + 1, z}; v3 = {x + 1, y, z};
+            normal = {1.0f, 0.0f, 0.0f};
             break;
         case 4: // 下面 (Y-) - 从外向里看顺时针 (CW)
             v0 = {x, y, z}; v1 = {x, y, z + 1};
             v2 = {x + 1, y, z + 1}; v3 = {x + 1, y, z};
+            normal = {0.0f, -1.0f, 0.0f};
             break;
         case 5: // 上面 (Y+) - 从外向里看顺时针 (CW)
             v0 = {x + 1, y + 1, z + 1}; v1 = {x, y + 1, z + 1};
             v2 = {x, y + 1, z}; v3 = {x + 1, y + 1, z};
+            normal = {0.0f, 1.0f, 0.0f};
             break;
         default:
             return;
     }
 
-    out.push_back({v0, color});
-    out.push_back({v1, color});
-    out.push_back({v2, color});
-    out.push_back({v0, color});
-    out.push_back({v2, color});
-    out.push_back({v3, color});
+    out.push_back({v0, color, normal});
+    out.push_back({v1, color, normal});
+    out.push_back({v2, color, normal});
+    out.push_back({v0, color, normal});
+    out.push_back({v2, color, normal});
+    out.push_back({v3, color, normal});
 }
 
 void BlockWorld::BuildChunkVertices(ChunkData* chunk, std::vector<BlockVertex>& out) {

@@ -2,8 +2,6 @@
 #include "ParticleSystem.h"
 #include "../Tool/ContinuousData.h"
 
-#include "../Physics/SquarePhysics.h"
-
 namespace GAME {
 
 	//粒子特效的结构体

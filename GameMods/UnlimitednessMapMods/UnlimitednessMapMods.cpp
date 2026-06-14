@@ -1,6 +1,6 @@
 #include "UnlimitednessMapMods.h"
 #include "../../Opcode/OpcodeFunction.h"
-#include "../../Physics/DestroyMode.h"
+// DestroyMode now in game layer (old: #include "../../Physics/DestroyMode.h")
 #include "../../DebugLog.h"
 
 namespace GAME
@@ -29,8 +29,8 @@ namespace GAME
 		JPSPathfinding = new JPS(300, 10000);
 		AStarPathfinding = new AStar(300, 10000);
 
-		float mGamePlayerPosX = -160;
-		float mGamePlayerPosY = 0;
+		float mGamePlayerPosX = (50 * 16) / 2.0f;
+		float mGamePlayerPosY = (30 * 16) / 2.0f;
 		mDungeon = new Dungeon(mDevice, 50, 30, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
 		mDungeon->initUniformManager(
 			mSwapChain->getImageCount(),
@@ -69,13 +69,13 @@ namespace GAME
 		mGamePlayer->InitCommandBuffer();
 		mGamePlayer->SetDamagePrompt(mDamagePrompt);
 
-		VulKan::AuxiliaryForceData *ALine = mAuxiliaryVision->GetContinuousForce()->New(mGamePlayer->GetObjectCollision()->GetForcePointer());
-		ALine->pos = mGamePlayer->GetObjectCollision()->GetPosPointer();
-		ALine->Force = mGamePlayer->GetObjectCollision()->GetForcePointer();
+		VulKan::AuxiliaryForceData *ALine = mAuxiliaryVision->GetContinuousForce()->New(&mGamePlayer->GetObjectCollision()->force);
+		ALine->pos = &mGamePlayer->GetObjectCollision()->pos;
+		ALine->Force = &mGamePlayer->GetObjectCollision()->force;
 		ALine->Color = {0, 0, 1.0f, 1.0f};
-		ALine = mAuxiliaryVision->GetContinuousForce()->New(mGamePlayer->GetObjectCollision()->GetSpeedPointer());
-		ALine->pos = mGamePlayer->GetObjectCollision()->GetPosPointer();
-		ALine->Force = mGamePlayer->GetObjectCollision()->GetSpeedPointer();
+		ALine = mAuxiliaryVision->GetContinuousForce()->New(&mGamePlayer->GetObjectCollision()->speed);
+		ALine->pos = &mGamePlayer->GetObjectCollision()->pos;
+		ALine->Force = &mGamePlayer->GetObjectCollision()->speed;
 		ALine->Color = {0, 1.0f, 0, 1.0f};
 
 		// 给操作码对象赋值
@@ -93,9 +93,9 @@ namespace GAME
 		delete JPSPathfinding;
 		delete AStarPathfinding;
 		delete mAuxiliaryVision;
+		delete mCrowd;          // 必须在 mDungeon 之前：NPC 的 JPS 线程使用 Dungeon 数据
+		delete mGamePlayer;     // 必须在 mDungeon 之前：GamePlayer 析构时 mSquarePhysics 仍需要有效
 		delete mDungeon;
-		delete mCrowd;
-		delete mGamePlayer;
 		delete mVisualEffect;
 		delete mDamagePrompt;
 	}
@@ -158,7 +158,7 @@ namespace GAME
 	// 键盘事件
 	void UnlimitednessMapMods::KeyDown(GameKeyEnum moveDirection)
 	{
-		const int lidaxiao = 100;
+		const float lidaxiao = 100 * TOOL::FPStime;
 		switch (moveDirection)
 		{
 		case GameKeyEnum::MOVE_LEFT:
@@ -186,16 +186,16 @@ namespace GAME
 			break;
 		case GameKeyEnum::Key_1:
 			AttackType--;
-			if (AttackType > SquarePhysics::DestroyModeEnumNumber)
 			{
-				AttackType = SquarePhysics::DestroyModeEnumNumber;
+				static constexpr int DESTROY_MODE_COUNT = 4;
+				if (AttackType >= DESTROY_MODE_COUNT) { AttackType = DESTROY_MODE_COUNT - 1; }
 			}
 			break;
 		case GameKeyEnum::Key_2:
 			AttackType++;
-			if (AttackType > SquarePhysics::DestroyModeEnumNumber)
 			{
-				AttackType = 0;
+				static constexpr int DESTROY_MODE_COUNT = 4;
+				if (AttackType >= DESTROY_MODE_COUNT) { AttackType = DESTROY_MODE_COUNT - 1; }
 			}
 			break;
 		default:
@@ -230,8 +230,8 @@ namespace GAME
 	{
 		mCrowd->NPCEvent(mCurrentFrame, TOOL::FPStime);
 
-		Global::GamePlayerX = mGamePlayer->GetObjectCollision()->GetPosX();
-		Global::GamePlayerY = mGamePlayer->GetObjectCollision()->GetPosY();
+		Global::GamePlayerX = mGamePlayer->GetObjectCollision()->pos.x;
+		Global::GamePlayerY = mGamePlayer->GetObjectCollision()->pos.y;
 
 		mDamagePrompt->UpDataDamagePrompt(Global::GamePlayerX, Global::GamePlayerY, TOOL::FPStime);
 
@@ -253,18 +253,18 @@ namespace GAME
 
 		mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16 + 8, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16 + 8, 0, mCurrentFrame);
 
-		mGamePlayer->GetObjectCollision()->PlayerTargetAngle(m_angle); // 设置玩家物理角度
-		mGamePlayer->GetObjectCollision()->SufferForce(PlayerForce);   // 设置玩家受力
+		mGamePlayer->GetObjectCollision()->angle = m_angle; // 设置玩家物理角度
+		mGamePlayer->GetObjectCollision()->PFSpeed() += PlayerForce;   // 设置玩家受力
 		PlayerForce = {0, 0};
 		mAuxiliaryVision->Begin();
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
-		mSquarePhysics->PhysicsSimulation(TOOL::FPStime); // 物理事件
+		mSquarePhysics->PhysicsEmulator(TOOL::FPStime); // 物理事件
 		TOOL::mTimer->StartEnd();
 
-		m_angle = mGamePlayer->GetObjectCollision()->GetAngleFloat();
+		m_angle = mGamePlayer->GetObjectCollision()->angle;
 
 		mGamePlayer->UpData();												// 更新玩家伤痕
-		mCamera->setCameraPos(mGamePlayer->GetObjectCollision()->GetPos()); // 设置玩家位置
+		mCamera->setCameraPos(mGamePlayer->GetObjectCollision()->pos); // 设置玩家位置
 
 		mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);
 
@@ -277,16 +277,16 @@ namespace GAME
 		static double ArmsContinuityFire = 0;
 		ArmsContinuityFire += TOOL::FPStime;
 		static int zuojian;
-		static SquarePhysics::ObjectSufferForce LSObjectDecorator{nullptr, {0, 0}};
+		static PhysicsBlock::PhysicsFormwork* LSObjectDecorator = nullptr;
 		if (!Global::ClickWindow)
 		{
-			if ((mLeftMouseDown) && ((zuojian != (mLeftMouseDown ? 1 : 0)) || ((ArmsContinuityFire > mArms->IntervalTime) && LSObjectDecorator.Object == nullptr)))
+			if ((mLeftMouseDown) && ((zuojian != (mLeftMouseDown ? 1 : 0)) || ((ArmsContinuityFire > mArms->IntervalTime) && LSObjectDecorator == nullptr)))
 			{
 				ArmsContinuityFire = 0;
-				LSObjectDecorator = mSquarePhysics->GetGoods({huoqdedian.x, huoqdedian.y});
-				if (LSObjectDecorator.Object == nullptr)
+				LSObjectDecorator = mSquarePhysics->Get(Vec2_{static_cast<FLOAT_>(huoqdedian.x), static_cast<FLOAT_>(huoqdedian.y)});
+				if (LSObjectDecorator == nullptr)
 				{
-					glm::dvec2 Armsdain = SquarePhysics::vec2angle(glm::dvec2{9.0f, 0.0f}, m_angle);
+					glm::dvec2 Armsdain = PhysicsBlock::vec2angle(glm::dvec2{9.0f, 0.0f}, m_angle);
 					mArms->Shoot(mCamera->getCameraPos().x + Armsdain.x, mCamera->getCameraPos().y + Armsdain.y, m_angle, 500, AttackType);
 				}
 			}
@@ -294,26 +294,25 @@ namespace GAME
 		}
 
 		// 是否有受力对象
-		if (LSObjectDecorator.Object != nullptr)
+		if (LSObjectDecorator != nullptr)
 		{
-			glm::dvec2 LSArmOfForce = SquarePhysics::vec2angle(LSObjectDecorator.ArmOfForce, LSObjectDecorator.Object->GetAngle());
-			LSObjectDecorator.Object->ForceSolution(
-				LSArmOfForce,
-				glm::dvec2{huoqdedian.x - (LSObjectDecorator.Object->GetPosX() + LSArmOfForce.x), huoqdedian.y - (LSObjectDecorator.Object->GetPosY() + LSArmOfForce.y)},
-				TOOL::FPStime);
+			auto* angleObj = static_cast<PhysicsBlock::PhysicsAngle*>(LSObjectDecorator);
+			glm::dvec2 LSArmOfForce = glm::dvec2{huoqdedian.x - angleObj->pos.x, huoqdedian.y - angleObj->pos.y};
+			angleObj->AddForce(Vec2_{huoqdedian.x, huoqdedian.y},
+				Vec2_{static_cast<FLOAT_>(LSArmOfForce.x * TOOL::FPStime), static_cast<FLOAT_>(LSArmOfForce.y * TOOL::FPStime)});
 			mAuxiliaryVision->Line(
-				{LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0},
+				glm::dvec3{LSArmOfForce + glm::dvec2(angleObj->pos), 0},
 				{1.0f, 0, 0, 1.0f},
-				{huoqdedian.x, huoqdedian.y, 0},
+				glm::dvec3{huoqdedian.x, huoqdedian.y, 0},
 				{0, 1.0f, 0, 1.0f});
 			mAuxiliaryVision->Spot(
-				{LSArmOfForce + LSObjectDecorator.Object->GetPos(), 0},
+				glm::dvec3{LSArmOfForce + glm::dvec2(angleObj->pos), 0},
 				0.25f,
 				{0, 0, 1.0f, 1.0f});
-			mVisualEffect->SetPosAngle(LSObjectDecorator.Object->GetPosX(), LSObjectDecorator.Object->GetPosY(), 0, LSObjectDecorator.Object->GetAngleFloat(), mCurrentFrame);
+			mVisualEffect->SetPosAngle(angleObj->pos.x, angleObj->pos.y, 0, angleObj->angle, mCurrentFrame);
 			if (!mLeftMouseDown)
 			{
-				LSObjectDecorator.Object = nullptr;
+				LSObjectDecorator = nullptr;
 			}
 		}
 
@@ -400,7 +399,7 @@ namespace GAME
 			UpDataGIFTime = 0;
 			mDungeon->UpDataGIF();
 		}
-		MovePlate2DInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->GetPosX(), mGamePlayer->GetObjectCollision()->GetPosY());
+		MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->pos.x, mGamePlayer->GetObjectCollision()->pos.y);
 		if (LMovePlateInfo.UpData)
 		{
 			mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);

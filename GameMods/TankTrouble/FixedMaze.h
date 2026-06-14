@@ -9,7 +9,8 @@
 #include "../../VulKanTool/PixelTexture.h"
 
 
-#include "../../Physics/SquarePhysics.h"
+#include "../../PhysicsBlock/PhysicsWorld.hpp"
+#include "../../PhysicsBlock/MapStatic.hpp"
 
 #include "../../Tool/PerlinNoise.h"
 
@@ -40,7 +41,7 @@ namespace GAME {
 	class FixedMaze : public PathfindingDecorator
 	{
 	public:
-		FixedMaze(SquarePhysics::SquarePhysics* squarePhysics);
+		FixedMaze(PhysicsBlock::PhysicsWorld* squarePhysics);
 		~FixedMaze();
 
 		//重新生成迷宫
@@ -124,8 +125,8 @@ namespace GAME {
 			}
 		}
 		//射线检测
-		virtual SquarePhysics::CollisionInfo RadialCollisionDetection(int x, int y, int Ex, int Ey) {
-			return mFixedSizeTerrain->RadialCollisionDetection({ x,y }, { Ex,Ey });
+		virtual PhysicsBlock::CollisionInfoI RadialCollisionDetection(int x, int y, int Ex, int Ey) {
+			return mFixedSizeTerrain->FMBresenhamDetection(glm::ivec2{x, y}, glm::ivec2{Ex, Ey});
 		};
 		/*******************************************************/
 
@@ -162,8 +163,8 @@ namespace GAME {
 		std::vector<VulKan::Buffer*>* mVPMstdBuffer = nullptr;
 
 	public://物理
-		SquarePhysics::SquarePhysics* wSquarePhysics = nullptr;
-		SquarePhysics::FixedSizeTerrain* mFixedSizeTerrain = nullptr;
+		PhysicsBlock::PhysicsWorld* wSquarePhysics = nullptr;
+		PhysicsBlock::MapStatic* mFixedSizeTerrain = nullptr;
 		Queue<PixelState>* mPixelQueue = nullptr;
 	};
 }

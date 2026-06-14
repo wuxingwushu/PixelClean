@@ -1,5 +1,6 @@
 #include "PhysicsCollision.hpp"
 #include "PhysicsWorld.hpp"
+#include "PhysicsParticle.hpp"
 
 namespace PhysicsBlock
 {
@@ -207,6 +208,16 @@ namespace PhysicsBlock
 
         PhysicsFormwork *physObj = (PhysicsFormwork *)(arbiterKey->mOriginalObject1);
         MapFormwork *mapObj = (MapFormwork *)(arbiterKey->mOriginalObject2);
+
+        // 对于粒子-地图碰撞，触发粒子的地形碰撞回调
+        // 使用碰撞接触点坐标（网格坐标），而非粒子世界坐标
+        if (arbiterKey->mArbiterType == PhysicsArbiterType::ArbiterP && arbiterKey->numContacts > 0) {
+            PhysicsParticle* particle = (PhysicsParticle*)physObj;
+            particle->OnHitTerrain(glm::ivec2(
+                (int)arbiterKey->contacts[0].position.x,
+                (int)arbiterKey->contacts[0].position.y
+            ));
+        }
 
         auto Mit = mMapBindings.find(mapObj);
         if (Mit == mMapBindings.end())

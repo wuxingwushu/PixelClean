@@ -96,7 +96,7 @@ namespace GAME {
 		mNPC = npc;
 		wPathfinding = pathfinding;
 		wArms = arms;
-		mNPC->GetObjectCollision()->SetAngle(0.01f);
+		mNPC->GetObjectCollision()->angle = 0.01f;
 		mJPS = new JPS(mRange, 50000);
 		mJPS->SetObstaclesCallback(AStarGetWall, wPathfinding);
 
@@ -117,19 +117,19 @@ namespace GAME {
 	}
 
 	void NPC::SetNPC(int x, int y, float angle) {
-		mNPC->GetObjectCollision()->SetPos({ x, y });
-		mNPC->GetObjectCollision()->SetAngle(angle);
+		mNPC->GetObjectCollision()->pos = Vec2_{static_cast<FLOAT_>(x), static_cast<FLOAT_>(y)};
+		mNPC->GetObjectCollision()->angle = angle;
 		mNPC->setGamePlayerMatrix(3, true);
 	}
 
 
 	int NPC::GetSensoryMessages() {
 		int flags = SensoryMessages_None;
-		glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
+		glm::vec2 pos = mNPC->GetObjectCollision()->pos;
 
 		//玩家相对NPC位置角度
-		wanjiaAngle = SquarePhysics::EdgeVecToCosAngleFloat(glm::vec2{ Global::GamePlayerX - pos.x, Global::GamePlayerY - pos.y });
-		float AngleCha = wanjiaAngle - mNPC->GetObjectCollision()->GetAngleFloat();
+		wanjiaAngle = PhysicsBlock::EdgeVecToCosAngleFloat(glm::vec2{ Global::GamePlayerX - pos.x, Global::GamePlayerY - pos.y });
+		float AngleCha = wanjiaAngle - mNPC->GetObjectCollision()->angle;
 		if (AngleCha > 3.14f) {
 			AngleCha -= 6.28f;
 		}
@@ -140,7 +140,7 @@ namespace GAME {
 			flags |= SensoryMessages_VisualField;//在视野范围内
 
 			//射线检测
-			SquarePhysics::CollisionInfo LInfo = wPathfinding->RadialCollisionDetection(pos.x, pos.y, Global::GamePlayerX, Global::GamePlayerY);
+			PhysicsBlock::CollisionInfoI LInfo = wPathfinding->RadialCollisionDetection(pos.x, pos.y, Global::GamePlayerX, Global::GamePlayerY);
 			if (!LInfo.Collision) {//在视野范围内，且可以看到玩家
 				mSuspicious = true;
 				mSuspiciousPos = { (int)Global::GamePlayerX, (int)Global::GamePlayerY };
@@ -157,7 +157,7 @@ namespace GAME {
 
 
 	void NPC::Pathfinding() {
-		glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
+		glm::vec2 pos = mNPC->GetObjectCollision()->pos;
 
 		if (mJPS->GetPathfindingCompleted() && //寻路可以用调用（防止反复调用）
 			LPath.size() <= 20 && //路径小于多少时
@@ -197,7 +197,7 @@ namespace GAME {
 			}
 		}
 
-		mNPC->GetObjectCollision()->PlayerTargetAngle(SquarePhysics::EdgeVecToCosAngleFloat(qianjinfang));//旋转角度
+		mNPC->GetObjectCollision()->angle = PhysicsBlock::EdgeVecToCosAngleFloat(qianjinfang);//旋转角度
 		if (mTime > 1.0f) {
 			NPCFSM->Get()->process_event(S_Patrol{});
 		}
@@ -224,13 +224,14 @@ namespace GAME {
 			}
 		}
 		
-		glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
+		glm::vec2 pos = mNPC->GetObjectCollision()->pos;
 		glm::vec2 Lpos = pos + qianjinfang;
 		if (wPathfinding->GetPixelWallNumber(Lpos.x + wPathfinding->PathfindingDecoratorDeviationX, Lpos.y + wPathfinding->PathfindingDecoratorDeviationY)) {
 			//mNPC->GetObjectCollision()->SetPos(pos + (qianjinfang * 0.1f));
-			float YAngle = SquarePhysics::EdgeVecToCosAngleFloat(qianjinfang);
-			mNPC->GetObjectCollision()->ExpectSpeed(100, YAngle, FPSTime);
-			mNPC->GetObjectCollision()->PlayerTargetAngle(YAngle);
+			float YAngle = PhysicsBlock::EdgeVecToCosAngleFloat(qianjinfang);
+			// TODO: ExpectSpeed may not be available in PhysicsShape
+			// mNPC->GetObjectCollision()->ExpectSpeed(100, YAngle, FPSTime);
+			mNPC->GetObjectCollision()->angle = YAngle;
 		}
 		else {
 			switch (rand()%4)
@@ -260,12 +261,12 @@ namespace GAME {
 	bool NPC::Attack() {
 		int flags = GetSensoryMessages();
 		if ((flags & SensoryMessages_Range) && (flags & SensoryMessages_Visible)) {
-			mNPC->GetObjectCollision()->PlayerTargetAngle(wanjiaAngle);
+			mNPC->GetObjectCollision()->angle = wanjiaAngle;
 			if (mTime > 0.5f) {
 				mTime = 0.0;
-				glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
-				pos += SquarePhysics::vec2angle(glm::vec2{ 9.0f, 0.0f }, mNPC->GetObjectCollision()->GetAngleFloat());
-				wArms->ShootBullets(pos.x, pos.y, mNPC->GetObjectCollision()->GetAngleFloat(), 500, 0);
+				glm::vec2 pos = mNPC->GetObjectCollision()->pos;
+				pos += PhysicsBlock::vec2angle(glm::vec2{ 9.0f, 0.0f }, mNPC->GetObjectCollision()->angle);
+				wArms->ShootBullets(pos.x, pos.y, mNPC->GetObjectCollision()->angle, 500, 0);
 			}
 		}
 		else {
@@ -280,7 +281,7 @@ namespace GAME {
 	//受伤
 	bool NPC::Injury() {
 		GetSensoryMessages();//感官消息
-		mNPC->GetObjectCollision()->PlayerTargetAngle(wanjiaAngle);//旋转角度
+		mNPC->GetObjectCollision()->angle = wanjiaAngle;//旋转角度
 		if (mTime > 2.0f) {
 			mTime = mPathfindingCycle + 1.0f;
 			NPCFSM->Get()->process_event(S_Chasing{});
@@ -309,7 +310,7 @@ namespace GAME {
 		
 
 		if (mJPS->GetPathfindingCompleted()) {
-			glm::vec2 pos = mNPC->GetObjectCollision()->GetPos();
+			glm::vec2 pos = mNPC->GetObjectCollision()->pos;
 
 			if (mSuspicious && mTime > mPathfindingCycle) {
 				mSuspicious = false;
@@ -339,7 +340,7 @@ namespace GAME {
 				//}
 
 				////玩家相对NPC位置角度
-				//float YAngle = SquarePhysics::EdgeVecToCosAngleFloat(glm::vec2{ mSuspiciousPos.x - pos.x, mSuspiciousPos.y - pos.y });
+				//float YAngle = PhysicsBlock::EdgeVecToCosAngleFloat(glm::vec2{ mSuspiciousPos.x - pos.x, mSuspiciousPos.y - pos.y });
 
 				////mNPC->mObjectCollision->SetForce(yiPOS * 100.0f);
 				//mNPC->GetObjectCollision()->SetAngle(YAngle);
@@ -372,9 +373,10 @@ namespace GAME {
 						}
 					}
 				}
-				float YAngle = SquarePhysics::EdgeVecToCosAngleFloat(glm::vec2{ yiPOS.x - pos.x, yiPOS.y - pos.y });
-				mNPC->GetObjectCollision()->PlayerTargetAngle(YAngle);
-				mNPC->GetObjectCollision()->ExpectSpeed(200, YAngle, FPSTime);
+				float YAngle = PhysicsBlock::EdgeVecToCosAngleFloat(glm::vec2{ yiPOS.x - pos.x, yiPOS.y - pos.y });
+				mNPC->GetObjectCollision()->angle = YAngle;
+				// TODO: ExpectSpeed may not be available in PhysicsShape
+				// mNPC->GetObjectCollision()->ExpectSpeed(200, YAngle, FPSTime);
 				//mNPC->GetObjectCollision()->SufferForce(YAngle, 100);
 			}
 			else {

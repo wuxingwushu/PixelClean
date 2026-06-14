@@ -39,7 +39,7 @@ namespace PhysicsBlock
     BaseGrid::~BaseGrid()
     {
         if (NewBool)
-            delete Grid;
+            delete[] Grid;
     }
 
     /**

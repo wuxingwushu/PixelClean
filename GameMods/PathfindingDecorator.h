@@ -1,5 +1,5 @@
 #pragma once
-#include "../Physics/StructuralComponents.h"
+#include "../PhysicsBlock/BaseStruct.hpp"
 
 namespace GAME {
 
@@ -14,6 +14,6 @@ namespace GAME {
 
 		virtual inline bool GetPixelWallNumber(unsigned int x, unsigned int y) = 0;
 
-		virtual SquarePhysics::CollisionInfo RadialCollisionDetection(int x, int y, int Ex, int Ey) = 0;
+		virtual PhysicsBlock::CollisionInfoI RadialCollisionDetection(int x, int y, int Ex, int Ey) = 0;
 	};
 }

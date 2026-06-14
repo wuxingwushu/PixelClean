@@ -9,13 +9,13 @@
 namespace GAME {
 
 
-	void Labyrinth_SetPixel_2(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* mclass) {
+	static void Labyrinth_SetPixel_2(int x, int y, bool Bool, PhysicsBlock::PhysicsFormwork* Object, void* mclass) {
 		FixedMaze* mClass = (FixedMaze*)mclass;
 		//破坏的像素
 		mClass->mPixelQueue->add({ x, y, Bool });//储存起来，统一上传
 	}
 
-	FixedMaze::FixedMaze(SquarePhysics::SquarePhysics* squarePhysics):
+	FixedMaze::FixedMaze(PhysicsBlock::PhysicsWorld* squarePhysics):
 		wSquarePhysics(squarePhysics)
 	{
 		LOGD("FixedMaze::FixedMaze constructor");
@@ -73,9 +73,16 @@ namespace GAME {
 	}
 
 	void FixedMaze::LabyrinthBuffer() {
-		mFixedSizeTerrain = new SquarePhysics::FixedSizeTerrain(numberX, numberY, 1);
-		mFixedSizeTerrain->SetCollisionCallback(Labyrinth_SetPixel_2, this);
-		wSquarePhysics->SetFixedSizeTerrain(mFixedSizeTerrain);//添加地图碰撞
+		mFixedSizeTerrain = new PhysicsBlock::MapStatic(numberX, numberY);
+		mFixedSizeTerrain->SetCollisionChangeCallback(
+			[](glm::ivec2 pos, bool newState, void* userData) {
+				if (!newState) {
+					Labyrinth_SetPixel_2(pos.x, pos.y, false, nullptr, userData);
+				}
+			},
+			this
+		);
+		wSquarePhysics->SetMapFormwork(mFixedSizeTerrain);//添加地图碰撞
 
 		int Ax = -(numberX / 2);
 		int Ay = -(numberY / 2);
@@ -83,7 +90,7 @@ namespace GAME {
 		int By = numberY + Ay;
 		mOriginX = (unsigned int)(-Ax);
 		mOriginY = (unsigned int)(-Ay);
-		mFixedSizeTerrain->SetOrigin(mOriginX, mOriginY);
+		mFixedSizeTerrain->SetCentrality({(float)mOriginX, (float)mOriginY});
 
 
 
@@ -130,6 +137,9 @@ namespace GAME {
 		delete mGridNavigation;
 
 		//销毁地面碰撞系统
+		if (wSquarePhysics != nullptr) {
+			wSquarePhysics->SetMapFormwork(nullptr);
+		}
 		delete mFixedSizeTerrain;
 
 		//销毁 网格 UV 点索引
@@ -198,11 +208,11 @@ namespace GAME {
 			{
 				if (BlockPixelS[x * numberY + y] == 1) {
 					memcpy(&mPixelS[(x * numberY + y) * 4], CLR1, 4);
-					mFixedSizeTerrain->at({ x, y })->Collision = true;
+					mFixedSizeTerrain->at(x, y).Collision = true;
 				}
 				else {
 					memcpy(&mPixelS[(x * numberY + y) * 4], CLR2, 4);
-					mFixedSizeTerrain->at({ x, y })->Collision = false;
+					mFixedSizeTerrain->at(x, y).Collision = false;
 				}
 			}
 		}

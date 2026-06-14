@@ -2,6 +2,7 @@
 #include "BaseDefine.h"
 #include "PhysicsFormwork.hpp"
 #include "BaseSerialization.hpp"
+#include "PhysicsBlockTypes.hpp"
 
 namespace PhysicsBlock
 {
@@ -182,6 +183,30 @@ namespace PhysicsBlock
             assert(0 && "[Error]: 粒子不存在角速度!");
             return invMass;
         };
+
+        /**
+         * @brief 设置地形碰撞回调
+         * @param callback 回调函数（游戏层实现破坏逻辑）
+         * @param userData 用户数据指针（可传递攻击类型、地图指针等）
+         */
+        void SetTerrainHitCallback(TerrainHitCallback callback, void* userData = nullptr) {
+            mTerrainHitCallback = std::move(callback);
+            mTerrainHitUserData = userData;
+        }
+
+        /**
+         * @brief 碰撞地形时由 PhysicsWorld 调用
+         * @param pos 碰撞网格坐标
+         */
+        void OnHitTerrain(glm::ivec2 pos) {
+            if (mTerrainHitCallback) {
+                mTerrainHitCallback(pos, 0, this, mTerrainHitUserData);
+            }
+        }
+
+    private:
+        TerrainHitCallback mTerrainHitCallback;
+        void* mTerrainHitUserData = nullptr;
     };
 
 }

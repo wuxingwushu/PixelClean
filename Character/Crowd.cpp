@@ -6,7 +6,7 @@
 namespace GAME {
 
 	void DeleteCrowd(GamePlayer* Player, void* Data) {
-		SquarePhysics::SquarePhysics* LSquarePhysics = (SquarePhysics::SquarePhysics*)Data;
+		PhysicsBlock::PhysicsWorld* LPhysicsWorld = (PhysicsBlock::PhysicsWorld*)Data;
 		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 		std::cout << "Delete Player, 释放 玩家" << std::endl;
 		delete Player;

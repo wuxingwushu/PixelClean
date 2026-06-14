@@ -164,6 +164,30 @@ namespace PhysicsBlock
         virtual Vec2_ FMGetCentrality() override { return centrality; }
         virtual std::vector<MapOutline> FMGetLightweightOutline(int x_, int y_, int w_, int h_) override { return GetLightweightOutline(x_, y_, w_, h_); }
         virtual std::vector<MapOutline> FMGetOutline(int x_, int y_, int w_, int h_) override { return GetOutline(x_, y_, w_, h_); }
+
+        virtual bool SafeSetCollision(glm::ivec2 pos, bool state) override;
+        virtual void SetFriction(int x, int y, FLOAT_ friction) override;
+        virtual FLOAT_ GetFriction(int x, int y) override;
+
+        /**
+         * @brief 碰撞状态变化回调类型
+         * @param pos 网格坐标
+         * @param newState 新的碰撞状态
+         * @param userData 用户数据 */
+        typedef void (*_CollisionChangeCallback)(glm::ivec2 pos, bool newState, void* userData);
+
+        /**
+         * @brief 设置碰撞状态变化回调（当 SafeSetCollision 改变网格碰撞状态时触发）
+         * @param callback 回调函数
+         * @param userData 用户数据 */
+        void SetCollisionChangeCallback(_CollisionChangeCallback callback, void* userData) {
+            mCollisionChangeCallback = callback;
+            mCollisionChangeUserData = userData;
+        }
+
+    private:
+        _CollisionChangeCallback mCollisionChangeCallback = nullptr;
+        void* mCollisionChangeUserData = nullptr;
     };
 
 }

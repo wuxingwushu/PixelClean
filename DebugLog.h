@@ -1,5 +1,5 @@
 #pragma once
-#define PIXEL_ENABLE_LOG 0
+#define PIXEL_ENABLE_LOG 1
 
 #if PIXEL_ENABLE_LOG
 

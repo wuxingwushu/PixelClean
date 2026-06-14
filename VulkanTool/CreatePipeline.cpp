@@ -1192,15 +1192,15 @@ namespace VulKan
 
 		Pipeline->setShaderGroup(shaderGroup);
 
-		// 顶点的排布模式：位置(vec3) + 颜色(vec4)
+		// 顶点的排布模式：位置(vec3) + 颜色(vec4) + 法线(vec3)
 		std::vector<VkVertexInputBindingDescription> vertexBindingDes{};
 		vertexBindingDes.resize(1);
 		vertexBindingDes[0].binding = 0;
-		vertexBindingDes[0].stride = sizeof(float) * (3 + 4);
+		vertexBindingDes[0].stride = sizeof(float) * (3 + 4 + 3);
 		vertexBindingDes[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 		std::vector<VkVertexInputAttributeDescription> attributeDes{};
-		attributeDes.resize(2);
+		attributeDes.resize(3);
 		attributeDes[0].binding = 0;
 		attributeDes[0].location = 0;
 		attributeDes[0].format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -1210,6 +1210,11 @@ namespace VulKan
 		attributeDes[1].location = 1;
 		attributeDes[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
 		attributeDes[1].offset = sizeof(float) * 3;
+
+		attributeDes[2].binding = 0;
+		attributeDes[2].location = 2;
+		attributeDes[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDes[2].offset = sizeof(float) * (3 + 4);
 
 		Pipeline->mVertexInputState.vertexBindingDescriptionCount = vertexBindingDes.size();
 		Pipeline->mVertexInputState.pVertexBindingDescriptions = vertexBindingDes.data();

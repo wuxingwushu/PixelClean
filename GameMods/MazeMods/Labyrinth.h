@@ -9,7 +9,8 @@
 #include "../../VulKanTool/PixelTexture.h"
 
 
-#include "../../Physics/SquarePhysics.h"
+#include "../../PhysicsBlock/PhysicsWorld.hpp"
+#include "../../PhysicsBlock/MapStatic.hpp"
 
 #include "../../Tool/PerlinNoise.h"
 
@@ -38,7 +39,7 @@ namespace GAME {
 	class Labyrinth : public PathfindingDecorator
 	{
 	public:
-		Labyrinth(SquarePhysics::SquarePhysics* squarePhysics);
+		Labyrinth(PhysicsBlock::PhysicsWorld* squarePhysics);
 		~Labyrinth();
 
 		//重新生成迷宫
@@ -145,8 +146,8 @@ namespace GAME {
 			}
 		}
 		//射线检测
-		virtual SquarePhysics::CollisionInfo RadialCollisionDetection(int x, int y, int Ex, int Ey) {
-			return mFixedSizeTerrain->RadialCollisionDetection({ x,y }, { Ex,Ey });
+		virtual PhysicsBlock::CollisionInfoI RadialCollisionDetection(int x, int y, int Ex, int Ey) {
+			return mFixedSizeTerrain->FMBresenhamDetection(glm::ivec2{x, y}, glm::ivec2{Ex, Ey});
 		};
 		/*******************************************************/
 		//计算点附近的墙壁数量
@@ -213,8 +214,8 @@ namespace GAME {
 		VulKan::Buffer* WallBool{ nullptr };//储存碰撞(是否是墙壁)
 
 	public://物理
-		SquarePhysics::SquarePhysics* wSquarePhysics = nullptr;
-		SquarePhysics::FixedSizeTerrain* mFixedSizeTerrain = nullptr;
+		PhysicsBlock::PhysicsWorld* wSquarePhysics = nullptr;
+		PhysicsBlock::MapStatic* mFixedSizeTerrain = nullptr;
 		Queue<PixelState>* mPixelQueue = nullptr;
 	};
 }

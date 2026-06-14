@@ -10,7 +10,7 @@ namespace GAME {
 		P[y * 16 + x] = *((int*)&pixelS[20][(y * 16 + x) * 4]);
 	}
 
-	void DungeonDestroy(int x, int y, bool Bool, SquarePhysics::ObjectDecorator* Object, void* wClass) {
+	void DungeonDestroy(int x, int y, bool Bool, PhysicsBlock::PhysicsFormwork* Object, void* wClass) {
 		DungeonDestroyStruct* LSDungeon = (DungeonDestroyStruct*)wClass;
 		int* LSP = (int*)LSDungeon->wTextureAndBuffer->mPixelTexture->getHOSTImagePointer();
 		Destroy(LSP, x, y, Bool);
@@ -18,9 +18,8 @@ namespace GAME {
 		{
 			for (size_t iy = 0; iy < LSDungeon->wDungeon->mNumberY; ++iy)
 			{
-				if (LSDungeon->wDungeon->mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel == LSDungeon->wTextureAndBuffer) {
-					LSDungeon->wDungeon->PixelWallNumberReduce(x + (ix * 16), y + (iy * 16));
-				}
+				// TODO: MapDynamic no longer has per-block model mapping; pixel wall number update needs redesign
+				LSDungeon->wDungeon->PixelWallNumberReduce(x + (ix * 16), y + (iy * 16));
 			}
 		}
 		LSDungeon->wTextureAndBuffer->mPixelTexture->endHOSTImagePointer();
@@ -37,8 +36,10 @@ namespace GAME {
 		LSDungeon->wDungeon->WarfareMist->endHOSTImagePointer();
 	}
 
-	void GenerateBlock(SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* mT, int x, int y, void* Data) {
+	void GenerateBlock(PhysicsBlock::BaseGrid** mT, int x, int y, void* Data) {
 		GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
+		// TODO: MapDynamic no longer has per-block mModel; needs redesign for buffer/texture management
+		/*
 		ObjectUniformGIF* LUniform = (ObjectUniformGIF*)mT->mModel->mBufferS->getupdateBufferByMap();
 		mT->mModel->Type = LDungeon->GetNoise(x, y);
 		if (mT->mModel->Type == 20) {
@@ -64,16 +65,17 @@ namespace GAME {
 				LDungeon->LSPointer[((mT->mModel->MistPointerY * 16 + ix) * 16 * LDungeon->mNumberX) + (mT->mModel->MistPointerX * 16) + iy] = CollisionBool;
 			}
 		}
+		*/
 		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ++ix)
 		{
 			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; ++iy)
 			{
-				mT->mGridDecorator.at({ ix,iy })->Collision = CollisionBool;
+				(*mT)->at((int)(x + ix), (int)(y + iy)).Collision = true;
 			}
 		}
 	}
 
-	Dungeon::Dungeon(VulKan::Device* device, unsigned int X, unsigned int Y, SquarePhysics::SquarePhysics* squarePhysics, float GamePlayerX, float GamePlayerY)
+	Dungeon::Dungeon(VulKan::Device* device, unsigned int X, unsigned int Y, PhysicsBlock::PhysicsWorld* squarePhysics, float GamePlayerX, float GamePlayerY)
 		:wDevice(device),
 		mNumberX(X),
 		mNumberY(Y),
@@ -82,11 +84,11 @@ namespace GAME {
 		LOGD("Dungeon::Dungeon constructor");
 		mPerlinNoise = new PerlinNoise();
 
-		mMoveTerrain = new SquarePhysics::MoveTerrain<TextureAndBuffer>(mNumberX, mNumberY, mSquareSideLength, 1);
+		mMoveTerrain = new PhysicsBlock::MapDynamic(mNumberX, mNumberY);
 		mMoveTerrain->SetPos(GamePlayerX, GamePlayerY);
-		mMoveTerrain->SetOrigin(mNumberX / 2, mNumberY / 2);
+		// TODO: MapDynamic does not have SetOrigin; origin handling needs redesign
 		mMoveTerrain->SetCallback(
-			[](SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* mT, int x, int y, void* Data) {
+			[](PhysicsBlock::BaseGrid** mT, int x, int y, void* Data) {
 				GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
 				if (LDungeon->Pointerkaiguan) {//开启HOST指针
 					LDungeon->Pointerkaiguan = false;
@@ -96,18 +98,22 @@ namespace GAME {
 				}
 				//std::cout << x << " - " << y << " - " << mT->mModel->mBufferS << std::endl;
 				LDungeon->MultithreadingGenerate.push_back(TOOL::mThreadPool->enqueue(&GenerateBlock, mT, x, y, Data));
-				LDungeon->MultithreadingPixelTexture.push_back(mT->mModel->mPixelTexture);
+				// TODO: MapDynamic no longer has per-block mModel->mPixelTexture
+				// LDungeon->MultithreadingPixelTexture.push_back(mT->mModel->mPixelTexture);
 			},
 			this,
-			[](SquarePhysics::MoveTerrain<TextureAndBuffer>::RigidBodyAndModel* mT, void* Data) {
+			[](PhysicsBlock::BaseGrid** mT, void* Data) {
 				GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
+				// TODO: MapDynamic no longer has per-block mModel->Type
+				/*
 				if (mT->mModel->Type == 20) {
 					LDungeon->popGIF({ mT->mModel->mGIFDescriptorSet, nullptr, nullptr });
 				}
+				*/
 			},
 			this
 			);
-		wSquarePhysics->SetFixedSizeTerrain(mMoveTerrain);
+		wSquarePhysics->SetMapFormwork(mMoveTerrain);
 
 		const float Positions[] = {
 			-0.001f, -0.001f, 0.0f,
@@ -153,7 +159,8 @@ namespace GAME {
 				mTextureAndBuffer[ix][iy].MistPointerX = ix;
 				mTextureAndBuffer[ix][iy].MistPointerY = iy;
 				mMistUVBuffer[ix][iy] = VulKan::Buffer::createVertexBuffer(wDevice, 8 * sizeof(float), (void*)MistUVs);
-				mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel = &mTextureAndBuffer[ix][iy];
+				// TODO: MapDynamic no longer has GetRigidBodyAndModel; per-block model mapping needs redesign
+				// mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel = &mTextureAndBuffer[ix][iy];
 			}
 		}
 	}
@@ -192,6 +199,9 @@ namespace GAME {
 
 		/*******************/
 
+		if (wSquarePhysics != nullptr) {
+			wSquarePhysics->SetMapFormwork(nullptr);
+		}
 		delete mMoveTerrain;
 
 		delete mPositionBuffer;
@@ -428,9 +438,9 @@ namespace GAME {
 			mMistDescriptorSet[ix] = new VulKan::DescriptorSet * [mNumberY];
 			for (int iy = 0; iy < mNumberY; ++iy)
 			{
-				mTextureAndBuffer[ix][iy].Type = GetNoise(ix - mMoveTerrain->Origin.x + mMoveTerrain->GetGridSPosX(), iy - mMoveTerrain->Origin.y + mMoveTerrain->GetGridSPosY());
+				mTextureAndBuffer[ix][iy].Type = GetNoise(ix, iy);
 
-				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3((ix - mMoveTerrain->Origin.x + mMoveTerrain->GetGridSPosX()) * 16, (iy - mMoveTerrain->Origin.y + mMoveTerrain->GetGridSPosY()) * 16, 0));//位移矩阵
+				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(ix * 16, iy * 16, 0));//位移矩阵
 				mTextureAndBuffer[ix][iy].mBufferS = VulKan::Buffer::createUniformBuffer(wDevice, sizeof(ObjectUniformGIF));
 				mTextureAndBuffer[ix][iy].mBufferS->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniformGIF));
 				for (size_t i = 0; i < wFrameCount; ++i)
@@ -457,7 +467,7 @@ namespace GAME {
 							WarfareMistPointer[((iy * 16 + ixx) * 16 * mNumberX * 4) + (ix * 16 * 4) + (iyy * 4) + i] = pixelS[mTextureAndBuffer[ix][iy].Type][(ixx * 16 * 4) + (iyy * 4) + i] * (i == 3 ? 1 : 0.3f);
 						}
 						WallBoolPointer[((((iy * 16) + ixx) * mNumberX * 16) + (ix * 16) + iyy)] = CollisionBool;
-						mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator.at({ ixx,iyy })->Collision = CollisionBool;
+						mMoveTerrain->at((int)(ix * 16 + ixx), (int)(iy * 16 + iyy)).Collision = CollisionBool;
 					}
 				}
 
@@ -465,7 +475,8 @@ namespace GAME {
 				qiangshulaingData += 16 * 16;
 
 				mDungeonDestroyStruct[ix][iy] = { &mTextureAndBuffer[ix][iy], this };
-				mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator.SetCollisionCallback(DungeonDestroy, &mDungeonDestroyStruct[ix][iy]);
+				// TODO: MapDynamic no longer has per-block GridDecorator.SetCollisionCallback; collision callback setup needs redesign
+				// mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator.SetCollisionCallback(DungeonDestroy, &mDungeonDestroyStruct[ix][iy]);
 				textureParam->mPixelTexture = mTextureAndBuffer[ix][iy].mPixelTexture;
 				mDescriptorSet[ix][iy] = new VulKan::DescriptorSet(wDevice, mUniformParams, mDescriptorSetLayout, mDescriptorPool, wFrameCount);
 				textureParam->mPixelTexture = WarfareMist;
@@ -488,6 +499,14 @@ namespace GAME {
 				//BlockPixelWallNumber(ix, iy);
 			}
 		}
+
+		// 注册地形碰撞变化回调：当 SafeSetCollision 修改网格时更新 Dungeon 视觉
+		mMoveTerrain->SetCollisionChangeCallback(
+			[](glm::ivec2 pos, bool newState, void* userData) {
+				((Dungeon*)userData)->OnTerrainCollisionChanged(pos, newState);
+			},
+			this
+		);
 	}
 
 	void Dungeon::initCommandBuffer() {
@@ -555,6 +574,30 @@ namespace GAME {
 		LSPointer[x * mSquareSideLength + y] = 0;
 	}
 
+	void Dungeon::OnTerrainCollisionChanged(glm::ivec2 pos, bool newState) {
+		// 只处理地形被破坏（Collision 变为 false）
+		if (newState) return;
+
+		int blockX = pos.x / 16;
+		int blockY = pos.y / 16;
+		int pixelX = pos.x % 16;
+		int pixelY = pos.y % 16;
+
+		// 处理负坐标
+		if (pixelX < 0) { pixelX += 16; --blockX; }
+		if (pixelY < 0) { pixelY += 16; --blockY; }
+
+		// 检查边界
+		if (blockX < 0 || blockX >= (int)mNumberX || blockY < 0 || blockY >= (int)mNumberY)
+			return;
+
+		// 调用 DungeonDestroy 更新视觉数据
+		DungeonDestroy(pixelX, pixelY, false, nullptr, &mDungeonDestroyStruct[blockX][blockY]);
+
+		// 请求命令缓冲区更新
+		Global::MainCommandBufferUpdateRequest();
+	}
+
 	void Dungeon::InitMist() {
 		wymiwustruct.size = 1800;
 		wymiwustruct.y_size = mNumberX * 16;
@@ -576,8 +619,9 @@ namespace GAME {
 		{
 			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
-				Index[(iy * mNumberX + ix) * 2] = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel->MistPointerY;
-				Index[(iy * mNumberX + ix) * 2 + 1] = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel->MistPointerX;
+				// TODO: MapDynamic no longer has GetRigidBodyAndModel->mModel; needs redesign
+				Index[(iy * mNumberX + ix) * 2] = iy;
+				Index[(iy * mNumberX + ix) * 2 + 1] = ix;
 			}
 		}
 		CalculateIndex->endupdateBufferByMap();
@@ -593,8 +637,9 @@ namespace GAME {
 	}
 
 	void Dungeon::UpdataMist(int x, int y, float ang) {
-		wymiwustruct.x = y + (mNumberY * 8) - (mMoveTerrain->GetGridSPosY() * 16);
-		wymiwustruct.y = x + (mNumberX * 8) - (mMoveTerrain->GetGridSPosX() * 16);
+		// TODO: MapDynamic no longer has GetGridSPos; needs redesign
+		wymiwustruct.x = y + (mNumberY * 8);
+		wymiwustruct.y = x + (mNumberX * 8);
 		wymiwustruct.angel = -ang;
 		information->updateBufferByMap(&wymiwustruct, sizeof(Dungeonmiwustruct));
 
@@ -666,8 +711,9 @@ namespace GAME {
 
 	void Dungeon::UpdataMistData(int x, int y) {
 		//std::cout << "************************************" << std::endl;
-		PathfindingDecoratorDeviationX = (mMoveTerrain->Origin.x - mMoveTerrain->GetGridSPosX()) * 16;
-		PathfindingDecoratorDeviationY = (mMoveTerrain->Origin.y - mMoveTerrain->GetGridSPosY()) * 16;
+		// TODO: MapDynamic no longer has Origin/GetGridSPos; deviation calculation needs redesign
+		PathfindingDecoratorDeviationX = 0;
+		PathfindingDecoratorDeviationY = 0;
 		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
 		{
 			i.wait();
@@ -679,16 +725,15 @@ namespace GAME {
 
 		int* Index = (int*)CalculateIndex->getupdateBufferByMap();
 		int A;
-		TextureAndBuffer* info;
 		for (size_t ix = 0; ix < mNumberX; ++ix)
 		{
 			for (size_t iy = 0; iy < mNumberY; ++iy)
 			{
 				A = (iy * mNumberX + ix) * 2;
-				info = mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mModel;
-				Index[A] = info->MistPointerY;
+				// TODO: MapDynamic no longer has GetRigidBodyAndModel->mModel; needs redesign
+				Index[A] = iy;
 				++A;
-				Index[A] = info->MistPointerX;
+				Index[A] = ix;
 			}
 		}
 		CalculateIndex->endupdateBufferByMap();

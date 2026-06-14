@@ -1021,11 +1021,16 @@ namespace PhysicsBlock
 
     void PhysicsWorld::SetMapFormwork(MapFormwork *MapFormwork_)
     {
+        if (MapFormwork_ == nullptr)
+        {
+            return;
+        }
+
+        wMapFormwork = MapFormwork_;
         GridWindSize = MapFormwork_->FMGetMapSize();
         mGridSearch.SetMapRange(std::max(GridWindSize.x, GridWindSize.y));
         mGridCenter = mGridSearch.GetGridCenter();
 
-        wMapFormwork = MapFormwork_;
         if (!WindBool)
         {
             return;

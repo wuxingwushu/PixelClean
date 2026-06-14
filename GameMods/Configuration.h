@@ -27,6 +27,7 @@
 #include "../Tool/AStar.h"
 #include "../VulkanTool/TextureLibrary.h"
 #include "../Character/DamagePrompt.h"
+#include "../PhysicsBlock/PhysicsWorld.hpp"
 
 namespace GAME {
 
@@ -61,7 +62,7 @@ namespace GAME {
 		std::vector<VulKan::Buffer*> mCameraVPMatricesBuffer{};//GPU用的玩家变换矩阵（位置 角度）
 		ParticleSystem* mParticleSystem = nullptr;//粒子系统
 		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;//粒子特效
-		SquarePhysics::SquarePhysics* mSquarePhysics = nullptr;//物理系统
+		PhysicsBlock::PhysicsWorld* mSquarePhysics = nullptr;//物理系统
 		Arms* mArms = nullptr;//武器
 
 

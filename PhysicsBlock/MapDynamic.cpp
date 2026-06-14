@@ -310,4 +310,38 @@ namespace PhysicsBlock
         return Outline;
     }
 
+    bool MapDynamic::SafeSetCollision(glm::ivec2 pos, bool state)
+    {
+        if (pos.x < 0 || pos.y < 0 || (unsigned int)pos.x >= BaseGrid::width || (unsigned int)pos.y >= BaseGrid::height)
+            return false;
+        GridBlock &block = at(pos.x, pos.y);
+        if (block.Collision != state) {
+            block.Collision = state;
+            if (!state) {
+                block.Entity = false;
+                block.Healthpoint = 0;
+            }
+            // 通知碰撞状态变化
+            if (mCollisionChangeCallback) {
+                mCollisionChangeCallback(pos, state, mCollisionChangeUserData);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void MapDynamic::SetFriction(int x, int y, FLOAT_ friction)
+    {
+        if (x < 0 || y < 0 || (unsigned int)x >= BaseGrid::width || (unsigned int)y >= BaseGrid::height)
+            return;
+        at(x, y).FrictionFactor = friction;
+    }
+
+    FLOAT_ MapDynamic::GetFriction(int x, int y)
+    {
+        if (x < 0 || y < 0 || (unsigned int)x >= BaseGrid::width || (unsigned int)y >= BaseGrid::height)
+            return FLOAT_{};
+        return at(x, y).FrictionFactor;
+    }
+
 }

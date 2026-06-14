@@ -9,10 +9,11 @@ namespace GAME {
 	{
 		Pistol = 0,
 		Shrapnel,
-		MachineGun
+		MachineGun,
+		Rocket
 	};
 
-	constexpr int AttackModeEnumNumber = static_cast<int>(AttackModeEnum::MachineGun);
+	constexpr int AttackModeEnumNumber = static_cast<int>(AttackModeEnum::Rocket);
 
 	struct AttackModeStruct {
 		_ShootCallback Mode = nullptr;
@@ -26,4 +27,6 @@ namespace GAME {
 	void ShrapnelMode(Arms* arms, float x, float y, float angle, float speed, unsigned int Type);
 
 	void MachineGunMode(Arms* arms, float x, float y, float angle, float speed, unsigned int Type);
+
+	void RocketMode(Arms* arms, float x, float y, float angle, float speed, unsigned int Type);
 }

@@ -127,8 +127,12 @@ namespace GAME {
 		int flags = SensoryMessages_None;
 		glm::vec2 pos = mNPC->GetObjectCollision()->pos;
 
+		float dx = Global::GamePlayerX - pos.x;
+		float dy = Global::GamePlayerY - pos.y;
+		mPlayerDistance = std::sqrt(dx * dx + dy * dy);
+
 		//玩家相对NPC位置角度
-		wanjiaAngle = PhysicsBlock::EdgeVecToCosAngleFloat(glm::vec2{ Global::GamePlayerX - pos.x, Global::GamePlayerY - pos.y });
+		wanjiaAngle = PhysicsBlock::EdgeVecToCosAngleFloat(glm::vec2{ dx, dy });
 		float AngleCha = wanjiaAngle - mNPC->GetObjectCollision()->angle;
 		if (AngleCha > 3.14f) {
 			AngleCha -= 6.28f;
@@ -136,7 +140,8 @@ namespace GAME {
 		if (AngleCha < -3.14f) {
 			AngleCha += 6.28f;
 		}
-		if (fabs(AngleCha) < 0.785f) {
+		// 视野锥：扩大到 90°（±1.57 弧度），让 NPC 更容易察觉玩家
+		if (fabs(AngleCha) < 1.57f) {
 			flags |= SensoryMessages_VisualField;//在视野范围内
 
 			//射线检测
@@ -148,8 +153,8 @@ namespace GAME {
 			}
 		}
 
-		if (fabs((Global::GamePlayerX - pos.x) < AttackRange) && (fabs(Global::GamePlayerY - pos.y) < AttackRange))//玩家在范围内
-		{
+		// 范围判定：用 mPlayerDistance 与 AttackRange 比较（修复原 fabs((x<range)) 的逻辑错误）
+		if (mPlayerDistance < AttackRange) {
 			flags |= SensoryMessages_Range;
 		}
 		return flags;
@@ -185,20 +190,21 @@ namespace GAME {
 		}
 
 		int flags = GetSensoryMessages();
-		if (flags & SensoryMessages_Visible) {//是否可见
-			if (flags & SensoryMessages_Range) {//是否在范围内
+		if (flags & SensoryMessages_Visible) {//看到玩家
+			if (flags & SensoryMessages_Range) {
+				// 近距离 → 攻击
+				NPCFSM->Get()->process_event(S_Attack{});
+			} else {
+				// 远距离 → 追击
 				mTime = mPathfindingCycle + 1.0f;
 				NPCFSM->Get()->process_event(S_Chasing{});
-				return true;
 			}
-			else {
-				NPCFSM->Get()->process_event(S_Attack{});
-				return true;
-			}
+			return true;
 		}
 
-		mNPC->GetObjectCollision()->angle = PhysicsBlock::EdgeVecToCosAngleFloat(qianjinfang);//旋转角度
-		if (mTime > 1.0f) {
+		// 待机时缓慢转向前进方向
+		mNPC->GetObjectCollision()->angle = PhysicsBlock::EdgeVecToCosAngleFloat(qianjinfang);
+		if (mTime > 1.5f) {
 			NPCFSM->Get()->process_event(S_Patrol{});
 		}
 		return true;
@@ -212,44 +218,34 @@ namespace GAME {
 			NPCFSM->Get()->process_event(S_Injury{});
 			return true;
 		}
-		if (flags & SensoryMessages_Visible) {//是否可见
-			if (flags & SensoryMessages_Range) {//是否在范围内
+		if (flags & SensoryMessages_Visible) {//看到玩家
+			if (flags & SensoryMessages_Range) {
 				NPCFSM->Get()->process_event(S_Attack{});
-				return true;
-			}
-			else {
+			} else {
 				mTime = mPathfindingCycle + 1.0f;
 				NPCFSM->Get()->process_event(S_Chasing{});
-				return true;
 			}
+			return true;
 		}
-		
+
 		glm::vec2 pos = mNPC->GetObjectCollision()->pos;
-		glm::vec2 Lpos = pos + qianjinfang;
-		if (wPathfinding->GetPixelWallNumber(Lpos.x + wPathfinding->PathfindingDecoratorDeviationX, Lpos.y + wPathfinding->PathfindingDecoratorDeviationY)) {
-			//mNPC->GetObjectCollision()->SetPos(pos + (qianjinfang * 0.1f));
+		glm::vec2 Lpos = pos + qianjinfang * 2.0f;
+		// GetPixelWallNumber 返回 true 表示该格是墙（不可通行）
+		if (!wPathfinding->GetPixelWallNumber(Lpos.x + wPathfinding->PathfindingDecoratorDeviationX, Lpos.y + wPathfinding->PathfindingDecoratorDeviationY)) {
+			// 前方无墙：对齐角度并移动（用 PFSpeed += 直接叠加速度，与玩家移动方式一致）
 			float YAngle = PhysicsBlock::EdgeVecToCosAngleFloat(qianjinfang);
-			// TODO: ExpectSpeed may not be available in PhysicsShape
-			// mNPC->GetObjectCollision()->ExpectSpeed(100, YAngle, FPSTime);
 			mNPC->GetObjectCollision()->angle = YAngle;
+			mNPC->GetObjectCollision()->PFSpeed() += Vec2_{ qianjinfang.x * mMoveForce * FPSTime, qianjinfang.y * mMoveForce * FPSTime };
 		}
 		else {
+			// 前方有墙：随机选新方向
 			switch (rand()%4)
 			{
-			case 0:
-				qianjinfang = { 1, 0 };
-				break;
-			case 1:
-				qianjinfang = { -1, 0 };
-				break;
-			case 2:
-				qianjinfang = { 0, 1 };
-				break;
-			case 3:
-				qianjinfang = { 0, -1 };
-				break;
-			default:
-				break;
+			case 0: qianjinfang = { 1, 0 }; break;
+			case 1: qianjinfang = { -1, 0 }; break;
+			case 2: qianjinfang = { 0, 1 }; break;
+			case 3: qianjinfang = { 0, -1 }; break;
+			default: break;
 			}
 			mTime = 0;
 			NPCFSM->Get()->process_event(S_Standby{});
@@ -261,28 +257,60 @@ namespace GAME {
 	bool NPC::Attack() {
 		int flags = GetSensoryMessages();
 		if ((flags & SensoryMessages_Range) && (flags & SensoryMessages_Visible)) {
+			// 朝向玩家
 			mNPC->GetObjectCollision()->angle = wanjiaAngle;
-			if (mTime > 0.5f) {
-				mTime = 0.0;
-				glm::vec2 pos = mNPC->GetObjectCollision()->pos;
-				pos += PhysicsBlock::vec2angle(glm::vec2{ 9.0f, 0.0f }, mNPC->GetObjectCollision()->angle);
-				wArms->ShootBullets(pos.x, pos.y, mNPC->GetObjectCollision()->angle, 500, 0);
+
+			// 保持一定距离：太近就后退，太远就靠近（保持中距离射击）
+			glm::vec2 pos = mNPC->GetObjectCollision()->pos;
+			glm::vec2 toPlayer = glm::vec2{ Global::GamePlayerX - pos.x, Global::GamePlayerY - pos.y };
+			float dist = mPlayerDistance;
+			float idealDist = 50.0f;
+			glm::vec2 moveDir = glm::normalize(toPlayer);
+			if (dist < idealDist - 10.0f) {
+				// 太近，后退
+				mNPC->GetObjectCollision()->PFSpeed() += Vec2_{ -moveDir.x * mMoveForce * FPSTime, -moveDir.y * mMoveForce * FPSTime };
+			} else if (dist > idealDist + 10.0f) {
+				// 太远，靠近
+				mNPC->GetObjectCollision()->PFSpeed() += Vec2_{ moveDir.x * mMoveForce * FPSTime, moveDir.y * mMoveForce * FPSTime };
+			}
+
+			// 射击（带冷却）
+			mShootCooldown -= FPSTime;
+			if (mShootCooldown <= 0.0f) {
+				mShootCooldown = mShootInterval;
+				glm::vec2 shootPos = pos + PhysicsBlock::vec2angle(glm::vec2{ 9.0f, 0.0f }, mNPC->GetObjectCollision()->angle);
+				// 加入轻微瞄准误差（让 AI 不至于百发百中）
+				float aimError = ((rand() % 100) / 100.0f - 0.5f) * 0.15f;
+				wArms->ShootBullets(shootPos.x, shootPos.y, mNPC->GetObjectCollision()->angle + aimError, 500, 0);
 			}
 		}
 		else {
+			// 失去目标 → 追击
 			mTime = mPathfindingCycle + 1.0f;
 			NPCFSM->Get()->process_event(S_Chasing{});
 		}
-
-
 		return true;
 	}
 
 	//受伤
 	bool NPC::Injury() {
-		GetSensoryMessages();//感官消息
-		mNPC->GetObjectCollision()->angle = wanjiaAngle;//旋转角度
-		if (mTime > 2.0f) {
+		int flags = GetSensoryMessages();
+		// 受伤时朝向玩家（反击）
+		mNPC->GetObjectCollision()->angle = wanjiaAngle;
+
+		// 如果看到玩家，立即反击或追击
+		if (flags & SensoryMessages_Visible) {
+			if (flags & SensoryMessages_Range) {
+				NPCFSM->Get()->process_event(S_Attack{});
+			} else {
+				mTime = mPathfindingCycle + 1.0f;
+				NPCFSM->Get()->process_event(S_Chasing{});
+			}
+			return true;
+		}
+
+		// 受伤后短暂硬直，然后追击最后目击位置
+		if (mTime > 1.0f) {
 			mTime = mPathfindingCycle + 1.0f;
 			NPCFSM->Get()->process_event(S_Chasing{});
 		}
@@ -297,92 +325,82 @@ namespace GAME {
 	//追击
 	bool NPC::GoToLocation() {
 		int flags = GetSensoryMessages();
+		// 看到玩家且在攻击范围内 → 攻击
 		if ((flags & SensoryMessages_Range) && (flags & SensoryMessages_Visible)) {
 			NPCFSM->Get()->process_event(S_Attack{});
 			return true;
 		}
 
-		if (!(flags & SensoryMessages_Visible) && (mNPC->mPixelQueue->GetNumber() > 0)) {//如果受伤
+		// 看不到玩家但受伤 → 受伤状态
+		if (!(flags & SensoryMessages_Visible) && (mNPC->mPixelQueue->GetNumber() > 0)) {
 			mTime = 0.0;
 			NPCFSM->Get()->process_event(S_Injury{});
 			return true;
 		}
-		
 
-		if (mJPS->GetPathfindingCompleted()) {
-			glm::vec2 pos = mNPC->GetObjectCollision()->pos;
+		if (!mJPS->GetPathfindingCompleted()) return true; // 寻路中，等待
 
-			if (mSuspicious && mTime > mPathfindingCycle) {
-				mSuspicious = false;
-				glm::vec2 zhuipos = { mSuspiciousPos.x - pos.x, mSuspiciousPos.y - pos.y };
-				while (fabs(zhuipos.x) > mRange || fabs(zhuipos.y) > mRange)
-				{
-					zhuipos /= 2.0f;
-					mSuspicious = true;
-				}
-				zhuipos += pos;
-				LPath.clear();
-				TOOL::mThreadPool->enqueue(&JPS::FindPath, mJPS, JPSVec2{ int(pos.x), int(pos.y) }, JPSVec2{ int(zhuipos.x), int(zhuipos.y) }, &LPath,
-					JPSVec2{ wPathfinding->PathfindingDecoratorDeviationX, wPathfinding->PathfindingDecoratorDeviationY }
-				);
-				hsuldad = 0;
-				mTime = 0;
+		glm::vec2 pos = mNPC->GetObjectCollision()->pos;
+
+		// === 关键修复：无论是否可疑，只要需要就重新寻路 ===
+		// 寻路触发条件：路径为空 OR 到了周期时间 OR 有新可疑位置
+		bool needRepath = (LPath.empty()) || (mTime > mPathfindingCycle);
+
+		if (needRepath) {
+			JPSVec2 target;
+			if (mSuspicious) {
+				// 有最后目击位置 → 前往该位置
+				target = mSuspiciousPos;
+				mSuspicious = false; // 消费掉
+			} else if (flags & SensoryMessages_Visible) {
+				// 还能看到玩家（但可能不在攻击范围内）→ 直接追玩家
+				target = { (int)Global::GamePlayerX, (int)Global::GamePlayerY };
+			} else {
+				// 完全丢失目标 → 巡逻
+				NPCFSM->Get()->process_event(S_Patrol{});
 				return true;
 			}
-			
-			if (LPath.size() > 0) {//沿着路径前进
-				//glm::vec2 yiPOS = { (LPath[LPath.size() - 2].x - LPath[LPath.size() - 1].x) , (LPath[LPath.size() - 2].y - LPath[LPath.size() - 1].y) };
-				//yiPOS = pos + (yiPOS * 0.1f);
-				//hsuldad++;
-				//if (hsuldad >= 10) {
-				//	hsuldad = 0;
-				//	LPath.pop_back();
-				//}
 
-				////玩家相对NPC位置角度
-				//float YAngle = PhysicsBlock::EdgeVecToCosAngleFloat(glm::vec2{ mSuspiciousPos.x - pos.x, mSuspiciousPos.y - pos.y });
+			// 距离过远时截断到寻路范围内
+			glm::vec2 toTarget = glm::vec2{ target.x - pos.x, target.y - pos.y };
+			while (fabs(toTarget.x) > mRange || fabs(toTarget.y) > mRange) {
+				toTarget *= 0.5f;
+			}
+			JPSVec2 clampedTarget = { (int)(pos.x + toTarget.x), (int)(pos.y + toTarget.y) };
 
-				////mNPC->mObjectCollision->SetForce(yiPOS * 100.0f);
-				//mNPC->GetObjectCollision()->SetAngle(YAngle);
-				//mNPC->GetObjectCollision()->SetPos(yiPOS);
-				//mNPC->GetObjectCollision()->SetSpeed(0, 0);
-				JPSVec2 yiPOS = LPath.back();
-				JPSVec2 DeviationPOS = yiPOS - JPSVec2{ int(pos.x), int(pos.y)};
-				if ((fabs(DeviationPOS.x) < 9) && (fabs(DeviationPOS.y) < 9)) {
-					if (LPath.size() > 1) {
-						LPath.pop_back();
-						yiPOS = LPath.back();
-					}
-					else {
-						LPath.clear();
-						if (mSuspicious) {
-							mSuspicious = false;
-							glm::vec2 zhuipos = { mSuspiciousPos.x - pos.x, mSuspiciousPos.y - pos.y };
-							while (fabs(zhuipos.x) > mRange || fabs(zhuipos.y) > mRange)
-							{
-								zhuipos /= 2.0f;
-								mSuspicious = true;
-							}
-							zhuipos += pos;
-							TOOL::mThreadPool->enqueue(&JPS::FindPath, mJPS, JPSVec2{ int(pos.x), int(pos.y) }, JPSVec2{ int(zhuipos.x), int(zhuipos.y) }, &LPath,
-								JPSVec2{ wPathfinding->PathfindingDecoratorDeviationX, wPathfinding->PathfindingDecoratorDeviationY }
-							);
-							hsuldad = 0;
-							mTime = 0;
-							return true;
-						}
-					}
-				}
-				float YAngle = PhysicsBlock::EdgeVecToCosAngleFloat(glm::vec2{ yiPOS.x - pos.x, yiPOS.y - pos.y });
-				mNPC->GetObjectCollision()->angle = YAngle;
-				// TODO: ExpectSpeed may not be available in PhysicsShape
-				// mNPC->GetObjectCollision()->ExpectSpeed(200, YAngle, FPSTime);
-				//mNPC->GetObjectCollision()->SufferForce(YAngle, 100);
-			}
-			else {
-				if (!(flags & SensoryMessages_Visible))NPCFSM->Get()->process_event(S_Patrol{});
-			}
+			LPath.clear();
+			TOOL::mThreadPool->enqueue(&JPS::FindPath, mJPS,
+				JPSVec2{ (int)pos.x, (int)pos.y }, clampedTarget, &LPath,
+				JPSVec2{ wPathfinding->PathfindingDecoratorDeviationX, wPathfinding->PathfindingDecoratorDeviationY }
+			);
+			hsuldad = 0;
+			mTime = 0;
+			return true;
 		}
+
+		// === 沿路径前进 ===
+		if (LPath.empty()) return true;
+
+		JPSVec2 yiPOS = LPath.back();
+		glm::vec2 toWaypoint = glm::vec2{ (float)(yiPOS.x) - pos.x, (float)(yiPOS.y) - pos.y };
+		float distToWaypoint = glm::length(toWaypoint);
+
+		// 到达当前路径点 → 移除并取下一个
+		if (distToWaypoint < 9.0f) {
+			LPath.pop_back();
+			if (LPath.empty()) return true;
+			yiPOS = LPath.back();
+			toWaypoint = glm::vec2{ (float)(yiPOS.x) - pos.x, (float)(yiPOS.y) - pos.y };
+			distToWaypoint = glm::length(toWaypoint);
+			if (distToWaypoint < 0.001f) return true;
+		}
+
+		// 朝向路径点 + 用 PFSpeed() += 移动（与玩家移动方式一致）
+		float YAngle = PhysicsBlock::EdgeVecToCosAngleFloat(toWaypoint);
+		mNPC->GetObjectCollision()->angle = YAngle;
+		glm::vec2 dir = toWaypoint / distToWaypoint;
+		mNPC->GetObjectCollision()->PFSpeed() += Vec2_{ dir.x * mMoveForce * FPSTime, dir.y * mMoveForce * FPSTime };
+
 		return true;
 	}
 	

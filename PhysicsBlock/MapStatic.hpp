@@ -111,7 +111,8 @@ namespace PhysicsBlock
          */
         virtual bool FMGetCollide(glm::ivec2 start)
         {
-            if ((start.x >= width) || (start.y >= height))
+            // 负索引保护：避免 at() 越界访问（网格坐标必须 >= 0）
+            if ((start.x < 0) || (start.y < 0) || (start.x >= (int)width) || (start.y >= (int)height))
             {
                 return false;
             }

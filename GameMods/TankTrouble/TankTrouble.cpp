@@ -98,6 +98,12 @@ namespace GAME
 		mGamePlayer->InitCommandBuffer();
 		mGamePlayer->SetDamagePrompt(mDamagePrompt);
 
+		// 接线 Arms ↔ 坦克：让子弹击中坦克时能正确销毁、爆炸能伤害到坦克
+		mArms->SetPlayerTank(mGamePlayer);
+		mArms->SetCrowd(mCrowd);
+		mArms->RegisterTankBulletHandler(mGamePlayer);
+		mArms->SetArmsMode(AttackModeEnum::Pistol); // 默认手枪（反弹 3 次）
+
 		VulKan::AuxiliaryForceData *ALine = mAuxiliaryVision->GetContinuousForce()->New(&mGamePlayer->GetObjectCollision()->force);
 		ALine->pos = &mGamePlayer->GetObjectCollision()->pos;
 		ALine->Force = &mGamePlayer->GetObjectCollision()->force;
@@ -113,6 +119,17 @@ namespace GAME
 		Opcode::OpCrowd = mCrowd;
 		Opcode::OpGamePlayer = mGamePlayer;
 		Opcode::OpImGuiInterFace = InterFace;
+
+		// NPC 被击杀时计分（玩家击杀）
+		mCrowd->mOnNPCKilled = [this] {
+			if (mGameEnded) return;
+			mPlayerKills++;
+			LOGI("[TankTrouble] NPC killed. Player kills: %d / %d", mPlayerKills, mKillTarget);
+			if (mPlayerKills >= mKillTarget) {
+				mGameEnded = true;
+				mPlayerWon = true;
+			}
+		};
 
 		mCrowd->AddNPC(-208, 60);
 	}
@@ -214,21 +231,64 @@ namespace GAME
 			}
 			break;
 		case GameKeyEnum::Key_1:
-			AttackType--;
-			{
-				static constexpr int DESTROY_MODE_COUNT = 4;
-				if (AttackType >= DESTROY_MODE_COUNT) { AttackType = DESTROY_MODE_COUNT - 1; }
-			}
+			// 切换到上一把武器（循环 0..3）
+			AttackType = (AttackType == 0) ? (AttackModeEnumNumber) : (AttackType - 1);
+			UpdateWeaponMode();
 			break;
 		case GameKeyEnum::Key_2:
-			AttackType++;
-			{
-				static constexpr int DESTROY_MODE_COUNT = 4;
-				if (AttackType >= DESTROY_MODE_COUNT) { AttackType = DESTROY_MODE_COUNT - 1; }
-			}
+			// 切换到下一把武器（循环 0..3）
+			AttackType = (AttackType >= (unsigned int)AttackModeEnumNumber) ? 0 : (AttackType + 1);
+			UpdateWeaponMode();
 			break;
 		default:
 			break;
+		}
+	}
+
+	// 把 AttackType 同步到 Arms 的当前武器配置（反弹/爆炸/射速）
+	void TankTrouble::UpdateWeaponMode() {
+		if (AttackType > (unsigned int)AttackModeEnumNumber) {
+			AttackType = 0;
+		}
+		mArms->SetArmsMode(static_cast<AttackModeEnum>(AttackType));
+	}
+
+	// 游戏规则：玩家死亡重生、NPC 维持数量、胜负判定
+	void TankTrouble::UpdateGameRules(float time) {
+		// 游戏已结束则不再处理规则
+		if (mGameEnded) return;
+
+		// 玩家死亡重生流程
+		if (mPlayerDying) {
+			mRespawnTimer -= time;
+			if (mRespawnTimer <= 0.0f) {
+				mPlayerDying = false;
+				// 在合法位置重生
+				glm::ivec2 pos = mLabyrinth->GetLegitimateGeneratePos();
+				mGamePlayer->ResetTank(pos.x, pos.y);
+				mCamera->setCameraPos(mGamePlayer->GetObjectCollision()->pos);
+			}
+			return;
+		}
+
+		// 检测玩家是否死亡
+		if (mGamePlayer->GetDeathInBattle()) {
+			mPlayerDying = true;
+			mPlayerDeaths++;
+			mRespawnTimer = mRespawnDelay;
+			LOGI("[TankTrouble] Player died. Deaths: %d", mPlayerDeaths);
+			// 死亡数过多判定失败（死亡 3 次失败）
+			if (mPlayerDeaths >= 3) {
+				mGameEnded = true;
+				mPlayerWon = false;
+			}
+			return;
+		}
+
+		// 维持至少 1 个 NPC 敌人（NPC 被杀光后自动补充）
+		if (mCrowd && mCrowd->GetNPCCount() == 0) {
+			glm::ivec2 pos = mLabyrinth->GetLegitimateGeneratePos();
+			mCrowd->RespawnNPC(pos.x, pos.y);
 		}
 	}
 
@@ -257,6 +317,71 @@ namespace GAME
 	void TankTrouble::GameUI()
 	{
 		mPhysicsDebug.drawUI();
+
+		// ===== HUD：武器、击杀、死亡 =====
+		// 用 ImGui 在屏幕左上角显示状态
+		ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowBgAlpha(0.6f);
+		if (ImGui::Begin("TankTroubleHUD", nullptr,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoInputs))
+		{
+			// 当前武器名
+			const char* weaponName = "手枪";
+			switch (mArms->GetCurrentWeapon()) {
+				case AttackModeEnum::Pistol:     weaponName = "手枪 [反弹]"; break;
+				case AttackModeEnum::Shrapnel:   weaponName = "霰弹"; break;
+				case AttackModeEnum::MachineGun: weaponName = "机枪"; break;
+				case AttackModeEnum::Rocket:     weaponName = "火箭 [爆炸]"; break;
+			}
+			ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), u8"武器: %s", weaponName);
+			ImGui::Text(u8"击杀: %d / %d", mPlayerKills, mKillTarget);
+			ImGui::Text(u8"死亡: %d / 3", mPlayerDeaths);
+			ImGui::Separator();
+			ImGui::TextDisabled(u8"[1/2] 切换武器  [WASD] 移动  [鼠标] 瞄准/射击");
+		}
+		ImGui::End();
+
+		// ===== 游戏结束结算面板 =====
+		if (mGameEnded) {
+			ImGui::OpenPopup("TankTroubleGameOver");
+		}
+		ImGui::SetNextWindowSize(ImVec2(360, 180), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(mWinWidth / 2.0f - 180, mWinHeight / 2.0f - 90), ImGuiCond_FirstUseEver);
+		if (ImGui::BeginPopupModal("TankTroubleGameOver", nullptr, ImGuiWindowFlags_NoResize))
+		{
+			if (mPlayerWon) {
+				ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), u8"胜利！");
+			} else {
+				ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), u8"失败！");
+			}
+			ImGui::Separator();
+			ImGui::Text(u8"击杀数: %d", mPlayerKills);
+			ImGui::Text(u8"死亡数: %d", mPlayerDeaths);
+			ImGui::Separator();
+			if (ImGui::Button(u8"重新开始", ImVec2(-1, 0)))
+			{
+				// 重置游戏状态
+				mPlayerKills = 0;
+				mPlayerDeaths = 0;
+				mGameEnded = false;
+				mPlayerWon = false;
+				mPlayerDying = false;
+				mRespawnTimer = 0.0f;
+				// 重生玩家
+				glm::ivec2 pos = mLabyrinth->GetLegitimateGeneratePos();
+				mGamePlayer->ResetTank(pos.x, pos.y);
+				// 清空所有 NPC 并重新生成
+				mCrowd->KillAll();
+				for (int i = 0; i < 2; ++i) {
+					glm::ivec2 npos = mLabyrinth->GetLegitimateGeneratePos();
+					mCrowd->AddNPC(npos.x, npos.y);
+				}
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
 	}
 
 	void TankTrouble::GameLoop(unsigned int mCurrentFrame)
@@ -270,23 +395,7 @@ namespace GAME
 
 		mDamagePrompt->UpDataDamagePrompt(Global::GamePlayerX, Global::GamePlayerY, TOOL::FPStime);
 
-		// TODO: mIndexAnimationGrid removed from new engine; animation grid outline points need redesign
-		/*
-		for (size_t i = 0; i < mUVDynamicDiagram->mIndexAnimationGrid->GetOutlinePointSize(); i++)
-		{
-			mAuxiliaryVision->AddSpot(
-				{PhysicsBlock::vec2angle(
-					 mUVDynamicDiagram->mIndexAnimationGrid->GetOutlinePointSet(i),
-					 mUVDynamicDiagram->mIndexAnimationGrid->GetAngle()) +
-					 glm::dvec2(mUVDynamicDiagram->mIndexAnimationGrid->GetPos()),
-				 0},
-				0.2,
-				glm::vec4{1, 0, 0, 1});
-		}
-		*/
-
-		// TODO: AnimationEvent temporarily disabled - IndexAnimationGrid is old engine concept
-		// mUVDynamicDiagram->AnimationEvent(TOOL::FPStime);
+		// 注意：原 IndexAnimationGrid 动画网格轮廓显示已随旧引擎移除（属渲染层重构，与玩法无关）
 		if (!Global::ServerOrClient)
 		{
 			mCrowd->NPCTimeoutDetection();
@@ -296,6 +405,14 @@ namespace GAME
 			mCrowd->NPCEvent(mCurrentFrame, TOOL::FPStime);
 		}
 
+		// 游戏规则：胜负判定 + 玩家/NPC 重生（在 NPC 死亡计数之后）
+		UpdateGameRules(TOOL::FPStime);
+
+		// 游戏结束后冻结输入与射击（仅渲染与 UI）
+		if (mGameEnded) {
+			mLeftMouseDown = false;
+			PlayerForce = {0, 0};
+		}
 		int winwidth = mWinWidth, winheight = mWinHeight;
 		if (winwidth == 0 || winheight == 0) {
 #if defined(__ANDROID__)

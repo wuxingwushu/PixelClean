@@ -10,9 +10,11 @@
 
 #include "../PhysicsBlock/PhysicsWorld.hpp"
 #include "../PhysicsBlock/PhysicsShape.hpp"
+#include "../PhysicsBlock/PhysicsParticle.hpp"
 #include "../Tool/Queue.h"
 #include "../GlobalStructural.h"
 #include <event2/util.h>
+#include <functional>
 #include "DamagePrompt.h"
 
 namespace GAME {
@@ -83,6 +85,16 @@ namespace GAME {
 		bool GetCrucial(int x, int y);
 		//获取玩家是否阵亡
 		[[nodiscard]] bool GetDeathInBattle(){ return DeathInBattle; }
+
+		//在新物理引擎中注册"坦克被子弹击中"的碰撞回调。
+		//需在坦克被 AddObject 后调用；Arms 通过 SetBulletDamageCallback 注册销毁子弹逻辑。
+		void RegisterBulletHitCallback();
+
+		// 由 Arms 设置：当子弹击中坦克时，调用此函数销毁该子弹。
+		std::function<void(PhysicsBlock::PhysicsParticle*)> BulletDestroyedHandler;
+
+		//重置坦克：清空伤害、复位死亡标记（用于重生）
+		void ResetTank(float X, float Y);
 
 	private:
 		bool DeathInBattle = false;

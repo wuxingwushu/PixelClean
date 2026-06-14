@@ -38,6 +38,21 @@ namespace GAME {
 			return MapPlayerS->GetNumber();
 		}
 
+		//获取 NPC 数量（用于维持最少敌人数）
+		unsigned int GetNPCCount() {
+			return mNPCS->GetNumber();
+		}
+
+		// 遍历所有 NPC 对应的 GamePlayer（用于爆炸/范围伤害判定）
+		template <typename Fn>
+		void ForEachPlayer(Fn&& fn) {
+			NPC** data = mNPCS->GetData();
+			for (size_t i = 0; i < mNPCS->GetNumber(); ++i) {
+				GamePlayer* gp = data[i] ? data[i]->GetGamePlayer() : nullptr;
+				if (gp) fn(gp);
+			}
+		}
+
 		//设置物理
 		void SteSquarePhysics(PhysicsBlock::PhysicsWorld* PhysicsWorld) {
 			mSquarePhysics = PhysicsWorld;
@@ -68,6 +83,12 @@ namespace GAME {
 		void NPCEvent(int Format, float time);
 
 		void KillAll();
+
+		// NPC 被击杀时触发的回调（用于计分），由上层设置
+		std::function<void()> mOnNPCKilled;
+
+		// 重新生成一个 NPC（用于重生），在随机/给定位置
+		void RespawnNPC(int x, int y);
 
 	private:
 		//储存用来生成玩家

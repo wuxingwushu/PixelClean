@@ -32,6 +32,9 @@ namespace GAME {
 			return mNPC->getCommandBuffer(i);
 		}
 
+		// 获取 NPC 对应的 GamePlayer（用于范围伤害判定）
+		GamePlayer* GetGamePlayer() { return mNPC; }
+
 		bool GetDeathInBattle() {
 			return mNPC->GetDeathInBattle();
 		}
@@ -71,22 +74,29 @@ namespace GAME {
 
 	private:
 		glm::vec2 qianjinfang = {1,0};
-		int AttackRange = 90;
+		int AttackRange = 90;       // 攻击范围（世界坐标距离）
+		int ChaseRange = 250;       // 追击触发范围
 		int mRange = 300;//寻路范围
 		GamePlayer* mNPC = nullptr;//玩家模型
 		PathfindingDecorator* wPathfinding = nullptr;//地图，用于寻路
 		Arms* wArms = nullptr;//武器
 
-		
 		int hsuldad = 0;
 		float FPSTime = 0;
 		float mTime = 0.0f;//当前间隔多久
-		const float mPathfindingCycle = 2.0f;//寻路最小周期
+		const float mPathfindingCycle = 1.5f;//寻路最小周期
 		std::vector<JPSVec2> LPath;//寻路路径
 
 		float wanjiaAngle = 0.0f;//NPC到玩家的角度
 		bool mSuspicious = false;//是否有可疑位置
 		JPSVec2 mSuspiciousPos{};//可疑位置
+		float mPlayerDistance = 0.0f; // NPC到玩家的直线距离（每帧更新）
+
+		float mShootCooldown = 0.0f;  // 射击冷却
+		const float mShootInterval = 0.8f; // 射击间隔
+
+		// NPC 朝向移动速度参数
+		const float mMoveForce = 80.0f;   // 每帧施加的移动"速度增量"
 
 		JPS* mJPS = nullptr;//A星寻路
 	};

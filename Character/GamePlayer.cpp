@@ -14,6 +14,47 @@ namespace GAME {
 		}
 	}
 
+	// 坦克被子弹击中：碰撞进入回调。
+	// 接触点（世界坐标）经 DropCollision 转为坦克 16x16 网格坐标，
+	// 然后复用现有的 mPixelQueue 伤害链路（与地形破坏子弹一致）。
+	static void TankHitByBullet(const PhysicsBlock::PhysicsFormwork* tankObj,
+		const PhysicsBlock::PhysicsFormwork* otherObj,
+		const PhysicsBlock::BaseArbiter* arbiter,
+		GamePlayer* self)
+	{
+		// 只处理被子弹（粒子）击中的情况
+		if (otherObj->type != PhysicsBlock::PhysicsObjectEnum::particle) return;
+		if (arbiter->numContacts <= 0) return;
+
+		auto* tankShape = const_cast<PhysicsBlock::PhysicsShape*>(
+			static_cast<const PhysicsBlock::PhysicsShape*>(tankObj));
+
+		// 用接触点世界坐标算出坦克网格坐标
+			glm::vec2 hitWorld = arbiter->contacts[0].position;
+			PhysicsBlock::CollisionInfoI info = tankShape->DropCollision(hitWorld);
+		if (!info.Collision) return;
+
+		int gx = info.pos.x;
+		int gy = info.pos.y;
+		if (gx < 0 || gx >= 16 || gy < 0 || gy >= 16) return;
+
+		// 复用既有像素伤害队列（State=false 表示破坏该格）
+		self->mPixelQueue->add({ gx, gy, false });
+
+			// 受伤方向提示（子弹入射方向）
+			if (self->wDamagePrompt != nullptr) {
+				Vec2_ spd = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFSpeed();
+				self->wDamagePrompt->AddDamagePrompt(atan2f(spd.y, spd.x));
+			}
+
+		// 通知 Arms 销毁该子弹
+		auto* bullet = const_cast<PhysicsBlock::PhysicsParticle*>(
+			static_cast<const PhysicsBlock::PhysicsParticle*>(otherObj));
+		if (self->BulletDestroyedHandler) {
+			self->BulletDestroyedHandler(bullet);
+		}
+	}
+
 	GamePlayer::GamePlayer(VulKan::Device* device, VulKan::Pipeline* pipeline, VulKan::SwapChain* swapChain, VulKan::RenderPass* renderPass, 
 		PhysicsBlock::PhysicsWorld* PhysicsWorld, float X, float Y)
 	{
@@ -42,8 +83,8 @@ namespace GAME {
 		// mObjectCollision->SetOrigin(8, 8);//设置原点 (PhysicsBlock uses CentreMass)
 		mObjectCollision->pos = Vec2_{ X, Y };//设置位置
 	mObjectCollision->friction = 1.0f;//设置摩擦系数
-	// TODO: PhysicsBlock uses global PhysicsCollision callback system instead of per-object SetCollisionCallback
-	// mObjectCollision->SetCollisionCallback(GamePlayerDestroyPixel, this);//设置回调函数
+	// 新物理引擎：通过 PhysicsCollision 全局回调系统注册"坦克被击中"事件
+	RegisterBulletHitCallback();
 	mSquarePhysics->AddObject(mObjectCollision);//添加玩家碰撞
 
 		std::vector<float> mPositions = {
@@ -304,5 +345,47 @@ namespace GAME {
 			}
 			EndPixelSPointer();
 		}
+	}
+
+	void GamePlayer::RegisterBulletHitCallback() {
+		// 通过全局 PhysicsCollision 回调系统注册"坦克被击中"事件
+		// 当粒子（子弹）进入坦克形状时触发 TankHitByBullet
+		mSquarePhysics->mCollision.AddCollisionEnterListener(
+			mObjectCollision,
+			[this](const PhysicsBlock::PhysicsFormwork* a,
+				const PhysicsBlock::PhysicsFormwork* b,
+				const PhysicsBlock::BaseArbiter* arbiter) {
+				// a 是本坦克，b 是对方物体
+				TankHitByBullet(a, b, arbiter, this);
+			}
+		);
+	}
+
+	void GamePlayer::ResetTank(float X, float Y) {
+		// 复位死亡标记
+		DeathInBattle = false;
+		// 清空待处理伤害
+		while (mPixelQueue->GetNumber() != 0) { mPixelQueue->pop(); }
+		// 恢复所有像素
+		for (size_t x = 0; x < 16; ++x) {
+			for (size_t y = 0; y < 16; ++y) {
+				mObjectCollision->at({ (int)x, (int)y }).Entity = true;
+				mObjectCollision->at({ (int)x, (int)y }).Collision = true;
+				mBrokenData[x * 16 + y] = true;
+			}
+		}
+		mObjectCollision->UpdateAll();
+		mObjectCollision->pos = Vec2_{ X, Y };
+		mObjectCollision->speed = Vec2_{ 0, 0 };
+		mObjectCollision->angle = 0;
+		mUniform.StrikeState = 0;
+		// 刷新贴图
+		GetPixelSPointer();
+		for (size_t x = 0; x < 16; ++x) {
+			for (size_t y = 0; y < 16; ++y) {
+				memset(&TexturePointer[(x * 16 + y) * 4 + 3], 255, 1);
+			}
+		}
+		EndPixelSPointer();
 	}
 }

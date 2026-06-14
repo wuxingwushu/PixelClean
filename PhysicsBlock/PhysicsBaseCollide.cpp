@@ -364,7 +364,10 @@ namespace PhysicsBlock
         if (!Map) return 0;
 
         // 首先检查点是否在地形碰撞区域内
-        if (Map->FMGetCollide(ToInt(Particle->pos)))
+        // 注意：必须用 Vec2_ 重载（FMGetCollide(Vec2_) 内部会加 centrality 把世界坐标转为网格坐标）。
+        // 旧的 ToInt(Particle->pos) 走 glm::ivec2 重载，不加 centrality，
+        // 导致世界坐标为负（地图左下半）时碰撞检测完全失效。
+        if (Map->FMGetCollide(Particle->pos))
         {
             CollisionInfoD info = Map->FMBresenhamDetection(Particle->OldPos, Particle->pos);
             if (info.Collision)

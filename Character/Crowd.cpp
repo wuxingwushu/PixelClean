@@ -161,6 +161,10 @@ namespace GAME {
 		);
 		LGamePlayer->InitCommandBuffer();
 		LGamePlayer->SetKey(NPCID);
+		// 注册子弹击中该 NPC 时的销毁处理（让玩家子弹能命中并伤害 NPC）
+		if (wArms) {
+			wArms->RegisterTankBulletHandler(LGamePlayer);
+		}
 		NPC** LNPC = mNPCS->New(NPCID);
 		*LNPC = new NPC(LGamePlayer, wPathfinding, wArms);
 
@@ -178,10 +182,16 @@ namespace GAME {
 				delete LNPC[i];
 				mNPCS->Delete(K);
 				i--;
+				// 通知上层有 NPC 被击杀（用于计分）
+				if (mOnNPCKilled) mOnNPCKilled();
 				continue;
 			}
 			LNPC[i]->Event(Format, time);
 		}
+	}
+
+	void Crowd::RespawnNPC(int x, int y) {
+		AddNPC(x, y);
 	}
 
 	void Crowd::KillAll() {

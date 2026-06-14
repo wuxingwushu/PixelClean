@@ -60,11 +60,6 @@ namespace GAME
 		// 创建
 		void FoundLeftEvent(bool Click, bool First, glm::vec2 s, glm::vec2 e);
 
-	private: // 辅助绘制
-		void ShowStaticSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1, 0, 0, 1});
-		void ShowSquare(glm::dvec2 pos, double angle = 0, glm::vec4 color = {1, 0, 0, 1});
-		void RenderMapOutline();
-
 	private:
         bool PhysicsSwitch = true;							 // 物理世界的开关
         PhysicsBlock::PhysicsWorld *mPhysicsWorld = nullptr; // 物理世界

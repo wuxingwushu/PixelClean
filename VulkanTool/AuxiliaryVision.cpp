@@ -2,10 +2,29 @@
 #include "../GlobalStructural.h"
 #include "../GlobalVariable.h"
 #include "../DebugLog.h"
+#include <cstring> // memcpy
 
 namespace VulKan {
 
 namespace {
+
+	// 用一个"隐藏顶点"模板填满整段映射内存（比逐字段赋值快得多）。
+	// 保持与原初始化循环完全一致的语义：Pos.z = -10000.0（被透视投影近裁剪面裁掉）。
+	// 用指数倍增的 memcpy：先写一个模板顶点，再 1→2→4→8... 复制，整段只需 ~log(N) 次 memcpy。
+	template<typename TVertex>
+	void FillHiddenVertices(TVertex* dst, size_t count, const TVertex& hidden)
+	{
+		if (count == 0) return;
+		dst[0] = hidden;
+		size_t filled = 1;
+		while (filled < count)
+		{
+			size_t chunk = filled; // 本次复制的块大小
+			if (chunk > count - filled) chunk = count - filled;
+			std::memcpy(dst + filled, dst, chunk * sizeof(TVertex));
+			filled += chunk;
+		}
+	}
 
 	template<typename TVertex>
 	bool ProcessStaticVertices(
@@ -112,10 +131,12 @@ namespace {
 		ContinuousAuxiliaryForce = new ContinuousMap<glm::vec2*, AuxiliaryForceData>(Number);
 		StaticContinuousAuxiliaryLine = new ContinuousMap<void*, StaticAuxiliaryLineData>(Number, ContinuousMap_New);
 		mLinePersistentPtr = static_cast<AuxiliaryLineSpot*>(AuxiliaryLineS->getPersistentMappedPtr());
-		for (size_t i = 0; i < (Number * 2); ++i)
 		{
-			mLinePersistentPtr[i].Pos = { i, i, -10000.0 };
-			mLinePersistentPtr[i].Color = { 0, 1.0f, 0, 1.0f };
+			// 初始化为隐藏顶点（z=-10000 被透视投影近裁剪面裁掉）；指数倍增 memcpy 填充
+			AuxiliaryLineSpot hidden{};
+			hidden.Pos.z = -10000.0;
+			hidden.Color = { 0, 1.0f, 0, 1.0f };
+			FillHiddenVertices(mLinePersistentPtr, static_cast<size_t>(Number) * 2, hidden);
 		}
 		AuxiliarySpotS = new Buffer(
 			wDevice, sizeof(AuxiliarySpot) * Number,
@@ -125,11 +146,12 @@ namespace {
 		ContinuousAuxiliarySpot = new ContinuousMap<glm::dvec2*, AuxiliarySpotData>(Number);
 		StaticContinuousAuxiliarySpot = new ContinuousMap<void*, StaticAuxiliarySpotData>(Number, ContinuousMap_New);
 		mSpotPersistentPtr = static_cast<AuxiliarySpot*>(AuxiliarySpotS->getPersistentMappedPtr());
-		for (size_t i = 0; i < Number; ++i)
 		{
-			mSpotPersistentPtr[i].Pos = { i, i, -10000.0 };
-			mSpotPersistentPtr[i].Size = 0.2;
-			mSpotPersistentPtr[i].Color = { 0, 0, 1.0f, 1.0f };
+			AuxiliarySpot hidden{};
+			hidden.Pos.z = -10000.0;
+			hidden.Size = 0.2;
+			hidden.Color = { 0, 0, 1.0f, 1.0f };
+			FillHiddenVertices(mSpotPersistentPtr, Number, hidden);
 		}
 		AuxiliaryCircleS = new Buffer(
 			wDevice, sizeof(AuxiliaryCircle) * Number,
@@ -137,11 +159,12 @@ namespace {
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 		);
 		mCirclePersistentPtr = static_cast<AuxiliaryCircle*>(AuxiliaryCircleS->getPersistentMappedPtr());
-		for (size_t i = 0; i < Number; ++i)
 		{
-			mCirclePersistentPtr[i].Pos = { i, i, -10000.0 };
-			mCirclePersistentPtr[i].Radius = 0.5;
-			mCirclePersistentPtr[i].Color = { 0, 0, 1.0f, 1.0f };
+			AuxiliaryCircle hidden{};
+			hidden.Pos.z = -10000.0;
+			hidden.Radius = 0.5;
+			hidden.Color = { 0, 0, 1.0f, 1.0f };
+			FillHiddenVertices(mCirclePersistentPtr, Number, hidden);
 		}
 
 		mLineRecordedCount = Number;

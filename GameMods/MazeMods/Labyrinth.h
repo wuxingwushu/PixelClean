@@ -1,5 +1,6 @@
 #pragma once
 #include "../../base.h"
+#include <functional>
 #include "../../Vulkan/pipeline.h"
 #include "../../Vulkan/swapChain.h"
 #include "../../Tool/MemoryPool.h"
@@ -217,5 +218,9 @@ namespace GAME {
 		PhysicsBlock::PhysicsWorld* wSquarePhysics = nullptr;
 		PhysicsBlock::MapStatic* mFixedSizeTerrain = nullptr;
 		Queue<PixelState>* mPixelQueue = nullptr;
+
+		// 地形被破坏时（格子 Collision 由 true 变 false）触发；由上层设置，
+		// 例如标记物理辅助显示的地图轮廓为脏，下一帧重绘。
+		std::function<void()> mTerrainChangedHandler;
 	};
 }

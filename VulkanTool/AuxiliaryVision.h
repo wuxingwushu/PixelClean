@@ -115,6 +115,9 @@ namespace VulKan
 		// 画线
 		inline void Line(glm::dvec3 Vertex1, glm::vec4 color1, glm::dvec3 Vertex2, glm::vec4 color2)
 		{
+			// 未开始录制（Begin 之前/End 之后）或缓冲区耗尽则丢弃，
+			// 与 Begin() 中静态线段的越界保护一致，避免写穿映射内存或解引用空指针
+			if (LinePointerHOST == nullptr || LinePointerHOST + 2 > mLinePersistentPtr + (Number * 2)) return;
 			LinePointerHOST->Pos = Vertex1;
 			LinePointerHOST->Color = color1;
 			++LinePointerHOST;
@@ -127,6 +130,7 @@ namespace VulKan
 		// 画点
 		inline void Spot(glm::dvec3 pos, float size, glm::vec4 color)
 		{
+			if (SpotPointerHOST == nullptr || SpotPointerHOST + 1 > mSpotPersistentPtr + Number) return;
 			SpotPointerHOST->Pos = pos;
 			SpotPointerHOST->Size = size;
 			SpotPointerHOST->Color = color;
@@ -134,9 +138,10 @@ namespace VulKan
 			++SpotNumber;
 		};
 
-		// 画圆 
+		// 画圆
 		inline void Circle(glm::dvec3 pos, float radius, glm::vec4 color)
 		{
+			if (CirclePointerHOST == nullptr || CirclePointerHOST + 1 > mCirclePersistentPtr + Number) return;
 			CirclePointerHOST->Pos = pos;
 			CirclePointerHOST->Radius = radius;
 			CirclePointerHOST->Color = color;

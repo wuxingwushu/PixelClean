@@ -4,6 +4,7 @@
 #include "../../GlobalVariable.h"
 #include "../../PhysicsBlock/BaseCalculate.hpp"
 #include "../../PhysicsBlock/ImGuiPhysics.hpp"
+#include "../../PhysicsBlock/PhysicsAuxiliaryVision.hpp" // 物理辅助视觉绘制（DrawPhysicsWorld 等）
 
 
 
@@ -20,7 +21,7 @@ namespace GAME
 	{
 		LOGD("PhysicsTest::PhysicsTest constructor");
 		// 添加视觉辅助
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 2000000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 150000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
 			mCameraVPMatricesBuffer);
@@ -28,7 +29,7 @@ namespace GAME
 
 		PhysicsBlock::DemoFunS[0](&mPhysicsWorld, mCamera);
 		mMapFormwork = mPhysicsWorld->GetMapFormwork();
-		RenderMapOutline();
+		PhysicsBlock::RenderMapOutline(mAuxiliaryVision, mPhysicsWorld);
 
 		PhysicsBlock::AuxiliaryInfoRead();
 
@@ -270,7 +271,7 @@ namespace GAME
 					mMapFormwork = mPhysicsWorld->GetMapFormwork();
 					PhysicsFormworkPtr = nullptr;
 					mAuxiliaryVision->ClearStaticLine();
-					RenderMapOutline();
+					PhysicsBlock::RenderMapOutline(mAuxiliaryVision, mPhysicsWorld);
 
 					if (mGPUInitialized && mPhysicsGPU) {
 						delete mPhysicsGPU;
@@ -362,7 +363,7 @@ namespace GAME
 					if (PhysicsBlock::PhysicsUI(mPhysicsWorld))
 					{
 						mAuxiliaryVision->ClearStaticLine();
-						RenderMapOutline();
+						PhysicsBlock::RenderMapOutline(mAuxiliaryVision, mPhysicsWorld);
 					}
 				}
 
@@ -447,7 +448,7 @@ namespace GAME
 		if (mPhysicsWorld->GetMapFormwork()->FMGetType() == PhysicsBlock::PhysicsObjectEnum::_MapDynamic) {
 			MovePlateInfo PlateInfo = ((PhysicsBlock::MapDynamic *)(mPhysicsWorld->GetMapFormwork()))->Updata({mCamera->getCameraPos().x,mCamera->getCameraPos().y});
 			if (PlateInfo.UpData) {
-				RenderMapOutline();
+				PhysicsBlock::RenderMapOutline(mAuxiliaryVision, mPhysicsWorld);
 			}
 		}
 
@@ -482,195 +483,9 @@ namespace GAME
 		}
 		TOOL::mTimer->StartEnd();
 
-		// 查看分配到的网格树位置
-		if (PhysicsAssistantInformation && PhysicsBlock::Auxiliary_GridDividedBool && (PhysicsFormworkPtr != nullptr))
-		{
-			std::vector<Vec2_> vision = mPhysicsWorld->mGridSearch.GetDividedVision(PhysicsFormworkPtr);
-			for (size_t i = 0; i < (vision.size() / 2); ++i)
-			{
-				mAuxiliaryVision->Line({vision[i * 2], 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor), {vision[i * 2 + 1].x, vision[i * 2].y, 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor));
-				mAuxiliaryVision->Line({vision[i * 2], 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor), {vision[i * 2].x, vision[i * 2 + 1].y, 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor));
-				mAuxiliaryVision->Line({vision[i * 2 + 1], 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor), {vision[i * 2 + 1].x, vision[i * 2].y, 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor));
-				mAuxiliaryVision->Line({vision[i * 2 + 1], 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor), {vision[i * 2].x, vision[i * 2 + 1].y, 0}, ColorToVec4(PhysicsBlock::Auxiliary_GridDividedColor));
-			}
-		}
-
-		// 渲染物理网格
-		for (auto i : mPhysicsWorld->GetPhysicsShape())
-		{
-			for (size_t x = 0; x < i->width; ++x)
-			{
-				for (size_t y = 0; y < i->height; ++y)
-				{
-					if (i->at(x, y).Entity)
-					{
-						ShowSquare(PhysicsBlock::vec2angle(Vec2_{x, y} - i->CentreMass, i->angle) + i->pos, i->angle, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
-					}
-				}
-			}
-			if (PhysicsAssistantInformation)
-			{
-				// 辅助显示位置
-				if (PhysicsBlock::Auxiliary_PosBool)
-					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
-				// 辅助显示旧位置
-				if (PhysicsBlock::Auxiliary_OldPosBool)
-					mAuxiliaryVision->Spot({i->OldPos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
-				// 辅助显示角度
-				if (PhysicsBlock::Auxiliary_AngleBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor), {i->pos + PhysicsBlock::vec2angle({1, 0}, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor));
-				// 辅助显示速度
-				if (PhysicsBlock::Auxiliary_SpeedBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
-				// 辅助显示受力
-				if (PhysicsBlock::Auxiliary_ForceBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
-				// 辅助显示质心
-				if (PhysicsBlock::Auxiliary_CentreMassBool)
-					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CentreMassColor));
-				// 辅助显示几何中心
-				if (PhysicsBlock::Auxiliary_CentreShapeBool)
-					mAuxiliaryVision->Spot({i->pos - PhysicsBlock::vec2angle(i->CentreMass - i->CentreShape, i->angle), 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CentreShapeColor));
-				// 辅助显示外骨骼点
-				if (PhysicsBlock::Auxiliary_OutlineBool)
-				{
-					PhysicsBlock::AngleMat angleMat(i->angle);
-					for (size_t d = 0; d < i->OutlineSize; ++d)
-					{
-						mAuxiliaryVision->Spot({i->pos + angleMat.Rotary(i->OutlineSet[d]), 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OutlineColor));
-					}
-				}
-				// 辅助显示最大外骨骼点质心
-				if (PhysicsBlock::Auxiliary_MaxOutlineCentreMassBool)
-				{
-					PhysicsBlock::AngleMat angleMat(i->angle);
-					for (size_t d = 0; d < i->OutlineSize; ++d)
-					{
-						mAuxiliaryVision->Spot({i->pos + angleMat.Rotary(i->MaxOutlineCentreMass[d]), 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_MaxOutlineCentreMassColor));
-					}
-				}
-				if (PhysicsBlock::Auxiliary_MaxOutlineCentreMassBool & PhysicsBlock::Auxiliary_OutlineBool) 
-				{
-					PhysicsBlock::AngleMat angleMat(i->angle);
-					for (size_t d = 0; d < i->OutlineSize; ++d)
-					{
-						mAuxiliaryVision->Line({i->pos + angleMat.Rotary(i->MaxOutlineCentreMass[d]), 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + angleMat.Rotary(i->OutlineSet[d]), 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
-					}
-				}
-			}
-		}
-		// 渲染物理点
-		for (auto i : mPhysicsWorld->GetPhysicsParticle())
-		{
-			mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
-			if (PhysicsAssistantInformation)
-			{
-				// 辅助显示位置
-				if (PhysicsBlock::Auxiliary_PosBool)
-					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
-				// 辅助显示旧位置
-				if (PhysicsBlock::Auxiliary_OldPosBool)
-					mAuxiliaryVision->Spot({i->OldPos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
-				// 辅助显示速度
-				if (PhysicsBlock::Auxiliary_SpeedBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
-				// 辅助显示受力
-				if (PhysicsBlock::Auxiliary_ForceBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
-			}
-		}
-		// 渲染圆
-		for (auto i : mPhysicsWorld->GetPhysicsCircle())
-		{
-			mAuxiliaryVision->Circle({i->pos, 0}, i->radius, {0, (i->StaticNum < 10 ? 1 : 0.2), 0, 1});
-			if (PhysicsAssistantInformation)
-			{
-				// 辅助显示位置
-				if (PhysicsBlock::Auxiliary_PosBool)
-					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
-				// 辅助显示旧位置
-				if (PhysicsBlock::Auxiliary_OldPosBool)
-					mAuxiliaryVision->Spot({i->OldPos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
-				// 辅助显示角度
-				if (PhysicsBlock::Auxiliary_AngleBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor), {i->pos + PhysicsBlock::vec2angle({i->radius, 0}, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor));
-				// 辅助显示速度
-				if (PhysicsBlock::Auxiliary_SpeedBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
-				// 辅助显示受力
-				if (PhysicsBlock::Auxiliary_ForceBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
-			}
-		}
-		// 渲染线
-		for (auto i : mPhysicsWorld->GetPhysicsLine())
-		{
-			Vec2_ pR = PhysicsBlock::vec2angle({i->radius, 0}, i->angle);
-			mAuxiliaryVision->Line({i->pos + pR, 0}, {0, 1, 0, 1}, {i->pos - pR, 0}, {0, 1, 0, 1});
-			if (PhysicsAssistantInformation)
-			{
-				// 辅助显示位置
-				if (PhysicsBlock::Auxiliary_PosBool)
-					mAuxiliaryVision->Spot({i->pos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_PosColor));
-				// 辅助显示旧位置
-				if (PhysicsBlock::Auxiliary_OldPosBool)
-					mAuxiliaryVision->Spot({i->OldPos, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_OldPosColor));
-				// 辅助显示角度
-				if (PhysicsBlock::Auxiliary_AngleBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor), {i->pos + PhysicsBlock::vec2angle({i->radius, 0}, i->angle), 0}, ColorToVec4(PhysicsBlock::Auxiliary_AngleColor));
-				// 辅助显示速度
-				if (PhysicsBlock::Auxiliary_SpeedBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor), {i->pos + i->speed, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SpeedColor));
-				// 辅助显示受力
-				if (PhysicsBlock::Auxiliary_ForceBool)
-					mAuxiliaryVision->Line({i->pos, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor), {i->pos + i->force, 0}, ColorToVec4(PhysicsBlock::Auxiliary_ForceColor));
-			}
-			
-		}
-		// 渲染绳子
-		for (auto i : mPhysicsWorld->GetPhysicsJoint())
-		{
-			mAuxiliaryVision->Line({i->body1->pos, 0}, {0, 1, 0, 1}, {i->body1->pos + i->r1, 0}, {0, 1, 0, 1});
-			mAuxiliaryVision->Line({i->body2->pos, 0}, {0, 1, 0, 1}, {i->body2->pos + i->r2, 0}, {0, 1, 0, 1});
-		}
-		for (auto j : mPhysicsWorld->GetBaseJunction())
-		{
-			mAuxiliaryVision->Line({j->GetA(), 0}, {0, 1, 0, 1}, {j->GetB(), 0}, {0, 1, 0, 1});
-		}
-		// 渲染物理信息
-		if (PhysicsAssistantInformation)
-		{
-			for (auto &i : mPhysicsWorld->CollideGroupVector)
-			{
-				for (int j = 0; j < i->numContacts; ++j)
-				{
-					// 碰撞点
-					if (PhysicsBlock::Auxiliary_CollisionDropBool)
-						mAuxiliaryVision->Spot({i->contacts[j].position, 0}, 0.05f, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropColor));
-					// 碰撞点 分离 法向量
-					if (PhysicsBlock::Auxiliary_SeparateNormalVectorBool)
-						mAuxiliaryVision->Line({i->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor), {i->contacts[j].position + i->contacts[j].normal, 0}, ColorToVec4(PhysicsBlock::Auxiliary_SeparateNormalVectorColor));
-					// 指向重心
-					if (PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityBool)
-					{
-						mAuxiliaryVision->Line({i->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor), {i->contacts[j].position - i->contacts[j].r1, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor));
-						mAuxiliaryVision->Line({i->contacts[j].position, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor), {i->contacts[j].position - i->contacts[j].r2, 0}, ColorToVec4(PhysicsBlock::Auxiliary_CollisionDropToCenterOfGravityColor));
-					}
-				}
-			}
-		}
-
-		// 渲染触发器区域辅助视觉
-		for (const auto &[handle, config] : mPhysicsWorld->mTrigger.GetConfigs())
-		{
-			Vec2_ min = config.TriggerBounds.Center - config.TriggerBounds.HalfSize;
-			Vec2_ max = config.TriggerBounds.Center + config.TriggerBounds.HalfSize;
-			glm::vec4 color = {1.0f, 0.5f, 0.0f, 1.0f};
-			mAuxiliaryVision->Line({min.x, min.y, 0}, color, {max.x, min.y, 0}, color);
-			mAuxiliaryVision->Line({max.x, min.y, 0}, color, {max.x, max.y, 0}, color);
-			mAuxiliaryVision->Line({max.x, max.y, 0}, color, {min.x, max.y, 0}, color);
-			mAuxiliaryVision->Line({min.x, max.y, 0}, color, {min.x, min.y, 0}, color);
-		}
+		// 渲染整帧物理世界（物体本体 + 辅助信息 + 关节 + 碰撞 + 触发器）
+		PhysicsBlock::DrawPhysicsWorld(mAuxiliaryVision, mPhysicsWorld,
+									   PhysicsAssistantInformation, PhysicsFormworkPtr);
 
 		mAuxiliaryVision->End();
 
@@ -688,7 +503,7 @@ namespace GAME
 				Vec2_ cellPos = PhysicsBlock::vec2angle(Vec2_{gx, gy} - GridEditShape->CentreMass, GridEditShape->angle) + GridEditShape->pos;
 				if (kv.second.Entity)
 				{
-					ShowSquare(cellPos, GridEditShape->angle, {0, 1, 0, 0.8f});
+					PhysicsBlock::DrawSquare(mAuxiliaryVision, cellPos, GridEditShape->angle, {0, 1, 0, 0.8f});
 				}
 				else
 				{
@@ -745,72 +560,6 @@ namespace GAME
 	// 游戏 TCP事件
 	void PhysicsTest::GameTCPLoop()
 	{
-	}
-
-	void PhysicsTest::ShowStaticSquare(glm::dvec2 pos, double angle, glm::vec4 color)
-	{
-		glm::dvec2 Angle = PhysicsBlock::AngleFloatToAngleVec(angle);
-		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, Angle);
-		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, Angle);
-		glm::dvec2 jiao3 = jiao2 + jiao1;
-		mAuxiliaryVision->AddStaticLine({pos, 0}, {pos + jiao1, 0}, color);
-		mAuxiliaryVision->AddStaticLine({pos, 0}, {pos + jiao2, 0}, color);
-		mAuxiliaryVision->AddStaticLine({pos + jiao3, 0}, {pos + jiao1, 0}, color);
-		mAuxiliaryVision->AddStaticLine({pos + jiao3, 0}, {pos + jiao2, 0}, color);
-	}
-
-	void PhysicsTest::ShowSquare(glm::dvec2 pos, double angle, glm::vec4 color)
-	{
-		glm::dvec2 Angle = PhysicsBlock::AngleFloatToAngleVec(angle);
-		glm::dvec2 jiao1 = PhysicsBlock::vec2angle({0, 1}, Angle);
-		glm::dvec2 jiao2 = PhysicsBlock::vec2angle({1, 0}, Angle);
-		glm::dvec2 jiao3 = jiao2 + jiao1;
-		mAuxiliaryVision->Line({pos, 0}, color, {pos + jiao1, 0}, color);
-		mAuxiliaryVision->Line({pos, 0}, color, {pos + jiao2, 0}, color);
-		mAuxiliaryVision->Line({pos + jiao3, 0}, color, {pos + jiao1, 0}, color);
-		mAuxiliaryVision->Line({pos + jiao3, 0}, color, {pos + jiao2, 0}, color);
-	}
-
-	void PhysicsTest::RenderMapOutline()
-	{
-		glm::uvec2 mapSize = mMapFormwork->FMGetMapSize();
-		if (mapSize.x == 0 || mapSize.y == 0) return;
-		mAuxiliaryVision->ClearStaticLine();
-		
-		Vec2_ mapCentrality;
-		if (mPhysicsWorld->GetMapFormwork()->FMGetType() == PhysicsBlock::PhysicsObjectEnum::_MapDynamic) {
-			PhysicsBlock::MapDynamic* dynMap = (PhysicsBlock::MapDynamic*)(mPhysicsWorld->GetMapFormwork());
-
-			int startX = -(int)(dynMap->GetPlatePos().x);
-			int startY = -(int)(dynMap->GetPlatePos().y);
-			int endX = startX + (int)mapSize.x;
-			int endY = startY + (int)mapSize.y;
-
-			for (int x = startX; x < endX; x++)
-			{
-				for (int y = startY; y < endY; y++)
-				{
-					if (mMapFormwork->FMGetGridBlock({ x, y }).Entity)
-					{
-						ShowStaticSquare(Vec2_{ x, y }, 0, { 0, 1, 0, 1 });
-					}
-				}
-			}
-		}
-		else {
-			mapCentrality = mMapFormwork->FMGetCentrality();
-
-			for (size_t x = 0; x < mapSize.x; x++)
-			{
-				for (size_t y = 0; y < mapSize.y; y++)
-				{
-					if (mMapFormwork->FMGetGridBlock({ x, y }).Entity)
-					{
-						ShowStaticSquare(Vec2_{ x, y } - mapCentrality, 0, { 0, 1, 0, 1 });
-					}
-				}
-			}
-		}
 	}
 
 	void PhysicsTest::EditorMode(glm::vec2 huoqdedian)
@@ -1193,13 +942,13 @@ namespace GAME
 						std::swap(s.y, e.y);
 					size = e - s;
 					size += 1;
-					for (int x = 0; x < size.x; ++x)
-					{
-						for (int y = 0; y < size.y; ++y)
+						for (int x = 0; x < size.x; ++x)
 						{
-							ShowSquare(s + glm::vec2{x, y}, 0, {0, 0.5, 0, 1});
+							for (int y = 0; y < size.y; ++y)
+							{
+								PhysicsBlock::DrawSquare(mAuxiliaryVision, s + glm::vec2{x, y}, 0, {0, 0.5, 0, 1});
+							}
 						}
-					}
 					break;
 				case 3:
 					mAuxiliaryVision->Line({s, FLOAT_(0)}, {0, 0.5, 0, 1}, {e, FLOAT_(0)}, {0, 0.5, 0, 1});

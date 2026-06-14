@@ -172,6 +172,8 @@ namespace GAME {
 			[](glm::ivec2 pos, bool newState, void* userData) {
 				if (!newState) {
 					Labyrinth_SetPixel_2(pos.x, pos.y, false, nullptr, userData);
+					// 通知上层地形已变（例如标记物理辅助显示的地图轮廓为脏）
+					if (auto h = static_cast<Labyrinth*>(userData)->mTerrainChangedHandler) h();
 				}
 			},
 			this

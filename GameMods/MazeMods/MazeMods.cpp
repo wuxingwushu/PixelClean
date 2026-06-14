@@ -19,7 +19,7 @@ namespace GAME
 	MazeMods::MazeMods(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
 		LOGD("MazeMods::MazeMods constructor");
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 50000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
 			mCameraVPMatricesBuffer);
@@ -38,6 +38,12 @@ namespace GAME
 		// 生成迷宫
 		mLabyrinth = new Labyrinth(mSquarePhysics);
 		mLabyrinth->InitLabyrinth(mDevice, 21, 21);
+
+		// 绑定物理辅助显示（地图轮廓此时已注册进物理世界）
+		mPhysicsDebug.setup(mAuxiliaryVision, mSquarePhysics);
+
+		// 地形被子弹破坏时，标记地图轮廓为脏，下一帧 refreshMap() 重绘
+		mLabyrinth->mTerrainChangedHandler = [this] { mPhysicsDebug.mapDirty = true; };
 
 		if (!(Global::MultiplePeopleMode && !Global::ServerOrClient)) {
 			mLabyrinth->initUniformManager(
@@ -356,6 +362,11 @@ namespace GAME
 		mUVDynamicDiagram->GetCommandBuffer(wThreadCommandBufferS, Format_i);
 	}
 
+	void MazeMods::GameUI()
+	{
+		mPhysicsDebug.drawUI();
+	}
+
 	void MazeMods::GameLoop(unsigned int mCurrentFrame)
 	{
 		if (mPendingLabyrinthInit) {
@@ -374,7 +385,10 @@ namespace GAME
 			mLabyrinthVulkanReady = true;
 			mPendingLabyrinthInit.reset();
 			mJustLoadedLabyrinth = true;
+			mPhysicsDebug.mapDirty = true; // 地图内容已变，下帧 refreshMap() 重写静态缓冲
 		}
+
+		mPhysicsDebug.refreshMap(); // 地图轮廓（静态缓冲，必须在 Begin() 之前）
 
 		mAuxiliaryVision->Begin();
 
@@ -448,6 +462,9 @@ namespace GAME
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsEmulator(TOOL::FPStime); // 物理事件
 		TOOL::mTimer->StartEnd();
+
+		// 渲染物理世界辅助视觉（物体本体 + 关节 + 碰撞 + 触发器；辅助开关打开后含位置/速度/受力等）
+		mPhysicsDebug.drawWorld();
 
 		m_angle = mGamePlayer->GetObjectCollision()->angle;
 
@@ -700,6 +717,7 @@ namespace GAME
 		mLabyrinthVulkanReady = true;
 		mJustLoadedLabyrinth = true;
 		mPendingLabyrinthInit.reset();
+		mPhysicsDebug.mapDirty = true; // 地图内容已变，下帧 refreshMap() 重写静态缓冲
 	}
 
 }

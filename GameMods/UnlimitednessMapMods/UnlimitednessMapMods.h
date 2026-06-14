@@ -2,6 +2,7 @@
 #include "../Configuration.h"
 #include "../GameMods.h"
 #include "Dungeon.h"
+#include "../../PhysicsBlock/PhysicsAuxiliaryVision.hpp" // PhysicsDebugView 控制器（按值持有，需完整定义）
 
 namespace GAME {
 
@@ -29,6 +30,9 @@ namespace GAME {
 		//游戏循环
 		virtual void GameLoop(unsigned int mCurrentFrame);
 
+		//界面
+		virtual void GameUI();
+
 		//录制 CommandBuffer
 		virtual void GameRecordCommandBuffers();
 
@@ -45,6 +49,8 @@ namespace GAME {
 		bool mRightMouseDown = false;
 		int mWinWidth = 0;
 		int mWinHeight = 0;
+
+		PhysicsBlock::PhysicsDebugView mPhysicsDebug; // 物理辅助显示控制器（地图轮廓 + 物理世界 + UI）
 	};
 
 }

@@ -15,7 +15,7 @@ namespace GAME
 	UnlimitednessMapMods::UnlimitednessMapMods(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
 		LOGD("UnlimitednessMapMods::UnlimitednessMapMods constructor");
-		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 1000);
+		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 150000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
 			mCameraVPMatricesBuffer);
@@ -32,6 +32,9 @@ namespace GAME
 		float mGamePlayerPosX = (50 * 16) / 2.0f;
 		float mGamePlayerPosY = (30 * 16) / 2.0f;
 		mDungeon = new Dungeon(mDevice, 50, 30, mSquarePhysics, mGamePlayerPosX, mGamePlayerPosY);
+
+		// 绑定物理辅助显示（动态地图轮廓此时已注册进物理世界，板块随玩家移动会自动重绘）
+		mPhysicsDebug.setup(mAuxiliaryVision, mSquarePhysics);
 		mDungeon->initUniformManager(
 			mSwapChain->getImageCount(),
 			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
@@ -226,6 +229,11 @@ namespace GAME
 		mDamagePrompt->GetCommandBuffer(wThreadCommandBufferS, Format_i);
 	}
 
+	void UnlimitednessMapMods::GameUI()
+	{
+		mPhysicsDebug.drawUI();
+	}
+
 	void UnlimitednessMapMods::GameLoop(unsigned int mCurrentFrame)
 	{
 		mCrowd->NPCEvent(mCurrentFrame, TOOL::FPStime);
@@ -256,10 +264,24 @@ namespace GAME
 		mGamePlayer->GetObjectCollision()->angle = m_angle; // 设置玩家物理角度
 		mGamePlayer->GetObjectCollision()->PFSpeed() += PlayerForce;   // 设置玩家受力
 		PlayerForce = {0, 0};
+
+		// 先推进动态地图板块位置，便于物理辅助显示的脏检测在同一帧生效
+		MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->pos.x, mGamePlayer->GetObjectCollision()->pos.y);
+		if (LMovePlateInfo.UpData)
+		{
+			mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);
+			Global::MainCommandBufferUpdateRequest();
+		}
+
+		mPhysicsDebug.refreshMap(); // 地图轮廓（静态缓冲，必须在 Begin() 之前；动态板块移动会自动重绘）
+
 		mAuxiliaryVision->Begin();
 		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
 		mSquarePhysics->PhysicsEmulator(TOOL::FPStime); // 物理事件
 		TOOL::mTimer->StartEnd();
+
+		// 渲染物理世界辅助视觉（物体本体 + 关节 + 碰撞 + 触发器；辅助开关打开后含位置/速度/受力等）
+		mPhysicsDebug.drawWorld();
 
 		m_angle = mGamePlayer->GetObjectCollision()->angle;
 
@@ -398,12 +420,6 @@ namespace GAME
 		{
 			UpDataGIFTime = 0;
 			mDungeon->UpDataGIF();
-		}
-		MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->pos.x, mGamePlayer->GetObjectCollision()->pos.y);
-		if (LMovePlateInfo.UpData)
-		{
-			mDungeon->UpdataMistData(LMovePlateInfo.X, LMovePlateInfo.Y);
-			Global::MainCommandBufferUpdateRequest();
 		}
 
 		// 战争迷雾

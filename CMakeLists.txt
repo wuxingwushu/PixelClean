@@ -123,7 +123,6 @@ add_subdirectory(Audio)
 #add_subdirectory(SoundEffect)
 add_subdirectory(NetworkTCP)
 add_subdirectory(Character)
-add_subdirectory(Physics)
 add_subdirectory(PhysicsBlock)
 add_subdirectory(Arms)
 add_subdirectory(Opcode)
@@ -164,7 +163,6 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		AudioEngineLib
 		NetworkTCPLib
 		CharacterLib
-		PhysicsLib
 		ArmsLib
 		OpcodeLib
 		GameModsLib
@@ -212,7 +210,6 @@ else()
 		AudioEngineLib
 		NetworkTCPLib
 		CharacterLib
-		PhysicsLib
 		ArmsLib
 		OpcodeLib
 		GameModsLib

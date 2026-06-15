@@ -12,6 +12,11 @@ namespace PhysicsBlock
         return val > 0 ? Power(val >>= 1, ++i) : i;
     }
 
+    /**
+     * @brief 构造函数 - 创建动态地图，初始化板块网格和移动控制台
+     * @param Width 板块 X 方向数量
+     * @param Height 板块 Y 方向数量
+     * @note 使用 Morton 编码优化相邻板块的内存局部性 */
     MapDynamic::MapDynamic(const unsigned int Width, const unsigned int Height):
         width(Width), height(Height), mMovePlate(Width, Height, PixelBlockEdgeSize, Width / 2, Height / 2), 
         centrality({Width / 2 * PixelBlockEdgeSize, Height / 2 * PixelBlockEdgeSize}),
@@ -102,6 +107,8 @@ namespace PhysicsBlock
         delete DataBool;
     }
 
+    /**
+     * @brief 析构函数 - 释放所有板块网格资源 */
     MapDynamic::~MapDynamic()
     {
         for (size_t i = 0; i < (width * height); ++i)
@@ -112,6 +119,11 @@ namespace PhysicsBlock
         delete GridBuffer;
     }
 
+    /**
+     * @brief 整数坐标 Bresenham 线段碰撞检测
+     * @param start 起始网格坐标
+     * @param end 结束网格坐标
+     * @return 碰撞信息（包含是否碰撞、碰撞位置、摩擦系数） */
     CollisionInfoI MapDynamic::FMBresenhamDetection(glm::ivec2 start, glm::ivec2 end)
     {
         int sx = (start.x < end.x) ? 1 : -1;
@@ -144,6 +156,12 @@ namespace PhysicsBlock
         }
     }
 
+    /**
+     * @brief 浮点坐标 Bresenham 线段碰撞检测
+     * @param start 起始世界坐标
+     * @param end 结束世界坐标
+     * @return 碰撞信息（包含是否碰撞、精确碰撞位置、碰撞方向、摩擦系数）
+     * @note 在整数检测基础上，通过插值计算精确碰撞点和碰撞方向 */
     CollisionInfoD MapDynamic::FMBresenhamDetection(Vec2_ start, Vec2_ end)
     {
             CollisionInfoI infoI = FMBresenhamDetection(ToInt(start), ToInt(end));
@@ -218,6 +236,12 @@ namespace PhysicsBlock
         return {false};
     }
 
+    /**
+     * @brief 安全 Bresenham 线段碰撞检测（边界裁剪）
+     * @param start 起始网格坐标
+     * @param end 结束网格坐标
+     * @return 碰撞信息
+     * @note 坐标会被裁剪到地图有效范围内，防止越界访问 */
     CollisionInfoI MapDynamic::FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end)
     {
         start.x = std::max(0, std::min(start.x, (int)BaseGrid::width - 1));
@@ -310,6 +334,8 @@ namespace PhysicsBlock
         return Outline;
     }
 
+    /**
+     * @brief 安全设置碰撞状态（带越界检查和回调通知） */
     bool MapDynamic::SafeSetCollision(glm::ivec2 pos, bool state)
     {
         if (pos.x < 0 || pos.y < 0 || (unsigned int)pos.x >= BaseGrid::width || (unsigned int)pos.y >= BaseGrid::height)
@@ -321,15 +347,17 @@ namespace PhysicsBlock
                 block.Entity = false;
                 block.Healthpoint = 0;
             }
-            // 通知碰撞状态变化
-            if (mCollisionChangeCallback) {
-                mCollisionChangeCallback(pos, state, mCollisionChangeUserData);
+            // 通知碰撞状态变化（通过 MapFormwork 桥接器转发到 PhysicsCollision）
+            if (mCollisionChangeNotifier) {
+                mCollisionChangeNotifier(pos, state);
             }
             return true;
         }
         return false;
     }
 
+    /**
+     * @brief 设置指定位置的摩擦力系数（带越界检查） */
     void MapDynamic::SetFriction(int x, int y, FLOAT_ friction)
     {
         if (x < 0 || y < 0 || (unsigned int)x >= BaseGrid::width || (unsigned int)y >= BaseGrid::height)
@@ -337,6 +365,8 @@ namespace PhysicsBlock
         at(x, y).FrictionFactor = friction;
     }
 
+    /**
+     * @brief 获取指定位置的摩擦力系数（带越界检查） */
     FLOAT_ MapDynamic::GetFriction(int x, int y)
     {
         if (x < 0 || y < 0 || (unsigned int)x >= BaseGrid::width || (unsigned int)y >= BaseGrid::height)

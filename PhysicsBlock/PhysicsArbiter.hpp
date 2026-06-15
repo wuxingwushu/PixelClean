@@ -141,7 +141,7 @@ namespace PhysicsBlock
     };
 
     /**
-     * @brief 线，圆，碰撞解析 */
+     * @brief 线，地形，碰撞解析 */
     class PhysicsArbiterL : public PhysicsBaseArbiterA
     {
     public:

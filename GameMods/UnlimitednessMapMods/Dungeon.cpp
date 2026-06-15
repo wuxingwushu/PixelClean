@@ -501,7 +501,7 @@ namespace GAME {
 		}
 
 		// 注册地形碰撞变化回调：当 SafeSetCollision 修改网格时更新 Dungeon 视觉
-		mMoveTerrain->SetCollisionChangeCallback(
+			wSquarePhysics->GetCollision().AddMapCollisionChangeListener(mMoveTerrain,
 			[](glm::ivec2 pos, bool newState, void* userData) {
 				((Dungeon*)userData)->OnTerrainCollisionChanged(pos, newState);
 			},

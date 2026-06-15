@@ -240,13 +240,29 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
         std::vector<PhysicsAssembly *> PhysicsAssemblyS; // 物理组装体
 
         std::unordered_map<ArbiterKey, CollideGroupEntry, ArbiterKeyHash> CollideGroupS; // 碰撞对-键值容器（含索引）
-        std::vector<BaseArbiter *> CollideGroupVector;                               // 碰撞对数组
+        /**
+         * @brief 碰撞对数组
+         * @details 以线性数组形式存储所有活跃的碰撞对，支持 O(1) 遍历。
+         *          配合 CollideGroupS 中的 vectorIndex 索引，实现 O(1) 的删除操作
+         *          （将末尾元素交换到被删除位置）。 */
+        std::vector<BaseArbiter *> CollideGroupVector;
         std::vector<BaseArbiter *> NewCollideGroup;                                  // 新添加的碰撞对
         std::vector<ArbiterKey> DeleteCollideGroup;                                  // 删除的碰撞对
 
-        PhysicsCollision mCollision;   // 碰撞回调管理器
-        PhysicsKinematic mKinematic;   // 运动学物体管理器
-        PhysicsTrigger mTrigger;       // 触发器管理器
+        /**
+         * @brief 碰撞回调管理器
+         * @details 管理所有碰撞对的回调注册与分发，在每帧物理模拟结束后触发用户注册的碰撞回调函数。 */
+        PhysicsCollision mCollision;
+        /**
+         * @brief 运动学物体管理器
+         * @details 负责管理运动学物体（不受物理模拟影响、由用户直接控制位置的物体），
+         *          每帧根据用户设定的速度更新其位置。 */
+        PhysicsKinematic mKinematic;
+        /**
+         * @brief 触发器管理器
+         * @details 管理所有触发器区域，检测物体进入/离开触发器的事件，
+         *          并在每帧物理模拟结束后触发相应的回调。 */
+        PhysicsTrigger mTrigger;
 
         // GPU 计算后端
         PhysicsGPU* mGPU = nullptr;            // GPU 物理求解器
@@ -272,8 +288,22 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
         unsigned int ObjectSize = 0;                             // 动态物理对象总数量
         unsigned int ApplyImpulseSize = PhysicsApplyImpulseSize; // 迭代次数
 
+        /**
+         * @brief 处理碰撞对
+         * @param Ba 碰撞对指针
+         * @details 计算碰撞结果，将碰撞对插入或更新到 CollideGroupS 中。
+         *          若有碰撞接触点则保留或更新碰撞对，若无碰撞则标记为待删除。 */
         void HandleCollideGroup(BaseArbiter *Ba);
+        /**
+         * @brief 解析碰撞对变更
+         * @details 将 NewCollideGroup 和 DeleteCollideGroup 中缓存的添加/删除操作
+         *          实际合并到 CollideGroupS 和 CollideGroupVector 中，
+         *          同时同步更新碰撞回调管理器和触发器管理器。 */
         void ResolveCollideGroup();
+        /**
+         * @brief 合并多线程碰撞输出
+         * @param outputs 各线程的碰撞输出缓冲区
+         * @details 将多线程并行碰撞检测产生的 per-thread 输出合并到全局新增/删除队列中。 */
         void MergeCollideOutputs(std::vector<CollideOutput> &outputs);
 
         AuxiliaryMemoryPool(PhysicsArbiterCP, PhysicsCircle, C, PhysicsParticle, P);
@@ -325,6 +355,10 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
             }
         }
 
+        /**
+         * @brief 添加形状物体到物理世界
+         * @param Object 形状物体指针
+         * @details 将物体注册到网格搜索，并加入物理形状列表。 */
         void AddObject(PhysicsShape *Object)
         {
             ApplyImpulseAdd();
@@ -332,6 +366,10 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
             PhysicsShapeS.push_back(Object);
         }
 
+        /**
+         * @brief 添加粒子到物理世界
+         * @param Object 粒子指针
+         * @details 将粒子注册到网格搜索，并加入物理粒子列表。 */
         void AddObject(PhysicsParticle *Object)
         {
             ApplyImpulseAdd();
@@ -339,18 +377,30 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
             PhysicsParticleS.push_back(Object);
         }
 
+        /**
+         * @brief 添加关节到物理世界
+         * @param Object 关节指针
+         * @details 将关节加入物理关节列表，关节用于约束两个物体之间的相对运动。 */
         void AddObject(PhysicsJoint *Object)
         {
             ApplyImpulseAdd();
             PhysicsJointS.push_back(Object);
         }
 
+        /**
+         * @brief 添加连接体到物理世界
+         * @param Object 连接体指针
+         * @details 将连接体（绳子/弹簧）加入物理连接列表。 */
         void AddObject(BaseJunction *Object)
         {
             ApplyImpulseAdd();
             BaseJunctionS.push_back(Object);
         }
 
+        /**
+         * @brief 添加圆形物体到物理世界
+         * @param Object 圆形物体指针
+         * @details 将圆形物体注册到网格搜索，并加入物理圆列表。 */
         void AddObject(PhysicsCircle *Object)
         {
             ApplyImpulseAdd();
@@ -358,19 +408,37 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
             PhysicsCircleS.push_back(Object);
         }
 
+        /**
+         * @brief 添加线段到物理世界
+         * @param Object 线段指针
+         * @details 将线段加入物理线列表。 */
         void AddObject(PhysicsLine *Object)
         {
             ApplyImpulseAdd();
             PhysicsLineS.push_back(Object);
         }
 
+        /**
+         * @brief 添加组装体到物理世界
+         * @param Object 组装体指针
+         * @details 调用组装体的 AddToWorld 将其所有子对象批量添加到物理世界，
+         *          然后将组装体本身加入组装体列表。 */
         void AddObject(PhysicsAssembly *Object)
         {
             Object->AddToWorld(this);
             PhysicsAssemblyS.push_back(Object);
         }
 
+        /**
+         * @brief 从物理世界中移除物体
+         * @param Object 待移除的物理物体指针
+         * @details 根据物体类型从对应的列表中移除，同时清理关联的关节、连接体、碰撞对等。 */
         void RemoveObject(PhysicsFormwork *Object);
+        /**
+         * @brief 从物理世界中移除组装体
+         * @param Object 待移除的组装体指针
+         * @details 调用组装体的 RemoveFromWorld 将其所有子对象从物理世界中移除，
+         *          然后从组装体列表中移除并销毁组装体。 */
         void RemoveObject(PhysicsAssembly *Object);
 
         std::vector<PhysicsShape *> &GetPhysicsShape()
@@ -408,6 +476,9 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
             return PhysicsAssemblyS;
         }
 
+        /**
+         * @brief 获取当前地图对象
+         * @return 地图对象指针，可能为 nullptr */
         MapFormwork *GetMapFormwork()
         {
             return wMapFormwork;
@@ -440,7 +511,8 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
 
         /**
          * @brief   设置地图
-         * @param   MapFormwork_ 地图指针 */
+         * @param   MapFormwork_ 地图指针
+         * @details 设置世界的地形碰撞对象，同时初始化网格风大小和网格搜索范围。 */
         void SetMapFormwork(MapFormwork *MapFormwork_);
 
         /**
@@ -457,14 +529,22 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
         void SetGridRebuildThreshold(FLOAT_ threshold) { mGridRebuildThreshold = threshold; }
 
         /**
-         * @brief 物理仿真
-         * @param time 时间差 */
+         * @brief 物理仿真主循环
+         * @param time 时间步长
+         * @details 执行一帧完整的物理模拟，包括：碰撞检测、预处理（PreStep）、
+         *          冲量迭代求解（ApplyImpulse）、位置更新（PhysicsPos）、
+         *          碰撞回调处理、触发器处理、网格搜索更新。支持多线程并行加速。 */
         void PhysicsEmulator(FLOAT_ time);
 
-        // 物理信息更新
+        /**
+         * @brief 物理信息更新
+         * @details 执行碰撞检测和预处理，更新网格搜索树，但不执行冲量求解和位置更新。
+         *          通常用于无需完整物理模拟帧的场景（如序列化恢复、静态场景初始化）。 */
         void PhysicsInformationUpdate();
 
-        // 等待碰撞检测线程完成
+        /**
+         * @brief 等待碰撞检测线程完成
+         * @details 阻塞等待所有正在运行的碰撞检测线程任务结束。 */
         void WaitForCollisionThreads();
 
         /**

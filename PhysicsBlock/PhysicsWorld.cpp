@@ -74,6 +74,12 @@ namespace PhysicsBlock
 #endif
     }
 
+    /**
+     * @brief 物理世界构造函数
+     * @param gravityAcceleration 重力加速度
+     * @param wind 是否启用网格风
+     * @details 初始化重力加速度、网格风开关，设置网格搜索的线程数，
+     *          并预分配多线程任务向量。 */
     PhysicsWorld::PhysicsWorld(Vec2_ gravityAcceleration, const bool wind) : GravityAcceleration(gravityAcceleration), WindBool(wind)
     {
         mGridSearch.SetThreadCount(std::thread::hardware_concurrency());
@@ -84,6 +90,10 @@ namespace PhysicsBlock
 #endif
     }
 
+    /**
+     * @brief 物理世界析构函数
+     * @details 按顺序清理所有物理资源：等待多线程任务结束、销毁所有碰撞对、释放网格风、
+     *          销毁地图对象、销毁所有组装体及其子对象、销毁所有物理物体（形状、粒子、圆、关节、连接体、线）。 */
     PhysicsWorld::~PhysicsWorld()
     {
 #if ThreadPoolBool
@@ -155,6 +165,12 @@ namespace PhysicsBlock
         }
     }
 
+    /**
+     * @brief 处理碰撞对
+     * @param Ba 碰撞对指针
+     * @details 计算两个物体之间的碰撞检测结果。如果有碰撞接触点，则将碰撞对插入或更新到
+     *          CollideGroupS 中；若无碰撞且之前存在碰撞对，则标记为待删除。
+     *          处理完毕后立即释放临时的 Ba 对象（通过内存池回收或 delete）。 */
     inline void PhysicsWorld::HandleCollideGroup(BaseArbiter *Ba)
     {
         Ba->ComputeCollide();
@@ -190,6 +206,11 @@ namespace PhysicsBlock
         DeleteArbiter(Ba);
     }
 
+    /**
+     * @brief 解析碰撞对变更
+     * @details 将 NewCollideGroup 和 DeleteCollideGroup 中缓存的变更操作实际应用到
+     *          CollideGroupS 和 CollideGroupVector 中。删除操作采用 swap-and-pop
+     *          策略以保持 O(1) 复杂度。同时同步更新碰撞回调管理器中的碰撞对注册。 */
     inline void PhysicsWorld::ResolveCollideGroup()
     {
 #if ThreadPoolBool
@@ -281,6 +302,19 @@ namespace PhysicsBlock
 #endif
     }
 
+    /**
+     * @brief 物理仿真主循环
+     * @param time 时间步长
+     * @details 执行一帧完整的物理模拟，按顺序分为以下阶段：
+     *          1. 解析上一帧的碰撞对变更（ResolveCollideGroup）
+     *          2. 碰撞检测（多线程）：遍历所有物体，使用网格搜索查找潜在碰撞对，
+     *             调用对应的 Arbiter 函数进行精确碰撞检测
+     *          3. 预处理（PreStep）：为每个碰撞对、关节、连接体计算预求解参数
+     *          4. 冲量迭代求解（ApplyImpulse）：多次迭代求解约束，支持 GPU 加速
+     *          5. 位置更新（PhysicsPos）：根据速度和时间步长更新所有物体的位置
+     *          6. 后处理：运动学物体更新、碰撞回调分发、触发器处理、网格搜索树更新
+     *          7. 启动下一帧的碰撞检测任务（异步）
+     *          各阶段耗时分别记录到对应的性能统计变量中。 */
     void PhysicsWorld::PhysicsEmulator(FLOAT_ time)
     {
         auto tEmulatorStart = std::chrono::high_resolution_clock::now();
@@ -759,6 +793,11 @@ namespace PhysicsBlock
         mPostProcessTimeMS = std::chrono::duration<float, std::milli>(tPostEnd - tPostStart).count();
     }
 
+    /**
+     * @brief 物理信息更新
+     * @details 执行碰撞检测和预处理，更新网格搜索树。与 PhysicsEmulator 不同，
+     *          此方法不执行冲量求解和位置更新，适用于反序列化恢复、静态场景初始化等
+     *          无需完整物理模拟的场景。碰撞检测任务以异步方式启动。 */
     void PhysicsWorld::PhysicsInformationUpdate()
     {
 #if ThreadPoolBool
@@ -1008,6 +1047,10 @@ namespace PhysicsBlock
 #endif
     }
 
+    /**
+     * @brief 等待碰撞检测线程完成
+     * @details 阻塞等待所有正在运行的异步碰撞检测任务结束，通常在需要确保
+     *          碰撞检测结果已经就绪时调用。 */
     void PhysicsWorld::WaitForCollisionThreads()
     {
 #if ThreadPoolBool
@@ -1019,14 +1062,40 @@ namespace PhysicsBlock
 #endif
     }
 
+    /**
+     * @brief 设置地图对象
+     * @param MapFormwork_ 地图对象指针
+     * @details 设置世界的地形碰撞对象，根据地图尺寸初始化网格风大小和网格搜索范围。
+     *          如果启用了网格风，会分配对应大小的网格风数组并初始化为零。 */
     void PhysicsWorld::SetMapFormwork(MapFormwork *MapFormwork_)
     {
         if (MapFormwork_ == nullptr)
         {
+            // 清除旧地图的通知桥接器
+            if (wMapFormwork)
+            {
+                wMapFormwork->ClearCollisionChangeNotifier();
+            }
+            wMapFormwork = nullptr;
             return;
         }
 
+        // 清除旧地图的通知桥接器（如有）
+        if (wMapFormwork)
+        {
+            wMapFormwork->ClearCollisionChangeNotifier();
+        }
+
         wMapFormwork = MapFormwork_;
+
+        // 注入碰撞状态变化通知桥接器：地图 → PhysicsCollision
+        MapFormwork_->SetCollisionChangeNotifier(
+            [this, MapFormwork_](glm::ivec2 pos, bool state)
+            {
+                mCollision.OnMapCollisionChanged(MapFormwork_, pos, state);
+            }
+        );
+
         GridWindSize = MapFormwork_->FMGetMapSize();
         mGridSearch.SetMapRange(std::max(GridWindSize.x, GridWindSize.y));
         mGridCenter = mGridSearch.GetGridCenter();
@@ -1046,6 +1115,11 @@ namespace PhysicsBlock
         }
     }
 
+    /**
+     * @brief 根据焦点位置更新网格位置
+     * @param focusPoint 焦点位置（如摄像机中心），世界坐标
+     * @details 仅当焦点与上次重建中心距离超过阈值时才标记网格位置为脏，
+     *          实际重建操作延迟到 PhysicsEmulator 中执行，避免重复计算。 */
     void PhysicsWorld::UpdateGridPosition(Vec2_ focusPoint)
     {
         if (glm::distance(focusPoint, mGridCenter) > mGridRebuildThreshold)
@@ -1056,6 +1130,14 @@ namespace PhysicsBlock
         }
     }
 
+    /**
+     * @brief 从物理世界中移除物体
+     * @param Object 待移除的物理物体指针
+     * @details 根据物体类型（形状、粒子、圆形、线段）从对应的类型列表中移除，
+     *          同时清理所有与该物体关联的资源：关节、连接体（绳子/弹簧）、
+     *          碰撞对（CollideGroupS 中的已激活碰撞对、NewCollideGroup 中待添加的碰撞对、
+     *          DeleteCollideGroup 中待删除的碰撞对）。如果物体属于某个组装体，
+     *          会先从组装体中移除子对象关联。最后销毁物体并减少对象计数。 */
     void PhysicsWorld::RemoveObject(PhysicsFormwork *Object)
     {
         if (Object->assembly)
@@ -1238,6 +1320,8 @@ namespace PhysicsBlock
                     ++i;
                 }
             }
+            // 自动清理该粒子的地形碰撞回调绑定
+            mCollision.RemoveTerrainHitListener(particle);
             delete particle;
             break;
         }
@@ -1412,6 +1496,11 @@ namespace PhysicsBlock
             --ObjectSize;
     }
 
+    /**
+     * @brief 从物理世界中移除组装体
+     * @param Object 待移除的组装体指针
+     * @details 调用组装体的 RemoveFromWorld 将其所有子对象从物理世界中移除，
+     *          然后从组装体列表中移除该组装体并销毁。 */
     void PhysicsWorld::RemoveObject(PhysicsAssembly *Object)
     {
         Object->RemoveFromWorld(this);
@@ -1427,6 +1516,15 @@ namespace PhysicsBlock
         delete Object;
     }
 
+    /**
+     * @brief 获取指定位置上的物理对象
+     * @param pos 查询位置
+     * @return 物理物体指针，若该位置无物体则返回 nullptr
+     * @details 使用网格搜索查找 pos 附近的物体，然后进行精确命中判断：
+     *          圆形：点与圆心距离小于半径；
+     *          粒子：点与粒子位置距离小于 0.25；
+     *          形状：点在碰撞范围内且投影碰撞检测通过；
+     *          线段：点到线段的最近距离小于 0.25。 */
     PhysicsFormwork *PhysicsWorld::Get(Vec2_ pos)
     {
         std::vector<PhysicsBlock::PhysicsFormwork*> SearchV;
@@ -1463,6 +1561,11 @@ namespace PhysicsBlock
         return nullptr;
     }
 
+    /**
+     * @brief 获取世界内的总动能
+     * @return 世界总动能
+     * @details 遍历所有形状、粒子、圆形物体的动能（平动动能 + 转动动能）之和，
+     *          计算公式为 E = Σ(½mv² + ½Iω²)。 */
     FLOAT_ PhysicsWorld::GetWorldEnergy()
     {
         FLOAT_ Energy = 0;

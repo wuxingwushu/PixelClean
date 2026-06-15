@@ -5,6 +5,8 @@ namespace PhysicsBlock
 {
 
     /** @brief 构造两个角度物体间的连接约束
+     *  @details 记录两端物体的指针和局部连接臂，并根据两端连接点的世界坐标距离
+     *           计算初始静止长度 Length
      *  @param Particle1 形状物体1
      *  @param arm1 物体1上的连接臂（局部坐标）
      *  @param Particle2 形状物体2
@@ -17,13 +19,19 @@ namespace PhysicsBlock
         Type = type;
     }
 
-    /** @brief 析构函数 */
+    /** @brief 析构函数，清理资源 */
     PhysicsJunctionSS::~PhysicsJunctionSS()
     {
     }
 
-    /** @brief 预处理阶段
-     *  @details 计算约束的法线方向、位置偏差和世界坐标下的连接臂向量
+    /** @brief 预处理阶段，计算约束的法线方向、位置偏差和世界坐标下的连接臂向量
+     *  @details 计算步骤：
+     *           1. 计算 A→B 方向并归一化得到 Normal
+     *           2. 计算当前距离与静止长度的差值 L - Length
+     *           3. 使用 Baumgarte 稳定化计算 bias
+     *           4. 根据绳子类型修正 bias
+     *           5. 更新世界坐标系下的连接臂 mR1、mR2
+     *           6. 计算冲量因子 k（有效质量倒数）
      *  @param inv_dt 时间步长的倒数 */
     void PhysicsJunctionSS::PreStep(FLOAT_ inv_dt)
     {
@@ -52,8 +60,13 @@ namespace PhysicsBlock
         */
     }
 
-    /** @brief 迭代应用冲量阶段
-     *  @details 根据两物体的速度差计算并应用约束冲量，修正其运动状态 */
+    /** @brief 迭代应用冲量阶段，根据两物体的速度差计算并施加约束冲量
+     *  @details 计算步骤：
+     *           1. 计算两物体在连接点处的相对速度 dv
+     *           2. 若 k==0（无穷大质量）则跳过
+     *           3. 计算冲量大小：impulse = (dot(-dv*elasticity, Normal) + bias) / k
+     *           4. 对物体1施加正冲量，对物体2施加反冲量
+     *           5. 同时修正两物体的角速度 */
     void PhysicsJunctionSS::ApplyImpulse()
     {
         Vec2_ dv = mParticle1->speed + Cross(mParticle1->angleSpeed, mR1) - mParticle2->speed - Cross(mParticle2->angleSpeed, mR2);
@@ -71,6 +84,8 @@ namespace PhysicsBlock
     }
 
     /** @brief 构造角度物体到固定点的连接约束
+     *  @details 记录物体指针和局部连接臂，并根据物体连接点与固定点之间的距离
+     *           计算初始静止长度 Length
      *  @param Particle 形状物体
      *  @param arm 连接臂（局部坐标）
      *  @param RegularDrop 固定点位置
@@ -82,13 +97,19 @@ namespace PhysicsBlock
         Type = type;
     }
 
-    /** @brief 析构函数 */
+    /** @brief 析构函数，清理资源 */
     PhysicsJunctionS::~PhysicsJunctionS()
     {
     }
 
-    /** @brief 预处理阶段
-     *  @details 计算约束的法线方向、位置偏差和世界坐标下的连接臂向量
+    /** @brief 预处理阶段，计算约束的法线方向、位置偏差和世界坐标下的连接臂向量
+     *  @details 计算步骤：
+     *           1. 计算 A→B 方向并归一化得到 Normal
+     *           2. 计算当前距离与静止长度的差值 L - Length
+     *           3. 使用 Baumgarte 稳定化计算 bias
+     *           4. 根据绳子类型修正 bias
+     *           5. 更新世界坐标系下的连接臂 R
+     *           6. 计算冲量因子 k（考虑物体质量和转动惯量）
      *  @param inv_dt 时间步长的倒数 */
     void PhysicsJunctionS::PreStep(FLOAT_ inv_dt)
     {
@@ -111,8 +132,12 @@ namespace PhysicsBlock
         // mParticle->angleSpeed += mParticle->invMomentInertia * Cross(arm, impulse);
     }
 
-    /** @brief 迭代应用冲量阶段
-     *  @details 根据物体的速度计算并应用约束冲量，修正其运动状态 */
+    /** @brief 迭代应用冲量阶段，根据物体的速度计算并施加约束冲量
+     *  @details 计算步骤：
+     *           1. 计算物体在连接点处的线速度（含角速度分量）
+     *           2. 若 k==0（无穷大质量）则跳过
+     *           3. 计算冲量大小并施加到物体上
+     *           4. 同时修正物体的角速度 */
     void PhysicsJunctionS::ApplyImpulse()
     {
         Vec2_ dv = mParticle->speed + Cross(mParticle->angleSpeed, R);
@@ -127,6 +152,8 @@ namespace PhysicsBlock
     }
 
     /** @brief 构造粒子到固定点的连接约束
+     *  @details 记录粒子指针，并根据粒子位置与固定点之间的距离
+     *           计算初始静止长度 Length
      *  @param Particle 粒子对象
      *  @param RegularDrop 固定点位置
      *  @param type 连接类型 */
@@ -137,13 +164,18 @@ namespace PhysicsBlock
         Type = type;
     }
 
-    /** @brief 析构函数 */
+    /** @brief 析构函数，清理资源 */
     PhysicsJunctionP::~PhysicsJunctionP()
     {
     }
 
-    /** @brief 预处理阶段
-     *  @details 计算约束的法线方向和位置偏差
+    /** @brief 预处理阶段，计算约束的法线方向和位置偏差
+     *  @details 计算步骤：
+     *           1. 计算粒子到固定点的方向并归一化得到 Normal
+     *           2. 计算当前距离与静止长度的差值 L - Length
+     *           3. 使用 Baumgarte 稳定化计算 bias
+     *           4. 根据绳子类型修正 bias
+     *           5. 计算冲量因子 k（即粒子质量的倒数）
      *  @param inv_dt 时间步长的倒数 */
     void PhysicsJunctionP::PreStep(FLOAT_ inv_dt)
     {
@@ -161,8 +193,11 @@ namespace PhysicsBlock
         // mParticle->speed += mParticle->invMass * impulse;
     }
 
-    /** @brief 迭代应用冲量阶段
-     *  @details 根据粒子的速度计算并应用约束冲量 */
+    /** @brief 迭代应用冲量阶段，根据粒子的速度计算并施加约束冲量
+     *  @details 计算步骤：
+     *           1. 若 k==0（无穷大质量）则跳过
+     *           2. 计算冲量大小：impulse = (dot(-speed*elasticity, Normal) + bias) / k
+     *           3. 将冲量施加到粒子上 */
     void PhysicsJunctionP::ApplyImpulse()
     {
         if (k == 0) return;
@@ -174,6 +209,8 @@ namespace PhysicsBlock
     }
 
     /** @brief 构造两个粒子间的连接约束
+     *  @details 记录两粒子指针，并根据两粒子之间的距离
+     *           计算初始静止长度 Length
      *  @param Particle1 粒子1
      *  @param Particle2 粒子2
      *  @param type 连接类型 */
@@ -184,13 +221,18 @@ namespace PhysicsBlock
         Type = type;
     }
 
-    /** @brief 析构函数 */
+    /** @brief 析构函数，清理资源 */
     PhysicsJunctionPP::~PhysicsJunctionPP()
     {
     }
 
-    /** @brief 预处理阶段
-     *  @details 计算约束的法线方向和位置偏差
+    /** @brief 预处理阶段，计算约束的法线方向和位置偏差
+     *  @details 计算步骤：
+     *           1. 计算两粒子之间的方向并归一化得到 Normal
+     *           2. 计算当前距离与静止长度的差值 L - Length
+     *           3. 使用 Baumgarte 稳定化计算 bias
+     *           4. 根据绳子类型修正 bias
+     *           5. 计算冲量因子 k（两粒子质量倒数之和）
      *  @param inv_dt 时间步长的倒数 */
     void PhysicsJunctionPP::PreStep(FLOAT_ inv_dt)
     {
@@ -209,8 +251,11 @@ namespace PhysicsBlock
         // mParticle2->speed -= mParticle2->invMass * impulse;
     }
 
-    /** @brief 迭代应用冲量阶段
-     *  @details 根据两粒子的速度差计算并应用约束冲量 */
+    /** @brief 迭代应用冲量阶段，根据两粒子的速度差计算并施加约束冲量
+     *  @details 计算步骤：
+     *           1. 若 k==0 则跳过
+     *           2. 计算冲量大小：impulse = (dot((v2-v1)*elasticity, Normal) + bias) / k
+     *           3. 对粒子1施加正冲量，对粒子2施加反冲量 */
     void PhysicsJunctionPP::ApplyImpulse()
     {
         if (k == 0) return;

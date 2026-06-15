@@ -209,14 +209,15 @@ namespace PhysicsBlock
         PhysicsFormwork *physObj = (PhysicsFormwork *)(arbiterKey->mOriginalObject1);
         MapFormwork *mapObj = (MapFormwork *)(arbiterKey->mOriginalObject2);
 
-        // 对于粒子-地图碰撞，触发粒子的地形碰撞回调
+        // 对于粒子-地图碰撞，触发粒子地形碰撞回调（统一由 PhysicsCollision 管理）
         // 使用碰撞接触点坐标（网格坐标），而非粒子世界坐标
         if (arbiterKey->mArbiterType == PhysicsArbiterType::ArbiterP && arbiterKey->numContacts > 0) {
             PhysicsParticle* particle = (PhysicsParticle*)physObj;
-            particle->OnHitTerrain(glm::ivec2(
+            glm::ivec2 hitPos = glm::ivec2(
                 (int)arbiterKey->contacts[0].position.x,
                 (int)arbiterKey->contacts[0].position.y
-            ));
+            );
+            this->OnTerrainHit(particle, hitPos);
         }
 
         auto Mit = mMapBindings.find(mapObj);
@@ -297,12 +298,92 @@ namespace PhysicsBlock
         }
     }
 
+    // ========== 地形碰撞命中回调实现 ==========
+
+    void PhysicsCollision::AddTerrainHitListener(PhysicsParticle *particle, TerrainHitCallback callback, void* userData)
+    {
+        if (particle == nullptr)
+        {
+            throw ArgumentNullException("particle");
+        }
+        if (!callback)
+        {
+            throw ArgumentNullException("callback");
+        }
+        mTerrainHitBindings[particle].OnHit = std::move(callback);
+        mTerrainHitBindings[particle].userData = userData;
+    }
+
+    void PhysicsCollision::RemoveTerrainHitListener(PhysicsParticle *particle)
+    {
+        if (particle == nullptr)
+        {
+            throw ArgumentNullException("particle");
+        }
+        mTerrainHitBindings.erase(particle);
+    }
+
+    void PhysicsCollision::RemoveAllTerrainHitListeners()
+    {
+        mTerrainHitBindings.clear();
+    }
+
+    void PhysicsCollision::OnTerrainHit(PhysicsParticle *particle, glm::ivec2 hitPos)
+    {
+        auto it = mTerrainHitBindings.find(particle);
+        if (it != mTerrainHitBindings.end() && it->second.OnHit)
+        {
+            it->second.OnHit(hitPos, 0, particle, it->second.userData);
+        }
+    }
+
+    // ========== 地图碰撞状态变化回调实现 ==========
+
+    void PhysicsCollision::AddMapCollisionChangeListener(MapFormwork *map, MapCollisionChangeCallback callback, void* userData)
+    {
+        if (map == nullptr)
+        {
+            throw ArgumentNullException("map");
+        }
+        if (!callback)
+        {
+            throw ArgumentNullException("callback");
+        }
+        mMapCollisionChangeBindings[map].OnChange = std::move(callback);
+        mMapCollisionChangeBindings[map].userData = userData;
+    }
+
+    void PhysicsCollision::RemoveMapCollisionChangeListener(MapFormwork *map)
+    {
+        if (map == nullptr)
+        {
+            throw ArgumentNullException("map");
+        }
+        mMapCollisionChangeBindings.erase(map);
+    }
+
+    void PhysicsCollision::RemoveAllMapCollisionChangeListeners()
+    {
+        mMapCollisionChangeBindings.clear();
+    }
+
+    void PhysicsCollision::OnMapCollisionChanged(MapFormwork *map, glm::ivec2 pos, bool newState)
+    {
+        auto it = mMapCollisionChangeBindings.find(map);
+        if (it != mMapCollisionChangeBindings.end() && it->second.OnChange)
+        {
+            it->second.OnChange(pos, newState, it->second.userData);
+        }
+    }
+
     void PhysicsCollision::Clear()
     {
         mBindings.clear();
         mCollisionArbiterStayS.clear();
         mMapBindings.clear();
         mMapCollisionArbiterStayS.clear();
+        mTerrainHitBindings.clear();
+        mMapCollisionChangeBindings.clear();
     }
 
 }

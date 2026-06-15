@@ -64,14 +64,28 @@ namespace PhysicsBlock
          */
         Vec2_ mExcursion{0};
 
+        /**
+         * @brief   线程数量
+         * @details 用于多线程 UpData 的线程数，默认为 0（单线程模式）
+         */
         unsigned int mThreadCount = 0;
 
+        /**
+         * @brief   多线程 UpData 的每线程临时数据结构
+         * @details 每个线程独立拥有一份 UpDataVector，
+         *          存储该线程负责处理的对象索引变更信息，
+         *          避免多线程同时修改 Grid 造成数据竞争
+         */
         struct UpDataVector{
             std::vector<std::pair<PhysicsFormwork *, unsigned int>> FormworkIndex;
             std::vector<PhysicsFormwork *> FormworkExtrovert;
             std::vector<unsigned int> ExcursionVector;
         };
 
+        /**
+         * @brief   多线程 UpData 数据数组指针
+         * @details 数组长度为 mThreadCount，每个元素对应一个线程的临时数据
+         */
         UpDataVector* UpDataPtr = nullptr;
 
 #if CurerExcursionVector
@@ -322,6 +336,12 @@ namespace PhysicsBlock
         }
 
     public:
+        /**
+         * @brief   设置多线程 UpData 的线程数
+         * @param   threadCount 线程数量（设为 0 使用单线程模式）
+         * @details 设置线程数并重新分配 UpDataPtr 数组。
+         *          如果之前已分配内存，会先释放旧内存再分配新数组。
+         */
         void SetThreadCount(unsigned int threadCount) {
             mThreadCount = threadCount;
             if (UpDataPtr != nullptr)
@@ -392,6 +412,18 @@ namespace PhysicsBlock
             UpData();
         }
 
+        /**
+         * @brief   更新网格偏移量（仅更新偏移，不触发索引重建）
+         * @param   newCenter 新的网格中心（世界坐标）
+         * @details 仅更新内部偏移量 mExcursion，不调用 UpData() 重建对象索引。
+         *          与 MoveGridTo() 的区别：
+         *          - MoveGridTo()：更新偏移量后立即调用 UpData() 重建所有对象索引，
+         *            适合单次移动后立即需要正确查询的场景
+         *          - UpdateGridOffset()：仅更新偏移量，不重建索引，
+         *            适合连续移动中分步操作，在合适时机再统一调用 UpData()
+         *          典型用法：多帧连续移动时，每帧先调用 UpdateGridOffset()，
+         *          再在移动结束后统一调用一次 UpData()
+         */
         void UpdateGridOffset(Vec2_ newCenter)
         {
             FLOAT_ halfRange = mGridDim / 2.0f;
@@ -401,6 +433,8 @@ namespace PhysicsBlock
         /**
          * @brief   获取当前网格中心（世界坐标）
          * @return  网格中心在世界空间中的位置
+         * @details 通过逆运算从偏移量反推网格中心位置：
+         *          网格中心 = (halfRange, halfRange) - mExcursion
          */
         Vec2_ GetGridCenter() const
         {
@@ -703,6 +737,15 @@ namespace PhysicsBlock
             }
         }
 
+        /**
+         * @brief   多线程 UpData 工作函数
+         * @param   ThreadSize 总线程数
+         * @param   ThreadID 当前线程 ID（从 0 开始）
+         * @details 将 mAllObjects 按块均匀分配给各线程并行处理。
+         *          每个线程遍历自己负责的对象块，计算新的网格索引，
+         *          将需要移动的对象记录到 UpDataPtr[ThreadID] 中。
+         *          此函数不直接修改 Grid，避免多线程数据竞争。
+         */
         void UpDaraWorkeTask(unsigned int ThreadSize, unsigned int ThreadID)
         {
             auto& FormworkIndex = UpDataPtr[ThreadID].FormworkIndex;
@@ -742,6 +785,13 @@ namespace PhysicsBlock
             }
         }
 
+        /**
+         * @brief   多线程 UpData 收尾函数（仅主线程调用）
+         * @details 在所有工作线程完成 UpDaraWorkeTask 后，由主线程调用。
+         *          遍历所有线程的 UpDataPtr，将各线程记录的对象索引变更
+         *          实际应用到 Grid 中（从旧位置移除、添加到新位置）。
+         *          处理完毕后清空各线程的临时数据，为下一帧做准备。
+         */
         void UpDaraWorkeTaskEnd()
         {
             for (unsigned int i = 0; i < mThreadCount; ++i)

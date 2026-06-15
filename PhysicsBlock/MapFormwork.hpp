@@ -1,6 +1,7 @@
 #pragma once
 #include "BaseStruct.hpp"
 #include <vector>
+#include <functional>
 
 namespace PhysicsBlock
 {
@@ -122,6 +123,32 @@ namespace PhysicsBlock
          * @return 摩擦系数值，如果坐标越界返回 0
          */
         virtual FLOAT_ GetFriction(int x, int y) = 0;
+
+    public:
+        /**
+         * @brief 设置碰撞状态变化通知桥接器
+         * @param notifier 通知回调函数（参数：网格坐标，新状态）
+         * @details 由 PhysicsWorld::SetMapFormwork 注入，用于在 SafeSetCollision
+         * 改变网格碰撞状态时通知 PhysicsCollision 管理器。
+         */
+        void SetCollisionChangeNotifier(std::function<void(glm::ivec2, bool)> notifier) {
+            mCollisionChangeNotifier = std::move(notifier);
+        }
+
+        /**
+         * @brief 清除碰撞状态变化通知桥接器
+         */
+        void ClearCollisionChangeNotifier() {
+            mCollisionChangeNotifier = nullptr;
+        }
+
+    protected:
+        /**
+         * @brief 碰撞状态变化通知桥接器
+         * @details 由 PhysicsWorld 在 SetMapFormwork 时注入，
+         * 在 SafeSetCollision 改变网格状态时调用，转发到 PhysicsCollision。
+         */
+        std::function<void(glm::ivec2, bool)> mCollisionChangeNotifier;
     };
 
 }

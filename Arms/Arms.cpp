@@ -102,7 +102,7 @@ namespace GAME {
 		gBulletState[LPixelCollision] = rt;
 
 			// 设置地形碰撞回调：根据剩余反弹次数决定反弹还是破坏地形
-			LPixelCollision->SetTerrainHitCallback(
+				mSquarePhysics->GetCollision().AddTerrainHitListener(LPixelCollision,
 				[this](glm::ivec2 hitPos, FLOAT_ hitAngle, PhysicsBlock::PhysicsFormwork* bullet, void* userData) {
 					auto* particle = (PhysicsBlock::PhysicsParticle*)bullet;
 

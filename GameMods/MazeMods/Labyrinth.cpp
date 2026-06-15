@@ -168,7 +168,7 @@ namespace GAME {
 
 	void Labyrinth::LabyrinthBuffer() {
 		mFixedSizeTerrain = new PhysicsBlock::MapStatic(numberX * 16, numberY * 16);
-		mFixedSizeTerrain->SetCollisionChangeCallback(
+			wSquarePhysics->GetCollision().AddMapCollisionChangeListener(mFixedSizeTerrain,
 			[](glm::ivec2 pos, bool newState, void* userData) {
 				if (!newState) {
 					Labyrinth_SetPixel_2(pos.x, pos.y, false, nullptr, userData);

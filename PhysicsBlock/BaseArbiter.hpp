@@ -195,15 +195,15 @@ namespace PhysicsBlock
 #endif
 
     public:
-        Contact contacts[PhysicsContactMaxSize]; // 碰撞点集合，最多支持 20 个碰撞点
-        int numContacts = 0;  // 当前碰撞点数量
+        Contact contacts[PhysicsContactMaxSize]; ///< 碰撞点集合，最多支持 PhysicsContactMaxSize 个碰撞点
+        int numContacts = 0;                   ///< 当前有效碰撞点数量
 
-        ArbiterKey key; // 两个碰撞对象的标识符
+        ArbiterKey key; ///< 两个碰撞对象的唯一标识符，内部保证 object1 >= object2
 
-        void *mOriginalObject1; // 原始顺序的第一个对象（与 key 可能不同，key 内部会交换指针顺序）
-        void *mOriginalObject2; // 原始顺序的第二个对象
-        unsigned char mAllocThreadIndex = 0; // 分配此对象的线程池索引
-        PhysicsArbiterType mArbiterType = PhysicsArbiterType::ArbiterS; // 裁决器类型枚举
+        void *mOriginalObject1;          ///< 原始顺序的第一个碰撞对象指针（构造时传入，与 key 内部交换后的顺序可能不同）
+        void *mOriginalObject2;          ///< 原始顺序的第二个碰撞对象指针（构造时传入，与 key 内部交换后的顺序可能不同）
+        unsigned char mAllocThreadIndex = 0;                ///< 分配此裁决器对象的线程池索引（用于多线程环境下对象池分配追踪）
+        PhysicsArbiterType mArbiterType = PhysicsArbiterType::ArbiterS; ///< 裁决器具体类型枚举（用于序列化时区分子类）
 
     public:
         /**

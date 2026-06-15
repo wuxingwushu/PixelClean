@@ -86,16 +86,25 @@ namespace PhysicsBlock
          */
         virtual void Update(Contact *NewContacts, int numNewContacts);
         
-        /** @brief 预处理（无时间步长版本） */
+        /**
+         * @brief   预处理（无时间步长版本）
+         * @details 计算碰撞点相对于物体质心与点对象位置的向量
+         *          点对象没有旋转，因此 r2 始终为零向量
+         */
         virtual void PreStep();
         
         /**
          * @brief   预处理（带时间步长版本）
          * @param   inv_dt 时间步长的倒数
+         * @details 点对象（object2）没有旋转惯量，只计算 object1 的旋转惯量影响
          */
         virtual void PreStep(FLOAT_ inv_dt);
         
-        /** @brief 应用冲量 */
+        /**
+         * @brief   应用冲量
+         * @details 根据碰撞信息计算并应用法向冲量和切向冲量（摩擦力）
+         *          点对象（object2）没有旋转，因此只更新其线速度
+         */
         virtual void ApplyImpulse();
     };
 
@@ -129,16 +138,26 @@ namespace PhysicsBlock
          */
         virtual void Update(Contact *NewContacts, int numNewContacts);
         
-        /** @brief 预处理（无时间步长版本） */
+        /**
+         * @brief   预处理（无时间步长版本）
+         * @details 计算碰撞点相对于物体质心的位置向量
+         *          地图是静态的，因此 r2 始终为零向量
+         */
         virtual void PreStep();
         
         /**
          * @brief   预处理（带时间步长版本）
          * @param   inv_dt 时间步长的倒数
+         * @details 计算有效质量、位置修正值，并应用累积冲量到动态形状上
+         *          地图是静态的（质量无穷大），因此只计算 object1 相关的有效质量
          */
         virtual void PreStep(FLOAT_ inv_dt);
         
-        /** @brief 应用冲量 */
+        /**
+         * @brief   应用冲量
+         * @details 根据碰撞信息计算并应用法向冲量和切向冲量（摩擦力）
+         *          地图是静态的，因此只更新 object1 的速度和角速度
+         */
         virtual void ApplyImpulse();
     };
 
@@ -171,16 +190,26 @@ namespace PhysicsBlock
          */
         virtual void Update(Contact *NewContacts, int numNewContacts);
         
-        /** @brief 预处理（无时间步长版本） */
+        /**
+         * @brief   预处理（无时间步长版本）
+         * @details 计算碰撞点相对于点对象位置的向量
+         *          点对象没有旋转，地图是静态的，因此 r2 始终为零向量
+         */
         virtual void PreStep();
         
         /**
          * @brief   预处理（带时间步长版本）
          * @param   inv_dt 时间步长的倒数
+         * @details 计算有效质量、位置修正值，并应用累积冲量到点对象上
+         *          点对象没有旋转惯量，地图是静态的（质量无穷大），因此只计算线速度相关的有效质量
          */
         virtual void PreStep(FLOAT_ inv_dt);
         
-        /** @brief 应用冲量 */
+        /**
+         * @brief   应用冲量
+         * @details 根据碰撞信息计算并应用法向冲量和切向冲量（摩擦力）
+         *          点对象没有旋转，地图是静态的，因此只更新点对象的线速度
+         */
         virtual void ApplyImpulse();
     };
 

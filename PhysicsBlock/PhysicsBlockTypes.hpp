@@ -153,6 +153,20 @@ namespace PhysicsBlock
     )>;
 
     /**
+     * @brief 地图碰撞状态变化回调函数类型
+     * @param pos 网格坐标
+     * @param newState 新的碰撞状态
+     * @param userData 用户自定义数据指针
+     * @details 当 SafeSetCollision 改变网格碰撞状态时触发。
+     * 游戏层在此回调中更新渲染贴图、寻路数据等。
+     */
+    using MapCollisionChangeCallback = std::function<void(
+        glm::ivec2 pos,             // 网格坐标
+        bool newState,              // 新的碰撞状态
+        void* userData              // 用户数据
+    )>;
+
+    /**
      * @brief 基础异常类，用于物理引擎内部的参数验证失败
      */
     class PhysicsException : public std::runtime_error

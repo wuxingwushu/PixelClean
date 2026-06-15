@@ -66,13 +66,13 @@ namespace PhysicsBlock
         }
 #endif
     public:
-        FLOAT_ Length;  // 绳子长度
-        FLOAT_ bias{0}; // 距离差（用于位置纠正）
-        FLOAT_ k{0};    // 冲量因子
-        Vec2_ Normal;   // 力的方向（从B指向A）
-        Vec2_ P;        // 冲量累积
+        FLOAT_ Length;  /**< 绳子的目标长度（静止长度） */
+        FLOAT_ bias{0}; /**< 距离偏差，用于 Baumgarte 位置修正（正值为拉伸，负值为压缩） */
+        FLOAT_ k{0};    /**< 冲量因子，即有效质量的倒数 k = 1/M_eff */
+        Vec2_ Normal;   /**< 约束力的单位方向向量（从B指向A） */
+        Vec2_ P;        /**< 累积冲量，用于 Sequential Impulse 迭代求解 */
 
-        CordType Type; // 绳子类型
+        CordType Type; /**< 连接约束类型（绳子/弹簧/杠杆/橡皮筋） */
 
         /** @brief 根据绳子类型处理偏置值
          *  @details cord和rubber不允许伸长，spring允许压缩和拉伸但系数不同 */
@@ -172,12 +172,12 @@ namespace PhysicsBlock
         }
 #endif
     public:
-        PhysicsAngle *mParticle1; // 形状物体1
-        Vec2_ mArm1;              // 物体1上的连接臂（局部坐标）
-        Vec2_ mR1;                // 物体1上的连接臂（世界坐标）
-        PhysicsAngle *mParticle2; // 形状物体2
-        Vec2_ mArm2;              // 物体2上的连接臂（局部坐标）
-        Vec2_ mR2;                // 物体2上的连接臂（世界坐标）
+        PhysicsAngle *mParticle1; /**< 形状物体1的指针 */
+        Vec2_ mArm1;              /**< 物体1上的连接臂（局部坐标系） */
+        Vec2_ mR1;                /**< 物体1上的连接臂（世界坐标系，PreStep中计算） */
+        PhysicsAngle *mParticle2; /**< 形状物体2的指针 */
+        Vec2_ mArm2;              /**< 物体2上的连接臂（局部坐标系） */
+        Vec2_ mR2;                /**< 物体2上的连接臂（世界坐标系，PreStep中计算） */
 
     public:
         /** @brief 构造两个角度物体间的连接约束
@@ -190,12 +190,16 @@ namespace PhysicsBlock
         /** @brief 析构函数 */
         ~PhysicsJunctionSS();
 
-        /** @brief 预处理阶段，计算约束的normal和bias */
+        /** @brief 预处理阶段，计算约束的法线方向、位置偏差和冲量因子
+         *  @details 更新 Normal、bias、k 以及世界坐标系下的连接臂 mR1/mR2，
+         *           为后续 ApplyImpulse() 迭代做准备
+         *  @param inv_dt 时间步长的倒数 */
         virtual void PreStep(FLOAT_ inv_dt);
-        /** @brief 迭代应用冲量阶段 */
+        /** @brief 迭代应用冲量阶段，计算速度约束并施加冲量
+         *  @details 根据两物体的相对速度计算约束冲量，同时修正线速度和角速度 */
         virtual void ApplyImpulse();
 
-        /** @brief 获取绳子的A端世界坐标
+        /** @brief 获取绳子的A端（物体1连接点）的世界坐标
          *  @return 物体1连接点的世界坐标 */
         virtual Vec2_ GetA() { return mParticle1->pos + vec2angle(mArm1, mParticle1->angle); };
 
@@ -236,10 +240,10 @@ namespace PhysicsBlock
         }
 #endif
     public:
-        Vec2_ mRegularDrop;      // 固定点位置
-        PhysicsAngle *mParticle; // 形状物体
-        Vec2_ Arm;               // 连接臂（局部坐标）
-        Vec2_ R;                 // 连接臂（世界坐标）
+        Vec2_ mRegularDrop;      /**< 固定锚点的世界坐标位置 */
+        PhysicsAngle *mParticle; /**< 被连接的形状物体指针 */
+        Vec2_ Arm;               /**< 连接臂（局部坐标系） */
+        Vec2_ R;                 /**< 连接臂（世界坐标系，PreStep中计算） */
 
     public:
         /** @brief 构造角度物体到固定点的连接约束
@@ -251,12 +255,16 @@ namespace PhysicsBlock
         /** @brief 析构函数 */
         ~PhysicsJunctionS();
 
-        /** @brief 预处理阶段 */
+        /** @brief 预处理阶段，计算约束的法线方向、位置偏差和冲量因子
+         *  @details 更新 Normal、bias、k 以及世界坐标系下的连接臂 R，
+         *           为后续 ApplyImpulse() 迭代做准备
+         *  @param inv_dt 时间步长的倒数 */
         virtual void PreStep(FLOAT_ inv_dt);
-        /** @brief 迭代应用冲量阶段 */
+        /** @brief 迭代应用冲量阶段，计算速度约束并施加冲量
+         *  @details 根据物体的线速度和角速度计算约束冲量，修正其运动状态 */
         virtual void ApplyImpulse();
 
-        /** @brief 获取绳子的A端世界坐标
+        /** @brief 获取绳子的A端（物体连接点）的世界坐标
          *  @return 物体连接点的世界坐标 */
         virtual Vec2_ GetA() { return mParticle->pos + vec2angle(Arm, mParticle->angle); };
 
@@ -295,8 +303,8 @@ namespace PhysicsBlock
         }
 #endif
     public:
-        Vec2_ mRegularDrop;         // 固定点位置
-        PhysicsParticle *mParticle; // 粒子对象
+        Vec2_ mRegularDrop;         /**< 固定锚点的世界坐标位置 */
+        PhysicsParticle *mParticle; /**< 被连接的粒子指针 */
     public:
         /** @brief 构造粒子到固定点的连接约束
          *  @param Particle 粒子对象
@@ -306,12 +314,15 @@ namespace PhysicsBlock
         /** @brief 析构函数 */
         ~PhysicsJunctionP();
 
-        /** @brief 预处理阶段 */
+        /** @brief 预处理阶段，计算约束的法线方向、位置偏差和冲量因子
+         *  @details 更新 Normal、bias、k，为后续 ApplyImpulse() 迭代做准备
+         *  @param inv_dt 时间步长的倒数 */
         virtual void PreStep(FLOAT_ inv_dt);
-        /** @brief 迭代应用冲量阶段 */
+        /** @brief 迭代应用冲量阶段，计算速度约束并施加冲量
+         *  @details 根据粒子的速度计算约束冲量，修正其运动状态 */
         virtual void ApplyImpulse();
 
-        /** @brief 获取绳子的A端世界坐标
+        /** @brief 获取绳子的A端（粒子）的世界坐标
          *  @return 粒子位置 */
         virtual Vec2_ GetA() { return mParticle->pos; };
 
@@ -337,8 +348,8 @@ namespace PhysicsBlock
         }
 #endif
     public:
-        PhysicsParticle *mParticle1; // 粒子1
-        PhysicsParticle *mParticle2; // 粒子2
+        PhysicsParticle *mParticle1; /**< 粒子1的指针 */
+        PhysicsParticle *mParticle2; /**< 粒子2的指针 */
     public:
         /** @brief 构造两个粒子间的连接约束
          *  @param Particle1 粒子1
@@ -348,12 +359,15 @@ namespace PhysicsBlock
         /** @brief 析构函数 */
         ~PhysicsJunctionPP();
 
-        /** @brief 预处理阶段 */
+        /** @brief 预处理阶段，计算约束的法线方向、位置偏差和冲量因子
+         *  @details 更新 Normal、bias、k，为后续 ApplyImpulse() 迭代做准备
+         *  @param inv_dt 时间步长的倒数 */
         virtual void PreStep(FLOAT_ inv_dt);
-        /** @brief 迭代应用冲量阶段 */
+        /** @brief 迭代应用冲量阶段，计算速度约束并施加冲量
+         *  @details 根据两粒子的速度差计算约束冲量，修正其运动状态 */
         virtual void ApplyImpulse();
 
-        /** @brief 获取绳子的A端世界坐标
+        /** @brief 获取绳子的A端（粒子1）的世界坐标
          *  @return 粒子1位置 */
         virtual Vec2_ GetA() { return mParticle1->pos; };
 

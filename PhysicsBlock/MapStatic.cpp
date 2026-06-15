@@ -213,8 +213,8 @@ namespace PhysicsBlock
                 block.Entity = false;
                 block.Healthpoint = 0;
             }
-            if (mCollisionChangeCallback) {
-                mCollisionChangeCallback(pos, state, mCollisionChangeUserData);
+            if (mCollisionChangeNotifier) {
+                mCollisionChangeNotifier(pos, state);
             }
             return true;
         }

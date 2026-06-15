@@ -16,6 +16,7 @@
 #include <event2/util.h>
 #include <functional>
 #include "DamagePrompt.h"
+#include "MovementComponent.h"
 
 namespace GAME {
 
@@ -137,6 +138,10 @@ namespace GAME {
 		PhysicsBlock::PhysicsShape* GetObjectCollision() {
 			return mObjectCollision;
 		}
+		// 移动组件（方案E 混合驱动：玩家/NPC 共用，三态 Controlled/Ragdoll/Frozen）
+		MovementComponent* GetMovement() { return mMovement; }
 		Queue<PixelState>* mPixelQueue = nullptr;
+	private:
+		MovementComponent* mMovement = nullptr;
 	};
 }

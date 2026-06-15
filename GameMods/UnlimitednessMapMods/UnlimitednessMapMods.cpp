@@ -161,20 +161,19 @@ namespace GAME
 	// 键盘事件
 	void UnlimitednessMapMods::KeyDown(GameKeyEnum moveDirection)
 	{
-		const float lidaxiao = 100 * TOOL::FPStime;
 		switch (moveDirection)
 		{
 		case GameKeyEnum::MOVE_LEFT:
-			PlayerForce.x -= lidaxiao;
+			PlayerForce.x -= 1;
 			break;
 		case GameKeyEnum::MOVE_RIGHT:
-			PlayerForce.x += lidaxiao;
+			PlayerForce.x += 1;
 			break;
 		case GameKeyEnum::MOVE_FRONT:
-			PlayerForce.y += lidaxiao;
+			PlayerForce.y += 1;
 			break;
 		case GameKeyEnum::MOVE_BACK:
-			PlayerForce.y -= lidaxiao;
+			PlayerForce.y -= 1;
 			break;
 		case GameKeyEnum::ESC:
 			if (Global::ConsoleBool)
@@ -266,9 +265,11 @@ namespace GAME
 
 		mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16 + 8, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16 + 8, 0, mCurrentFrame);
 
-		mGamePlayer->GetObjectCollision()->angle = m_angle; // 设置玩家物理角度
-		mGamePlayer->GetObjectCollision()->PFSpeed() += PlayerForce;   // 设置玩家受力
-		PlayerForce = {0, 0};
+	mGamePlayer->GetObjectCollision()->angle = m_angle; // 设置玩家物理角度
+	mGamePlayer->GetMovement()->SetMoveInput(PlayerForce);     // 方案E：方向投票 → 目标速度
+	mGamePlayer->GetMovement()->SetLookAngle(m_angle);         // 朝向平滑跟随（消除瞬切）
+	mGamePlayer->GetMovement()->Update(TOOL::FPStime);         // 在物理积分前施力
+	PlayerForce = {0, 0};
 
 		// 先推进动态地图板块位置，便于物理辅助显示的脏检测在同一帧生效
 		MovePlateInfo LMovePlateInfo = mDungeon->UpPos(mGamePlayer->GetObjectCollision()->pos.x, mGamePlayer->GetObjectCollision()->pos.y);

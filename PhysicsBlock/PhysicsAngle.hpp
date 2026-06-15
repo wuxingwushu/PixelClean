@@ -111,14 +111,33 @@ namespace PhysicsBlock
          * @param Force 力向量
          * @details 同时影响物体的移动和旋转
          */
-        void AddForce(Vec2_ Pos, Vec2_ Force);
+        virtual void AddForce(Vec2_ Pos, Vec2_ Force) override;
 
         /**
          * @brief 受力（移动）
          * @param Force 力向量
          * @details 仅影响物体的移动，不影响旋转
          */
-        void AddForce(Vec2_ Force);
+        virtual void AddForce(Vec2_ Force) override;
+
+        /**
+         * @brief 施加质心冲量（瞬时改变线速度）
+         * @param impulse 冲量向量（Δv = invMass * impulse）
+         * @note 不可移动体静默忽略；唤醒静止计数 */
+        virtual void ApplyImpulse(const Vec2_& impulse) override;
+
+        /**
+         * @brief 施加带受力点的冲量（同时产生角速度）
+         * @param impulse 冲量向量
+         * @param worldPoint 受力点（世界坐标）
+         * @details 线速度 Δv = invMass * impulse；角速度 Δω = invI * Cross(r, impulse)，
+         *          其中 r = worldPoint - pos。用于带自旋的击退效果。 */
+        virtual void ApplyImpulse(const Vec2_& impulse, const Vec2_& worldPoint) override;
+
+        /**
+         * @brief 施加纯角冲量（瞬时改变角速度）
+         * @param torqueImpulse 角冲量（Δω = invMomentInertia * torqueImpulse） */
+        virtual void ApplyTorqueImpulse(FLOAT_ torqueImpulse) override;
 
         /**
          * @brief 受力（旋转）
@@ -149,6 +168,18 @@ namespace PhysicsBlock
          * @note 实现了 PhysicsFormwork 中的虚函数
          */
         virtual FLOAT_ PFGetInvI() { return invMomentInertia; }
+
+        /**
+         * @brief 获取旋转角度
+         * @return 当前角度（弧度）
+         */
+        virtual FLOAT_ PFGetAngle() override { return angle; }
+
+        /**
+         * @brief 设置旋转角度
+         * @param a 目标角度（弧度）
+         */
+        virtual void PFSetAngle(FLOAT_ a) override { angle = a; }
         
         /**
          * @brief 获取角速度引用

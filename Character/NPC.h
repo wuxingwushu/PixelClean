@@ -90,13 +90,12 @@ namespace GAME {
 		float wanjiaAngle = 0.0f;//NPC到玩家的角度
 		bool mSuspicious = false;//是否有可疑位置
 		JPSVec2 mSuspiciousPos{};//可疑位置
-		float mPlayerDistance = 0.0f; // NPC到玩家的直线距离（每帧更新）
+	float mPlayerDistance = 0.0f; // NPC到玩家的直线距离（每帧更新）
 
-		float mShootCooldown = 0.0f;  // 射击冷却
-		const float mShootInterval = 0.8f; // 射击间隔
+	float mShootCooldown = 0.0f;  // 射击冷却
+	const float mShootInterval = 0.8f; // 射击间隔
 
-		// NPC 朝向移动速度参数
-		const float mMoveForce = 80.0f;   // 每帧施加的移动"速度增量"
+	// （方案E：mMoveForce 已废弃，移动参数统一由 MovementComponent::MovementConfig 管理）
 
 		JPS* mJPS = nullptr;//A星寻路
 	};

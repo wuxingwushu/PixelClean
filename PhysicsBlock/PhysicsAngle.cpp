@@ -76,6 +76,54 @@ namespace PhysicsBlock
     }
 
     /**
+     * @brief 施加质心冲量
+     * @param impulse 冲量向量
+     * @details 瞬时改变线速度：speed += invMass * impulse；唤醒静止计数。
+     * 与 PhysicsParticle::ApplyImpulse 一致，显式覆盖以便通过基类指针多态调用。 */
+    void PhysicsAngle::ApplyImpulse(const Vec2_& impulse)
+    {
+        if (invMass == 0)
+        {
+            return;
+        }
+        speed += invMass * impulse;
+        StaticNum = 0; // 唤醒
+    }
+
+    /**
+     * @brief 施加带受力点的冲量
+     * @param impulse 冲量向量
+     * @param worldPoint 受力点（世界坐标）
+     * @details 平移：speed += invMass * impulse（Δv = J/m）
+     *          旋转：angleSpeed += invMomentInertia * Cross(r, impulse)（Δω = invI * (r × J)）
+     *          其中 r = worldPoint - pos。复用碰撞求解器（PhysicsBaseArbiter）的现成公式。 */
+    void PhysicsAngle::ApplyImpulse(const Vec2_& impulse, const Vec2_& worldPoint)
+    {
+        if (invMass == 0)
+        {
+            return;
+        }
+        speed += invMass * impulse;
+        Vec2_ r = worldPoint - pos;
+        angleSpeed += invMomentInertia * (r.x * impulse.y - r.y * impulse.x); // Cross(r, impulse)
+        StaticNum = 0; // 唤醒
+    }
+
+    /**
+     * @brief 施加纯角冲量
+     * @param torqueImpulse 角冲量
+     * @details 瞬时改变角速度：angleSpeed += invMomentInertia * torqueImpulse */
+    void PhysicsAngle::ApplyTorqueImpulse(FLOAT_ torqueImpulse)
+    {
+        if (invMomentInertia == 0)
+        {
+            return;
+        }
+        angleSpeed += invMomentInertia * torqueImpulse;
+        StaticNum = 0; // 唤醒
+    }
+
+    /**
      * @brief 根据外力和时间更新速度和角速度
      * @param time 时间差（秒）
      * @param Ga 重力加速度向量

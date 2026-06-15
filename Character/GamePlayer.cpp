@@ -38,14 +38,31 @@ namespace GAME {
 		int gy = info.pos.y;
 		if (gx < 0 || gx >= 16 || gy < 0 || gy >= 16) return;
 
-		// 复用既有像素伤害队列（State=false 表示破坏该格）
-		self->mPixelQueue->add({ gx, gy, false });
+	// 复用既有像素伤害队列（State=false 表示破坏该格）
+	self->mPixelQueue->add({ gx, gy, false });
 
-			// 受伤方向提示（子弹入射方向）
-			if (self->wDamagePrompt != nullptr) {
-				Vec2_ spd = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFSpeed();
-				self->wDamagePrompt->AddDamagePrompt(atan2f(spd.y, spd.x));
-			}
+		// 受伤方向提示（子弹入射方向）
+		if (self->wDamagePrompt != nullptr) {
+			Vec2_ spd = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFSpeed();
+			self->wDamagePrompt->AddDamagePrompt(atan2f(spd.y, spd.x));
+		}
+
+	// === 方案E：子弹击退 ===
+	if (self->GetMovement()) {
+		Vec2_ bulletSpeed = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFSpeed();
+		float bulletSpdLen = std::sqrt(bulletSpeed.x * bulletSpeed.x + bulletSpeed.y * bulletSpeed.y);
+		if (bulletSpdLen > 1e-3f) {
+			Vec2_ dir = { bulletSpeed.x / bulletSpdLen, bulletSpeed.y / bulletSpdLen };
+			const float knockbackScale = 8.0f;  // 击退强度（可调）
+			glm::vec2 hp = arbiter->contacts[0].position;
+			// 带受力点冲量：接触点受力产生自旋
+			self->GetObjectCollision()->ApplyImpulse(
+				Vec2_{ dir.x * knockbackScale, dir.y * knockbackScale },
+				Vec2_{ hp.x, hp.y });
+			// 切换到被击飞态（期间不响应玩家/AI 输入）
+			self->GetMovement()->SetMode(MovementMode::Ragdoll);
+		}
+	}
 
 		// 通知 Arms 销毁该子弹
 		auto* bullet = const_cast<PhysicsBlock::PhysicsParticle*>(
@@ -86,6 +103,10 @@ namespace GAME {
 	// 新物理引擎：通过 PhysicsCollision 全局回调系统注册"坦克被击中"事件
 	RegisterBulletHitCallback();
 	mSquarePhysics->AddObject(mObjectCollision);//添加玩家碰撞
+
+	// 创建混合驱动移动组件（方案E）。坦克体总质量≈256（16x16 每格 mass=1），
+	// ComputeMoveForce 会按真实质量反推施力，所以 MaxSpeed 默认 120 像素/秒足够灵敏。
+	mMovement = new MovementComponent(mObjectCollision);
 
 		std::vector<float> mPositions = {
 			-8.0f, -8.0f, 0.0f,
@@ -129,6 +150,12 @@ namespace GAME {
 
 	GamePlayer::~GamePlayer()
 	{
+		// 先销毁移动组件（它持有物理体裸指针，但不拥有它）
+		if (mMovement != nullptr) {
+			delete mMovement;
+			mMovement = nullptr;
+		}
+
 		if (mSquarePhysics != nullptr) {
 			mSquarePhysics->RemoveObject(mObjectCollision);//移除玩家碰撞
 		}

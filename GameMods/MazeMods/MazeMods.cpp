@@ -291,20 +291,19 @@ namespace GAME
 
 	void MazeMods::KeyDown(GameKeyEnum moveDirection)
 	{
-		const float lidaxiao = 100 * TOOL::FPStime;
 		switch (moveDirection)
 		{
 		case GameKeyEnum::MOVE_LEFT:
-			PlayerForce.x -= lidaxiao;
+			PlayerForce.x -= 1;
 			break;
 		case GameKeyEnum::MOVE_RIGHT:
-			PlayerForce.x += lidaxiao;
+			PlayerForce.x += 1;
 			break;
 		case GameKeyEnum::MOVE_FRONT:
-			PlayerForce.y += lidaxiao;
+			PlayerForce.y += 1;
 			break;
 		case GameKeyEnum::MOVE_BACK:
-			PlayerForce.y -= lidaxiao;
+			PlayerForce.y -= 1;
 			break;
 		case GameKeyEnum::ESC:
 			if (Global::ConsoleBool)
@@ -461,12 +460,14 @@ namespace GAME
 
 		mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16 + 8, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16 + 8, 0, mCurrentFrame);
 
-		mGamePlayer->GetObjectCollision()->angle = m_angle; // 设置玩家物理角度
-		mGamePlayer->GetObjectCollision()->PFSpeed() += PlayerForce;   // 设置玩家受力
-		PlayerForce = {0, 0};
-		TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
-		mSquarePhysics->PhysicsEmulator(TOOL::FPStime); // 物理事件
-		TOOL::mTimer->StartEnd();
+	mGamePlayer->GetObjectCollision()->angle = m_angle; // 设置玩家物理角度
+	mGamePlayer->GetMovement()->SetMoveInput(PlayerForce);     // 方案E：方向投票 → 目标速度
+	mGamePlayer->GetMovement()->SetLookAngle(m_angle);         // 朝向平滑跟随（消除瞬切）
+	mGamePlayer->GetMovement()->Update(TOOL::FPStime);         // 在物理积分前施力
+	PlayerForce = {0, 0};
+	TOOL::mTimer->StartTiming(u8"物理模拟 ", true);
+	mSquarePhysics->PhysicsEmulator(TOOL::FPStime); // 物理事件
+	TOOL::mTimer->StartEnd();
 
 		// 渲染物理世界辅助视觉（物体本体 + 关节 + 碰撞 + 触发器；辅助开关打开后含位置/速度/受力等）
 		mPhysicsDebug.drawWorld();

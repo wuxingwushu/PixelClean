@@ -46,7 +46,7 @@ namespace PhysicsBlock
      * @brief 添加一个受力
      * @param Force 要添加的力向量
      * @details 如果粒子的质量倒数为 0（不可移动），则不添加力
-     * 否则将力累加到当前的受力上
+     * 否则将力累加到当前的受力上，并唤醒静止计数（防止休眠吞掉施力）
      */
     void PhysicsParticle::AddForce(Vec2_ Force)
     {
@@ -55,6 +55,33 @@ namespace PhysicsBlock
             return;
         }
         force += Force; // 累计力
+        StaticNum = 0;  // 唤醒：物理世界用 StaticNum>10 跳过静止物体的碰撞，施力后必须清零
+    }
+
+    /**
+     * @brief 施加质心冲量
+     * @param impulse 冲量向量
+     * @details 瞬时改变速度：speed += invMass * impulse（即 Δv = J/m）
+     * 不可移动粒子（invMass==0，含静态体/运动学体）静默忽略
+     * 唤醒静止计数，确保后续碰撞检测能感知到本物体的运动
+     */
+    void PhysicsParticle::ApplyImpulse(const Vec2_& impulse)
+    {
+        if (invMass == 0)
+        {
+            return;
+        }
+        speed += invMass * impulse;
+        StaticNum = 0; // 唤醒
+    }
+
+    /**
+     * @brief 施加纯角冲量
+     * @details 粒子不存在转动惯量，调用此函数属于逻辑错误，触发断言
+     */
+    void PhysicsParticle::ApplyTorqueImpulse(FLOAT_)
+    {
+        assert(0 && "[Error]: 粒子不存在转动惯量，不能施加角冲量!");
     }
 
     /**

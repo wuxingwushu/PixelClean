@@ -114,6 +114,7 @@ namespace PhysicsBlock
         }
         if (info.Collision)
         {
+            Collisioninfo.GridPos = info.pos;
             Collisioninfo.Friction = info.Friction;
             Collisioninfo.Collision = true;
             Collisioninfo.pos = info.pos;

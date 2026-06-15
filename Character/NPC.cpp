@@ -100,6 +100,14 @@ namespace GAME {
 		mJPS = new JPS(mRange, 50000);
 		mJPS->SetObstaclesCallback(AStarGetWall, wPathfinding);
 
+		// 设置 NPC 专属移动参数（比玩家略慢、转向更平滑）
+		MovementComponent* mc = mNPC->GetMovement();
+		if (mc) {
+			mc->Config().MaxSpeed = 90.0f;   // NPC 最高速度（玩家 120）
+			mc->Config().TurnRate = 7.0f;    // NPC 转向稍慢，更"思考"
+			mc->Config().RagdollMinTime = 0.4f; // 击飞硬直稍长
+		}
+
 		//歪门邪道 生成状态机
 		NPC_StateMachine NFSM(this);
 		NPCFSM = new FSM(boost::sml::sm<NPC_StateMachine, std::tuple<>>(NFSM));
@@ -183,6 +191,8 @@ namespace GAME {
 
 	//待机
 	bool NPC::Standby() {
+		mNPC->GetMovement()->SetMode(MovementMode::Controlled);  // 恢复受控
+
 		if (mNPC->mPixelQueue->GetNumber() > 0) {//如果受伤
 			mTime = 0.0;
 			NPCFSM->Get()->process_event(S_Injury{});
@@ -203,7 +213,7 @@ namespace GAME {
 		}
 
 		// 待机时缓慢转向前进方向
-		mNPC->GetObjectCollision()->angle = PhysicsBlock::EdgeVecToCosAngleFloat(qianjinfang);
+		mNPC->GetMovement()->SetLookAngle(PhysicsBlock::EdgeVecToCosAngleFloat(qianjinfang));
 		if (mTime > 1.5f) {
 			NPCFSM->Get()->process_event(S_Patrol{});
 		}
@@ -212,6 +222,8 @@ namespace GAME {
 
 	//巡逻
 	bool NPC::Patrol() {
+		mNPC->GetMovement()->SetMode(MovementMode::Controlled);  // 恢复受控
+
 		int flags = GetSensoryMessages();
 		if (!(flags & SensoryMessages_Visible) && mNPC->mPixelQueue->GetNumber() > 0) {//如果受伤
 			mTime = 0.0;
@@ -232,10 +244,10 @@ namespace GAME {
 		glm::vec2 Lpos = pos + qianjinfang * 2.0f;
 		// GetPixelWallNumber 返回 true 表示该格是墙（不可通行）
 		if (!wPathfinding->GetPixelWallNumber(Lpos.x + wPathfinding->PathfindingDecoratorDeviationX, Lpos.y + wPathfinding->PathfindingDecoratorDeviationY)) {
-			// 前方无墙：对齐角度并移动（用 PFSpeed += 直接叠加速度，与玩家移动方式一致）
+			// 前方无墙：设置朝向 + 方向投票
 			float YAngle = PhysicsBlock::EdgeVecToCosAngleFloat(qianjinfang);
-			mNPC->GetObjectCollision()->angle = YAngle;
-			mNPC->GetObjectCollision()->PFSpeed() += Vec2_{ qianjinfang.x * mMoveForce * FPSTime, qianjinfang.y * mMoveForce * FPSTime };
+			mNPC->GetMovement()->SetLookAngle(YAngle);
+			mNPC->GetMovement()->SetMoveInput(Vec2_{ qianjinfang.x, qianjinfang.y });
 		}
 		else {
 			// 前方有墙：随机选新方向
@@ -255,10 +267,12 @@ namespace GAME {
 
 	//攻击
 	bool NPC::Attack() {
+		mNPC->GetMovement()->SetMode(MovementMode::Controlled);  // 恢复受控
+
 		int flags = GetSensoryMessages();
 		if ((flags & SensoryMessages_Range) && (flags & SensoryMessages_Visible)) {
 			// 朝向玩家
-			mNPC->GetObjectCollision()->angle = wanjiaAngle;
+			mNPC->GetMovement()->SetLookAngle(wanjiaAngle);
 
 			// 保持一定距离：太近就后退，太远就靠近（保持中距离射击）
 			glm::vec2 pos = mNPC->GetObjectCollision()->pos;
@@ -268,10 +282,10 @@ namespace GAME {
 			glm::vec2 moveDir = glm::normalize(toPlayer);
 			if (dist < idealDist - 10.0f) {
 				// 太近，后退
-				mNPC->GetObjectCollision()->PFSpeed() += Vec2_{ -moveDir.x * mMoveForce * FPSTime, -moveDir.y * mMoveForce * FPSTime };
+				mNPC->GetMovement()->SetMoveInput(Vec2_{ -moveDir.x, -moveDir.y });
 			} else if (dist > idealDist + 10.0f) {
 				// 太远，靠近
-				mNPC->GetObjectCollision()->PFSpeed() += Vec2_{ moveDir.x * mMoveForce * FPSTime, moveDir.y * mMoveForce * FPSTime };
+				mNPC->GetMovement()->SetMoveInput(Vec2_{ moveDir.x, moveDir.y });
 			}
 
 			// 射击（带冷却）
@@ -292,12 +306,13 @@ namespace GAME {
 		return true;
 	}
 
-	//受伤
+	//受伤（方案E：硬直态，冻结移动）
 	bool NPC::Injury() {
-		int flags = GetSensoryMessages();
-		// 受伤时朝向玩家（反击）
-		mNPC->GetObjectCollision()->angle = wanjiaAngle;
+		// 进入硬直：冻结移动，但仍可转向朝向玩家
+		mNPC->GetMovement()->SetMode(MovementMode::Frozen);
+		mNPC->GetMovement()->SetLookAngle(wanjiaAngle);
 
+		int flags = GetSensoryMessages();
 		// 如果看到玩家，立即反击或追击
 		if (flags & SensoryMessages_Visible) {
 			if (flags & SensoryMessages_Range) {
@@ -324,6 +339,8 @@ namespace GAME {
 
 	//追击
 	bool NPC::GoToLocation() {
+		mNPC->GetMovement()->SetMode(MovementMode::Controlled);  // 恢复受控
+
 		int flags = GetSensoryMessages();
 		// 看到玩家且在攻击范围内 → 攻击
 		if ((flags & SensoryMessages_Range) && (flags & SensoryMessages_Visible)) {
@@ -395,11 +412,11 @@ namespace GAME {
 			if (distToWaypoint < 0.001f) return true;
 		}
 
-		// 朝向路径点 + 用 PFSpeed() += 移动（与玩家移动方式一致）
+		// 朝向路径点 + 设置移动方向
 		float YAngle = PhysicsBlock::EdgeVecToCosAngleFloat(toWaypoint);
-		mNPC->GetObjectCollision()->angle = YAngle;
+		mNPC->GetMovement()->SetLookAngle(YAngle);
 		glm::vec2 dir = toWaypoint / distToWaypoint;
-		mNPC->GetObjectCollision()->PFSpeed() += Vec2_{ dir.x * mMoveForce * FPSTime, dir.y * mMoveForce * FPSTime };
+		mNPC->GetMovement()->SetMoveInput(Vec2_{ dir.x, dir.y });
 
 		return true;
 	}
@@ -412,6 +429,9 @@ namespace GAME {
 		FPSTime = time;
 		
 		NPCFSM->Get()->process_event(S_Event{});
+
+		// 方案E：统一施力（FSM 只设意图，这里集中翻译成物理操作）
+		mNPC->GetMovement()->Update(FPSTime);
 
 		//更新NPC损伤
 		mNPC->UpData();

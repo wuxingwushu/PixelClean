@@ -104,6 +104,7 @@ namespace PhysicsBlock
             };
         };
         Vec2_ pos;       // 碰撞位置
+        glm::ivec2 GridPos;  // 碰撞网格位置
         FLOAT_ Friction; // 摩擦因数
     };
 

@@ -220,26 +220,42 @@ namespace GAME {
 			mParticlesSpecialEffect->GenerateSpecialEffects(pos.x, pos.y, color, 0.0f, 1.5f);
 		}
 
-		// 对坦克造成伤害（按距离衰减）
-			auto damageTank = [&](GamePlayer* tank) {
-				if (tank == nullptr || tank->GetDeathInBattle()) return;
-				glm::vec2 tpos = tank->GetObjectCollision()->pos;
-			float dist = std::sqrt((tpos.x - pos.x) * (tpos.x - pos.x) + (tpos.y - pos.y) * (tpos.y - pos.y));
-			if (dist > radius) return;
-			// 计算爆炸中心相对坦克的网格坐标，在中心附近随机破坏若干格
-			auto* shape = tank->GetObjectCollision();
-			PhysicsBlock::CollisionInfoI info = shape->DropCollision(pos);
-			int gx = info.pos.x;
-			int gy = info.pos.y;
-			int damageCells = (int)(3.0f * (1.0f - dist / radius)) + 1;
-			for (int i = 0; i < damageCells; ++i) {
-				int ox = gx + (rand() % 5) - 2;
-				int oy = gy + (rand() % 5) - 2;
-				if (ox >= 0 && ox < 16 && oy >= 0 && oy < 16) {
-					tank->mPixelQueue->add({ ox, oy, false });
-				}
+	// 对坦克造成伤害（按距离衰减） + 爆炸击飞（方案E）
+	auto damageTank = [&](GamePlayer* tank) {
+		if (tank == nullptr || tank->GetDeathInBattle()) return;
+		glm::vec2 tpos = tank->GetObjectCollision()->pos;
+		float dist = std::sqrt((tpos.x - pos.x) * (tpos.x - pos.x) + (tpos.y - pos.y) * (tpos.y - pos.y));
+		if (dist > radius) return;
+		// 计算爆炸中心相对坦克的网格坐标，在中心附近随机破坏若干格
+		auto* shape = tank->GetObjectCollision();
+		PhysicsBlock::CollisionInfoI info = shape->DropCollision(pos);
+		int gx = info.pos.x;
+		int gy = info.pos.y;
+		int damageCells = (int)(3.0f * (1.0f - dist / radius)) + 1;
+		for (int i = 0; i < damageCells; ++i) {
+			int ox = gx + (rand() % 5) - 2;
+			int oy = gy + (rand() % 5) - 2;
+			if (ox >= 0 && ox < 16 && oy >= 0 && oy < 16) {
+				tank->mPixelQueue->add({ ox, oy, false });
 			}
-		};
+		}
+
+		// === 方案E：爆炸击飞 ===
+		// 方向：从爆炸中心指向坦克（向外推），大小随距离衰减
+		glm::vec2 kbDir = (dist > 1e-3f)
+			? glm::vec2((tpos.x - pos.x) / dist, (tpos.y - pos.y) / dist)
+			: glm::vec2(1, 0);
+		float falloff = 1.0f - dist / radius;  // 0~1
+		const float explosionImpulse = 40.0f * falloff;
+		tank->GetObjectCollision()->ApplyImpulse(
+			Vec2_{ kbDir.x * explosionImpulse, kbDir.y * explosionImpulse },
+			Vec2_{ static_cast<FLOAT_>(pos.x), static_cast<FLOAT_>(pos.y) });
+		if (tank->GetMovement()) {
+			// 爆炸击飞时间更长：临时加大 RagdollMinTime 确保不被自己输入立刻覆盖
+			tank->GetMovement()->Config().RagdollMinTime = 0.6f;
+			tank->GetMovement()->SetMode(MovementMode::Ragdoll);
+		}
+	};
 
 		damageTank(mPlayerTank);
 		if (mCrowd) {

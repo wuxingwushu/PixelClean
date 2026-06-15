@@ -117,7 +117,18 @@ namespace PhysicsBlock
          * @param Force 要添加的力向量
          * @note 力会累加到当前的受力上
          */
-        virtual void AddForce(Vec2_ Force);
+        virtual void AddForce(Vec2_ Force) override;
+
+        /**
+         * @brief 施加质心冲量（瞬时改变速度）
+         * @param impulse 冲量向量（Δv = invMass * impulse）
+         * @note 不可移动粒子（invMass==0）静默忽略；会唤醒静止计数（StaticNum=0） */
+        virtual void ApplyImpulse(const Vec2_& impulse) override;
+
+        /**
+         * @brief 施加纯角冲量
+         * @note 粒子不存在旋转，调用会触发断言 */
+        virtual void ApplyTorqueImpulse(FLOAT_ torqueImpulse) override;
 
         /*=========PhysicsFormwork=========*/
 

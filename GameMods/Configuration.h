@@ -53,7 +53,7 @@ namespace GAME {
 
 
 		double CursorPosX = 0, CursorPosY = 0;//光标位置
-		glm::vec2 PlayerForce{};//玩家移动受力
+		glm::vec2 PlayerForce{};//玩家移动方向投票（方案E：KeyDown 每帧累加 ±1，GameLoop 喂给 MovementComponent 后清零）
 		unsigned int AttackType = 0;//攻击模式
 		Camera*      mCamera{ nullptr };//定义的相机
 		ImGuiInterFace* InterFace = nullptr; // ImGui 游戏界面都写这里面

@@ -135,21 +135,47 @@ namespace PhysicsBlock
     using MapCollisionCallback = std::function<void(const PhysicsFormwork *, const MapFormwork *, const BaseArbiter *)>;
 
     /**
+     * @brief 子弹/粒子命中事件的统一碰撞信息
+     * @details 聚合 Contact 的精确位置和法向量，以及从世界坐标反算的网格坐标。
+     * 让回调层无需再做估算或截断。所有信息在 AddCollisionPair 阶段从 arbiter->contacts[0] 构造。
+     */
+    struct BulletHitInfo
+    {
+        Vec2_ WorldPos;             ///< 碰撞点（世界坐标，子像素浮点精度；来自 Contact::position）
+        glm::ivec2 GridPos;         ///< 被击中网格坐标（地图网格坐标系；由 WorldPos + centrality 计算）
+        unsigned char Direction;    ///< 碰撞边方向（CheckDirection: 0=Right,1=Up,2=Left,3=Down；仅 Map 路径由法向量反推，Shape 路径不使用）
+        Vec2_ Normal;               ///< 碰撞面法向量（世界坐标；来自 Contact::normal）
+        FLOAT_ Friction;            ///< 组合摩擦系数（来自 Contact::friction）
+        FLOAT_ Separation;          ///< 分离距离（负值=重叠；来自 Contact::separation）
+    };
+
+    /**
+     * @brief 从轴对齐的法向量反推 Bresenham 碰撞边方向
+     * @details 仅用于 Particle→Map 路径（法向量是轴对齐的）。
+     * Shape→Particle 路径的法向量经过 Shape->angle 旋转，不能直接用此函数。
+     * 映射关系（由 vec2angle({-1,0}, Direction*π/2) 确定）：
+     *   Right(0) → (-1,0), Up(1) → (0,1), Left(2) → (1,0), Down(3) → (0,-1)
+     */
+    inline unsigned char DirectionFromNormal(Vec2_ normal) {
+        float ax = std::abs(normal.x), ay = std::abs(normal.y);
+        if (ax > ay) return (normal.x > 0) ? 2 : 0;
+        else         return (normal.y > 0) ? 1 : 3;
+    }
+
+    /**
      * @brief 子弹/粒子命中地形时的回调
-     * @param hitPos 碰撞发生的网格坐标（世界坐标）
-     * @param angle 子弹入射角度（弧度）
+     * @param hitInfo 精确碰撞信息（含位置、法向量、网格坐标）
      * @param bullet 命中地形的子弹/粒子对象
      * @param userData 用户自定义数据指针
-     * @details 游戏层在此回调中实现破坏逻辑：
-     * 1. 根据子弹类型（通过 userData 传递）计算破坏范围
-     * 2. 调用 MapFormwork::SafeSetCollision() 逐个清除像素
-     * 3. 更新贴图数据、寻路数据等渲染层信息
+     * @details 游戏层在此回调中实现：
+     * 1. 根据 hitInfo.GridPos 进行地形破坏（直接使用，无需加 centrality 转换）
+     * 2. 根据 hitInfo.Normal 做镜面反射（反弹弹）
+     * 3. 爆炸弹直接引爆
      */
     using TerrainHitCallback = std::function<void(
-        glm::ivec2 hitPos,              // 碰撞网格坐标
-        FLOAT_ angle,                   // 子弹入射角度
-        PhysicsFormwork* bullet,        // 子弹对象
-        void* userData                  // 用户数据
+        const BulletHitInfo& hitInfo,    ///< 精确碰撞信息
+        PhysicsFormwork* bullet,         ///< 子弹对象
+        void* userData                   ///< 用户数据
     )>;
 
     /**

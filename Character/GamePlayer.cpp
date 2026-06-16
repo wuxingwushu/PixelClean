@@ -26,25 +26,25 @@ namespace GAME {
 		if (otherObj->type != PhysicsBlock::PhysicsObjectEnum::particle) return;
 		if (arbiter->numContacts <= 0) return;
 
-		auto* tankShape = const_cast<PhysicsBlock::PhysicsShape*>(
-			static_cast<const PhysicsBlock::PhysicsShape*>(tankObj));
+		const PhysicsBlock::Contact& c = arbiter->contacts[0];
 
 		// 用接触点世界坐标算出坦克网格坐标
-			glm::vec2 hitWorld = arbiter->contacts[0].position;
-			PhysicsBlock::CollisionInfoI info = tankShape->DropCollision(hitWorld);
+		PhysicsBlock::CollisionInfoI info =
+			const_cast<PhysicsBlock::PhysicsShape*>(
+				static_cast<const PhysicsBlock::PhysicsShape*>(tankObj))
+			->DropCollision(c.position);
 		if (!info.Collision) return;
 
 		int gx = info.pos.x;
 		int gy = info.pos.y;
 		if (gx < 0 || gx >= 16 || gy < 0 || gy >= 16) return;
 
-	// 复用既有像素伤害队列（State=false 表示破坏该格）
-	self->mPixelQueue->add({ gx, gy, false });
+		// 复用既有像素伤害队列（State=false 表示破坏该格）
+		self->mPixelQueue->add({ gx, gy, false });
 
-		// 受伤方向提示（子弹入射方向）
+		// 受伤方向提示：使用 Contact::normal 的法向量反方向（子弹入射方向）
 		if (self->wDamagePrompt != nullptr) {
-			Vec2_ spd = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFSpeed();
-			self->wDamagePrompt->AddDamagePrompt(atan2f(spd.y, spd.x));
+			self->wDamagePrompt->AddDamagePrompt(atan2f(-c.normal.y, -c.normal.x));
 		}
 
 	// === 方案E：子弹击退 ===
@@ -53,12 +53,14 @@ namespace GAME {
 		float bulletSpdLen = std::sqrt(bulletSpeed.x * bulletSpeed.x + bulletSpeed.y * bulletSpeed.y);
 		if (bulletSpdLen > 1e-3f) {
 			Vec2_ dir = { bulletSpeed.x / bulletSpdLen, bulletSpeed.y / bulletSpdLen };
-			const float knockbackScale = 8.0f;  // 击退强度（可调）
-			glm::vec2 hp = arbiter->contacts[0].position;
-			// 带受力点冲量：接触点受力产生自旋
+			// 冲量 = 子弹动量 × 击退系数
+			const float knockbackScale = 8.0f;
+			FLOAT_ bulletMass = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFGetMass();
+			float impulseMag = bulletSpdLen * bulletMass * knockbackScale;
+			// 带受力点冲量：接触点受力产生自旋（使用 Contact::position，已有子像素精度）
 			self->GetObjectCollision()->ApplyImpulse(
-				Vec2_{ dir.x * knockbackScale, dir.y * knockbackScale },
-				Vec2_{ hp.x, hp.y });
+				Vec2_{ dir.x * impulseMag, dir.y * impulseMag },
+				Vec2_{ c.position.x, c.position.y });
 			// 切换到被击飞态（期间不响应玩家/AI 输入）
 			self->GetMovement()->SetMode(MovementMode::Ragdoll);
 		}

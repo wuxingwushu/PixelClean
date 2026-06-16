@@ -100,8 +100,26 @@ namespace GAME {
         // mass 为 FLOAT_MAX 表示静态体，跳过施力
         if (mass > 0 && mass < FLOAT_MAX)
         {
+            Vec2_ currentSpeed = mBody->PFSpeed();
+
+            // ★ 用 Acceleration 限制本帧速度变化量，实现平滑加速/减速
+            Vec2_ deltaV = { mDesiredSpeed.x - currentSpeed.x,
+                             mDesiredSpeed.y - currentSpeed.y };
+            float deltaLen = std::sqrt(deltaV.x * deltaV.x + deltaV.y * deltaV.y);
+            float maxDelta = mConfig.Acceleration * dt;  // 本帧允许的最大速度变化（像素/秒）
+            if (deltaLen > maxDelta)
+            {
+                // 截断到允许的变化量，保持方向不变
+                deltaV = { deltaV.x / deltaLen * maxDelta,
+                           deltaV.y / deltaLen * maxDelta };
+            }
+
+            // 本帧实际要达到的中间速度 = 当前速度 + 受限的速度变化
+            Vec2_ targetForThisFrame = { currentSpeed.x + deltaV.x,
+                                         currentSpeed.y + deltaV.y };
+
             Vec2_ f = PhysicsBlock::ComputeMoveForce(
-                mBody->PFSpeed(), mDesiredSpeed, mass, dt);
+                currentSpeed, targetForThisFrame, mass, dt);
             mBody->AddForce(f);
         }
 

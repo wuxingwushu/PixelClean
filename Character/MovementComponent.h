@@ -32,6 +32,7 @@ namespace GAME {
     // 配置参数（玩家/NPC 各持一份，可微调）
     struct MovementConfig {
         float MaxSpeed            = 120.0f;  // 目标速度上限（像素/秒）
+        float Acceleration        = 300.0f;  // 加速度（像素/秒²），越大加速/减速越快。建议值 300~800
         float TurnRate            = 12.0f;   // 朝向趋近率（消除 angle 瞬切；越大转向越快）
         float RagdollRecoverSpeed = 20.0f;   // Ragdoll 速度低于此值（像素/秒）切回 Controlled
         float RagdollMinTime      = 0.3f;    // Ragdoll 最短持续时间（秒，防抖）

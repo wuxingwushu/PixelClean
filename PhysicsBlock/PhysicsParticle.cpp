@@ -89,8 +89,9 @@ namespace PhysicsBlock
      * @param time 时间差（秒）
      * @param Ga 重力加速度向量
      * @details 如果粒子的质量倒数为 0（不可移动），则不更新速度
-     * 否则根据牛顿第二定律更新速度：v = v + t * (g + F/m)
-     * 最后将力重置为零向量
+     * 否则先应用阻尼（speed *= Define_MinSpoilage 模拟阻力衰减），
+     * 再根据牛顿第二定律更新速度：v = v + t * (g + F/m)
+     * 最后将累积力重置为零向量
      */
     void inline PhysicsParticle::PhysicsSpeed(FLOAT_ time, Vec2_ Ga)
     {

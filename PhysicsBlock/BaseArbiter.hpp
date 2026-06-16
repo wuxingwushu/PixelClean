@@ -47,7 +47,7 @@ namespace PhysicsBlock
          * @brief 构造函数
          * @param Object1 第一个物体指针
          * @param Object2 第二个物体指针
-         * @details 自动将较小的指针赋值给 object1，较大的赋值给 object2
+         * @details 自动将较大的指针赋值给 object1，较小的赋值给 object2（内部保证 object1 >= object2）
          */
         ArbiterKey(void *Object1, void *Object2)
         {

@@ -176,32 +176,48 @@ namespace PhysicsBlock
         if (arbiterKey->mArbiterType >= PhysicsArbiterType::ArbiterSS)
         {
             auto Ait = mBindings.find((PhysicsFormwork *) (arbiterKey->mOriginalObject1));
-            if (Ait == mBindings.end())
-            {
-                return;
-            }
             auto Bit = mBindings.find((PhysicsFormwork *) (arbiterKey->mOriginalObject2));
-            if (Bit == mBindings.end())
+
+            bool A_bound = (Ait != mBindings.end());
+            bool B_bound = (Bit != mBindings.end());
+
+            if (!A_bound && !B_bound) return;   // 双方都没有绑定，跳过
+
+            // 层级掩码检查：只有双方都有绑定时才做交集检查；单方有绑定则放行
+            bool layerOk = true;
+            if (A_bound && B_bound)
             {
-                return;
+                layerOk = (Bit->second.Layers & Ait->second.Layers) != 0;
+            }
+            if (!layerOk) return;
+
+            if (A_bound && Ait->second.OnEnter)
+            {
+                // 对象 A 的 OnEnter：参数 (objA, objB, arbiter)
+                Ait->second.OnEnter(Ait->first,
+                    (const PhysicsFormwork *)(arbiterKey->mOriginalObject2),
+                    arbiterKey);
+            }
+            if (B_bound && Bit->second.OnEnter)
+            {
+                // 对象 B 的 OnEnter：参数 (objA, objB, arbiter)
+                Bit->second.OnEnter(Ait->first,
+                    (const PhysicsFormwork *)(arbiterKey->mOriginalObject2),
+                    arbiterKey);
             }
 
-            if (Bit->second.Layers & Ait->second.Layers) {
-
-                if (Ait->second.OnEnter)
-                {   
-                    Ait->second.OnEnter(Ait->first, Bit->first, arbiterKey);
-                }
-                
-                if (Bit->second.OnEnter)
-                {
-                    Bit->second.OnEnter(Ait->first, Bit->first, arbiterKey);
-                }
-
-                if ((Ait->second.OnStay != nullptr) || Bit->second.OnStay != nullptr) {
-                    CollisionArbiter stayArbiter = {Ait->second, Bit->second, arbiterKey};
-                    mCollisionArbiterStayS.push_back(stayArbiter);
-                }
+            // 单方有绑定时也创建 stay 记录（用于 ProcessCollisions 持续回调）
+            bool A_stay = A_bound && (Ait->second.OnStay != nullptr);
+            bool B_stay = B_bound && (Bit->second.OnStay != nullptr);
+            if (A_stay || B_stay)
+            {
+                CollisionArbiter stayArbiter;
+                stayArbiter.arbiter = arbiterKey;
+                if (A_bound)
+                    stayArbiter.A_CollisionBinding = Ait->second;
+                if (B_bound)
+                    stayArbiter.B_CollisionBinding = Bit->second;
+                mCollisionArbiterStayS.push_back(stayArbiter);
             }
             return;
         }
@@ -210,14 +226,27 @@ namespace PhysicsBlock
         MapFormwork *mapObj = (MapFormwork *)(arbiterKey->mOriginalObject2);
 
         // 对于粒子-地图碰撞，触发粒子地形碰撞回调（统一由 PhysicsCollision 管理）
-        // 使用碰撞接触点坐标（网格坐标），而非粒子世界坐标
+        // 从 contacts[0] 构造 BulletHitInfo，让回调层拿到精确碰撞位置和法向量
         if (arbiterKey->mArbiterType == PhysicsArbiterType::ArbiterP && arbiterKey->numContacts > 0) {
             PhysicsParticle* particle = (PhysicsParticle*)physObj;
-            glm::ivec2 hitPos = glm::ivec2(
-                (int)arbiterKey->contacts[0].position.x,
-                (int)arbiterKey->contacts[0].position.y
+
+            BulletHitInfo hitInfo;
+            hitInfo.WorldPos   = arbiterKey->contacts[0].position;
+            hitInfo.Normal     = arbiterKey->contacts[0].normal;
+            hitInfo.Friction   = arbiterKey->contacts[0].friction;
+            hitInfo.Separation = arbiterKey->contacts[0].separation;
+
+            // 从轴对齐法向量反推 Bresenham 碰撞边方向
+            hitInfo.Direction = DirectionFromNormal(arbiterKey->contacts[0].normal);
+
+            // GridPos = WorldPos + centrality：世界坐标 → 地图网格坐标
+            Vec2_ cen = mapObj->FMGetCentrality();
+            hitInfo.GridPos = glm::ivec2(
+                (int)(hitInfo.WorldPos.x + cen.x),
+                (int)(hitInfo.WorldPos.y + cen.y)
             );
-            this->OnTerrainHit(particle, hitPos);
+
+            this->OnTerrainHit(particle, hitInfo);
         }
 
         auto Mit = mMapBindings.find(mapObj);
@@ -328,12 +357,12 @@ namespace PhysicsBlock
         mTerrainHitBindings.clear();
     }
 
-    void PhysicsCollision::OnTerrainHit(PhysicsParticle *particle, glm::ivec2 hitPos)
+    void PhysicsCollision::OnTerrainHit(PhysicsParticle *particle, const BulletHitInfo& hitInfo)
     {
         auto it = mTerrainHitBindings.find(particle);
         if (it != mTerrainHitBindings.end() && it->second.OnHit)
         {
-            it->second.OnHit(hitPos, 0, particle, it->second.userData);
+            it->second.OnHit(hitInfo, particle, it->second.userData);
         }
     }
 

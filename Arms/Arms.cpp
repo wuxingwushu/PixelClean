@@ -102,90 +102,65 @@ namespace GAME {
 		gBulletState[LPixelCollision] = rt;
 
 			// 设置地形碰撞回调：根据剩余反弹次数决定反弹还是破坏地形
-				mSquarePhysics->GetCollision().AddTerrainHitListener(LPixelCollision,
-				[this](glm::ivec2 hitPos, FLOAT_ hitAngle, PhysicsBlock::PhysicsFormwork* bullet, void* userData) {
-					auto* particle = (PhysicsBlock::PhysicsParticle*)bullet;
+			mSquarePhysics->GetCollision().AddTerrainHitListener(LPixelCollision,
+			[this](const PhysicsBlock::BulletHitInfo& hitInfo, PhysicsBlock::PhysicsFormwork* bullet, void* userData) {
+				auto* particle = (PhysicsBlock::PhysicsParticle*)bullet;
 
-					auto it = gBulletState.find(particle);
-					if (it == gBulletState.end()) {
-						// 状态丢失，直接销毁
-						particle->invMass = 0;
-						mPendingDeleteBullets.insert(particle);
-						return;
-					}
-
-					BulletRuntime& rt = it->second;
-
-					// 坐标系转换：hitPos 是碰撞接触点的【世界坐标】（地图中心在原点 0,0），
-					// 而 SafeSetCollision / FMGetCollide(glm::ivec2) 需要【网格坐标】（原点在左上角）。
-					// 转换关系：grid = world + centrality
-					PhysicsBlock::MapFormwork* map = mSquarePhysics->GetMapFormwork();
-					glm::ivec2 gridPos = hitPos;
-					if (map) {
-						glm::vec2 cen = map->FMGetCentrality();
-						gridPos += glm::ivec2((int)cen.x, (int)cen.y);
-					}
-
-					// 爆炸弹：命中即爆炸，直接销毁
-					if (rt.explode) {
-						Explode(particle->pos, rt.explodeRadius);
-						particle->invMass = 0;
-						mPendingDeleteBullets.insert(particle);
-						return;
-					}
-
-					// 还有反弹次数：反射速度，不破坏地形，不销毁子弹
-					if (rt.bounceRemaining > 0) {
-						// 简化法线估算：根据命中网格周围 4 邻接格的实心情况判定是水平墙还是垂直墙
-						if (map) {
-							// 检查命中网格在 x 方向和 y 方向的邻居是否为实心墙（用网格坐标）
-							bool wallLeft  = map->FMGetCollide(glm::ivec2(gridPos.x - 1, gridPos.y));
-							bool wallRight = map->FMGetCollide(glm::ivec2(gridPos.x + 1, gridPos.y));
-							bool wallDown  = map->FMGetCollide(glm::ivec2(gridPos.x, gridPos.y - 1));
-							bool wallUp    = map->FMGetCollide(glm::ivec2(gridPos.x, gridPos.y + 1));
-
-							Vec2_ spd = particle->speed;
-							// 若左右有墙，则碰撞面是垂直的，翻转 x 分量
-							if (wallLeft || wallRight) {
-								spd.x = -spd.x;
-							}
-							// 若上下有墙，则碰撞面是水平的，翻转 y 分量
-							if (wallDown || wallUp) {
-								spd.y = -spd.y;
-							}
-							// 若都没匹配（角落或孤立格），同时翻转两个分量
-							if (!(wallLeft || wallRight) && !(wallDown || wallUp)) {
-								spd.x = -spd.x;
-								spd.y = -spd.y;
-							}
-							particle->speed = spd;
-						} else {
-							particle->speed = Vec2_{ -particle->speed.x, -particle->speed.y };
-						}
-
-						// 把子弹位置稍微沿新速度方向推离墙体，避免下一帧重复触发
-						Vec2_ dir = particle->speed;
-						float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
-						if (len > 0.0001f) {
-							particle->pos.x += dir.x / len * 0.5f;
-							particle->pos.y += dir.y / len * 0.5f;
-						}
-						rt.bounceRemaining--;
-						return;
-					}
-
-					// 反弹次数耗尽：破坏地形并销毁子弹（用网格坐标）
-					if (map) {
-						bool result = map->SafeSetCollision(gridPos, false);
-						LOGD("[Bullet] SafeSetCollision: worldPos=(%d,%d) gridPos=(%d,%d) result=%d",
-							hitPos.x, hitPos.y, gridPos.x, gridPos.y, result);
-					}
-					particle->invMass = 0;  // 停止移动
+				auto it = gBulletState.find(particle);
+				if (it == gBulletState.end()) {
+					// 状态丢失，直接销毁
+					particle->invMass = 0;
 					mPendingDeleteBullets.insert(particle);
-					LOGD("[Bullet] PendingDelete: bullet=%p, pendingCount=%zu", particle, mPendingDeleteBullets.size());
-				},
-				this
-			);
+					return;
+				}
+
+				BulletRuntime& rt = it->second;
+
+				// GridPos 已由 PhysicsCollision 计算好（= WorldPos + centrality），
+				// 直接可当 SafeSetCollision / FMGetCollide 的地图网格坐标使用。
+				PhysicsBlock::MapFormwork* map = mSquarePhysics->GetMapFormwork();
+				glm::ivec2 gridPos = hitInfo.GridPos;
+
+				// 爆炸弹：命中即爆炸，直接销毁
+				if (rt.explode) {
+					Explode(particle->pos, rt.explodeRadius);
+					particle->invMass = 0;
+					mPendingDeleteBullets.insert(particle);
+					return;
+				}
+
+				// 还有反弹次数：使用精确法向量做镜面反射
+				if (rt.bounceRemaining > 0) {
+					Vec2_ spd = particle->speed;
+					Vec2_ N = hitInfo.Normal;
+					// 镜面反射：v' = v - 2*(v·n)*n
+					float vn = spd.x * N.x + spd.y * N.y;
+					spd.x -= 2.0f * vn * N.x;
+					spd.y -= 2.0f * vn * N.y;
+					particle->speed = spd;
+
+					// 把子弹位置稍微沿新速度方向推离墙体，避免下一帧重复触发
+					float len = std::sqrt(spd.x * spd.x + spd.y * spd.y);
+					if (len > 0.0001f) {
+						particle->pos.x += spd.x / len * 0.5f;
+						particle->pos.y += spd.y / len * 0.5f;
+					}
+					rt.bounceRemaining--;
+					return;
+				}
+
+				// 反弹次数耗尽：破坏地形并销毁子弹
+				if (map) {
+					bool result = map->SafeSetCollision(gridPos, false);
+					LOGD("[Bullet] SafeSetCollision: gridPos=(%d,%d) result=%d",
+						gridPos.x, gridPos.y, result);
+				}
+				particle->invMass = 0;  // 停止移动
+				mPendingDeleteBullets.insert(particle);
+				LOGD("[Bullet] PendingDelete: bullet=%p, pendingCount=%zu", particle, mPendingDeleteBullets.size());
+			},
+			this
+		);
 		Ppppx->Pixel->ModifyImage(4, color);//设置模型颜色
 		ObjectUniform mUniform;
 		mUniform.mModelMatrix = glm::translate(glm::mat4(1.0), glm::vec3( x, y, 0.0));//位置矩阵
@@ -246,7 +221,8 @@ namespace GAME {
 			? glm::vec2((tpos.x - pos.x) / dist, (tpos.y - pos.y) / dist)
 			: glm::vec2(1, 0);
 		float falloff = 1.0f - dist / radius;  // 0~1
-		const float explosionImpulse = 40.0f * falloff;
+		// 爆炸冲量（坦克质量≈256，5000 * falloff → 近处 Δv ≈ 19.5 px/s）
+		const float explosionImpulse = 5000.0f * falloff;
 		tank->GetObjectCollision()->ApplyImpulse(
 			Vec2_{ kbDir.x * explosionImpulse, kbDir.y * explosionImpulse },
 			Vec2_{ static_cast<FLOAT_>(pos.x), static_cast<FLOAT_>(pos.y) });

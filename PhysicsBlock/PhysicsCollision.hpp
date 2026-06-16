@@ -171,7 +171,7 @@ namespace PhysicsBlock
         /// @brief 移除所有粒子的地形碰撞命中回调
         void RemoveAllTerrainHitListeners();
         /// @brief 内部触发地形碰撞命中回调
-        void OnTerrainHit(PhysicsParticle *particle, glm::ivec2 hitPos);
+        void OnTerrainHit(PhysicsParticle *particle, const BulletHitInfo& hitInfo);
 
         // ========== 地图碰撞状态变化回调 ==========
         /// @brief 注册地图碰撞状态变化回调（当 SafeSetCollision 改变网格碰撞状态时触发）

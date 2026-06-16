@@ -35,16 +35,13 @@ namespace PhysicsBlock
     PhysicsAngle::~PhysicsAngle() {}
 
     /**
-     * @brief 受力（移动，旋转）
-     * @param Pos 受力位置（世界位置）
+     * @brief 受力（移动 + 旋转）
+     * @param Pos 受力位置（世界坐标）
      * @param Force 力向量
      * @details 1. 计算力臂（从质心到受力点的向量）
-     * 2. 计算力臂的角度
-     * 3. 计算力与力臂之间的夹角
-     * 4. 计算力的大小
-     * 5. 计算垂直于力臂的力分量（用于移动）
-     * 6. 调用 PhysicsParticle::AddForce 添加移动力
-     * 7. 计算扭矩并调用 AddTorque 添加旋转力
+     * 2. 将完整力传给 PhysicsParticle::AddForce（产生平动加速度）
+     * 3. 通过叉积 torque += Arm × Force 累加扭矩（产生角加速度）
+     * 4. 同时唤醒物体（StaticNum = 0，由 PhysicsParticle::AddForce 内部处理）
      */
     void PhysicsAngle::AddForce(Vec2_ Pos, Vec2_ Force)
     {

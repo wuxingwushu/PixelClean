@@ -92,8 +92,8 @@ namespace PhysicsBlock
     
     /**
      * @brief 线段碰撞检测（浮点数坐标）
-     * @param start 起始位置（世界坐标）
-     * @param end 结束位置（世界坐标）
+     * @param start 起始位置（网格坐标；调用方（FMBresenhamDetection/PsBresenhamDetection）已从世界坐标转换）
+     * @param end 结束位置（网格坐标；调用方已从世界坐标转换）
      * @return 碰撞结果信息（包含精确碰撞位置和方向）
      * @details 1. 将浮点数坐标转换为整数坐标，调用重载的 BresenhamDetection
      * 2. 计算精确的碰撞位置和碰撞方向

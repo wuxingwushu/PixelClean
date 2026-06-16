@@ -191,7 +191,10 @@ namespace GAME {
 
 	//待机
 	bool NPC::Standby() {
-		mNPC->GetMovement()->SetMode(MovementMode::Controlled);  // 恢复受控
+		// 不在被击飞态时才恢复受控（击飞态由 MovementComponent 自动切回 Controlled）
+		if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
+			mNPC->GetMovement()->SetMode(MovementMode::Controlled);
+		}
 
 		if (mNPC->mPixelQueue->GetNumber() > 0) {//如果受伤
 			mTime = 0.0;
@@ -222,7 +225,10 @@ namespace GAME {
 
 	//巡逻
 	bool NPC::Patrol() {
-		mNPC->GetMovement()->SetMode(MovementMode::Controlled);  // 恢复受控
+		// 不在被击飞态时才恢复受控（击飞态由 MovementComponent 自动切回 Controlled）
+		if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
+			mNPC->GetMovement()->SetMode(MovementMode::Controlled);
+		}
 
 		int flags = GetSensoryMessages();
 		if (!(flags & SensoryMessages_Visible) && mNPC->mPixelQueue->GetNumber() > 0) {//如果受伤
@@ -267,7 +273,10 @@ namespace GAME {
 
 	//攻击
 	bool NPC::Attack() {
-		mNPC->GetMovement()->SetMode(MovementMode::Controlled);  // 恢复受控
+		// 不在被击飞态时才恢复受控（击飞态由 MovementComponent 自动切回 Controlled）
+		if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
+			mNPC->GetMovement()->SetMode(MovementMode::Controlled);
+		}
 
 		int flags = GetSensoryMessages();
 		if ((flags & SensoryMessages_Range) && (flags & SensoryMessages_Visible)) {
@@ -339,7 +348,10 @@ namespace GAME {
 
 	//追击
 	bool NPC::GoToLocation() {
-		mNPC->GetMovement()->SetMode(MovementMode::Controlled);  // 恢复受控
+		// 不在被击飞态时才恢复受控（击飞态由 MovementComponent 自动切回 Controlled）
+		if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
+			mNPC->GetMovement()->SetMode(MovementMode::Controlled);
+		}
 
 		int flags = GetSensoryMessages();
 		// 看到玩家且在攻击范围内 → 攻击

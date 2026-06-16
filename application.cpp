@@ -254,6 +254,7 @@ namespace GAME {
 
 		LOGI("initGame: step 2 - creating ParticleSystem");
 		const int particleCount = 1000;
+		mParticleCount = particleCount;
 		LOGI("initGame: step 2 - particleCount=%d (reduced on Android for mobile GPU compatibility)", particleCount);
 		mParticleSystem = new ParticleSystem(mDevice, particleCount);
 		mParticleSystem->initUniformManager(
@@ -269,15 +270,7 @@ namespace GAME {
 
 		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleSystem, particleCount);
 
-		LOGI("initGame: step 3 - creating PhysicsWorld");
-		mSquarePhysics = new PhysicsBlock::PhysicsWorld(Vec2_{0, 0}, false);
-
-		LOGI("initGame: step 4 - creating Arms");
-		mArms = new Arms(mParticleSystem, particleCount);
-		mArms->SetSpecialEffect(mParticlesSpecialEffect);
-		mArms->SetSquarePhysics(mSquarePhysics);
-
-		LOGI("initGame: step 5 - creating GIF TextureLibrary");
+		LOGI("initGame: step 3 - creating GIF TextureLibrary (PhysicsWorld/Arms moved to each GameMod)");
 		mGIFTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Resource/GifTexture/");
 		LOGI("initGame: step 5 - GIF TextureLibrary done");
 
@@ -971,12 +964,8 @@ namespace GAME {
 
 		delete mParticleSystem;
 		mParticleSystem = nullptr;
-		delete mSquarePhysics;
-		mSquarePhysics = nullptr;
 		delete mParticlesSpecialEffect;
 		mParticlesSpecialEffect = nullptr;
-		delete mArms;
-		mArms = nullptr;
 
 		if (mSwapChain) {
 			for (int i = 0; i < mSwapChain->getImageCount(); ++i) {

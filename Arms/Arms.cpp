@@ -38,10 +38,7 @@ namespace GAME {
 
 	Arms::~Arms()
 	{
-		for (size_t i = 0; i < mBullet->GetDataSize(); ++i)
-		{
-			delete mBullet->GetIndexKey(i);//销毁生成的物理模型
-		}
+		// PhysicsWorld 析构时会清理所有 PhysicsParticle，此处不再重复释放
 		delete mBullet;
 		gBulletState.clear();
 	}

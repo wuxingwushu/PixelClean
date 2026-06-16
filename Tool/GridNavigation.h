@@ -57,15 +57,17 @@ bool GridNavigation<TData>::GetFK(int x, int y, int K) {
     int XY = x + K;
     int K1 = y + K, K2 = y - K;
     for(int j = x - K; j <= XY; ++j) {
-        if(mGetGridRoadCallback(j, K1, wClass) || mGetGridRoadCallback(j, K2, wClass)) {// 檢測上下邊框是否有障礙物
-            return true;
+        if ((unsigned int)j < mWide) {
+            if ((unsigned int)K1 < mHigh && mGetGridRoadCallback(j, K1, wClass)) return true;// 檢測上邊框是否有障礙物
+            if ((unsigned int)K2 < mHigh && mGetGridRoadCallback(j, K2, wClass)) return true;// 檢測下邊框是否有障礙物
         }
     }
     XY = y + K - 1;
     K1 = x + K, K2 = x - K;
     for(int j = y - K + 1; j <= XY; ++j) {// 去除已经检测的头和尾
-        if(mGetGridRoadCallback(K1, j, wClass) || mGetGridRoadCallback(K2, j, wClass)) {// 檢測左右邊框是否有障礙物
-            return true;
+        if ((unsigned int)j < mHigh) {
+            if ((unsigned int)K1 < mWide && mGetGridRoadCallback(K1, j, wClass)) return true;// 檢測右邊框是否有障礙物
+            if ((unsigned int)K2 < mWide && mGetGridRoadCallback(K2, j, wClass)) return true;// 檢測左邊框是否有障礙物
         }
     }
     return false;
@@ -87,14 +89,18 @@ void GridNavigation<TData>::SetRawg(int x, int y, int K) {
     int XY = x + K;
     int K1 = y + K, K2 = y - K;
     for(int j = x - K; j <= XY; ++j) {
-        if(Get(j, K1) > K)at(j, K1) = K;// 上邊框
-        if(Get(j, K2) > K)at(j, K2) = K;// 下邊框
+        if (j >= 0 && (unsigned int)j < mWide) {
+            if ((unsigned int)K1 < mHigh && Get(j, K1) > K) at(j, K1) = K;// 上邊框
+            if ((unsigned int)K2 < mHigh && Get(j, K2) > K) at(j, K2) = K;// 下邊框
+        }
     }
     XY = y + K - 1;
     K1 = x + K, K2 = x - K;
     for(int j = y - K + 1; j <= XY; ++j) {// 去除已经检测的头和尾
-        if(Get(K1, j) > K)at(K1, j) = K;// 右邊框
-        if(Get(K2, j) > K)at(K2, j) = K;// 左邊框
+        if (j >= 0 && (unsigned int)j < mHigh) {
+            if ((unsigned int)K1 < mWide && Get(K1, j) > K) at(K1, j) = K;// 右邊框
+            if ((unsigned int)K2 < mWide && Get(K2, j) > K) at(K2, j) = K;// 左邊框
+        }
     }
 }
 
@@ -126,14 +132,18 @@ void GridNavigation<TData>::SetPopRawg(int x, int y, int K) {
     int XY = x + K;
     int K1 = y + K, K2 = y - K;
     for(int j = x - K; j <= XY; ++j) {
-        if(Get(j, K1) == K)at(j, K1) = GetRawg(j, K1, K);// 上邊框
-        if(Get(j, K2) == K)at(j, K2) = GetRawg(j, K2, K);// 下邊框
+        if (j >= 0 && (unsigned int)j < mWide) {
+            if ((unsigned int)K1 < mHigh && Get(j, K1) == K) at(j, K1) = GetRawg(j, K1, K);// 上邊框
+            if ((unsigned int)K2 < mHigh && Get(j, K2) == K) at(j, K2) = GetRawg(j, K2, K);// 下邊框
+        }
     }
     XY = y + K - 1;
     K1 = x + K, K2 = x - K;
     for(int j = y - K + 1; j <= XY; ++j) {// 去除已经检测的头和尾
-        if(Get(K1, j) == K)at(K1, j) = GetRawg(K1, j, K);// 右邊框
-        if(Get(K2, j) == K)at(K2, j) = GetRawg(K2, j, K);// 左邊框
+        if (j >= 0 && (unsigned int)j < mHigh) {
+            if ((unsigned int)K1 < mWide && Get(K1, j) == K) at(K1, j) = GetRawg(K1, j, K);// 右邊框
+            if ((unsigned int)K2 < mWide && Get(K2, j) == K) at(K2, j) = GetRawg(K2, j, K);// 左邊框
+        }
     }
 }
 

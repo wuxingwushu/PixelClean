@@ -38,39 +38,15 @@ namespace GAME {
 
 	void GenerateBlock(PhysicsBlock::BaseGrid** mT, int x, int y, void* Data) {
 		GAME::Dungeon* LDungeon = (GAME::Dungeon*)Data;
-		// TODO: MapDynamic no longer has per-block mModel; needs redesign for buffer/texture management
-		/*
-		ObjectUniformGIF* LUniform = (ObjectUniformGIF*)mT->mModel->mBufferS->getupdateBufferByMap();
-		mT->mModel->Type = LDungeon->GetNoise(x, y);
-		if (mT->mModel->Type == 20) {
-			GAME::TextureLibrary::TextureToUVInfo TUinfo = LDungeon->wTextureLibrary->GetTextureUV("004_24");
-			mT->mModel->mGIFDescriptorSet = LDungeon->AddGIF(mT->mModel->mBufferS, TUinfo.mTexture, TUinfo.mUV);
-			LUniform->chuang = 1.0f / TUinfo.X;
-		}
-		LUniform->mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(x * 16, y * 16, 0.0f));//位移矩阵
-		mT->mModel->mBufferS->endupdateBufferByMap();
-		bool CollisionBool = false;
-		if (mT->mModel->Type > (TextureNumber / 2)) {
-			CollisionBool = true;
-		}
-		mT->mModel->mPixelTexture->updateBufferByMap((void*)pixelS[mT->mModel->Type], 16 * 16 * 4);
+		// 根据柏林噪声判定地形类型，决定碰撞状态
+		unsigned int type = LDungeon->GetNoise(x, y);
+		bool CollisionBool = (type > (TextureNumber / 2));
 		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ++ix)
 		{
 			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; ++iy)
 			{
-				for (size_t i = 0; i < 4; ++i)
-				{
-					LDungeon->LSMistPointer[((mT->mModel->MistPointerY * 16 + ix) * 16 * LDungeon->mNumberX * 4) + (mT->mModel->MistPointerX * 16 * 4) + (iy * 4) + i] = pixelS[mT->mModel->Type][(ix * 16 * 4) + (iy * 4) + i] * (i == 3 ? 1 : 0.3f);
-				}
-				LDungeon->LSPointer[((mT->mModel->MistPointerY * 16 + ix) * 16 * LDungeon->mNumberX) + (mT->mModel->MistPointerX * 16) + iy] = CollisionBool;
-			}
-		}
-		*/
-		for (size_t ix = 0; ix < LDungeon->mSquareSideLength; ++ix)
-		{
-			for (size_t iy = 0; iy < LDungeon->mSquareSideLength; ++iy)
-			{
-				(*mT)->at((int)(x + ix), (int)(y + iy)).Collision = true;
+				// 使用局部坐标 (ix, iy)，(BaseGrid::at 期望 0..15 的局部索引)
+				(*mT)->at((int)ix, (int)iy).Collision = CollisionBool;
 			}
 		}
 	}
@@ -113,6 +89,7 @@ namespace GAME {
 			},
 			this
 			);
+
 		wSquarePhysics->SetMapFormwork(mMoveTerrain);
 
 		const float Positions[] = {
@@ -356,9 +333,11 @@ namespace GAME {
 		TextureLibrary* textureLibrary
 	) {
 		wFrameCount = frameCount;
+		mFrameCount = frameCount;
 		wVPMstdBuffer = VPMstdBuffer;
 		wDescriptorSetLayout = mDescriptorSetLayout;
 		wTextureLibrary = textureLibrary;
+		wSampler = sampler;
 		mCommandPool = new VulKan::CommandPool(wDevice);
 		mCommandBuffer = new VulKan::CommandBuffer * [wFrameCount];
 		mMistCommandBuffer = new VulKan::CommandBuffer * [wFrameCount];
@@ -431,6 +410,10 @@ namespace GAME {
 		int* WallBoolPointer = (int*)WallBool->getupdateBufferByMap();
 		mDungeonDestroyStruct = new DungeonDestroyStruct * [mNumberX];
 		short* qiangshulaingData = new short[16 * 16 * mNumberX * mNumberY];
+		// 计算当前世界板块偏移，使视觉纹理与（GenerateBlock 设置的）物理碰撞基于同一噪声坐标
+		glm::ivec2 curPlatePos = mMoveTerrain->GetPlatePos();
+		mWorldBlockOffsetX = -curPlatePos.x / (int)mSquareSideLength;  // = mPosX
+		mWorldBlockOffsetY = -curPlatePos.y / (int)mSquareSideLength;  // = mPosY
 		for (int ix = 0; ix < mNumberX; ++ix)
 		{
 			mDungeonDestroyStruct[ix] = new DungeonDestroyStruct[mNumberY];
@@ -438,7 +421,7 @@ namespace GAME {
 			mMistDescriptorSet[ix] = new VulKan::DescriptorSet * [mNumberY];
 			for (int iy = 0; iy < mNumberY; ++iy)
 			{
-				mTextureAndBuffer[ix][iy].Type = GetNoise(ix, iy);
+				mTextureAndBuffer[ix][iy].Type = GetNoise(ix + mWorldBlockOffsetX, iy + mWorldBlockOffsetY);
 
 				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(ix * 16, iy * 16, 0));//位移矩阵
 				mTextureAndBuffer[ix][iy].mBufferS = VulKan::Buffer::createUniformBuffer(wDevice, sizeof(ObjectUniformGIF));
@@ -467,7 +450,6 @@ namespace GAME {
 							WarfareMistPointer[((iy * 16 + ixx) * 16 * mNumberX * 4) + (ix * 16 * 4) + (iyy * 4) + i] = pixelS[mTextureAndBuffer[ix][iy].Type][(ixx * 16 * 4) + (iyy * 4) + i] * (i == 3 ? 1 : 0.3f);
 						}
 						WallBoolPointer[((((iy * 16) + ixx) * mNumberX * 16) + (ix * 16) + iyy)] = CollisionBool;
-						mMoveTerrain->at((int)(ix * 16 + ixx), (int)(iy * 16 + iyy)).Collision = CollisionBool;
 					}
 				}
 
@@ -475,8 +457,6 @@ namespace GAME {
 				qiangshulaingData += 16 * 16;
 
 				mDungeonDestroyStruct[ix][iy] = { &mTextureAndBuffer[ix][iy], this };
-				// TODO: MapDynamic no longer has per-block GridDecorator.SetCollisionCallback; collision callback setup needs redesign
-				// mMoveTerrain->GetRigidBodyAndModel(ix, iy)->mGridDecorator.SetCollisionCallback(DungeonDestroy, &mDungeonDestroyStruct[ix][iy]);
 				textureParam->mPixelTexture = mTextureAndBuffer[ix][iy].mPixelTexture;
 				mDescriptorSet[ix][iy] = new VulKan::DescriptorSet(wDevice, mUniformParams, mDescriptorSetLayout, mDescriptorPool, wFrameCount);
 				textureParam->mPixelTexture = WarfareMist;
@@ -507,6 +487,26 @@ namespace GAME {
 			},
 			this
 		);
+	}
+
+	void Dungeon::GenerateInitialCollision(float playerX, float playerY) {
+		mMoveTerrain->ALLUpData(playerX, playerY);
+		for (auto& it : MultithreadingGenerate) { it.wait(); }
+		MultithreadingGenerate.clear();
+		// 刷新世界偏移和纹理类型（ALLUpData 改变了 plate 坐标映射）
+		glm::ivec2 pp = mMoveTerrain->GetPlatePos();
+		mWorldBlockOffsetX = -pp.x / (int)mSquareSideLength;
+		mWorldBlockOffsetY = -pp.y / (int)mSquareSideLength;
+		RefreshVisualTypes();
+	}
+
+	void Dungeon::RefreshVisualTypes() {
+		// 地图移动后重新计算所有板块的纹理类型，使其与 GenerateBlock 使用的世界噪声坐标对齐
+		for (int ix = 0; ix < mNumberX; ++ix) {
+			for (int iy = 0; iy < mNumberY; ++iy) {
+				mTextureAndBuffer[ix][iy].Type = GetNoise(ix + mWorldBlockOffsetX, iy + mWorldBlockOffsetY);
+			}
+		}
 	}
 
 	void Dungeon::initCommandBuffer() {
@@ -719,6 +719,43 @@ namespace GAME {
 			i.wait();
 		}
 		MultithreadingGenerate.clear();//清空
+		// 刷新纹理类型，使视觉与地图移动后的碰撞噪声坐标对齐
+		RefreshVisualTypes();
+
+		// 更新所有板块的纹理像素数据（基于刷新后的类型），加入上传队列
+		MultithreadingPixelTexture.clear();
+		for (int uix = 0; uix < mNumberX; ++uix) {
+			for (int uiy = 0; uiy < mNumberY; ++uiy) {
+				auto* tex = mTextureAndBuffer[uix][uiy].mPixelTexture;
+				unsigned int utype = mTextureAndBuffer[uix][uiy].Type;
+				void* uptr = tex->getHOSTImagePointer();
+				memcpy(uptr, pixelS[utype], 16 * 16 * 4);
+				tex->endHOSTImagePointer();
+				MultithreadingPixelTexture.push_back(tex);
+
+				// 同步更新 WarfareMist 大纹理（迷雾层使用的视觉数据）
+				// LSMistPointer 由上方的 GenerateBlock 回调通过 Pointerkaiguan 机制打开
+				if (LSMistPointer && LSPointer) {
+					bool wCollision = (utype > (TextureNumber / 2));
+					for (size_t ixx = 0; ixx < mSquareSideLength; ++ixx) {
+						for (size_t iyy = 0; iyy < mSquareSideLength; ++iyy) {
+							for (size_t ic = 0; ic < 4; ++ic) {
+								LSMistPointer[
+									((uiy * 16 + ixx) * 16 * mNumberX * 4) +
+									(uix * 16 * 4) + (iyy * 4) + ic
+								] = pixelS[utype][(ixx * 16 * 4) + (iyy * 4) + ic]
+									* (ic == 3 ? 1 : 0.3f);
+							}
+							LSPointer[
+								((uiy * 16 + ixx) * mNumberX * 16) +
+								(uix * 16) + iyy
+							] = wCollision;
+						}
+					}
+				}
+			}
+		}
+
 		mBlockData->WholePop();
 		UpDataGIFCommandBuffer();
 		TOOL::mThreadPool->enqueue(&Dungeon::UpdateAIPathfindingBlock, this, x, y);
@@ -750,6 +787,15 @@ namespace GAME {
 		mCalculate->GetCommandBuffer()->end();
 		mCalculate->GetCommandBuffer()->submitSync(wDevice->getGraphicQueue(), VK_NULL_HANDLE);
 		MultithreadingPixelTexture.clear();//清空
+
+		// 将更新后的 WarfareMist 上传到 GPU（必须在 initCommandBuffer 之前，使重新录制的指令引用新数据）
+		if (LSMistPointer) {
+			WarfareMist->UpDataImage();
+		}
+
+		// 纹理已上传到 GPU，重新录制地图的二级指令缓冲使新的像素数据生效
+		initCommandBuffer();
+
 		TOOL::mTimer->MomentEnd();
 		for (auto& i : MultithreadingGenerate)//等待全部线程任务结束
 		{

@@ -85,22 +85,22 @@ namespace GAME {
 
 		mPixelQueue = new Queue<PixelState>(100);
 
-		mObjectCollision = new PhysicsBlock::PhysicsShape(Vec2_{X, Y}, glm::ivec2{16, 16});
-		mBrokenData = new bool[16 * 16];
-		for (size_t x = 0; x < 16; ++x)
+		// 用 (X-8, Y-8) 初始化，UpdateAll() 会将 pos 调整为质心位置 (X, Y)，
+	// 保证 DropCollision 中 gridPos = worldPos - pos + CentreMass 公式正确。
+	mObjectCollision = new PhysicsBlock::PhysicsShape(Vec2_{X - 8, Y - 8}, glm::ivec2{16, 16});
+	mBrokenData = new bool[16 * 16];
+	for (size_t x = 0; x < 16; ++x)
+	{
+		for (size_t y = 0; y < 16; ++y)
 		{
-			for (size_t y = 0; y < 16; ++y)
-			{
-				mObjectCollision->at({ x,y }).Entity = true;
-				mObjectCollision->at({ x,y }).Collision = true;
-				mObjectCollision->at({ x,y }).mass = 1.0;
-				mObjectCollision->at({ x,y }).FrictionFactor = 0.2f;
-				mBrokenData[x * 16 + y] = true;
-			}
+			mObjectCollision->at({ x,y }).Entity = true;
+			mObjectCollision->at({ x,y }).Collision = true;
+			mObjectCollision->at({ x,y }).mass = 1.0;
+			mObjectCollision->at({ x,y }).FrictionFactor = 0.2f;
+			mBrokenData[x * 16 + y] = true;
 		}
-		mObjectCollision->UpdateAll();//计算外骨架
-		// mObjectCollision->SetOrigin(8, 8);//设置原点 (PhysicsBlock uses CentreMass)
-		mObjectCollision->pos = Vec2_{ X, Y };//设置位置
+	}
+	mObjectCollision->UpdateAll();//计算外骨架（pos 从 (X-8,Y-8) 调整为质心位置 (X,Y)）
 	mObjectCollision->friction = 1.0f;//设置摩擦系数
 	// 新物理引擎：通过 PhysicsCollision 全局回调系统注册"坦克被击中"事件
 	RegisterBulletHitCallback();

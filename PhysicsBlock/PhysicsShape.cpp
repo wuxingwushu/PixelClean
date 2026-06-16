@@ -40,12 +40,13 @@ namespace PhysicsBlock
         CollisionInfoI info;
         info.pos = ToInt(Pos + CentreMass); // 计算网格位置
         
-        // 处理边界情况
-        if (Pos.x == width)
+        // 处理边界情况：接触点恰好在右/下边缘时，gridPos 会等于 width/height，
+        // 需 clamp 到有效范围 [0, width-1] / [0, height-1]
+        if (info.pos.x >= static_cast<int>(width))
         {
             info.pos.x = width - 1;
         }
-        if (Pos.y == height)
+        if (info.pos.y >= static_cast<int>(height))
         {
             info.pos.y = height - 1;
         }

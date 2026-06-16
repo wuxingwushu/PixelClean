@@ -15,6 +15,14 @@ namespace GAME
 	UnlimitednessMapMods::UnlimitednessMapMods(Configuration wConfiguration) : Configuration{wConfiguration}
 	{
 		LOGD("UnlimitednessMapMods::UnlimitednessMapMods constructor");
+
+		// 创建模式私有物理世界
+		mSquarePhysics = new PhysicsBlock::PhysicsWorld(Vec2_{0, 0}, false);
+		// 创建模式私有武器系统
+		mArms = new Arms(mParticleSystem, mParticleCount);
+		mArms->SetSpecialEffect(mParticlesSpecialEffect);
+		mArms->SetSquarePhysics(mSquarePhysics);
+
 		mAuxiliaryVision = new VulKan::AuxiliaryVision(mDevice, mPipelineS, 150000);
 		mAuxiliaryVision->initUniformManager(
 			mSwapChain->getImageCount(),
@@ -41,6 +49,8 @@ namespace GAME
 			mCameraVPMatricesBuffer,
 			mSampler,
 			mGIFTextureLibrary);
+		// 生成所有板块的初始碰撞数据（必须在 initUniformManager 之后，因为 GenerateBlock 的回调需要 WarfareMist/WallBool）
+		mDungeon->GenerateInitialCollision(mGamePlayerPosX, mGamePlayerPosY);
 		mDungeon->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods), mPipelineS->GetPipeline(VulKan::PipelineMods::GifMods));
 
 		JPSPathfinding->SetObstaclesCallback(DungeonGetWallD, mDungeon);
@@ -98,7 +108,11 @@ namespace GAME
 		delete mAuxiliaryVision;
 		delete mCrowd;          // 必须在 mDungeon 之前：NPC 的 JPS 线程使用 Dungeon 数据
 		delete mGamePlayer;     // 必须在 mDungeon 之前：GamePlayer 析构时 mSquarePhysics 仍需要有效
-		delete mDungeon;
+		delete mArms;           // 可能调用 mSquarePhysics->RemoveObject/GetMapFormwork
+		mArms = nullptr;
+		delete mDungeon;        // 析构时 SetMapFormwork(nullptr)，需要 mSquarePhysics
+		delete mSquarePhysics;  // 最后销毁物理世界
+		mSquarePhysics = nullptr;
 		delete mVisualEffect;
 		delete mDamagePrompt;
 	}

@@ -62,8 +62,10 @@ namespace GAME {
 		std::vector<VulKan::Buffer*> mCameraVPMatricesBuffer{};//GPU用的玩家变换矩阵（位置 角度）
 		ParticleSystem* mParticleSystem = nullptr;//粒子系统
 		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;//粒子特效
-		PhysicsBlock::PhysicsWorld* mSquarePhysics = nullptr;//物理系统
-		Arms* mArms = nullptr;//武器
+		unsigned int mParticleCount = 1000;  // 粒子数量 / Arms 子弹池大小
+		// PhysicsWorld/Arms 已迁移到各 GameMod 自行创建
+		// PhysicsBlock::PhysicsWorld* mSquarePhysics = nullptr;
+		// Arms* mArms = nullptr;
 
 
 

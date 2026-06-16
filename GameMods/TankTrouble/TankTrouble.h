@@ -5,6 +5,8 @@
 #include "../../Character/UVDynamicDiagram.h"
 #include "../../Arms/AttackMode.h"
 #include "../../PhysicsBlock/PhysicsAuxiliaryVision.hpp" // PhysicsDebugView 控制器（按值持有，需完整定义）
+#include "../../Arms/Arms.h"          // mArms
+#include "../../PhysicsBlock/PhysicsWorld.hpp" // mSquarePhysics
 
 namespace GAME {
 
@@ -45,6 +47,9 @@ namespace GAME {
 		virtual void GameTCPLoop();
 
 	private:
+		PhysicsBlock::PhysicsWorld* mSquarePhysics = nullptr;  // 模式私有物理世界
+		Arms* mArms = nullptr;                                 // 模式私有武器系统
+
 		// 把 AttackType 同步到 Arms 的当前武器配置（反弹/爆炸/射速）
 		void UpdateWeaponMode();
 

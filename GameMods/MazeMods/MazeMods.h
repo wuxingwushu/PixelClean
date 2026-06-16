@@ -8,6 +8,8 @@
 #include "MazeReplicationComponents.h"
 #include "MazeReplicationEvents.h"
 #include "../../PhysicsBlock/PhysicsAuxiliaryVision.hpp" // PhysicsDebugView 控制器（按值持有，需完整定义）
+#include "../../Arms/Arms.h"          // mArms
+#include "../../PhysicsBlock/PhysicsWorld.hpp" // mSquarePhysics
 #include <memory>
 
 namespace GAME {
@@ -52,6 +54,9 @@ namespace GAME {
 		void ProcessPendingLabyrinthInit();
 
 	private:
+		PhysicsBlock::PhysicsWorld* mSquarePhysics = nullptr;  // 模式私有物理世界
+		Arms* mArms = nullptr;                                 // 模式私有武器系统
+
 		Labyrinth* mLabyrinth = nullptr;//迷宫
 		bool mLabyrinthVulkanReady = false; // 是否已经完成 Vulkan 初始化
 		bool mJustLoadedLabyrinth = false; // 刚完成迷宫加载，需跳过本帧迷雾更新

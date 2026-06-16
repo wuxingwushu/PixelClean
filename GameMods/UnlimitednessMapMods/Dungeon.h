@@ -91,7 +91,13 @@ namespace GAME {
 
 		//根据输入的位置对区块位置进行更新
 		inline MovePlateInfo UpPos(float x, float y) {
-			return mMoveTerrain->Updata(Vec2_{x, y});
+			MovePlateInfo info = mMoveTerrain->Updata(Vec2_{x, y});
+			if (info.UpData) {
+				glm::ivec2 pp = mMoveTerrain->GetPlatePos();
+				mWorldBlockOffsetX = -pp.x / (int)mSquareSideLength;
+				mWorldBlockOffsetY = -pp.y / (int)mSquareSideLength;
+			}
+			return info;
 		}
 
 		//根据世界坐标获取对于的区块
@@ -179,6 +185,14 @@ namespace GAME {
 		 * @param pos 网格坐标（世界坐标）
 		 * @param newState 新的碰撞状态（false 表示被破坏） */
 		void OnTerrainCollisionChanged(glm::ivec2 pos, bool newState);
+
+		/**
+		 * @brief 地图移动后刷新所有板块的纹理类型（基于新的 mWorldBlockOffset） */
+		void RefreshVisualTypes();
+
+		/**
+		 * @brief 在构造函数之后触发生成所有板块的物理碰撞（需确保 WarfareMist/WallBool 已创建） */
+		void GenerateInitialCollision(float playerX, float playerY);
 
 		//计算一个区块所有像素的墙壁数
 		void BlockPixelWallNumber(int x, int y) {
@@ -307,6 +321,10 @@ namespace GAME {
 
 		std::vector<std::future<void>> MultithreadingGenerate;
 		std::vector<VulKan::PixelTexture*>MultithreadingPixelTexture;
+
+		// 当前世界板块偏移（用于视觉纹理与碰撞坐标对齐）
+		int mWorldBlockOffsetX = 0;
+		int mWorldBlockOffsetY = 0;
 	private://迷雾
 		//初始化战争迷雾
 		void InitMist();
@@ -357,6 +375,8 @@ namespace GAME {
 		VulKan::SwapChain* wSwapChain{ nullptr };
 		PhysicsBlock::PhysicsWorld* wSquarePhysics{ nullptr };
 		VkDescriptorSetLayout wDescriptorSetLayout;
+		int mFrameCount = 0;
+		VulKan::Sampler* wSampler = nullptr;
 		std::vector<VulKan::Buffer*> wVPMstdBuffer;//玩家相机的变化矩阵
 	};
 

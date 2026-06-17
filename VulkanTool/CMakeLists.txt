@@ -8,4 +8,4 @@ if(DEFINED ENV{VULKAN_SDK})
     target_link_directories(vulkanToolLib PRIVATE $ENV{VULKAN_SDK}/Lib)
 endif()
 
-target_link_libraries(vulkanToolLib PRIVATE vulkan-1.lib)
+target_link_libraries(vulkanToolLib PRIVATE vulkanLib vulkan-1.lib)

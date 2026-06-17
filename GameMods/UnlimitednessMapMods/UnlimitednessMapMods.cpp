@@ -271,6 +271,7 @@ namespace GAME
 #endif
 		}
 		m_angle = std::atan2((winwidth / 2) - CursorPosX, (winheight / 2) - CursorPosY) + 1.57f;
+		mCamera->transform().setAngle2D(m_angle);  // 同步到 CameraTransform
 
 		glm::vec3 huoqdedian = get_ray_direction(CursorPosX, CursorPosY, winwidth, winheight, mCamera->getViewMatrix(), mCamera->getProjectMatrix());
 		huoqdedian *= -mCamera->getCameraPos().z / huoqdedian.z;
@@ -279,10 +280,9 @@ namespace GAME
 
 		mVisualEffect->SetPos(((int(huoqdedian.x) / 16) + (huoqdedian.x < 0 ? -1 : 0)) * 16 + 8, ((int(huoqdedian.y) / 16) + (huoqdedian.y < 0 ? -1 : 0)) * 16 + 8, 0, mCurrentFrame);
 
-	mGamePlayer->GetObjectCollision()->angle = m_angle; // 设置玩家物理角度
 	mGamePlayer->GetMovement()->SetMoveInput(PlayerForce);     // 方案E：方向投票 → 目标速度
 	mGamePlayer->GetMovement()->SetLookAngle(m_angle);         // 朝向平滑跟随（消除瞬切）
-	mGamePlayer->GetMovement()->Update(TOOL::FPStime);         // 在物理积分前施力
+	mGamePlayer->GetMovement()->Update(TOOL::FPStime);         // 在物理积分前施力（由 Movement 统一管理角度，避免与直接赋值冲突）
 	PlayerForce = {0, 0};
 
 		// 先推进动态地图板块位置，便于物理辅助显示的脏检测在同一帧生效
@@ -303,10 +303,11 @@ namespace GAME
 		// 渲染物理世界辅助视觉（物体本体 + 关节 + 碰撞 + 触发器；辅助开关打开后含位置/速度/受力等）
 		mPhysicsDebug.drawWorld();
 
-		m_angle = mGamePlayer->GetObjectCollision()->angle;
+		// 注意：不再从物理体读回 m_angle，防止碰撞摩擦力反馈振荡导致左右抖动
 
 		mGamePlayer->UpData();												// 更新玩家伤痕
 		mCamera->setCameraPos(mGamePlayer->GetObjectCollision()->pos); // 设置玩家位置
+		mCamera->update(static_cast<float>(TOOL::FPStime));            // 同步 CameraTransform
 
 		mParticlesSpecialEffect->SpecialEffectsEvent(mCurrentFrame, TOOL::FPStime);
 

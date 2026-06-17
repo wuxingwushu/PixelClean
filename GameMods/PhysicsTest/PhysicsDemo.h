@@ -1,7 +1,7 @@
 #pragma once
 #include "../../PhysicsBlock/PhysicsWorld.hpp"
 #include "../../PhysicsBlock/MapStatic.hpp"
-#include "../../Camera.h"
+#include "../../Camera/Camera.h"
 
 namespace PhysicsBlock
 {

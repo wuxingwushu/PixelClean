@@ -16,7 +16,7 @@
 #include "../VulkanTool/PipelineS.h"
 
 #include "../InterfaceUI/Interface.h"
-#include "../Camera.h"
+#include "../Camera/Camera.h"
 #include "../GlobalStructural.h"
 #include "../Arms/ParticleSystem.h"
 #include "../Character/GamePlayer.h"

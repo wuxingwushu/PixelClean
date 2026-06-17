@@ -26,6 +26,7 @@ if(MSVC)
 endif()
 
 aux_source_directory(. DIRSRCS)
+aux_source_directory(Camera CAMERA_SRCS)
 
 
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
@@ -55,6 +56,7 @@ include_directories(
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/Soloud/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/imgui
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/imgui/backends
+	${CMAKE_CURRENT_SOURCE_DIR}/Camera
 )
 
 # Vulkan SDK configuration
@@ -138,7 +140,7 @@ add_subdirectory(GameMods/WFCTest)
 add_subdirectory(Tool)#文件夹里面要有代码文件，不可以是空的，会报错
 
 
-add_executable(PixelClean  ${DIRSRCS}
+add_executable(PixelClean  ${DIRSRCS} ${CAMERA_SRCS}
 	resource.rc#设置exe程序图标
 )
 
@@ -154,8 +156,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		#设置启动项
 		PixelClean
 
-		# 文件夹代码
-		vulkanLib
+		# 文件夹代码（按依赖顺序：依赖多的在前，被依赖的 vulkanLib 放最后）
 		vulkanToolLib
 		InterfaceUI
 		BlockSLib
@@ -174,6 +175,7 @@ if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 		RadianceCascadesLib
 		FruitNinjaLib
 		WFCTestLib
+		vulkanLib
 		glfw
 		libevent
 		imgui
@@ -201,8 +203,7 @@ else()
 		#设置启动项
 		PixelClean 
 
-		# 文件夹代码
-		vulkanLib
+		# 文件夹代码（按依赖顺序：依赖多的在前，被依赖的 vulkanLib 放最后）
 		vulkanToolLib
 		InterfaceUI 
 		BlockSLib 
@@ -221,6 +222,7 @@ else()
 		RadianceCascadesLib
 		FruitNinjaLib
 		WFCTestLib
+		vulkanLib
 		glfw
 		libevent
 		imgui

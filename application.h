@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-#include "Camera.h"
+#include "Camera/Camera.h"
 
 #include "Audio/SpatialAudio.h"
 

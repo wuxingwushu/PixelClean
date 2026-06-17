@@ -1158,7 +1158,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             const val FruitNinja = 5        // 水果忍者模式
             const val WFCTest = 6           // WFC 测试模式
             const val BlockWorld = 7         // 区块世界模式（Minecraft-like）
-            const val Infinite = 100        // 无限模式（无尽生存/挑战）
+            const val Infinite = 200        // 无限模式（无尽生存/挑战）
         }
 
         init {

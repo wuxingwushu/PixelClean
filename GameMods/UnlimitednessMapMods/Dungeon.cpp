@@ -504,6 +504,7 @@ namespace GAME {
 		// 地图移动后重新计算所有板块的纹理类型，使其与 GenerateBlock 使用的世界噪声坐标对齐
 		for (int ix = 0; ix < mNumberX; ++ix) {
 			for (int iy = 0; iy < mNumberY; ++iy) {
+				unsigned int oldType = mTextureAndBuffer[ix][iy].Type;
 				mTextureAndBuffer[ix][iy].Type = GetNoise(ix + mWorldBlockOffsetX, iy + mWorldBlockOffsetY);
 				// 同步更新板块的世界坐标，使渲染位置与物理碰撞（RenderMapOutline 的窗口）对齐。
 				// 板块 (ix, iy) 的内容对应世界板块 (ix + offset, iy + offset)，
@@ -512,6 +513,12 @@ namespace GAME {
 				ObjectUniformGIF* mUniform = (ObjectUniformGIF*)mTextureAndBuffer[ix][iy].mBufferS->getupdateBufferByMap();
 				mUniform->mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3((ix + mWorldBlockOffsetX) * 16, (iy + mWorldBlockOffsetY) * 16, 0));
 				mTextureAndBuffer[ix][iy].mBufferS->endupdateBufferByMap();
+				// 板块滚动后类型可能变化：旧类型为 GIF(20) 但新类型不再是 20 时，
+				// 需要移除旧的 GIF 描述符，避免残留的 GIF 动画在地图上错误显示。
+				if (oldType == 20 && mTextureAndBuffer[ix][iy].Type != 20 && mTextureAndBuffer[ix][iy].mGIFDescriptorSet) {
+					popGIF({ mTextureAndBuffer[ix][iy].mGIFDescriptorSet, nullptr, nullptr });
+					mTextureAndBuffer[ix][iy].mGIFDescriptorSet = nullptr;
+				}
 			}
 		}
 	}
@@ -644,9 +651,13 @@ namespace GAME {
 	}
 
 	void Dungeon::UpdataMist(int x, int y, float ang) {
-		// TODO: MapDynamic no longer has GetGridSPos; needs redesign
-		wymiwustruct.x = y + (mNumberY * 8);
-		wymiwustruct.y = x + (mNumberX * 8);
+		// 将世界坐标转换为 WarfareMist 纹理像素坐标。
+		// 纹理像素 (texX, texY) 对应板块数组下标 (texX/16, texY/16)，
+		// 该板块渲染在世界 ((texX/16 + offset)*16, (texY/16 + offset)*16) = (texX + offset*16, texY + offset*16)。
+		// 因此世界坐标 (x, y) 对应纹理像素 (x - offset*16, y - offset*16)。
+		// 着色器内部 x/y 与纹理 texY/texX 对应（见 y_size/x_size 的交换），故此处做相应交换。
+		wymiwustruct.x = y - (mWorldBlockOffsetY * (int)mSquareSideLength);
+		wymiwustruct.y = x - (mWorldBlockOffsetX * (int)mSquareSideLength);
 		wymiwustruct.angel = -ang;
 		information->updateBufferByMap(&wymiwustruct, sizeof(Dungeonmiwustruct));
 
@@ -728,6 +739,17 @@ namespace GAME {
 		MultithreadingGenerate.clear();//清空
 		// 刷新纹理类型，使视觉与地图移动后的碰撞噪声坐标对齐
 		RefreshVisualTypes();
+
+		// 板块滚动后，可能有新板块类型变为 GIF(20)，需要为其注册 GIF 描述符
+		// （旧 GIF 已在 RefreshVisualTypes 中通过 popGIF 移除）
+		for (int uix = 0; uix < mNumberX; ++uix) {
+			for (int uiy = 0; uiy < mNumberY; ++uiy) {
+				if (mTextureAndBuffer[uix][uiy].Type == 20 && !mTextureAndBuffer[uix][uiy].mGIFDescriptorSet) {
+					GAME::TextureLibrary::TextureToUVInfo TUinfo = wTextureLibrary->GetTextureUV("004_24");
+					mTextureAndBuffer[uix][uiy].mGIFDescriptorSet = AddGIF(mTextureAndBuffer[uix][uiy].mBufferS, TUinfo.mTexture, TUinfo.mUV);
+				}
+			}
+		}
 
 		// 更新所有板块的纹理像素数据（基于刷新后的类型），加入上传队列
 		MultithreadingPixelTexture.clear();

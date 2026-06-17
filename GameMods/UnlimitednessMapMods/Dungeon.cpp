@@ -423,7 +423,7 @@ namespace GAME {
 			{
 				mTextureAndBuffer[ix][iy].Type = GetNoise(ix + mWorldBlockOffsetX, iy + mWorldBlockOffsetY);
 
-				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(ix * 16, iy * 16, 0));//位移矩阵
+				mUniform.mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3((ix + mWorldBlockOffsetX) * 16, (iy + mWorldBlockOffsetY) * 16, 0));//位移矩阵（含世界板块偏移，与物理碰撞对齐）
 				mTextureAndBuffer[ix][iy].mBufferS = VulKan::Buffer::createUniformBuffer(wDevice, sizeof(ObjectUniformGIF));
 				mTextureAndBuffer[ix][iy].mBufferS->updateBufferByMap((void*)&mUniform, sizeof(ObjectUniformGIF));
 				for (size_t i = 0; i < wFrameCount; ++i)
@@ -505,6 +505,13 @@ namespace GAME {
 		for (int ix = 0; ix < mNumberX; ++ix) {
 			for (int iy = 0; iy < mNumberY; ++iy) {
 				mTextureAndBuffer[ix][iy].Type = GetNoise(ix + mWorldBlockOffsetX, iy + mWorldBlockOffsetY);
+				// 同步更新板块的世界坐标，使渲染位置与物理碰撞（RenderMapOutline 的窗口）对齐。
+				// 板块 (ix, iy) 的内容对应世界板块 (ix + offset, iy + offset)，
+				// 因此必须渲染到 ((ix + offset)*16, (iy + offset)*16)，否则视觉与物理会错位。
+				// 通过 map/unmap 原地修改 mModelMatrix，保留 zhen 等 GIF 动画状态字段。
+				ObjectUniformGIF* mUniform = (ObjectUniformGIF*)mTextureAndBuffer[ix][iy].mBufferS->getupdateBufferByMap();
+				mUniform->mModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3((ix + mWorldBlockOffsetX) * 16, (iy + mWorldBlockOffsetY) * 16, 0));
+				mTextureAndBuffer[ix][iy].mBufferS->endupdateBufferByMap();
 			}
 		}
 	}

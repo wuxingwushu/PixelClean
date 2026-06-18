@@ -1032,17 +1032,6 @@ void BlockWorld::KeyDown(GameKeyEnum moveDirection) {
 // ============================================================================
 
 void BlockWorld::GameCommandBuffers(unsigned int Format_i) {
-    if (Format_i >= mSwapChain->getImageCount()) return;
-
-    // ====== VP 矩阵写入（方案B：移到 fence 等待之后）======
-    // 此时 Application::Render() 已通过 mFences[block] 等待本帧渲染完成，
-    // 且此处使用的索引 Format_i == imageIndex，与 descriptor set 绑定该 CB
-    // 所读取的 mCameraVPMatricesBuffer[imageIndex] 完全一致，消除了
-    // 「写入索引(mCurrentFrame) != 读取索引(imageIndex)」导致的矩阵撕裂。
-    VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[Format_i]->getPersistentMappedPtr();
-    mVPMatrices->mViewMatrix = mCamera->getViewMatrix();
-    mVPMatrices->mProjectionMatrix = mCamera->getProjectMatrix();
-
     if (mBlockCommandBuffers) {
         wThreadCommandBufferS->push_back(
             mBlockCommandBuffers[Format_i]->getCommandBuffer());
@@ -1085,12 +1074,6 @@ void BlockWorld::GameLoop(unsigned int /*mCurrentFrame*/) {
     }
 
     mCamera->update();
-
-    // 注意：VP 矩阵的 GPU 写入已移至 GameCommandBuffers(Format_i)，
-    // 因为那里才在 fence 等待之后、且持有与渲染一致的 imageIndex。
-    // 为保证 GameCommandBuffers 每帧都被调用（而非被 MainCommandBufferS
-    // 缓存机制跳过），这里请求每帧重录主指令缓冲。
-    Global::MainCommandBufferUpdateRequest();
 }
 
 void BlockWorld::GameRecordCommandBuffers() {

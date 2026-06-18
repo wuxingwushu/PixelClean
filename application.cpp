@@ -395,6 +395,16 @@ namespace GAME {
 	
 	void Application::createCommandBuffers(unsigned int i)
 	{
+
+		// ====== VP 矩阵写入（方案B：移到 fence 等待之后）======
+    	// 此时 Application::Render() 已通过 mFences[block] 等待本帧渲染完成，
+    	// 且此处使用的索引 Format_i == imageIndex，与 descriptor set 绑定该 CB
+    	// 所读取的 mCameraVPMatricesBuffer[imageIndex] 完全一致，消除了
+    	// 「写入索引(mCurrentFrame) != 读取索引(imageIndex)」导致的矩阵撕裂。
+    	VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[i]->getPersistentMappedPtr();
+    	mVPMatrices->mViewMatrix = mCamera->getViewMatrix();
+    	mVPMatrices->mProjectionMatrix = mCamera->getProjectMatrix();
+
 		ThreadCommandBufferS.clear();//清空显示队列
 
 		VkCommandBufferInheritanceInfo InheritanceInfo{};

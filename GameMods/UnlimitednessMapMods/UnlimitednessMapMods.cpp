@@ -221,11 +221,6 @@ namespace GAME
 
 	void UnlimitednessMapMods::GameCommandBuffers(unsigned int Format_i)
 	{
-		// VP 矩阵写入（方案B：在 fence 等待之后用 imageIndex 写入，
-		// 与 descriptor set 读取的索引一致，消除 mCurrentFrame != imageIndex 的撕裂）
-		VPMatrices *mVPMatrices = (VPMatrices *)mCameraVPMatricesBuffer[Format_i]->getPersistentMappedPtr();
-		mVPMatrices->mViewMatrix = mCamera->getViewMatrix();
-
 		mDungeon->GetCommandBuffer(wThreadCommandBufferS, Format_i);
 		mDungeon->GetGIFCommandBuffer(wThreadCommandBufferS, Format_i);
 
@@ -450,9 +445,6 @@ namespace GAME
 		TOOL::mTimer->StartEnd();
 
 		mAuxiliaryVision->End();
-
-		// 请求每帧重录主指令缓冲，确保 GameCommandBuffers 每帧被调用以写入 VP 矩阵
-		Global::MainCommandBufferUpdateRequest();
 	}
 
 	void UnlimitednessMapMods::GameRecordCommandBuffers()

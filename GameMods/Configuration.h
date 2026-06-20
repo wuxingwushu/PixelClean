@@ -18,7 +18,7 @@
 #include "../InterfaceUI/Interface.h"
 #include "../Camera/Camera.h"
 #include "../GlobalStructural.h"
-#include "../Arms/ParticleSystem.h"
+#include "../Arms/Particle/ParticleWorld.h"
 #include "../Character/GamePlayer.h"
 #include "../Arms/Arms.h"
 #include "../Character/Crowd.h"
@@ -60,7 +60,7 @@ namespace GAME {
 		TextureLibrary* mGIFTextureLibrary{ nullptr };//GIF库
 		TextureLibrary* mTextureLibrary{ nullptr };//素材库
 		std::vector<VulKan::Buffer*> mCameraVPMatricesBuffer{};//GPU用的玩家变换矩阵（位置 角度）
-		ParticleSystem* mParticleSystem = nullptr;//粒子系统
+		ParticleWorld* mParticleWorld = nullptr;//粒子世界（Plan D facade，统一管理粒子特效 + 子弹）
 		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;//粒子特效
 		unsigned int mParticleCount = 1000;  // 粒子数量 / Arms 子弹池大小
 		// PhysicsWorld/Arms 已迁移到各 GameMod 自行创建

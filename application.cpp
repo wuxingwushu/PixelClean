@@ -252,23 +252,21 @@ namespace GAME {
 			mCameraVPMatricesBuffer[i]->endupdateBufferByMap();
 		}
 
-		LOGI("initGame: step 2 - creating ParticleSystem");
+		LOGI("initGame: step 2 - creating ParticleWorld (Plan D)");
 		const int particleCount = 1000;
 		mParticleCount = particleCount;
 		LOGI("initGame: step 2 - particleCount=%d (reduced on Android for mobile GPU compatibility)", particleCount);
-		mParticleSystem = new ParticleSystem(mDevice, particleCount);
-		mParticleSystem->initUniformManager(
-			mDevice,
-			mCommandPool,
-			mSwapChain->getImageCount(),
-			mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods)->DescriptorSetLayout,
-			mCameraVPMatricesBuffer,
-			mSampler
-		);
-		mParticleSystem->RecordingCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::MainMods));
-		LOGI("initGame: step 2 - ParticleSystem done");
 
-		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleSystem, particleCount);
+		// Plan D：ParticleWorld（facade）统一管理粒子特效 + 子弹
+		mParticleWorld = new ParticleWorld(mDevice, mCommandPool, mSwapChain->getImageCount(), particleCount);
+		mParticleWorld->initDescriptorSet(
+			mCameraVPMatricesBuffer,
+			mPipelineS->GetPipeline(VulKan::PipelineMods::ParticleMods)->DescriptorSetLayout
+		);
+		mParticleWorld->recordCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::ParticleMods));
+		LOGI("initGame: step 2 - ParticleWorld done");
+
+		mParticlesSpecialEffect = new ParticlesSpecialEffect(mParticleWorld, particleCount);
 
 		LOGI("initGame: step 3 - creating GIF TextureLibrary (PhysicsWorld/Arms moved to each GameMod)");
 		mGIFTextureLibrary = new TextureLibrary(mDevice, mCommandPool, mSampler, "./Resource/GifTexture/");
@@ -619,8 +617,11 @@ namespace GAME {
 		if (mGameMods != nullptr) {
 			mGameMods->GameRecordCommandBuffers();
 		}
-		mParticleSystem->resetThreadCommandPools();
-		mParticleSystem->ThreadUpdateCommandBuffer();
+		// Plan D：ParticleWorld 重置指令池并重新录制
+		if (mParticleWorld) {
+			mParticleWorld->resetCommandPools();
+			mParticleWorld->recordCommandBuffer(mRenderPass, mSwapChain, mPipelineS->GetPipeline(VulKan::PipelineMods::ParticleMods));
+		}
 		for (size_t i = 0; i < mSwapChain->getImageCount(); ++i)
 		{
 			Global::MainCommandBufferS[i].store(true, std::memory_order_release);
@@ -794,7 +795,7 @@ namespace GAME {
 			ImGui::Text(u8"鼠标获取位置：%10.3f - %10.3f - %10.3f", huoqdedian.x, huoqdedian.y, huoqdedian.z);
 			ImGui::Text(u8"攻击模式：%d (1 / 2 上下切换) ", AttackType);
 			//ImGui::Text(u8"玩家速度：%10.3f  |  %10.3f", mGamePlayer->GetObjectCollision()->GetSpeed().x, mGamePlayer->GetObjectCollision()->GetSpeed().y);
-			ImGui::Text(u8"剩余粒子：%d", mParticleSystem->mParticle->GetNumber());
+			ImGui::Text(u8"粒子 World：活跃=%u  空闲=%u", mParticleWorld->activeCount(), mParticleWorld->freeCount());
 			InterFace->ImGuiShowFPS();
 			InterFace->ImGuiShowTiming();
 			ImGui::Text(u8"如果只看得到监视窗口去设置中关掉监视器 ! ");
@@ -868,9 +869,13 @@ namespace GAME {
 		TOOL::mTimer->StartEnd();
 
 		//重新录制指令
-		TOOL::mTimer->StartTiming(u8"录制指令 ");
-		createCommandBuffers(imageIndex);
-		TOOL::mTimer->StartEnd();
+	TOOL::mTimer->StartTiming(u8"录制指令 ");
+	// 粒子系统：每帧更新 SSBO + 阈值检查（仅跨阈值时重录二级 CB 并请求主 CB 更新）
+	if (mParticleWorld) {
+		mParticleWorld->updateGPU(imageIndex);
+	}
+	createCommandBuffers(imageIndex);
+	TOOL::mTimer->StartEnd();
 
 		//构建提交信息
 		VkSubmitInfo submitInfo{};
@@ -972,10 +977,10 @@ namespace GAME {
 			vkDeviceWaitIdle(mDevice->getDevice());
 		}
 
-		delete mParticleSystem;
-		mParticleSystem = nullptr;
 		delete mParticlesSpecialEffect;
 		mParticlesSpecialEffect = nullptr;
+		delete mParticleWorld;
+		mParticleWorld = nullptr;
 
 		if (mSwapChain) {
 			for (int i = 0; i < mSwapChain->getImageCount(); ++i) {

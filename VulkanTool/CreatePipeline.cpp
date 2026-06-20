@@ -1309,4 +1309,162 @@ namespace VulKan
 
 		return Pipeline;
 	}
+
+	// 粒子系统专用 Pipeline（方案 D：SSBO + Instanced Rendering）
+	// binding 0: VP UBO（共享相机矩阵）
+	// binding 1: Instance SSBO（所有粒子实例数据，靠 gl_InstanceIndex 索引）
+	// 顶点输入复用 MainPipeline 的 position(vec3)/UV(vec2) binding，不使用 instance binding
+	Pipeline *ParticlePipeline(Pipeline *Pipeline, Device *Device)
+	{
+		LOGD("[CreatePipeline] ParticlePipeline");
+		// 设置视口
+		VkViewport viewport = {};
+		viewport.x = 0.0f;
+		viewport.y = (float)Global::mHeight;
+		viewport.width = (float)Global::mWidth;
+		viewport.height = -(float)Global::mHeight;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+
+		VkRect2D scissor = {};
+		scissor.offset = {0, 0};
+		scissor.extent = {Global::mWidth, Global::mHeight};
+
+		Pipeline->setViewports({viewport});
+		Pipeline->setScissors({scissor});
+
+		// 设置shader
+		std::vector<VulKan::Shader *> shaderGroup{};
+
+		VulKan::Shader *shaderVertex = new VulKan::Shader(Device, PARTICLE_VERT_SHADER_PATH, VK_SHADER_STAGE_VERTEX_BIT, "main");
+		shaderGroup.push_back(shaderVertex);
+
+		VulKan::Shader *shaderFragment = new VulKan::Shader(Device, PARTICLE_FRAG_SHADER_PATH, VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+		shaderGroup.push_back(shaderFragment);
+
+		Pipeline->setShaderGroup(shaderGroup);
+
+		// 顶点的排布模式：复用 MainPipeline 的 position/UV binding
+		// binding 0: stride=12 (vec3 position), VK_VERTEX_INPUT_RATE_VERTEX
+		// binding 1: stride=8  (vec2 UV),       VK_VERTEX_INPUT_RATE_VERTEX
+		// 不使用 instance binding（实例数据从 SSBO 读，靠 gl_InstanceIndex 索引）
+		std::vector<VkVertexInputBindingDescription> vertexBindingDes{};
+		vertexBindingDes.resize(2);
+		vertexBindingDes[0].binding = 0;
+		vertexBindingDes[0].stride = sizeof(float) * 3;
+		vertexBindingDes[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		vertexBindingDes[1].binding = 1;
+		vertexBindingDes[1].stride = sizeof(float) * 2;
+		vertexBindingDes[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		std::vector<VkVertexInputAttributeDescription> attributeDes{};
+		attributeDes.resize(2);
+		attributeDes[0].binding = 0;
+		attributeDes[0].location = 0;
+		attributeDes[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDes[0].offset = 0;
+		attributeDes[1].binding = 1;
+		attributeDes[1].location = 2;
+		attributeDes[1].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDes[1].offset = 0;
+
+		Pipeline->mVertexInputState.vertexBindingDescriptionCount = vertexBindingDes.size();
+		Pipeline->mVertexInputState.pVertexBindingDescriptions = vertexBindingDes.data();
+		Pipeline->mVertexInputState.vertexAttributeDescriptionCount = attributeDes.size();
+		Pipeline->mVertexInputState.pVertexAttributeDescriptions = attributeDes.data();
+
+		// 图元装配：三角形列表（与 MainPipeline 一致）
+		Pipeline->mAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		Pipeline->mAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		Pipeline->mAssemblyState.primitiveRestartEnable = VK_FALSE;
+
+		// 光栅化设置（与 MainPipeline 一致）
+		Pipeline->mRasterState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		Pipeline->mRasterState.polygonMode = Global::DrawLinesMode ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+		Pipeline->mRasterState.lineWidth = 1.0f;
+		Pipeline->mRasterState.cullMode = VK_CULL_MODE_BACK_BIT;
+		Pipeline->mRasterState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+		Pipeline->mRasterState.depthBiasEnable = VK_FALSE;
+		Pipeline->mRasterState.depthBiasConstantFactor = 0.0f;
+		Pipeline->mRasterState.depthBiasClamp = 0.0f;
+		Pipeline->mRasterState.depthBiasSlopeFactor = 0.0f;
+
+		// 多重采样（与 MainPipeline 一致）
+		Pipeline->mSampleState.sampleShadingEnable = VK_FALSE;
+		Pipeline->mSampleState.rasterizationSamples = Device->getMaxUsableSampleCount();
+		Pipeline->mSampleState.minSampleShading = 1.0f;
+		Pipeline->mSampleState.pSampleMask = nullptr;
+		Pipeline->mSampleState.alphaToCoverageEnable = VK_FALSE;
+		Pipeline->mSampleState.alphaToOneEnable = VK_FALSE;
+
+		// 深度与模板测试（与 MainPipeline 一致）
+		Pipeline->mDepthStencilState.depthTestEnable = VK_TRUE;
+		Pipeline->mDepthStencilState.depthWriteEnable = VK_TRUE;
+		Pipeline->mDepthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+
+		// 颜色混合（与 MainPipeline 一致：alpha 混合）
+		VkPipelineColorBlendAttachmentState blendAttachment{};
+		blendAttachment.colorWriteMask =
+			VK_COLOR_COMPONENT_R_BIT |
+			VK_COLOR_COMPONENT_G_BIT |
+			VK_COLOR_COMPONENT_B_BIT |
+			VK_COLOR_COMPONENT_A_BIT;
+
+		blendAttachment.blendEnable = VK_TRUE;
+		blendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		blendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		blendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+
+		blendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		blendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		blendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+		Pipeline->pushBlendAttachment(blendAttachment);
+
+		Pipeline->mBlendState.logicOpEnable = VK_FALSE;
+		Pipeline->mBlendState.logicOp = VK_LOGIC_OP_COPY;
+
+		Pipeline->mBlendState.blendConstants[0] = 0.0f;
+		Pipeline->mBlendState.blendConstants[1] = 0.0f;
+		Pipeline->mBlendState.blendConstants[2] = 0.0f;
+		Pipeline->mBlendState.blendConstants[3] = 0.0f;
+
+		// DescriptorSetLayout: binding 0 = VP UBO, binding 1 = Instance SSBO
+		// 移除 ObjectUniform UBO 和 Sampler（颜色改走 SSBO 的 vec4 color）
+		std::vector<VkDescriptorSetLayoutBinding> layoutBindings{};
+		layoutBindings.resize(2);
+		layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		layoutBindings[0].binding = 0;
+		layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		layoutBindings[0].descriptorCount = 1;
+
+		layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		layoutBindings[1].binding = 1;
+		layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		layoutBindings[1].descriptorCount = 1;
+
+		VkDescriptorSetLayoutCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		createInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
+		createInfo.pBindings = layoutBindings.data();
+
+		if (vkCreateDescriptorSetLayout(Device->getDevice(), &createInfo, nullptr, &Pipeline->DescriptorSetLayout) != VK_SUCCESS)
+		{
+			LOGE("[CreatePipeline] ParticlePipeline: failed to create descriptor set layout");
+			throw std::runtime_error("Error: failed to create descriptor set layout");
+		}
+
+		std::vector<VkDescriptorSetLayout> mDescriptorSetLayout;
+		mDescriptorSetLayout.push_back(Pipeline->DescriptorSetLayout);
+
+		Pipeline->mLayoutState.setLayoutCount = mDescriptorSetLayout.size();
+		Pipeline->mLayoutState.pSetLayouts = mDescriptorSetLayout.data();
+		Pipeline->mLayoutState.pushConstantRangeCount = 0;
+		Pipeline->mLayoutState.pPushConstantRanges = nullptr;
+
+		Pipeline->build();
+
+		return Pipeline;
+	}
 }

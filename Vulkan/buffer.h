@@ -23,6 +23,9 @@ namespace VulKan {
 		static Buffer* createIndexBuffer(Device* device, VkDeviceSize size, void* pData, bool ThreadBool = false);
 		//创建描述符
 		static Buffer* createUniformBuffer(Device* device, VkDeviceSize size, void* pData = nullptr);
+		//创建 SSBO（Storage Buffer），用于粒子系统等实例化数据
+		//persistentMapping=true 时构造后即映射内存，可用 getPersistentMappedPtr() 获取指针
+		static Buffer* createStorageBuffer(Device* device, VkDeviceSize size, void* pData = nullptr, bool persistentMapping = false);
 		//创建临时Buffer,用来上传图片
 		static Buffer* createStageBuffer(Device* device, const VkImage& dstImage, VkImageLayout dstImageLayout, uint32_t width, uint32_t height, VkDeviceSize size, void* pData = nullptr, bool ThreadBool = false);
 

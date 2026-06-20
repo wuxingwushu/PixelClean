@@ -47,3 +47,6 @@
 #define physics_arbiter_spv       ShaderPath"physics_arbiter.comp.spv"
 #define physics_joint_spv         ShaderPath"physics_joint.comp.spv"
 #define physics_junction_spv      ShaderPath"physics_junction.comp.spv"
+// 粒子系统（方案 D：SSBO + Instanced Rendering）
+#define PARTICLE_VERT_SHADER_PATH ShaderPath"particle_vert.spv"
+#define PARTICLE_FRAG_SHADER_PATH ShaderPath"particle_frag.spv"

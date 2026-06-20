@@ -1,25 +1,24 @@
 #pragma once
-#include "ParticleSystem.h"
+#include "Particle/ParticleWorld.h"
 #include "../Tool/ContinuousData.h"
 
 namespace GAME {
 
-	//粒子特效的结构体
+	//粒子特效的结构体（Plan D Phase 5：移除 Pixel/Buffer 指针，改存 ParticleWorld 索引）
 	struct SpecialEffects {
-		float x;
-		float y;
-		float speed;
-		float angle;
-		float Zoom;
-		VulKan::PixelTexture* Pixel;
-		std::vector<VulKan::Buffer*>* Buffer;
+		float x{ 0.0f };
+		float y{ 0.0f };
+		float speed{ 0.0f };
+		float angle{ 0.0f };
+		float Zoom{ 1.0f };
+		uint32_t particleIndex{ 0 };   // ParticleWorld 中的索引（替代旧的 Pixel/Buffer 指针）
 	};
 
 	class ParticlesSpecialEffect
 	{
 	public:
-		//导入粒子系统，和粒子上线
-		ParticlesSpecialEffect(ParticleSystem* particleSystem, unsigned int size);
+		//导入粒子世界（ParticleWorld facade），和粒子上限
+		ParticlesSpecialEffect(ParticleWorld* world, unsigned int size);
 		~ParticlesSpecialEffect();
 
 		//生成一个粒子特效
@@ -29,8 +28,8 @@ namespace GAME {
 		//粒子事件
 		void SpecialEffectsEvent(unsigned int Fndex, double time);
 	private:
-		ContinuousData<SpecialEffects>* mSpecialEffects;//现场的粒子
-		ParticleSystem* mParticleSystem;//粒子系统
+		ContinuousData<SpecialEffects>* mSpecialEffects;//现场的粒子（仅存索引和元数据，无指针）
+		ParticleWorld* mWorld;//粒子世界（facade）
 	};
 
 }

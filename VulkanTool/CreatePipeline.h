@@ -25,4 +25,7 @@ namespace VulKan {
 
 	//BlockWorld 方块世界
 	Pipeline* BlockWorldPipeline(Pipeline* Pipeline, Device* Device);
+
+	//粒子系统（方案 D：SSBO + Instanced Rendering）
+	Pipeline* ParticlePipeline(Pipeline* Pipeline, Device* Device);
 }

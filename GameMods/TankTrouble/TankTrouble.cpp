@@ -41,7 +41,7 @@ namespace GAME
 		// 创建模式私有物理世界
 		mSquarePhysics = new PhysicsBlock::PhysicsWorld(Vec2_{0, 0}, false);
 		// 创建模式私有武器系统
-		mArms = new Arms(mParticleSystem, mParticleCount);
+		mArms = new Arms(mParticleWorld, mParticleCount);
 		mArms->SetSpecialEffect(mParticlesSpecialEffect);
 		mArms->SetSquarePhysics(mSquarePhysics);
 
@@ -311,7 +311,10 @@ namespace GAME
 	{
 		mLabyrinth->GetCommandBuffer(wThreadCommandBufferS, Format_i);
 
-		mParticleSystem->GetCommandBuffer(wThreadCommandBufferS, Format_i);
+		// Plan D：ParticleWorld 渲染粒子特效 + 子弹（1 次 DrawCall）
+		if (mParticleWorld) {
+			mParticleWorld->getCommandBuffers(wThreadCommandBufferS, Format_i);
+		}
 		// 加到显示数组中
 		mCrowd->GetCommandBufferS(wThreadCommandBufferS, Format_i);
 

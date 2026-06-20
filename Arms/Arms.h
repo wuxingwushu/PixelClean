@@ -1,6 +1,7 @@
 #pragma once
-#include "ParticleSystem.h"
+#include "Particle/ParticleWorld.h"
 #include "../Tool/ContinuousData.h"
+#include "../Tool/ContinuousMap.h"
 #include "ParticlesSpecialEffect.h"
 #include "../PhysicsBlock/PhysicsWorld.hpp"
 #include "../PhysicsBlock/PhysicsParticle.hpp"
@@ -34,7 +35,7 @@ namespace GAME {
 	{
 	public:
 
-		Arms(ParticleSystem* particleSystem, unsigned int size);
+		Arms(ParticleWorld* world, unsigned int size);
 		~Arms();
 
 		//获取物理系统
@@ -97,13 +98,13 @@ namespace GAME {
 		// 爆炸：在 pos 处半径 radius 范围内破坏地形并对坦克造成伤害
 		void Explode(glm::vec2 pos, float radius);
 
-		ContinuousMap<PhysicsBlock::PhysicsParticle*, Particle>* mBullet;//子弹映射
+		ContinuousMap<PhysicsBlock::PhysicsParticle*, uint32_t>* mBullet;//子弹映射（物理粒子 -> ParticleWorld 索引）
 
-		float IntervalTime = 0.5f;
-	private:
-		_ShootCallback ShootCallback = PistolMode;
-		ParticleSystem* mParticleSystem = nullptr;//粒子系统
-		ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;//粒子特效
+	float IntervalTime = 0.5f;
+private:
+	_ShootCallback ShootCallback = PistolMode;
+	ParticleWorld* mWorld = nullptr;//粒子世界（Plan D facade）
+	ParticlesSpecialEffect* mParticlesSpecialEffect = nullptr;//粒子特效
 		PhysicsBlock::PhysicsWorld* mSquarePhysics = nullptr;//物理系统
 		std::set<PhysicsBlock::PhysicsParticle*> mPendingDeleteBullets;//待删除子弹集合
 

@@ -47,6 +47,25 @@ namespace VulKan {
 		return buffer;
 	}
 
+	Buffer* Buffer::createStorageBuffer(Device* device, VkDeviceSize size, void* pData, bool persistentMapping) {
+		// SSBO：Storage Buffer，用于粒子系统实例数据
+		// usage 含 STORAGE_BUFFER_BIT（GPU 可读写）+ TRANSFER_DST_BIT（允许 staging 拷贝）
+		// 内存属性：HOST_VISIBLE + HOST_COHERENT，CPU 可持久映射写入
+		Buffer* buffer = new Buffer(
+			device, size,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		);
+
+		if (pData != nullptr) {
+			buffer->updateBufferByStage(pData, size);
+		}
+		if (persistentMapping) {
+			buffer->getPersistentMappedPtr();
+		}
+		return buffer;
+	}
+
 	Buffer* Buffer::createStageBuffer(Device* device, const VkImage& dstImage, VkImageLayout dstImageLayout, uint32_t width, uint32_t height, VkDeviceSize size, void* pData, bool ThreadBool) {
 		Buffer* buffer = new Buffer(
 			device, size,

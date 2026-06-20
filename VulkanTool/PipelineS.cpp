@@ -17,6 +17,7 @@ namespace VulKan {
 		EstablishPipeline(DamagePromptPipeline);
 		EstablishPipeline(UVDynamicDiagramPipeline);
 		EstablishPipeline(BlockWorldPipeline);
+		EstablishPipeline(ParticlePipeline);
 	}
 
 	PipelineS::~PipelineS() {

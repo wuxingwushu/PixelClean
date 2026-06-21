@@ -608,6 +608,8 @@ namespace GAME {
 		}
 		mPipelineS->ReconfigurationPipelineS();
 		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
+		// RenderPass 已重建，ImGui 二级 CB 中引用的旧 RenderPass 失效，需强制重录
+		InterFace->InvalidateCommandBufferCache();
 		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
 		{
 			VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[i]->getupdateBufferByMap();
@@ -651,18 +653,19 @@ namespace GAME {
 			GAME::Audio::AudioEngine::Get().Update(TOOL::FPStime);
 			PlayerForce = { 0,0 };
 			mWindow->pollEvents();//GLFW轮询事件
-			// 更新 ImGui 的 MousePos
+			// 更新 ImGui 鼠标输入（使用事件系统，避免绕过 ImGui 输入管线）
 			ImGuiIO& io = ImGui::GetIO();
 #if defined(_WIN32)
 			glfwGetCursorPos(mWindow->getWindow(), &CursorPosX, &CursorPosY);
 #elif defined(__ANDROID__)
 			// CursorPosX, CursorPosY 由 JNI 触摸事件填充
 #endif
-			io.MousePos.x = CursorPosX;
-			io.MousePos.y = CursorPosY;
-			// 更新 ImGui 的 鼠标滚轮的值
-			io.MouseWheel = -mWindow->MouseScroll;
-			mWindow->MouseScroll = 0;
+			io.AddMousePosEvent((float)CursorPosX, (float)CursorPosY);
+			// 使用事件系统更新鼠标滚轮
+			if (mWindow->MouseScroll != 0.0f) {
+				io.AddMouseWheelEvent(0.0f, -mWindow->MouseScroll);
+				mWindow->MouseScroll = 0;
+			}
 
 			if (InterFace->GetInterFaceBool()) {
 				mWindow->ImGuiKeyBoardEvent();//监听键盘
@@ -1108,16 +1111,17 @@ namespace GAME {
 		GAME::Audio::AudioEngine::Get().Update(TOOL::FPStime);
 		PlayerForce = { 0,0 };
 		mWindow->pollEvents();
+		// 更新 ImGui 鼠标输入（使用事件系统，避免绕过 ImGui 输入管线）
 		ImGuiIO& io = ImGui::GetIO();
-		io.MousePos.x = CursorPosX;
-		io.MousePos.y = CursorPosY;
-		io.MouseWheel = -mWindow->MouseScroll;
-		mWindow->MouseScroll = 0;
+		io.AddMousePosEvent((float)CursorPosX, (float)CursorPosY);
+		if (mWindow->MouseScroll != 0.0f) {
+			io.AddMouseWheelEvent(0.0f, -mWindow->MouseScroll);
+			mWindow->MouseScroll = 0;
+		}
 
 		if (InterFace->GetInterFaceBool()) {
 			mWindow->ImGuiKeyBoardEvent();
 #if defined(__ANDROID__)
-			io.AddMousePosEvent((float)CursorPosX, (float)CursorPosY);
 			if (mPendingMouseDown.exchange(false)) {
 				io.AddMouseButtonEvent(0, true);
 			} else if (mPendingMouseUp.exchange(false)) {

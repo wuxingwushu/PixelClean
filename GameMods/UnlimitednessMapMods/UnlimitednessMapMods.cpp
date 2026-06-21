@@ -201,19 +201,17 @@ namespace GAME
 			}
 			break;
 		case GameKeyEnum::Key_1:
-			AttackType--;
-			{
-				static constexpr int DESTROY_MODE_COUNT = 4;
-				if (AttackType >= DESTROY_MODE_COUNT) { AttackType = DESTROY_MODE_COUNT - 1; }
-			}
-			break;
-		case GameKeyEnum::Key_2:
-			AttackType++;
-			{
-				static constexpr int DESTROY_MODE_COUNT = 4;
-				if (AttackType >= DESTROY_MODE_COUNT) { AttackType = DESTROY_MODE_COUNT - 1; }
-			}
-			break;
+		{
+			static constexpr int DESTROY_MODE_COUNT = 4;
+			AttackType = (AttackType - 1 + DESTROY_MODE_COUNT) % DESTROY_MODE_COUNT;
+		}
+		break;
+	case GameKeyEnum::Key_2:
+		{
+			static constexpr int DESTROY_MODE_COUNT = 4;
+			AttackType = (AttackType + 1) % DESTROY_MODE_COUNT;
+		}
+		break;
 		default:
 			break;
 		}

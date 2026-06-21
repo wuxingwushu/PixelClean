@@ -1,4 +1,4 @@
-#pragma once11
+#pragma once
 #include "../Configuration.h"
 #include "../GameMods.h"
 #include "Dungeon.h"

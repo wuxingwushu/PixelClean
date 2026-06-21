@@ -129,10 +129,10 @@ namespace GAME {
 		}
 		/*******************************************************/
 		//获取对于墙壁数量
-		inline virtual bool GetPixelWallNumber(unsigned int x, unsigned int y) {
-			// TODO: MapDynamic PixelWallNumber access needs redesign
-			return false;
-		}
+	inline virtual bool GetPixelWallNumber(unsigned int x, unsigned int y) {
+		// 通过 MapDynamic::at 查询碰撞状态（at 内部带边界检查，越界返回空块 Collision=false）
+		return mMoveTerrain->at((int)x, (int)y).Collision;
+	}
 		//射线检测
 		virtual PhysicsBlock::CollisionInfoI RadialCollisionDetection(int x, int y, int Ex, int Ey) {
 			return mMoveTerrain->FMBresenhamDetection(glm::ivec2{x, y}, glm::ivec2{Ex, Ey});

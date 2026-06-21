@@ -683,43 +683,65 @@ namespace GAME {
 	}
 
 	void Dungeon::UpdateAIPathfindingBlock(int x, int y) {
+		// 保存原始位移：原实现会在 x 分支中改写 x，导致 y 分支的范围计算错误，
+		// 且 `x -= x - 1` 等价于 `x = 1`，丢失了负向位移的幅度。此处保留原始值供 y 分支使用。
+		const int origX = x;
+		const int nx = (int)mNumberX;
+		const int ny = (int)mNumberY;
+
+		// X 方向边缘更新：地图沿 x 移动后，新显现的边缘列需要重算墙壁数（+1 列作为安全重叠余量）
 		if (x > 0) {
-			x = x + 1;
-			for (size_t ix = mNumberX - x; ix < mNumberX; ++ix)
+			int width = x + 1;
+			int start = nx - width;
+			if (start < 0) start = 0;
+			for (int ix = start; ix < nx; ++ix)
 			{
-				for (size_t iy = 0; iy < mNumberY; ++iy)
+				for (int iy = 0; iy < ny; ++iy)
 				{
 					TOOL::mThreadPool->enqueue(&Dungeon::BlockPixelWallNumber, this, ix, iy);
 				}
 			}
 		}
-		else {
-			x -= x - 1;
-			for (size_t ix = 0; ix < x; ++ix)
+		else if (x < 0) {
+			int width = -x + 1;
+			int end = width;
+			if (end > nx) end = nx;
+			for (int ix = 0; ix < end; ++ix)
 			{
-				for (size_t iy = 0; iy < mNumberY; ++iy)
+				for (int iy = 0; iy < ny; ++iy)
 				{
 					TOOL::mThreadPool->enqueue(&Dungeon::BlockPixelWallNumber, this, ix, iy);
 				}
 			}
 		}
+
+		// Y 方向边缘更新：使用原始 origX 计算角落重叠区域 [A, B)，
+		// 跳过 X 分支已处理的边缘列，避免重复计算。
+		int A = (origX < 0) ? (-origX + 1) : 0;
+		int B = (origX > 0) ? (nx - (origX + 1)) : nx;
+		if (A < 0) A = 0;
+		if (B > nx) B = nx;
+		if (B < A) B = A;
+
 		if (y > 0) {
-			y = y + 1;
-			int A = (x < 0 ? -x : 0), B = (x > 0 ? mNumberX - x : 0);
-			for (size_t iy = mNumberY - y; iy < mNumberY; ++iy)
+			int height = y + 1;
+			int start = ny - height;
+			if (start < 0) start = 0;
+			for (int iy = start; iy < ny; ++iy)
 			{
-				for (size_t ix = A; ix < B; ++ix)
+				for (int ix = A; ix < B; ++ix)
 				{
 					TOOL::mThreadPool->enqueue(&Dungeon::BlockPixelWallNumber, this, ix, iy);
 				}
 			}
 		}
-		else {
-			y -= y - 1;
-			int A = (x < 0 ? -x : 0), B = (x > 0 ? mNumberX - x : 0);
-			for (size_t iy = 0; iy < y; ++iy)
+		else if (y < 0) {
+			int height = -y + 1;
+			int end = height;
+			if (end > ny) end = ny;
+			for (int iy = 0; iy < end; ++iy)
 			{
-				for (size_t ix = A; ix < B; ++ix)
+				for (int ix = A; ix < B; ++ix)
 				{
 					TOOL::mThreadPool->enqueue(&Dungeon::BlockPixelWallNumber, this, ix, iy);
 				}

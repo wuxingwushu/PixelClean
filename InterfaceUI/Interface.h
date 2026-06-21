@@ -1,5 +1,8 @@
 #pragma once
 #include <chrono>
+#include <cstdint>
+#include <vector>
+#include <algorithm>
 #include "GUI.h"
 #include "../Vulkan/Window.h"
 #include "../Vulkan/device.h"
@@ -69,6 +72,12 @@ namespace GAME {
 
 		VkCommandBuffer GetCommandBuffer(int i, VkCommandBufferInheritanceInfo info);
 
+		// 使 draw data 哈希缓存全部失效，强制下一帧重录所有二级 CB。
+		// 应在 RenderPass 重建、管线重建等导致已录制 CB 失效的场景调用。
+		void InvalidateCommandBufferCache() {
+			std::fill(mLastDrawDataHash.begin(), mLastDrawDataHash.end(), 0);
+		}
+
 		VulKan::ShaderTexture* mShaderTexture{ nullptr };
 
 		ImFont* Font; //字体
@@ -90,6 +99,25 @@ namespace GAME {
 
 		VulKan::CommandPool** ImGuiCommandPoolS;
 		VulKan::CommandBuffer** ImGuiCommandBufferS;
+
+		// ImGui 命令缓冲区缓存：每个交换链图像一个哈希槽位。
+		// 当 draw data 哈希未变时跳过二级 CB 重录，直接复用已录制的指令。
+		std::vector<uint64_t> mLastDrawDataHash;
+
+		// 公共 UI 布局参数（消除三个界面函数中重复的 scale/btnW/btnH 计算）
+		struct ButtonLayout {
+			float scale;
+			float btnScale;
+			float btnW;
+			float btnH;
+			float spacing;
+			float normalFontScale;
+		};
+		ButtonLayout GetButtonLayout() const;
+
+		// 开始一个全屏无装饰面板（DrawBackground + Begin + SetWindowPos + SetWindowSize）
+		// 调用者完成内容后需自行调用 ImGui::End()
+		void BeginFullscreenPanel(const char* name, float fontScale);
 
 		void MainInterface();//游戏主界面
 		

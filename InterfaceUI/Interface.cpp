@@ -152,6 +152,8 @@ namespace GAME {
 			ImGuiCommandPoolS[i] = new VulKan::CommandPool(mDevice);
 			ImGuiCommandBufferS[i] = new VulKan::CommandBuffer(mDevice, ImGuiCommandPoolS[i], true);
 		}
+		// 初始化 draw data 哈希缓存（0 表示尚未录制过）
+		mLastDrawDataHash.assign(mFormatCount, 0);
 
 		mChatBoxStr = new Queue<ChatBoxStr>(100);
 	}
@@ -212,9 +214,29 @@ namespace GAME {
 	}
 
 	VkCommandBuffer ImGuiInterFace::GetCommandBuffer(int i, VkCommandBufferInheritanceInfo info) {
+		ImDrawData* drawData = ImGui::GetDrawData();
+
+		// 计算当前 draw data 的轻量哈希：命令列表数 + 总顶点数 + 总索引数 + 显示尺寸。
+		// 这些值任一变化即代表 UI 结构改变，需要重录二级 CB。
+		// 哈希相同时直接复用已录制的 CB，跳过 begin/record/end 开销。
+		uint64_t hash = 0;
+		//hash = hash * 131ull + (uint64_t)Global::GameMode;
+		hash = hash * 131ull + (uint64_t)drawData->CmdListsCount;
+		hash = hash * 131ull + (uint64_t)drawData->TotalVtxCount;
+		hash = hash * 131ull + (uint64_t)drawData->TotalIdxCount;
+		hash = hash * 131ull + (uint64_t)(uint32_t)drawData->DisplaySize.x;
+		hash = hash * 131ull + (uint64_t)(uint32_t)drawData->DisplaySize.y;
+
+		if (hash != 0 && hash == mLastDrawDataHash[i]) {
+			// draw data 未变，复用已录制的二级命令缓冲区
+			return ImGuiCommandBufferS[i]->getCommandBuffer();
+		}
+
+		// draw data 已变（或首次录制），重新录制二级 CB
 		ImGuiCommandBufferS[i]->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, info);
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), ImGuiCommandBufferS[i]->getCommandBuffer());
+		ImGui_ImplVulkan_RenderDrawData(drawData, ImGuiCommandBufferS[i]->getCommandBuffer());
 		ImGuiCommandBufferS[i]->end();
+		mLastDrawDataHash[i] = hash;
 		return ImGuiCommandBufferS[i]->getCommandBuffer();
 	}
 
@@ -248,22 +270,43 @@ namespace GAME {
 		return s;
 	}
 
+	ImGuiInterFace::ButtonLayout ImGuiInterFace::GetButtonLayout() const {
+		ButtonLayout layout;
+		layout.scale = mUIScale;
+#if defined(__ANDROID__)
+		layout.btnScale = 1.5f;
+#else
+		layout.btnScale = 1.0f;
+#endif
+		layout.btnW = 420.0f * layout.scale * layout.btnScale;
+		layout.btnH = 60.0f * layout.scale * layout.btnScale;
+		layout.spacing = 16.0f * layout.scale;
+		layout.normalFontScale = Global::FontZoomRatio * layout.scale;
+		return layout;
+	}
+
+	void ImGuiInterFace::BeginFullscreenPanel(const char* name, float fontScale) {
+		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
+		ImGui::SetNextWindowBgAlpha(0.0f);
+		ImGui::Begin(name, NULL,
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove
+		);
+		ImGui::SetWindowPos(ImVec2(0, 0));
+		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+		ImGui::SetWindowFontScale(fontScale);
+	}
+
 	void ImGuiInterFace::MainInterface()
 	{
-		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
-
-		float scale = mUIScale; // 使用缓存值避免每帧重复计算
-#if defined(__ANDROID__)
-		float btnScale = 1.5f;
-#else
-		float btnScale = 1.0f;
-#endif
-		float btnW = 420.0f * scale * btnScale;
-		float btnH = 60.0f * scale * btnScale;
-		float arrowBtn = 60.0f * scale * btnScale;
-		float spacing = 16.0f * scale;
+		auto layout = GetButtonLayout();
+		float scale = layout.scale;
+		float btnW = layout.btnW;
+		float btnH = layout.btnH;
+		float arrowBtn = 60.0f * scale * layout.btnScale;
+		float spacing = layout.spacing;
 		float titleFontScale = 3.0f * scale;
-		float normalFontScale = Global::FontZoomRatio * scale;
 
 		float contentW = btnW + arrowBtn * 2 + spacing * 2;
 		float titleH = 80.0f * scale;
@@ -273,14 +316,7 @@ namespace GAME {
 		float startX = (Global::mWidth - contentW) * 0.5f;
 		float startY = (Global::mHeight - totalH) * 0.5f;
 
-		ImGui::SetNextWindowBgAlpha(0.0f);
-		ImGui::Begin(u8"##main", NULL,
-			ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove
-		);
-		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
+		BeginFullscreenPanel(u8"##main", layout.normalFontScale);
 
 		float curY = startY;
 
@@ -291,7 +327,7 @@ namespace GAME {
 
 		curY += titleH + spacing * 2;
 
-		ImGui::SetWindowFontScale(normalFontScale);
+		ImGui::SetWindowFontScale(layout.normalFontScale);
 
 		float rowX = startX;
 		ImGui::SetCursorPos(ImVec2(rowX, curY));
@@ -379,18 +415,10 @@ namespace GAME {
 
 	void ImGuiInterFace::ViceInterface()
 	{
-		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
-
-		float scale = mUIScale;
-#if defined(__ANDROID__)
-		float btnScale = 1.5f;
-#else
-		float btnScale = 1.0f;
-#endif
-		float btnW = 420.0f * scale * btnScale;
-		float btnH = 60.0f * scale * btnScale;
-		float spacing = 16.0f * scale;
-		float normalFontScale = Global::FontZoomRatio * scale;
+		auto layout = GetButtonLayout();
+		float btnW = layout.btnW;
+		float btnH = layout.btnH;
+		float spacing = layout.spacing;
 
 		int numButtons = 4;
 		float totalH = (btnH + spacing) * numButtons - spacing;
@@ -398,15 +426,7 @@ namespace GAME {
 		float startX = (Global::mWidth - btnW) * 0.5f;
 		float startY = (Global::mHeight - totalH) * 0.5f;
 
-		ImGui::SetNextWindowBgAlpha(0.0f);
-		ImGui::Begin(u8"##vice", NULL,
-			ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove
-		);
-		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
-		ImGui::SetWindowFontScale(normalFontScale);
+		BeginFullscreenPanel(u8"##vice", layout.normalFontScale);
 
 		float curY = startY;
 
@@ -444,18 +464,10 @@ namespace GAME {
 	}
 
 	void ImGuiInterFace::MultiplePeopleInterface() {
-		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
-
-		float scale = mUIScale;
-#if defined(__ANDROID__)
-		float btnScale = 1.5f;
-#else
-		float btnScale = 1.0f;
-#endif
-		float btnW = 420.0f * scale * btnScale;
-		float btnH = 60.0f * scale * btnScale;
-		float spacing = 16.0f * scale;
-		float normalFontScale = Global::FontZoomRatio * scale;
+		auto layout = GetButtonLayout();
+		float btnW = layout.btnW;
+		float btnH = layout.btnH;
+		float spacing = layout.spacing;
 
 		int numButtons = 3;
 		float totalH = (btnH + spacing) * numButtons - spacing;
@@ -463,15 +475,7 @@ namespace GAME {
 		float startX = (Global::mWidth - btnW) * 0.5f;
 		float startY = (Global::mHeight - totalH) * 0.5f;
 
-		ImGui::SetNextWindowBgAlpha(0.0f);
-		ImGui::Begin(u8"##multi", NULL,
-			ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove
-		);
-		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(Global::mWidth, Global::mHeight));
-		ImGui::SetWindowFontScale(normalFontScale);
+		BeginFullscreenPanel(u8"##multi", layout.normalFontScale);
 
 		float curY = startY;
 
@@ -509,7 +513,8 @@ namespace GAME {
 	void ImGuiInterFace::SetInterface() {
 		static int SetServerPort;
 		static int SetClientPort;
-		static char SetClientIP[16];
+		// 缓冲区扩大到 64，支持 IPv6/长主机名，避免溢出风险
+		static char SetClientIP[64];
 		static bool SetVulKanValidationLayer;
 		static bool SetMonitor;
 		static bool SetFullScreen;
@@ -545,7 +550,11 @@ namespace GAME {
 			SetFullScreen = Global::FullScreen;
 			SetServerPort = Global::ServerPort;
 			SetClientPort = Global::ClientPort;
-			memcpy(SetClientIP, Global::ClientIP.c_str(), Global::ClientIP.size());
+			// 安全拷贝：限制长度并保证 null 终止
+			size_t copyLen = Global::ClientIP.size() < sizeof(SetClientIP) - 1
+				? Global::ClientIP.size() : sizeof(SetClientIP) - 1;
+			memcpy(SetClientIP, Global::ClientIP.c_str(), copyLen);
+			SetClientIP[copyLen] = '\0';
 			SetVulKanValidationLayer = Global::VulKanValidationLayer;
 			SetFontZoomRatio = Global::FontZoomRatio;
 			SetMonitor = Global::Monitor;
@@ -605,7 +614,7 @@ namespace GAME {
 		ImGui::DragInt(u8"服务器端口", &SetServerPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None);
 		HelpMarker2(u8"玩家开设在本地的服务器端口");
 		ImGui::Spacing();
-		ImGui::InputText(u8"客户端链接IP", SetClientIP, 16, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters);
+		ImGui::InputText(u8"客户端链接IP", SetClientIP, sizeof(SetClientIP), ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters);
 		HelpMarker2(u8"玩家链接服务器IP");
 		ImGui::Spacing();
 		ImGui::DragInt(u8"客户端链接端口", &SetClientPort, 0.5f, 0, 65535, "%d", ImGuiSliderFlags_None);
@@ -832,9 +841,13 @@ namespace GAME {
 
 		float scale = mUIScale;
 
-		ImGuiStyle& style = ImGui::GetStyle();
-		style.WindowBorderSize = 0.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 0.0f;
+		// 用 PushStyleVar/PushStyleColor 替代直接修改全局 style，确保异常安全且自动恢复正确值
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		{
+			ImVec4 bg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+			bg.w = 0.0f;
+			ImGui::PushStyleColor(ImGuiCol_WindowBg, bg);
+		}
 
 		ImGui::Begin(u8"控制台 ", NULL,
 			ImGuiWindowFlags_NoTitleBar |
@@ -906,16 +919,20 @@ namespace GAME {
 
 		ImGui::End();
 
-		style.WindowBorderSize = 1.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+		ImGui::PopStyleColor();
+		ImGui::PopStyleVar();
 	}
 
 	void ImGuiInterFace::DisplayTextS() {
 		float scale = mUIScale;
 
-		ImGuiStyle& style = ImGui::GetStyle();
-		style.WindowBorderSize = 0.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 0.0f;
+		// 用 PushStyleVar/PushStyleColor 替代直接修改全局 style，确保异常安全且自动恢复正确值
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		{
+			ImVec4 bg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+			bg.w = 0.0f;
+			ImGui::PushStyleColor(ImGuiCol_WindowBg, bg);
+		}
 
 		ImGui::Begin(u8"TEXT ", NULL,
 			ImGuiWindowFlags_NoTitleBar |
@@ -944,8 +961,9 @@ namespace GAME {
 		}
 
 		ImGui::End();
-		style.WindowBorderSize = 1.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+
+		ImGui::PopStyleColor();
+		ImGui::PopStyleVar();
 	}
 
 	void ImGuiInterFace::ImGuiShowFPS() {

@@ -144,8 +144,8 @@ namespace PhysicsBlock
          * @param y_ 起始Y坐标（世界坐标）
          * @param w_ 结束X坐标（世界坐标）
          * @param h_ 结束Y坐标（世界坐标）
-         * @return 轮廓点向量 */
-        std::vector<MapOutline> GetLightweightOutline(int x_, int y_, int w_, int h_);
+         * @param Outline 轮廓点向量 */
+        void GetLightweightOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline);
 
         /**
          * @brief 获取完整轮廓
@@ -153,8 +153,17 @@ namespace PhysicsBlock
          * @param y_ 起始Y坐标（世界坐标）
          * @param w_ 结束X坐标（世界坐标）
          * @param h_ 结束Y坐标（世界坐标）
-         * @return 轮廓点向量 */
-        std::vector<MapOutline> GetOutline(int x_, int y_, int w_, int h_);
+         * @param Outline 轮廓点向量 */
+        void GetOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline);
+
+        /**
+         * @brief 更新外轮廓点集合（最小版）
+         * @param x_ 起始X坐标
+         * @param y_ 起始Y坐标
+         * @param w_ 结束X坐标
+         * @param h_ 结束Y坐标
+         * @param Outline 轮廓点向量 */
+        void GetMinOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline);
 
         /*=========MapFormwork=========*/
 
@@ -214,8 +223,9 @@ namespace PhysicsBlock
          * @brief 获取地图模拟场中心位置
          * @return 中心位置坐标 */
         virtual Vec2_ FMGetCentrality() override { return {0, 0}; }
-        virtual std::vector<MapOutline> FMGetLightweightOutline(int x_, int y_, int w_, int h_) override { return GetLightweightOutline(x_, y_, w_, h_); }
-        virtual std::vector<MapOutline> FMGetOutline(int x_, int y_, int w_, int h_) override { return GetOutline(x_, y_, w_, h_); }
+        virtual void FMGetMinOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline) override { GetMinOutline(x_, y_, w_, h_, Outline); }
+        virtual void FMGetLightweightOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline) override { GetLightweightOutline(x_, y_, w_, h_, Outline); }
+        virtual void FMGetOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline) override { GetOutline(x_, y_, w_, h_, Outline); }
 
         /**
          * @brief 安全设置碰撞状态（带边界检查）

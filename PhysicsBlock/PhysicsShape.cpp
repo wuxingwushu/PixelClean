@@ -80,7 +80,7 @@ namespace PhysicsBlock
             {
                 i = x * height + y;
                 // 不为空
-                if (at(i).type & GridBlockType::Entity)
+                if (at(i).Entity)
                 {
                     mass += at(i).mass;
                     ++Size;

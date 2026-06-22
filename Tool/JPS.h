@@ -1,5 +1,9 @@
 #pragma once
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 #define JPS_MemoryPool
 //#include <set>
 #ifdef JPS_MemoryPool// 开启  内存池
@@ -30,9 +34,9 @@ struct JPSVec2 {
         return *this;
     }
 
-    inline constexpr JPSVec2 operator+(const JPSVec2& other) noexcept
+    inline constexpr JPSVec2 operator+(const JPSVec2& other) const noexcept
     {
-        return { x += other.x, y += other.y };
+        return { x + other.x, y + other.y };
     }
 
     inline constexpr JPSVec2& operator-=(const JPSVec2& other) noexcept
@@ -42,17 +46,17 @@ struct JPSVec2 {
         return *this;
     }
 
-    inline constexpr JPSVec2 operator-(const JPSVec2& other) noexcept
+    inline constexpr JPSVec2 operator-(const JPSVec2& other) const noexcept
     {
         return { x - other.x, y - other.y };
     }
 
-    inline constexpr bool operator!=(const JPSVec2& other) noexcept
+    inline constexpr bool operator!=(const JPSVec2& other) const noexcept
     {
         return (x != other.x) || (y != other.y);
     }
 
-    inline constexpr bool operator==(const JPSVec2& other) noexcept
+    inline constexpr bool operator==(const JPSVec2& other) const noexcept
     {
         return (x == other.x) && (y == other.y);
     }
@@ -93,11 +97,14 @@ struct NodeData : public JPSVec2
 };
 
 struct NodeDataHash {
-    inline std::size_t operator()(const NodeData& node) const {
+    inline std::size_t operator()(const NodeData& node) const noexcept {
         std::size_t h1 = std::hash<int>{}(node.x);
         std::size_t h2 = std::hash<int>{}(node.y);
         std::size_t h3 = std::hash<int>{}(static_cast<int>(node.Direction));
-        return h3 + (h2 << 1) + (h1 << 2);
+        // 使用 hash_combine 模式减少碰撞
+        h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
+        h1 ^= h3 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
+        return h1;
     }
 };
 
@@ -117,7 +124,7 @@ public:
     JPSVec2 StartingPoint = { 0,0 };                //开始位置（也是偏移值）
 private:
     const int mRange = 0;                           //范围
-    const int mSteps = 0;                           //最大步数
+    [[maybe_unused]] const int mSteps = 0;          //最大步数
     bool mPathfindingCompleted = true;              //寻路是否结束
     typedef bool (*_ObstaclesCallback)(int x, int y, void* ptr);
     _ObstaclesCallback mObstaclesCallback = nullptr;    //是否为障碍物回调函数
@@ -129,7 +136,7 @@ private:
 #endif
 public:
     //位置是否合法
-    inline bool Legitimacy(int x, int y) {
+    inline bool Legitimacy(int x, int y) const {
         if (x >= -mRange && x < mRange && y >= -mRange && y < mRange) { return true; }
         else { return false; }
     }
@@ -143,11 +150,11 @@ private:
     }
 
     //计算代价
-    inline int calculateH(int x, int y) {
-        return fabs(x - TargetPosition.x) + fabs(y - TargetPosition.y);
+    inline int calculateH(int x, int y) const {
+        return std::abs(x - TargetPosition.x) + std::abs(y - TargetPosition.y);
     }
-    inline int calculateH(JPSVec2 pos) {
-        return fabs(pos.x - TargetPosition.x) + fabs(pos.y - TargetPosition.x);
+    inline int calculateH(JPSVec2 pos) const {
+        return std::abs(pos.x - TargetPosition.x) + std::abs(pos.y - TargetPosition.y);
     }
 
     //创建JPSNode
@@ -178,33 +185,25 @@ private:
     }
 
     //方向的偏移
-    JPSVec2 GetProgramme(JPSDirection Direction) {
+    static inline constexpr JPSVec2 GetProgramme(JPSDirection Direction) noexcept {
         switch (Direction)
         {
         case JPSDirection::Upper:
             return JPSVec2{ 0, 1 };
-            break;
         case JPSDirection::Lower:
             return JPSVec2{ 0, -1 };
-            break;
         case JPSDirection::Left:
             return JPSVec2{ -1, 0 };
-            break;
         case JPSDirection::Right:
             return JPSVec2{ 1, 0 };
-            break;
         case JPSDirection::UpperLeft:
             return JPSVec2{ -1, 1 };
-            break;
         case JPSDirection::LowerLeft:
             return JPSVec2{ -1, -1 };
-            break;
         case JPSDirection::UpperRight:
             return JPSVec2{ 1, 1 };
-            break;
         case JPSDirection::LowerRight:
             return JPSVec2{ 1, -1 };
-            break;
         default:
             break;
         }
@@ -217,28 +216,20 @@ private:
         {
         case JPSDirection::Upper:
             return isValid(pos.x, pos.y + 1);
-            break;
         case JPSDirection::Lower:
             return isValid(pos.x, pos.y - 1);
-            break;
         case JPSDirection::Left:
             return isValid(pos.x - 1, pos.y);
-            break;
         case JPSDirection::Right:
             return isValid(pos.x + 1, pos.y);
-            break;
         case JPSDirection::UpperLeft:
             return (isValid(pos.x - 1, pos.y) || isValid(pos.x, pos.y + 1)) && isValid(pos.x - 1, pos.y + 1);
-            break;
         case JPSDirection::LowerLeft:
             return (isValid(pos.x - 1, pos.y) || isValid(pos.x, pos.y - 1)) && isValid(pos.x - 1, pos.y - 1);
-            break;
         case JPSDirection::UpperRight:
             return (isValid(pos.x + 1, pos.y) || isValid(pos.x, pos.y + 1)) && isValid(pos.x + 1, pos.y + 1);
-            break;
         case JPSDirection::LowerRight:
             return (isValid(pos.x + 1, pos.y) || isValid(pos.x, pos.y - 1)) && isValid(pos.x + 1, pos.y - 1);
-            break;
         default:
             break;
         }
@@ -359,15 +350,15 @@ private:
     }
 
     //添加邻近点
-    JPSNode* AddSkipPoint(JPSVec2 posd, JPSNode* ParentD, std::vector<JPSNode*> Skip, JPSDirection Direction) {
+    JPSNode* AddSkipPoint(JPSVec2 posd, JPSNode* ParentD, const std::vector<JPSNode*>& Skip, JPSDirection Direction) {
         if (Skip.size() != 0 && Scanning) {
             Scanning = false;
             JPSVec2 LSpos = CurrentPosition - GetProgramme(ParentD->Direction);
             JPSNode* jiao = NewJPSNode(LSpos, 0, calculateH(posd), ParentD, ParentD->Direction);
             ParentD->pChild.push_back(jiao);
             JPSVec2 LSpos2 = LSpos - posd;
-            if (fabs(LSpos2.x) > 1 || fabs(LSpos2.y) > 1) {
-                if (fabs(LSpos2.x) > 1) {
+            if (std::abs(LSpos2.x) > 1 || std::abs(LSpos2.y) > 1) {
+                if (std::abs(LSpos2.x) > 1) {
                     ParentD = NewJPSNode({ LSpos.x + (LSpos2.x < 0 ? 1 : -1), posd.y }, 1, calculateH(LSpos.x + (LSpos2.x < 0 ? 1 : -1), posd.y), jiao, Direction);
                 }
                 else {
@@ -406,7 +397,7 @@ private:
         if (!isValid(pos.x - 1, pos.y) && isValid(pos.x - 1, pos.y + 1))//左上强制邻近点
         {
             if (RepeatJudge.find({ pos, JPSDirection::UpperLeft }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x - 1, pos.y + 1);
+                int newH = calculateH(pos.x - 1, pos.y + 1);
                 LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::UpperLeft));
                 RepeatJudge.insert({ pos, JPSDirection::UpperLeft });
             }
@@ -414,7 +405,7 @@ private:
         if (!isValid(pos.x + 1, pos.y) && isValid(pos.x + 1, pos.y + 1))//右上强制邻近点
         {
             if (RepeatJudge.find({ pos, JPSDirection::UpperRight }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x + 1, pos.y + 1);
+                int newH = calculateH(pos.x + 1, pos.y + 1);
                 LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::UpperRight));
                 RepeatJudge.insert({ pos, JPSDirection::UpperRight });
             }
@@ -442,7 +433,7 @@ private:
         if (!isValid(pos.x - 1, pos.y) && isValid(pos.x - 1, pos.y - 1))//左下强制邻近点
         {
             if (RepeatJudge.find({ pos, JPSDirection::LowerLeft }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x - 1, pos.y - 1);
+                int newH = calculateH(pos.x - 1, pos.y - 1);
                 LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::LowerLeft));
                 RepeatJudge.insert({ pos, JPSDirection::LowerLeft });
             }
@@ -450,7 +441,7 @@ private:
         if (!isValid(pos.x + 1, pos.y) && isValid(pos.x + 1, pos.y - 1))//右下强制邻近点
         {
             if (RepeatJudge.find({ pos, JPSDirection::LowerRight }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x + 1, pos.y - 1);
+                int newH = calculateH(pos.x + 1, pos.y - 1);
                 LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::LowerRight));
                 RepeatJudge.insert({ pos, JPSDirection::LowerRight });
             }
@@ -472,7 +463,7 @@ private:
         if (!isValid(pos.x, pos.y - 1) && isValid(pos.x - 1, pos.y - 1))//左下强制邻近点
         {
             if (RepeatJudge.find({ pos, JPSDirection::LowerLeft }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x - 1, pos.y - 1);
+                int newH = calculateH(pos.x - 1, pos.y - 1);
                 LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::LowerLeft));
                 RepeatJudge.insert({ pos, JPSDirection::LowerLeft });
             }
@@ -480,7 +471,7 @@ private:
         if (!isValid(pos.x, pos.y + 1) && isValid(pos.x - 1, pos.y + 1))//左上强制邻近点
         {
             if (RepeatJudge.find({ pos, JPSDirection::UpperLeft }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x - 1, pos.y + 1);
+                int newH = calculateH(pos.x - 1, pos.y + 1);
                 LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::UpperLeft));
                 RepeatJudge.insert({ pos, JPSDirection::UpperLeft });
             }
@@ -502,7 +493,7 @@ private:
         if (!isValid(pos.x, pos.y - 1) && isValid(pos.x + 1, pos.y - 1))//右下强制邻近点
         {
             if (RepeatJudge.find({ pos, JPSDirection::LowerRight }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x + 1, pos.y - 1);
+                int newH = calculateH(pos.x + 1, pos.y - 1);
                 LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::LowerRight));
                 RepeatJudge.insert({ pos, JPSDirection::LowerRight });
             }
@@ -510,7 +501,7 @@ private:
         if (!isValid(pos.x, pos.y + 1) && isValid(pos.x + 1, pos.y + 1))//右上强制邻近点
         {
             if (RepeatJudge.find({ pos, JPSDirection::UpperRight }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x + 1, pos.y + 1);
+                int newH = calculateH(pos.x + 1, pos.y + 1);
                 LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::UpperRight));
                 RepeatJudge.insert({ pos, JPSDirection::UpperRight });
             }
@@ -556,7 +547,7 @@ public:
     }
 
     //获取寻路是否结束
-    bool GetPathfindingCompleted() {
+    bool GetPathfindingCompleted() const {
         return mPathfindingCompleted;
     }
 

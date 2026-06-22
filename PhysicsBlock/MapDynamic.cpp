@@ -252,87 +252,123 @@ namespace PhysicsBlock
         return FMBresenhamDetection(start, end);
     }
 
-    std::vector<MapOutline> MapDynamic::GetLightweightOutline(int x_, int y_, int w_, int h_)
+    void MapDynamic::GetLightweightOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline)
     {
-        std::vector<MapOutline> Outline;
-
         for (int x = x_; x < w_; ++x)
         {
             for (int y = y_; y < h_; ++y)
             {
-                if (!at(x, y).Entity)
+                if (!at(x, y).Collision)
                 {
                     continue;
                 }
-                if (!at(x - 1, y - 1).Entity)
+                if (!at(x - 1, y - 1).Collision)
                 {
-                    if (at(x - 1, y).Entity == at(x, y - 1).Entity)
+                    if (at(x - 1, y).Collision == at(x, y - 1).Collision)
                     {
                         Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
                     }
                 }
-                else if (!at(x - 1, y).Entity || !at(x, y - 1).Entity)
+                else if (!at(x - 1, y).Collision || !at(x, y - 1).Collision)
                 {
                     Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
                 }
-                if (!at(x, y + 1).Entity)
+                if (!at(x, y + 1).Collision)
                 {
-                    if (!(at(x - 1, y).Entity && !at(x - 1, y + 1).Entity))
+                    if (!(at(x - 1, y).Collision && !at(x - 1, y + 1).Collision))
                     {
                         Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
                     }
                 }
-                if (!at(x + 1, y).Entity)
+                if (!at(x + 1, y).Collision)
                 {
-                    if ((!at(x, y - 1).Entity && !at(x + 1, y - 1).Entity))
+                    if ((!at(x, y - 1).Collision && !at(x + 1, y - 1).Collision))
                     {
                         Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
                     }
                 }
-                if (!at(x + 1, y + 1).Entity)
+                if (!at(x + 1, y + 1).Collision)
                 {
-                    if ((at(x + 1, y).Entity == at(x, y + 1).Entity) && !at(x + 1, y).Entity)
+                    if ((at(x + 1, y).Collision == at(x, y + 1).Collision) && !at(x + 1, y).Collision)
                     {
                         Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
                     }
                 }
             }
         }
-        return Outline;
     }
 
-    std::vector<MapOutline> MapDynamic::GetOutline(int x_, int y_, int w_, int h_)
+    void MapDynamic::GetOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline)
     {
-        std::vector<MapOutline> Outline;
-
         for (int x = x_; x < w_; ++x)
         {
             for (int y = y_; y < h_; ++y)
             {
-                if (!at(x, y).Entity)
+                if (!at(x, y).Collision)
                 {
                     continue;
                 }
 
-                if (!at(x - 1, y).Entity || !at(x, y - 1).Entity || !at(x - 1, y - 1).Entity)
+                if (!at(x - 1, y).Collision || !at(x, y - 1).Collision || !at(x - 1, y - 1).Collision)
                 {
                     Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
                 }
-                if (!at(x, y + 1).Entity)
+                if (!at(x, y + 1).Collision)
                 {
                     Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
                 }
-                if (!(at(x + 1, y - 1).Entity || at(x + 1, y).Entity))
+                if (!(at(x + 1, y - 1).Collision || at(x + 1, y).Collision))
                 {
                     Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
                 }
-                if (!(at(x + 1, y).Entity || at(x + 1, y + 1).Entity || at(x, y + 1).Entity))
+                if (!(at(x + 1, y).Collision || at(x + 1, y + 1).Collision || at(x, y + 1).Collision))
                 {
                     Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
                 }
             }
         }
-        return Outline;
+    }
+
+    void MapDynamic::GetMinOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline)
+    {
+        for (int x = x_; x < w_; ++x)
+        {
+            for (int y = y_; y < h_; ++y)
+            {
+                if (!at(x, y).Collision)
+                {
+                    continue;
+                }
+
+                // 左上角
+                if (!at(x - 1, y - 1).Collision)
+                {
+                    if (!at(x - 1, y).Collision && !at(x, y - 1).Collision)
+                    {
+                        Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
+                    }
+                }
+                // 左下角
+                if (!at(x - 1, y + 1).Collision) {
+                    if (!at(x - 1, y).Collision && !at(x, y + 1).Collision) {
+                        Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
+                    }
+                }
+                // 右上角
+                if (!at(x + 1, y - 1).Collision) {
+                    if (!at(x, y - 1).Collision && !at(x + 1, y).Collision) {
+                        Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
+                    }
+                }
+                // 右下角
+                if (!at(x + 1, y + 1).Collision) {
+                    if (!at(x + 1, y).Collision && !at(x, y + 1).Collision)
+                    {
+                        Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -345,7 +381,7 @@ namespace PhysicsBlock
         if (block.Collision != state) {
             block.Collision = state;
             if (!state) {
-                block.Entity = false;
+                block.Collision = false;
                 block.Healthpoint = 0;
             }
             // 通知碰撞状态变化（通过 MapFormwork 桥接器转发到 PhysicsCollision）

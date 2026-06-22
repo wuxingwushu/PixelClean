@@ -73,7 +73,7 @@ namespace PhysicsBlock
          * @param w_ 结束X坐标（世界坐标）
          * @param h_ 结束Y坐标（世界坐标）
          * @return 轮廓点向量 */
-        virtual std::vector<MapOutline> FMGetLightweightOutline(int x_, int y_, int w_, int h_) { return {}; }
+        virtual void FMGetLightweightOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline) { }
 
         /**
          * @brief 获取完整轮廓
@@ -82,7 +82,9 @@ namespace PhysicsBlock
          * @param w_ 结束X坐标（世界坐标）
          * @param h_ 结束Y坐标（世界坐标）
          * @return 轮廓点向量 */
-        virtual std::vector<MapOutline> FMGetOutline(int x_, int y_, int w_, int h_) { return {}; }
+        virtual void FMGetOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline) { }
+
+        virtual void FMGetMinOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline) { }
 
         /**
          * @brief 地图 线段(Bresenham) 检测

@@ -88,14 +88,12 @@ namespace PhysicsBlock
      * 4. 返回轮廓点向量
      * @note 轻量级轮廓，只返回部分关键点，减少计算量
      */
-    std::vector<MapOutline> MapStatic::GetLightweightOutline(int x_, int y_, int w_, int h_)
+    void MapStatic::GetLightweightOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline)
     {
         x_ += centrality.x;
         y_ += centrality.y;
         w_ += centrality.x;
         h_ += centrality.y;
-
-        std::vector<MapOutline> Outline;
 
         for (int x = x_; x < w_; ++x)
         {
@@ -143,7 +141,6 @@ namespace PhysicsBlock
                 }
             }
         }
-        return Outline;
     }
 
     /**
@@ -159,14 +156,12 @@ namespace PhysicsBlock
      * 4. 返回轮廓点向量
      * @note 返回所有轮廓点，比轻量级轮廓更完整
      */
-    std::vector<MapOutline> MapStatic::GetOutline(int x_, int y_, int w_, int h_)
+    void MapStatic::GetOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline)
     {
         x_ += centrality.x;
         y_ += centrality.y;
         w_ += centrality.x;
         h_ += centrality.y;
-
-        std::vector<MapOutline> Outline;
 
         for (int x = x_; x < w_; ++x)
         {
@@ -199,7 +194,52 @@ namespace PhysicsBlock
                 }
             }
         }
-        return Outline;
+    }
+
+    void MapStatic::GetMinOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline){
+        x_ += centrality.x;
+        y_ += centrality.y;
+        w_ += centrality.x;
+        h_ += centrality.y;
+
+        for (int x = x_; x < w_; ++x)
+        {
+            for (int y = y_; y < h_; ++y)
+            {
+                if (!GetCollision(x, y))
+                {
+                    continue;
+                }
+
+                // 左上角
+                if (!GetCollision(x - 1, y - 1))
+                {
+                    if (!GetCollision(x - 1, y) && !GetCollision(x, y - 1))
+                    {
+                        Outline.push_back({Vec2_{x, y}, Vec2_{-1, -1}, at(x, y).FrictionFactor});
+                    }
+                }
+                // 左下角
+                if (!GetCollision(x - 1, y + 1)) {
+                    if (!GetCollision(x - 1, y) && !GetCollision(x, y + 1)) {
+                        Outline.push_back({Vec2_{x, y + 1}, Vec2_{-1, 1}, at(x, y).FrictionFactor});
+                    }
+                }
+                // 右上角
+                if (!GetCollision(x + 1, y - 1)) {
+                    if (!GetCollision(x, y - 1) && !GetCollision(x + 1, y)) {
+                        Outline.push_back({Vec2_{x + 1, y}, Vec2_{1, -1}, at(x, y).FrictionFactor});
+                    }
+                }
+                // 右下角
+                if (!GetCollision(x + 1, y + 1)) {
+                    if (!GetCollision(x + 1, y) && !GetCollision(x, y + 1))
+                    {
+                        Outline.push_back({Vec2_{x + 1, y + 1}, Vec2_{1, 1}, at(x, y).FrictionFactor});
+                    }
+                }
+            }
+        }
     }
 
     bool MapStatic::SafeSetCollision(glm::ivec2 pos, bool state)
@@ -210,7 +250,7 @@ namespace PhysicsBlock
         if (block.Collision != state) {
             block.Collision = state;
             if (!state) {
-                block.Entity = false;
+                block.Collision = false;
                 block.Healthpoint = 0;
             }
             if (mCollisionChangeNotifier) {

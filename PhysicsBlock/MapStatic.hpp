@@ -73,25 +73,30 @@ namespace PhysicsBlock
 
         /**
          * @brief 获取轻量级轮廓
-         * @param x_ 起始X坐标
-         * @param y_ 起始Y坐标
-         * @param w_ 结束X坐标
-         * @param h_ 结束Y坐标
-         * @return 轮廓点向量
-         * @note 轻量级轮廓，只返回部分关键点
-         */
-        std::vector<MapOutline> GetLightweightOutline(int x_, int y_, int w_, int h_);
+         * @param x_ 起始X坐标（世界坐标）
+         * @param y_ 起始Y坐标（世界坐标）
+         * @param w_ 结束X坐标（世界坐标）
+         * @param h_ 结束Y坐标（世界坐标）
+         * @param Outline 轮廓点向量 */
+        void GetLightweightOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline);
 
         /**
          * @brief 获取完整轮廓
+         * @param x_ 起始X坐标（世界坐标）
+         * @param y_ 起始Y坐标（世界坐标）
+         * @param w_ 结束X坐标（世界坐标）
+         * @param h_ 结束Y坐标（世界坐标）
+         * @param Outline 轮廓点向量 */
+        void GetOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline);
+
+        /**
+         * @brief 更新外轮廓点集合（最小版）
          * @param x_ 起始X坐标
          * @param y_ 起始Y坐标
          * @param w_ 结束X坐标
          * @param h_ 结束Y坐标
-         * @return 轮廓点向量
-         * @note 返回所有轮廓点
-         */
-        std::vector<MapOutline> GetOutline(int x_, int y_, int w_, int h_);
+         * @param Outline 轮廓点向量 */
+        void GetMinOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline);
 
         /*=========MapFormwork=========*/
 
@@ -163,8 +168,9 @@ namespace PhysicsBlock
         virtual CollisionInfoI FMSafeBresenhamDetection(glm::ivec2 start, glm::ivec2 end);
 
         virtual Vec2_ FMGetCentrality() override { return centrality; }
-        virtual std::vector<MapOutline> FMGetLightweightOutline(int x_, int y_, int w_, int h_) override { return GetLightweightOutline(x_, y_, w_, h_); }
-        virtual std::vector<MapOutline> FMGetOutline(int x_, int y_, int w_, int h_) override { return GetOutline(x_, y_, w_, h_); }
+        virtual void FMGetMinOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline) override { GetMinOutline(x_, y_, w_, h_, Outline); }
+        virtual void FMGetLightweightOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline) override { GetLightweightOutline(x_, y_, w_, h_, Outline); }
+        virtual void FMGetOutline(int x_, int y_, int w_, int h_, std::vector<MapOutline>& Outline) override { GetOutline(x_, y_, w_, h_, Outline); }
 
         virtual bool SafeSetCollision(glm::ivec2 pos, bool state) override;
         virtual void SetFriction(int x, int y, FLOAT_ friction) override;

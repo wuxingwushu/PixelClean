@@ -326,11 +326,13 @@ namespace PhysicsBlock
         // 获取形状包围盒范围内的地形轻量轮廓（减少检测量），反向检测地形的棱角是否穿透形状
         int KD = 1;
         Vec2_ mapCentrality = Map->FMGetCentrality();
-        std::vector<MapOutline> Outline = Map->FMGetLightweightOutline(
+        std::vector<MapOutline> Outline;
+        Map->FMGetMinOutline(
             ToInt(Shape->pos.x - Shape->radius) - KD,
             ToInt(Shape->pos.y - Shape->radius) - KD,
             ToInt(Shape->pos.x + Shape->radius) + KD,
-            ToInt(Shape->pos.y + Shape->radius) + KD);
+            ToInt(Shape->pos.y + Shape->radius) + KD,
+            Outline);
 
         for (size_t i = 0; i < Outline.size(); ++i)
         {
@@ -462,11 +464,13 @@ namespace PhysicsBlock
         // 获取圆形包围盒范围内的地形轻量轮廓，判断每个轮廓点到圆心的距离是否小于半径
         int KD = 2;
         Vec2_ mapCentrality = Map->FMGetCentrality();
-        std::vector<MapOutline> Outline = Map->FMGetLightweightOutline(
+        std::vector<MapOutline> Outline;
+        Map->FMGetMinOutline(
             ToInt(Circle->pos.x - Circle->radius) - KD,
             ToInt(Circle->pos.y - Circle->radius) - KD,
             ToInt(Circle->pos.x + Circle->radius) + KD,
-            ToInt(Circle->pos.y + Circle->radius) + KD);
+            ToInt(Circle->pos.y + Circle->radius) + KD,
+            Outline);
 
         FLOAT_ L;
         for (auto d : Outline)
@@ -923,11 +927,13 @@ namespace PhysicsBlock
         // 获取线段包围盒范围内的地形轻量轮廓，用地形的轮廓边与线段做相交测试
         int KD = 2;
         Vec2_ mapCentrality = Map->FMGetCentrality();
-        std::vector<MapOutline> Outline = Map->FMGetLightweightOutline(
+        std::vector<MapOutline> Outline;
+        Map->FMGetMinOutline(
             ToInt(Line->pos.x - Line->radius) - KD,
             ToInt(Line->pos.y - Line->radius) - KD,
             ToInt(Line->pos.x + Line->radius) + KD,
-            ToInt(Line->pos.y + Line->radius) + KD);
+            ToInt(Line->pos.y + Line->radius) + KD,
+            Outline);
 
         FLOAT_ L;
         Vec2_ beginDian;

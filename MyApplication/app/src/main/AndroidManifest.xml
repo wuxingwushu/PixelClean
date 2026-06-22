@@ -25,6 +25,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTask"
             android:configChanges="orientation|keyboardHidden|screenSize|screenLayout"
             android:exported="true"
             android:screenOrientation="landscape">

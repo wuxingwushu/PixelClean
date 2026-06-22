@@ -1032,6 +1032,9 @@ void BlockWorld::KeyDown(GameKeyEnum moveDirection) {
 // ============================================================================
 
 void BlockWorld::GameCommandBuffers(unsigned int Format_i) {
+    // 越界保护：Android 端 imageCount 可能与 MAX_FRAMES_IN_FLIGHT 不同
+    if (Format_i >= mSwapChain->getImageCount()) return;
+
     if (mBlockCommandBuffers) {
         wThreadCommandBufferS->push_back(
             mBlockCommandBuffers[Format_i]->getCommandBuffer());
@@ -1071,6 +1074,9 @@ void BlockWorld::GameLoop(unsigned int /*mCurrentFrame*/) {
         RebuildAllVertexData();
         // 顶点数据变化后必须重新录制二级指令缓冲
         RecordBlockWorldCommandBuffers();
+        // 请求重录主指令缓冲：二级 CB 已更新，缓存的主 CB 必须重新录制
+        // 才能正确引用新的二级 CB 内容（否则安卓端会因主 CB 缓存导致地形闪烁）
+        Global::MainCommandBufferUpdateRequest();
     }
 
     mCamera->update();

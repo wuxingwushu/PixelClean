@@ -1,6 +1,6 @@
 #pragma once
 #include "GamePlayer.h"
-#include "NPC.h"
+#include "NPCGOBT.h"
 #include "../Tool/ContinuousData.h"
 #include <event2/util.h>
 #include "../Arms/Arms.h"
@@ -46,7 +46,7 @@ namespace GAME {
 		// 遍历所有 NPC 对应的 GamePlayer（用于爆炸/范围伤害判定）
 		template <typename Fn>
 		void ForEachPlayer(Fn&& fn) {
-			NPC** data = mNPCS->GetData();
+			NPCGOBT** data = mNPCS->GetData();
 			for (size_t i = 0; i < mNPCS->GetNumber(); ++i) {
 				GamePlayer* gp = data[i] ? data[i]->GetGamePlayer() : nullptr;
 				if (gp) fn(gp);
@@ -71,7 +71,7 @@ namespace GAME {
 			MapPlayerS->UpDataWholeTime();
 		}
 
-		NPC* GetNPC(evutil_socket_t key);
+		NPCGOBT* GetNPC(evutil_socket_t key);
 
 		//只有 客户端才要 检测 NPC 超时
 		void NPCTimeoutDetection() {
@@ -105,7 +105,7 @@ namespace GAME {
 		ContinuousMap<evutil_socket_t, GamePlayer*>* MapPlayerS = nullptr;//玩家映射
 
 		unsigned int NPCID = 0;//分配 NPC ID
-		ContinuousMap<evutil_socket_t, NPC*>* mNPCS = nullptr;//NPC映射
+		ContinuousMap<evutil_socket_t, NPCGOBT*>* mNPCS = nullptr;//NPC映射
 
 		PhysicsBlock::PhysicsWorld* mSquarePhysics = nullptr;//物理
 

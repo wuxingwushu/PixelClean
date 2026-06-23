@@ -18,7 +18,7 @@ namespace GAME {
 	}
 
 
-	bool NPCTimeoutCrowd(NPC* x, void* data) {
+	bool NPCTimeoutCrowd(NPCGOBT* x, void* data) {
 		std::cout << "Timeout Player, 超时 NPC" << std::endl;
 		delete x;
 		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
@@ -47,7 +47,7 @@ namespace GAME {
 		NPCID = size;
 		MapPlayerS = new ContinuousMap<evutil_socket_t, GamePlayer*>(size, ContinuousMap_Timeout);
 
-		mNPCS = new ContinuousMap<evutil_socket_t, NPC*>(100, ContinuousMap_Timeout);
+		mNPCS = new ContinuousMap<evutil_socket_t, NPCGOBT*>(100, ContinuousMap_Timeout);
 		mNPCS->SetTimeoutTime(500);
 		mNPCS->SetTimeoutCallback(NPCTimeoutCrowd, this);
 
@@ -123,8 +123,8 @@ namespace GAME {
 		}
 	}
 
-	NPC* Crowd::GetNPC(evutil_socket_t key) {
-		NPC** LGamePlayer = mNPCS->Get(key);
+	NPCGOBT* Crowd::GetNPC(evutil_socket_t key) {
+		NPCGOBT** LGamePlayer = mNPCS->Get(key);
 		if (LGamePlayer == nullptr) {//不存NPC
 			GamePlayer* LGamePlayer = new GamePlayer(mDevice, mPipeline, mSwapChain, mRenderPass, mSquarePhysics, 0, 0);
 			LGamePlayer->initUniformManager(
@@ -138,8 +138,8 @@ namespace GAME {
 			);
 			LGamePlayer->InitCommandBuffer();
 			LGamePlayer->SetKey(key);
-			NPC** LNPC = mNPCS->New(key);
-			*LNPC = new NPC(LGamePlayer, wPathfinding, wArms);
+			NPCGOBT** LNPC = mNPCS->New(key);
+			*LNPC = new NPCGOBT(LGamePlayer, wPathfinding, wArms);
 
 			Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 			return *LNPC;
@@ -165,15 +165,15 @@ namespace GAME {
 		if (wArms) {
 			wArms->RegisterTankBulletHandler(LGamePlayer);
 		}
-		NPC** LNPC = mNPCS->New(NPCID);
-		*LNPC = new NPC(LGamePlayer, wPathfinding, wArms);
+		NPCGOBT** LNPC = mNPCS->New(NPCID);
+		*LNPC = new NPCGOBT(LGamePlayer, wPathfinding, wArms);
 
 		NPCID++;
 		Global::MainCommandBufferUpdateRequest();//请求更新 MainCommandBuffer
 	}
 
 	void Crowd::NPCEvent(int Format, float time) {
-		NPC** LNPC = mNPCS->GetData();
+		NPCGOBT** LNPC = mNPCS->GetData();
 		for (size_t i = 0; i < mNPCS->GetNumber(); ++i)
 		{
 			if (LNPC[i]->GetDeathInBattle()) {

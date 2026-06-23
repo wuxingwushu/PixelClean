@@ -57,6 +57,7 @@ include_directories(
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/imgui
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/Environment/imgui/backends
 	${CMAKE_CURRENT_SOURCE_DIR}/Camera
+	${CMAKE_CURRENT_SOURCE_DIR}/GOBT
 )
 
 # Vulkan SDK configuration
@@ -124,6 +125,7 @@ add_subdirectory(BlockS)
 add_subdirectory(Audio)
 #add_subdirectory(SoundEffect)
 add_subdirectory(NetworkTCP)
+add_subdirectory(GOBT)
 add_subdirectory(Character)
 add_subdirectory(PhysicsBlock)
 add_subdirectory(Arms)

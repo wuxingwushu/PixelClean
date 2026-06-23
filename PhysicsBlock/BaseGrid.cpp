@@ -121,64 +121,56 @@ namespace PhysicsBlock
             // 计算精确碰撞位置
             FLOAT_ Difference = (end.x - start.x) / (start.y - end.y);
             FLOAT_ invDifference = 1.0 / Difference;
-            FLOAT_ val = start.x - end.x;
-            if (val < 0)
-            {
-                Collisioninfo.pos = {info.pos.x, ((end.x - info.pos.x) * invDifference) + end.y};
-                Collisioninfo.Direction = CheckDirection::Left;
-            }
-            else if (val > 0)
-            {
-                Collisioninfo.pos = {info.pos.x + 1, ((end.x - info.pos.x - 1) * invDifference) + end.y};
-                Collisioninfo.Direction = CheckDirection::Right;
-            }
-            if ((val == 0) || (Collisioninfo.pos.y < info.pos.y) || (Collisioninfo.pos.y > (info.pos.y + 1)))
-            {
-                val = start.y - end.y;
-                if (val < 0)
+            FLOAT_ valX = start.x - end.x;
+            FLOAT_ valY = start.y - end.y;
+
+            // 计算X方向碰撞点（左/右边界）
+            auto calcFromX = [&]() {
+                if (valX < 0)
+                {
+                    Collisioninfo.pos = {info.pos.x, ((end.x - info.pos.x) * invDifference) + end.y};
+                    Collisioninfo.Direction = CheckDirection::Left;
+                }
+                else if (valX > 0)
+                {
+                    Collisioninfo.pos = {info.pos.x + 1, ((end.x - info.pos.x - 1) * invDifference) + end.y};
+                    Collisioninfo.Direction = CheckDirection::Right;
+                }
+            };
+
+            // 计算Y方向碰撞点（上/下边界）
+            auto calcFromY = [&]() {
+                if (valY < 0)
                 {
                     Collisioninfo.pos = {(Difference * (end.y - info.pos.y)) + end.x, info.pos.y};
                     Collisioninfo.Direction = CheckDirection::Down;
                 }
-                else if (val > 0)
+                else if (valY > 0)
                 {
                     Collisioninfo.pos = {(Difference * (end.y - info.pos.y - 1)) + end.x, info.pos.y + 1};
                     Collisioninfo.Direction = CheckDirection::Up;
                 }
-                // 检查相邻格子是否有碰撞
+            };
+
+            // 先尝试X方向
+            calcFromX();
+
+            if ((valX == 0) || (Collisioninfo.pos.y < info.pos.y) || (Collisioninfo.pos.y > (info.pos.y + 1)))
+            {
+                // X方向无效（垂直线或交点不在格子内），改用Y方向
+                calcFromY();
+                // 检查垂直方向相邻格子是否有碰撞
                 if (GetCollision(info.pos.x, info.pos.y + (CheckDirection::Down == Collisioninfo.Direction ? -1 : 1)))
                 {
-                    val = start.x - end.x;
-                    if (val < 0)
-                    {
-                        Collisioninfo.pos = {info.pos.x, ((end.x - info.pos.x) * invDifference) + end.y};
-                        Collisioninfo.Direction = CheckDirection::Left;
-                    }
-                    else if (val > 0)
-                    {
-                        ++info.pos.x;
-                        Collisioninfo.pos = {info.pos.x, ((end.x - info.pos.x) * invDifference) + end.y};
-                        Collisioninfo.Direction = CheckDirection::Right;
-                    }
+                    calcFromX();
                 }
             }
             else
             {
-                // 检查相邻格子是否有碰撞
+                // X方向有效，检查水平方向相邻格子是否有碰撞
                 if (GetCollision(info.pos.x + (CheckDirection::Left == Collisioninfo.Direction ? -1 : 1), info.pos.y))
                 {
-                    val = start.y - end.y;
-                    if (val < 0)
-                    {
-                        Collisioninfo.pos = {(Difference * (end.y - info.pos.y)) + end.x, info.pos.y};
-                        Collisioninfo.Direction = CheckDirection::Down;
-                    }
-                    else if (val > 0)
-                    {
-                        ++info.pos.y;
-                        Collisioninfo.pos = {(Difference * (end.y - info.pos.y)) + end.x, info.pos.y};
-                        Collisioninfo.Direction = CheckDirection::Up;
-                    }
+                    calcFromY();
                 }
             }
         }

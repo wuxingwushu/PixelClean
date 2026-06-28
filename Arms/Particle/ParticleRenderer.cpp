@@ -92,9 +92,6 @@ void ParticleRenderer::uploadInstanceData(const std::vector<ParticleCPUData>& cp
 		++written;
 	}
 
-	LOGI("[ParticleRenderer] uploadInstanceData: activeCount=%u written=%u recorded=%u",
-	     activeCount, written, mRecordedInstanceCount);
-
 	// 隐藏 [written, mRecordedInstanceCount) 区间的槽位（对应 AuxiliaryVision::HideUnusedVertices）
 	// 用 z=-10000 的模型矩阵覆盖，被近裁剪面剔除，避免残留渲染
 	if (written < mRecordedInstanceCount) {

@@ -54,6 +54,18 @@ public:
     void SetNPC(int x, int y, float angle);
 
 private:
+    // === 巡逻状态机 ===
+    enum PatrolState {
+        PATROL_IDLE = 0,        // 空闲，需要选取目标
+        PATROL_PATHFINDING,     // JPS 正在计算路径
+        PATROL_MOVING,          // 沿路径移动中
+    };
+
+    PatrolState mPatrolState = PATROL_IDLE;
+    JPSVec2 mPatrolTarget{};        // 当前巡逻目标点
+    int mPatrolFailedCount = 0;     // 连续寻路失败次数
+    bool mPatrolEntered = false;    // 是否已进入巡逻状态（用于重置状态机）
+
     // === 游戏对象引用 ===
     GamePlayer* mNPC = nullptr;
     PathfindingDecorator* wPathfinding = nullptr;
@@ -89,6 +101,9 @@ private:
     int hsuldad = 0;
     int lastDamageCount_ = 0;          // 上次伤害队列长度（检测新伤害）
     bool injuryEntered_ = false;       // 是否已进入受伤状态（用于重置计时器）
+    bool mStandbyEntered = false;      // 是否已进入待机状态（用于重置待机计时器）
+    float mStandbyTimer = 0.0f;        // 待机独立计时器（不受其他动作重置mTime影响）
+    bool mJpsSubmitted = false;        // 是否已提交JPS寻路（用于检测空路径导致死循环）
 
     // === 感官系统 ===
     int GetSensoryMessages();
@@ -101,6 +116,10 @@ private:
     void SetupDecomposer();
     void SetupSubtreeLibrary();
     void BuildTree();
+
+    // === 辅助方法 ===
+    JPSVec2 FindRandomWalkablePosition(const glm::vec2& currentPos);
+    gobot::Status DoPatrolFallback(const glm::vec2& pos);
 
     // === 动作执行器（对应原 FSM 各状态的行为逻辑） ===
     gobot::Status DoStandby(gobot::Context& ctx);

@@ -32,7 +32,7 @@ namespace GAME {
 		PhysicsBlock::CollisionInfoI info =
 			const_cast<PhysicsBlock::PhysicsShape*>(
 				static_cast<const PhysicsBlock::PhysicsShape*>(tankObj))
-			->DropCollision(c.position);
+			->DropCollision(c.position - (c.normal * 0.5f));
 		if (!info.Collision) return;
 
 		int gx = info.pos.x;
@@ -42,29 +42,33 @@ namespace GAME {
 		// 复用既有像素伤害队列（State=false 表示破坏该格）
 		self->mPixelQueue->add({ gx, gy, false });
 
+		// 关闭被破坏的物理碰撞格子
+		static_cast<const PhysicsBlock::PhysicsShape*>(tankObj)->Grid[gy * 16 + gx].Collision = false;
+		static_cast<const PhysicsBlock::PhysicsShape*>(tankObj)->Grid[gy * 16 + gx].Entity = false;
+
 		// 受伤方向提示：使用 Contact::normal 的法向量反方向（子弹入射方向）
 		if (self->wDamagePrompt != nullptr) {
 			self->wDamagePrompt->AddDamagePrompt(atan2f(-c.normal.y, -c.normal.x));
 		}
 
-	// === 方案E：子弹击退 ===
-	if (self->GetMovement()) {
-		Vec2_ bulletSpeed = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFSpeed();
-		float bulletSpdLen = std::sqrt(bulletSpeed.x * bulletSpeed.x + bulletSpeed.y * bulletSpeed.y);
-		if (bulletSpdLen > 1e-3f) {
-			Vec2_ dir = { bulletSpeed.x / bulletSpdLen, bulletSpeed.y / bulletSpdLen };
-			// 冲量 = 子弹动量 × 击退系数
-			const float knockbackScale = 8.0f;
-			FLOAT_ bulletMass = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFGetMass();
-			float impulseMag = bulletSpdLen * bulletMass * knockbackScale;
-			// 带受力点冲量：接触点受力产生自旋（使用 Contact::position，已有子像素精度）
-			self->GetObjectCollision()->ApplyImpulse(
-				Vec2_{ dir.x * impulseMag, dir.y * impulseMag },
-				Vec2_{ c.position.x, c.position.y });
-			// 切换到被击飞态（期间不响应玩家/AI 输入）
-			self->GetMovement()->SetMode(MovementMode::Ragdoll);
+		// === 方案E：子弹击退 ===
+		if (self->GetMovement()) {
+			Vec2_ bulletSpeed = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFSpeed();
+			float bulletSpdLen = std::sqrt(bulletSpeed.x * bulletSpeed.x + bulletSpeed.y * bulletSpeed.y);
+			if (bulletSpdLen > 1e-3f) {
+				Vec2_ dir = { bulletSpeed.x / bulletSpdLen, bulletSpeed.y / bulletSpdLen };
+				// 冲量 = 子弹动量 × 击退系数
+				const float knockbackScale = 8.0f;
+				FLOAT_ bulletMass = const_cast<PhysicsBlock::PhysicsFormwork*>(otherObj)->PFGetMass();
+				float impulseMag = bulletSpdLen * bulletMass * knockbackScale;
+				// 带受力点冲量：接触点受力产生自旋（使用 Contact::position，已有子像素精度）
+				self->GetObjectCollision()->ApplyImpulse(
+					Vec2_{ dir.x * impulseMag, dir.y * impulseMag },
+					Vec2_{ c.position.x, c.position.y });
+				// 切换到被击飞态（期间不响应玩家/AI 输入）
+				self->GetMovement()->SetMode(MovementMode::Ragdoll);
+			}
 		}
-	}
 
 		// 通知 Arms 销毁该子弹
 		auto* bullet = const_cast<PhysicsBlock::PhysicsParticle*>(

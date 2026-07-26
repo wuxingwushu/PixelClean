@@ -6,6 +6,7 @@
 #include "gobot/infra/EventBus.hpp"
 #include <unordered_map>
 #include <memory>
+#include <algorithm>
 
 namespace gobot {
 
@@ -19,11 +20,18 @@ public:
             [this](const std::any& payload) {
                 this->on_tactical_failure(payload);
             });
+        // 目标完成 = 局势已改变：恢复所有目标的基础优先级，
+        // 否则失败降级会永久累积，目标最终被雪藏（NPC 越玩越"佛系"）
+        completed_sub_id_ = event_bus_->subscribe(events::kGoalCompleted,
+            [this](const std::any&) {
+                goal_manager_->restore_all_priorities();
+            });
     }
 
     ~StrategicPlanner() {
         if (event_bus_) {
             event_bus_->unsubscribe(sub_id_);
+            event_bus_->unsubscribe(completed_sub_id_);
         }
     }
 
@@ -49,9 +57,12 @@ public:
         }
         failure_count_++;
         if (failure_count_ >= kMaxConsecutiveFailures) {
-            // 降级当前目标优先级，使其他目标有机会被选中
+            // 降级当前目标优先级，使其他目标有机会被选中。
+            // 封底：不低于基础优先级 - kMaxDowngrade，防止无限降级导致目标被永久雪藏
             if (current_goal_) {
-                int new_priority = current_goal_->priority() - kPriorityDowngradeStep;
+                int floor_priority = current_goal_->base_priority() - kMaxDowngrade;
+                int new_priority = (std::max)(current_goal_->priority() - kPriorityDowngradeStep,
+                                              floor_priority);
                 goal_manager_->adjust_priority(current_goal_->name(), new_priority);
             }
             failure_count_ = 0;
@@ -63,9 +74,11 @@ public:
 private:
     static constexpr int kMaxConsecutiveFailures = 3;
     static constexpr int kPriorityDowngradeStep = 5;
+    static constexpr int kMaxDowngrade = 25;  // 降级封底（相对基础优先级）
     std::shared_ptr<GoalManager> goal_manager_;
     EventBusPtr event_bus_;
     SubscriptionId sub_id_ = 0;
+    SubscriptionId completed_sub_id_ = 0;
     GoalPtr current_goal_;
     int failure_count_ = 0;
 };

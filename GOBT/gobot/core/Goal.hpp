@@ -11,15 +11,19 @@ namespace gobot {
 class Goal {
 public:
     Goal(std::string name,
-         std::unordered_map<WorldKey, WorldValue> target_state,
-         int priority = 0)
+        std::unordered_map<WorldKey, WorldValue> target_state,
+        int priority = 0)
         : name_(std::move(name))
         , target_state_(std::move(target_state))
-        , priority_(priority) {}
+        , priority_(priority)
+        , base_priority_(priority) {}
 
     const std::string& name() const { return name_; }
     int priority() const { return priority_; }
     void set_priority(int p) { priority_ = p; }
+    // 基础优先级（注册时的初始值），用于失败降级后的恢复
+    int base_priority() const { return base_priority_; }
+    void restore_priority() { priority_ = base_priority_; }
     const std::unordered_map<WorldKey, WorldValue>& target_state() const {
         return target_state_;
     }
@@ -37,6 +41,7 @@ private:
     std::string name_;
     std::unordered_map<WorldKey, WorldValue> target_state_;
     int priority_;
+    int base_priority_ = 0;
 };
 
 // 子目标类型枚举：用于子树库映射

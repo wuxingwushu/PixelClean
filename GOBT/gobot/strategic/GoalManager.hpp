@@ -51,6 +51,18 @@ public:
             });
     }
 
+    // 恢复所有目标到注册时的基础优先级
+    // （失败降级应是暂时的：局势变化后必须恢复，否则目标会被永久雪藏）
+    void restore_all_priorities() {
+        for (const auto& goal : goals_) {
+            goal->restore_priority();
+        }
+        std::sort(goals_.begin(), goals_.end(),
+            [](const GoalPtr& a, const GoalPtr& b) {
+                return a->priority() > b->priority();
+            });
+    }
+
     const std::vector<GoalPtr>& goals() const { return goals_; }
 
 private:

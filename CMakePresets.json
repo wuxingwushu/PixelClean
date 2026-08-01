@@ -7,9 +7,10 @@
     },
     "configurePresets": [
         {
-            "name": "x64",
-            "displayName": "Windows x64",
-            "description": "x64 配置：项目使用 64 位 Vulkan SDK（Lib 目录），必须为 x64 目标",
+            "name": "release",
+            "displayName": "Windows x64 Release",
+            "description": "Release 构建（Visual Studio 生成器 + x64）。编译器由 VS 生成器自动发现，不依赖 PATH/工具包环境，VS IDE 与 VS Code 通用",
+            "generator": "Visual Studio 18 2026",
             "architecture": "x64",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
@@ -17,9 +18,10 @@
             }
         },
         {
-            "name": "x64-debug",
-            "displayName": "Windows x64 (Debug)",
-            "description": "x64 Debug 配置",
+            "name": "debug",
+            "displayName": "Windows x64 Debug",
+            "description": "Debug 构建（Visual Studio 生成器 + x64）",
+            "generator": "Visual Studio 18 2026",
             "architecture": "x64",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
@@ -29,20 +31,14 @@
     ],
     "buildPresets": [
         {
-            "name": "x64-release",
-            "configurePreset": "x64",
+            "name": "release",
+            "configurePreset": "release",
             "configuration": "Release"
         },
         {
-            "name": "x64-debug",
-            "configurePreset": "x64-debug",
+            "name": "debug",
+            "configurePreset": "debug",
             "configuration": "Debug"
-        },
-        {
-            "name": "Debug",
-            "description": "",
-            "displayName": "",
-            "configurePreset": "x64-debug"
         }
     ]
 }

@@ -66,13 +66,15 @@ if(DEFINED ENV{VULKAN_SDK})
 	# 根据目标架构选择库目录：Lib 为 x64，Lib32 为 x86
 	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 		set(VULKAN_LIB_DIR "$ENV{VULKAN_SDK}/Lib")
+		set(VULKAN_SDK_BITS "64")
 	else()
 		set(VULKAN_LIB_DIR "$ENV{VULKAN_SDK}/Lib32")
+		set(VULKAN_SDK_BITS "32")
 	endif()
 	if(NOT EXISTS "${VULKAN_LIB_DIR}/vulkan-1.lib")
-		message(FATAL_ERROR "Vulkan SDK 下未找到 ${VULKAN_LIB_DIR}/vulkan-1.lib，"
-			"请确认安装了与目标架构(${CMAKE_SIZEOF_VOID_P}位)匹配的 Vulkan SDK，"
-			"或在 CMake 配置时指定正确架构（如 -A x64）")
+		message(FATAL_ERROR "Vulkan SDK 下未找到 ${VULKAN_LIB_DIR}/vulkan-1.lib。"
+			"当前目标为 ${VULKAN_SDK_BITS} 位，但本机 Vulkan SDK 无对应架构库。"
+			"请使用 64 位编译器环境：VS Code 选择 amd64 工具包，VS IDE 选择 x64 配置")
 	endif()
 	link_directories(SYSTEM ${VULKAN_LIB_DIR})
 	message(STATUS "Vulkan library directory: ${VULKAN_LIB_DIR}")

@@ -1,0 +1,48 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "x64",
+            "displayName": "Windows x64",
+            "description": "x64 配置：项目使用 64 位 Vulkan SDK（Lib 目录），必须为 x64 目标",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
+            }
+        },
+        {
+            "name": "x64-debug",
+            "displayName": "Windows x64 (Debug)",
+            "description": "x64 Debug 配置",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "x64-release",
+            "configurePreset": "x64",
+            "configuration": "Release"
+        },
+        {
+            "name": "x64-debug",
+            "configurePreset": "x64-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "Debug",
+            "description": "",
+            "displayName": "",
+            "configurePreset": "x64-debug"
+        }
+    ]
+}

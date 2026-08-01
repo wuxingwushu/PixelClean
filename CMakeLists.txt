@@ -63,11 +63,19 @@ include_directories(
 # Vulkan SDK configuration
 if(DEFINED ENV{VULKAN_SDK})
 	include_directories(SYSTEM $ENV{VULKAN_SDK}/Include)
-	if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
-		link_directories(SYSTEM $ENV{VULKAN_SDK}/Lib)
+	# 根据目标架构选择库目录：Lib 为 x64，Lib32 为 x86
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(VULKAN_LIB_DIR "$ENV{VULKAN_SDK}/Lib")
 	else()
-		link_directories(SYSTEM $ENV{VULKAN_SDK}/Lib)
+		set(VULKAN_LIB_DIR "$ENV{VULKAN_SDK}/Lib32")
 	endif()
+	if(NOT EXISTS "${VULKAN_LIB_DIR}/vulkan-1.lib")
+		message(FATAL_ERROR "Vulkan SDK 下未找到 ${VULKAN_LIB_DIR}/vulkan-1.lib，"
+			"请确认安装了与目标架构(${CMAKE_SIZEOF_VOID_P}位)匹配的 Vulkan SDK，"
+			"或在 CMake 配置时指定正确架构（如 -A x64）")
+	endif()
+	link_directories(SYSTEM ${VULKAN_LIB_DIR})
+	message(STATUS "Vulkan library directory: ${VULKAN_LIB_DIR}")
 endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/PhysicsBlock.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
@@ -247,3 +255,17 @@ else()
 endif()
 
 
+
+# =============================================================================
+# 后置构建：把运行所需的资源复制到 exe 所在目录（shaders/Resource/ini）
+# 游戏内所有资源路径都是相对路径（./shaders/ 等），依赖工作目录，
+# 复制到 exe 旁边后，双击运行或任意工作目录启动都不会找不到文件
+# =============================================================================
+add_custom_command(TARGET PixelClean POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/shaders $<TARGET_FILE_DIR:PixelClean>/shaders
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource $<TARGET_FILE_DIR:PixelClean>/Resource
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/PhysicsBlock.ini $<TARGET_FILE_DIR:PixelClean>/PhysicsBlock.ini
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/Info.ini $<TARGET_FILE_DIR:PixelClean>/Info.ini
+	COMMENT "Copying shaders/Resource/ini next to executable"
+	VERBATIM
+)

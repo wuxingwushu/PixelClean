@@ -152,8 +152,6 @@ namespace GAME {
 			ImGuiCommandPoolS[i] = new VulKan::CommandPool(mDevice);
 			ImGuiCommandBufferS[i] = new VulKan::CommandBuffer(mDevice, ImGuiCommandPoolS[i], true);
 		}
-		// 初始化 draw data 哈希缓存（0 表示尚未录制过）
-		mLastDrawDataHash.assign(mFormatCount, 0);
 
 		mChatBoxStr = new Queue<ChatBoxStr>(100);
 	}
@@ -216,27 +214,15 @@ namespace GAME {
 	VkCommandBuffer ImGuiInterFace::GetCommandBuffer(int i, VkCommandBufferInheritanceInfo info) {
 		ImDrawData* drawData = ImGui::GetDrawData();
 
-		// 计算当前 draw data 的轻量哈希：命令列表数 + 总顶点数 + 总索引数 + 显示尺寸。
-		// 这些值任一变化即代表 UI 结构改变，需要重录二级 CB。
-		// 哈希相同时直接复用已录制的 CB，跳过 begin/record/end 开销。
-		uint64_t hash = 0;
-		//hash = hash * 131ull + (uint64_t)Global::GameMode;
-		hash = hash * 131ull + (uint64_t)drawData->CmdListsCount;
-		hash = hash * 131ull + (uint64_t)drawData->TotalVtxCount;
-		hash = hash * 131ull + (uint64_t)drawData->TotalIdxCount;
-		hash = hash * 131ull + (uint64_t)(uint32_t)drawData->DisplaySize.x;
-		hash = hash * 131ull + (uint64_t)(uint32_t)drawData->DisplaySize.y;
-
-		if (hash != 0 && hash == mLastDrawDataHash[i]) {
-			// draw data 未变，复用已录制的二级命令缓冲区
-			return ImGuiCommandBufferS[i]->getCommandBuffer();
-		}
-
-		// draw data 已变（或首次录制），重新录制二级 CB
+		// 注意：不能靠 CmdListsCount / TotalVtxCount / TotalIdxCount 等"数量"来判断 UI 是否变化。
+		// ImGui 每帧都会根据鼠标/键盘状态重新生成 draw data，悬停/按下/激活等状态变化
+		// 只体现在顶点颜色（ImDrawVert.col）上，拖动滑块、文本光标闪烁只改变顶点位置/UV，
+		// 这些变化的顶点/索引数量完全不变；数量哈希一致时复用旧二级 CB，画面会停在录制那一刻
+		// （表现为"点了没反应 / 悬停不高亮 / 滑块冻结"）。且 ClipRect、纹理绑定等同样在
+		// 录制时固化。因此必须每帧重新录制二级 CB，与官方后端 RenderDrawData 行为一致。
 		ImGuiCommandBufferS[i]->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, info);
 		ImGui_ImplVulkan_RenderDrawData(drawData, ImGuiCommandBufferS[i]->getCommandBuffer());
 		ImGuiCommandBufferS[i]->end();
-		mLastDrawDataHash[i] = hash;
 		return ImGuiCommandBufferS[i]->getCommandBuffer();
 	}
 

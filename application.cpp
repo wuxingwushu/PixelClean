@@ -608,8 +608,8 @@ namespace GAME {
 		}
 		mPipelineS->ReconfigurationPipelineS();
 		mCamera->setPerpective(45.0f, (float)Global::mWidth / (float)Global::mHeight, 0.1f, 1000.0f);
-		// RenderPass 已重建，ImGui 二级 CB 中引用的旧 RenderPass 失效，需强制重录
-		InterFace->InvalidateCommandBufferCache();
+		// RenderPass 已重建；ImGui 二级 CB 每帧都用最新的 inheritance（RenderPass/Framebuffer）
+		// 重新录制，无需额外失效处理
 		for (size_t i = 0; i < mSwapChain->getImageCount(); i++)
 		{
 			VPMatrices* mVPMatrices = (VPMatrices*)mCameraVPMatricesBuffer[i]->getupdateBufferByMap();

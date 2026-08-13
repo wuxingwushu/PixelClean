@@ -147,8 +147,13 @@ namespace GAME {
 			}
 		}
 		//射线检测
+		// ★ 修复：世界坐标 → 网格坐标（+mOriginX/mOriginY），与 GetPixelWallNumber 保持一致。
+		//   旧实现直接传世界坐标给 FMBresenhamDetection(int)（该重载不做 centrality 偏移），
+		//   射线查错区域导致视线检测失效。
 		virtual PhysicsBlock::CollisionInfoI RadialCollisionDetection(int x, int y, int Ex, int Ey) {
-			return mFixedSizeTerrain->FMBresenhamDetection(glm::ivec2{x, y}, glm::ivec2{Ex, Ey});
+			return mFixedSizeTerrain->FMBresenhamDetection(
+				glm::ivec2{x + mOriginX, y + mOriginY},
+				glm::ivec2{Ex + mOriginX, Ey + mOriginY});
 		};
 		/*******************************************************/
 		//计算点附近的墙壁数量

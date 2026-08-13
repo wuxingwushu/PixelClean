@@ -35,7 +35,7 @@ public:
         }
     }
 
-    // 选择当前应追求的目标（委托给 GoalManager）
+    // 选择当前应追求的目标（委托给 GoalManager，挂起目标自动跳过）
     GoalPtr select_goal(const WorldState& ws) {
         return goal_manager_->select_top(ws);
     }
@@ -46,7 +46,7 @@ public:
         failure_count_ = 0; // 目标切换时重置失败计数
     }
 
-    // 失败处理：累计失败次数，超阈值则降级当前目标优先级
+    // 失败处理：累计失败次数，超阈值时挂起当前目标（冷却后自动恢复）
     void on_tactical_failure(const std::any& payload) {
         // payload 期望为 SubgoalPtr
         try {
@@ -56,16 +56,24 @@ public:
             return;
         }
         failure_count_++;
-        if (failure_count_ >= kMaxConsecutiveFailures) {
-            // 降级当前目标优先级，使其他目标有机会被选中。
-            // 封底：不低于基础优先级 - kMaxDowngrade，防止无限降级导致目标被永久雪藏
-            if (current_goal_) {
-                int floor_priority = current_goal_->base_priority() - kMaxDowngrade;
-                int new_priority = (std::max)(current_goal_->priority() - kPriorityDowngradeStep,
-                                              floor_priority);
-                goal_manager_->adjust_priority(current_goal_->name(), new_priority);
-            }
-            failure_count_ = 0;
+        if (failure_count_ < kMaxConsecutiveFailures) {
+            return;
+        }
+        failure_count_ = 0;
+        if (!current_goal_) {
+            return;
+        }
+
+        if (current_goal_->suspendible()) {
+            // 挂起目标一段时间：让低优先级目标（如巡逻）获得机会；
+            // 冷却结束后目标自动恢复参与选择，不会被永久雪藏。
+            goal_manager_->suspend(current_goal_->name(), kSuspensionTicks);
+        } else {
+            // 不可挂起目标（如 Survive）：仅做有限降级，保证其仍可被选中
+            int floor_priority = current_goal_->base_priority() - kMaxDowngrade;
+            int new_priority = (std::max)(current_goal_->priority() - kPriorityDowngradeStep,
+                                          floor_priority);
+            goal_manager_->adjust_priority(current_goal_->name(), new_priority);
         }
     }
 
@@ -73,8 +81,11 @@ public:
 
 private:
     static constexpr int kMaxConsecutiveFailures = 3;
+    // 挂起冷却（选择周期 ≈ 帧；60fps 下约 3 秒）
+    static constexpr int kSuspensionTicks = 180;
     static constexpr int kPriorityDowngradeStep = 5;
     static constexpr int kMaxDowngrade = 25;  // 降级封底（相对基础优先级）
+
     std::shared_ptr<GoalManager> goal_manager_;
     EventBusPtr event_bus_;
     SubscriptionId sub_id_ = 0;

@@ -126,8 +126,14 @@ namespace GAME {
 			}
 		}
 		//射线检测
+		// ★ 修复：世界坐标 → 网格坐标（+mOriginX/mOriginY）。
+		//   旧实现直接传世界坐标给 FMBresenhamDetection(int)（该重载不做 centrality 偏移），
+		//   地图以原点为中心（世界坐标可为负）时射线查错区域，几乎永远撞墙 →
+		//   NPC 视线永远被遮挡，"看不到玩家、只会巡逻"。
 		virtual PhysicsBlock::CollisionInfoI RadialCollisionDetection(int x, int y, int Ex, int Ey) {
-			return mFixedSizeTerrain->FMBresenhamDetection(glm::ivec2{x, y}, glm::ivec2{Ex, Ey});
+			return mFixedSizeTerrain->FMBresenhamDetection(
+				glm::ivec2{x + mOriginX, y + mOriginY},
+				glm::ivec2{Ex + mOriginX, Ey + mOriginY});
 		};
 		/*******************************************************/
 

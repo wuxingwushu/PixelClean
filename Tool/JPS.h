@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -125,7 +126,8 @@ public:
 private:
     const int mRange = 0;                           //范围
     [[maybe_unused]] const int mSteps = 0;          //最大步数
-    bool mPathfindingCompleted = true;              //寻路是否结束
+    // 寻路是否结束（线程池写 / 主线程读，用 atomic 消除数据竞争）
+    std::atomic<bool> mPathfindingCompleted{ true };
     typedef bool (*_ObstaclesCallback)(int x, int y, void* ptr);
     _ObstaclesCallback mObstaclesCallback = nullptr;    //是否为障碍物回调函数
     void* mDataPointer = nullptr;                       //回调参数

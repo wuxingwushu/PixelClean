@@ -32,6 +32,8 @@ namespace NPCWS {
     inline const std::string kPlayerInRange     = "player_in_range";
     inline const std::string kPlayerInViewField = "player_in_viewfield";
     inline const std::string kInjuryRecovered   = "injury_recovered";
+    inline const std::string kPlayerEngaged     = "player_engaged";  // 仇恨锁存（交战状态）
+    inline const std::string kRecentlyHurt      = "recently_hurt";   // 最近受伤威胁（驱动自保）
 }
 
 class NPCGOBT
@@ -86,7 +88,7 @@ private:
     // === 游戏状态（从 NPC 迁移） ===
     glm::vec2 qianjinfang = {1, 0};   // 前进方向
     int AttackRange = 90;              // 攻击范围
-    int ChaseRange = 250;              // 追击触发范围
+    int ChaseRange = 400;              // 感知/交战尺度（脱战距离上限 = 此值×1.5；地图 644 宽）
     int mRange = 300;                  // 寻路范围
     float FPSTime = 0;                 // 帧时间
     float mTime = 0.0f;                // 计时器
@@ -98,12 +100,43 @@ private:
     float mPlayerDistance = 0.0f;      // NPC到玩家距离
     float mShootCooldown = 0.0f;       // 射击冷却
     const float mShootInterval = 0.8f; // 射击间隔
-    int hsuldad = 0;
     int lastDamageCount_ = 0;          // 上次伤害队列长度（检测新伤害）
     bool injuryEntered_ = false;       // 是否已进入受伤状态（用于重置计时器）
     bool mStandbyEntered = false;      // 是否已进入待机状态（用于重置待机计时器）
     float mStandbyTimer = 0.0f;        // 待机独立计时器（不受其他动作重置mTime影响）
     bool mJpsSubmitted = false;        // 是否已提交JPS寻路（用于检测空路径导致死循环）
+
+    // === 感知缓存（每帧一次感官采样，动作执行器共享，避免重复射线） ===
+    long long mFrameCounter = 0;       // 帧计数
+    long long mSensoryFrameStamp = -1; // 缓存的感官结果所属帧
+    int mSensoryCachedFlags = 0;       // 缓存的感官标志
+
+    // === 交战状态（滞回/防抖） ===
+    bool mEngaged = false;             // 已进入交战（仇恨锁存）
+    float mPlayerLostTime = 0.0f;      // 连续丢失视野时长
+    bool mVisibleLatched = false;      // 可见性锁存（宽限 0.25s）
+    float mVisibleLostTime = 0.0f;     // 可见性宽限计时
+    bool mInRangeLatched = false;      // 攻击范围锁存（<90 进入，>115 退出）
+
+    // === 可疑位置记忆（衰减） ===
+    float mSuspiciousTimer = 0.0f;     // 可疑记忆剩余时间
+
+    // === 追击搜索（最后目击位置调查） ===
+    bool mInvestigating = false;       // 正前往最后目击位置
+    bool mSearching = false;           // 正在最后目击位置搜索
+    float mSearchTimer = 0.0f;         // 搜索计时
+    int mOrbitDir = 1;                 // 绕圈方向（撞墙才换向，防逐帧抖动）
+
+    // === 受伤威胁（SelfPreserve 目标） ===
+    float mRecentlyHurtTimer = 0.0f;   // 最近受伤计时
+
+    // === 攻击走位 ===
+    float mStrafeTimer = 0.0f;         // 侧移计时
+    int mStrafeDir = 1;                // 侧移方向
+
+    // === 后撤（Retreat 子目标） ===
+    bool mFleeEntered = false;         // 已进入后撤
+    float mFleeTimer = 0.0f;           // 后撤计时
 
     // === 感官系统 ===
     int GetSensoryMessages();
@@ -120,6 +153,7 @@ private:
     // === 辅助方法 ===
     JPSVec2 FindRandomWalkablePosition(const glm::vec2& currentPos);
     gobot::Status DoPatrolFallback(const glm::vec2& pos);
+    void ClearPathSafe();   // 无 JPS 任务在途时清空路径（避免与线程池写竞争）
 
     // === 动作执行器（对应原 FSM 各状态的行为逻辑） ===
     gobot::Status DoStandby(gobot::Context& ctx);
@@ -127,6 +161,7 @@ private:
     gobot::Status DoChase(gobot::Context& ctx);
     gobot::Status DoAttack(gobot::Context& ctx);
     gobot::Status DoInjury(gobot::Context& ctx);
+    gobot::Status DoFlee(gobot::Context& ctx);
 };
 
 } // namespace GAME

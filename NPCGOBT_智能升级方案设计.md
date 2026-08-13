@@ -916,4 +916,113 @@ class NPCGOBT {
 
 ---
 
-*文档结束。建议从阶段一的"听觉感知 + 记忆衰减 + 预判射击"三项开始实施，这三项改动量小、收益高、风险低。*
+## 十、目标（希望）逻辑缺陷修复与完善记录
+
+> 本节为 2025 年对 `Character/NPCGOBT.h/.cpp` 与 `GOBT/` 框架的目标（希望）层实测诊断与修复记录。
+
+### 10.1 缺陷诊断（修复前）
+
+| # | 严重度 | 缺陷 | 后果 |
+|---|--------|------|------|
+| 0 | 🔴 致命 | `RadialCollisionDetection`（FixedMaze/Labyrinth）把**世界坐标**直接传给 `FMBresenhamDetection(int)`，而该重载**不做 centrality 偏移**；地图以原点为中心（世界坐标含负数，如 NPC 出生 (-208,60)） | 射线永远查错网格区域、几乎必然撞墙 → **NPC 永远"看不见"玩家，只会巡逻**（本次"看不到玩家"的直接根因，物理碰撞因走 float 重载而正常，故游戏其他部分无异常） |
+| 1 | 🔴 致命 | `Recover` 子树前置条件为 `{injured:true}`，而 `injured` 只在伤害队列非空的当帧为真（队列每帧被 `UpData()` 清空） | 硬直开始 1 帧后前置失败，1.0s 硬直被立即打断 |
+| 2 | 🔴 致命 | `SyncWorldState()` 在伤害队列归零的下一帧强制写 `injury_recovered=true`，与动作 Effect 双写入打架 | `Survive` 目标 1 帧后即被误判满足而切走，硬直名存实亡 |
+| 3 | 🔴 致命 | 世界状态键无初始化默认值，目标满足性判断依赖 `SyncWorldState` 的执行顺序 | 出生首帧目标选择存在未定义行为隐患 |
+| 4 | 🟠 严重 | `FightEnemy` 满足条件为 `player_visible=false`：玩家一躲墙后即"满足"被放弃 | 最后目击追击形同虚设，NPC 秒回巡逻，不调查 |
+| 5 | 🟠 严重 | `ChaseRange=250` 声明但从未使用 | 全图无限仇恨：玩家在地图任意位置露头即被追杀 |
+| 6 | 🟠 严重 | 视野锥边界（±90°）与攻击范围边界（90）无滞回 | 目标/子目标每帧抖振，反复重新分解、重建子树、移动抽搐 |
+| 7 | 🟠 严重 | 失败降级封底 `kMaxDowngrade=25` 使 FightEnemy(80) 最低 55，永远高于 PatrolArea(20) | "失败降级让其他目标有机会"的设计从未生效；降级仅 `kGoalCompleted` 时恢复 → 目标被永久雪藏或永久压过 fallback |
+| 8 | 🟠 严重 | `SubtreeReferenceNode` 无子树时只上报失败不弹出子目标 | 每 tick 重复发布 `kTacticalFailure`，失败计数无限累积（事件风暴） |
+| 9 | 🟡 中等 | 到达最后目击位置后无搜索行为，立即 Failure 回巡逻 | 追击行为机械、可预测 |
+| 10 | 🟡 中等 | `DoPatrolFallback` 把 `GetPixelWallNumber`（true=可通行）语义用反 | 降级巡逻持续撞墙（该函数与 JPS 回调/`FindRandomWalkablePosition` 的语义相反） |
+| 11 | 🟡 中等 | 每帧 2~3 次重复感官采样（SyncWorldState + DoChase/DoAttack 各一次） | 全图射线检测重复执行，性能浪费 |
+| 12 | 🟡 中等 | `DoAttack` 距离适中时不清空移动输入；`dist≈0` 时 `normalize` NaN；无走位 | 站桩被预判 |
+| 13 | 🟡 中等 | JPS `mPathfindingCompleted` 为非原子 bool，线程池写/主线程读 | 数据竞争（设计文档已列为崩溃风险） |
+| 14 | 🟢 轻微 | `hsuldad` 死变量；每帧大量 LOGD 刷屏 | 噪音 |
+
+### 10.2 修复内容
+
+#### GOBT 框架（`GOBT/gobot/`）
+
+- **`core/Goal.hpp`**：新增 `suspendible` 标志（默认 true；`Survive` 设为 false 永不雪藏）。
+- **`strategic/GoalManager.hpp`**：新增目标挂起机制 `suspend(name, ticks)`——挂起目标在冷却周期内不参与选择，每次 `select_top` 推进计时，到期自动恢复。彻底替代"降级 + 封底"（缺陷 7）。
+- **`strategic/StrategicPlanner.hpp`**：连续战术失败 ≥3 次 → 可挂起目标挂起 180 tick（约 3s）；不可挂起目标才降级（保留封底）。`kGoalCompleted` 恢复全部优先级保留为兜底。
+- **`tactical/SubtreeReferenceNode.hpp`**：无对应子树时上报一次失败并弹出子目标（缺陷 8）。
+- **`Tool/JPS.h`**：`mPathfindingCompleted` 改为 `std::atomic<bool>`（缺陷 13）。
+
+#### 地图装饰器（`GameMods/TankTrouble/FixedMaze.h`、`GameMods/MazeMods/Labyrinth.h`）
+
+- **修复视线射线坐标偏移（缺陷 0，本次"NPC 看不到玩家"的根因）**：`RadialCollisionDetection` 现在先做 世界坐标→网格坐标 转换（+mOriginX/mOriginY）再调用 `FMBresenhamDetection(int)`，与 `GetPixelWallNumber`、`FMBresenhamDetection(float)`（物理路径）保持一致。
+
+#### NPCGOBT（`Character/NPCGOBT.h/.cpp`）
+
+- **世界状态初始化**：构造时写入默认值（已恢复/未交战/无威胁）（缺陷 3）。
+- **`SyncWorldState` 重写**（缺陷 1/2/4/5/6）：
+  - `injury_recovered` 仅由 Recover 动作 Effect 写入（单一写入方）；
+  - 新增可见性锁存（0.25s 宽限）与攻击范围锁存（<90 进，>115 出）；
+  - 交战状态机：**只有"看见玩家"或"被击中"才能发现玩家——绝不隔墙感知**；看得见就永远保持；看不见时才按 距离上限/记忆耗尽/超时 脱战；
+  - 被击中即仇恨：看得见记下精确位置；看不见只沿受伤方向前进 120px 作为调查点（只知道方向，不隔墙知道坐标）；
+  - 新增 `recently_hurt` 威胁计时（2.5s）与可疑记忆衰减（8s）。
+- **感官系统**：每帧一次采样缓存共享；射线检测不设距离上限；**只有视线射线通过才刷新玩家位置记忆——不隔墙追踪玩家**。
+- **目标体系升级为 4 目标**：`Survive(100)` > `SelfPreserve(90)` > `FightEnemy(80)` > `PatrolArea(20)`。
+- **子目标/动作增强**：
+  - `DoInjury`：连续受击刷新硬直计时；前置改为 `injury_recovered=false`；
+  - `DoChase`：最后目击调查、玩家偏离路径终点 80px 提前重寻路、JPS 目标内缩钳制；
+  - `DoAttack`：侧向走位（周期性换向+撞墙换向）、距离自适应瞄准误差、NaN 防护；
+  - `DoFlee`（新）：受伤威胁期后撤拉开距离，方向探测绕墙；
+  - `DoPatrolFallback`：修正墙判断语义反转（缺陷 10）；
+  - 分解策略在目标重入时重置巡逻/后撤/待机状态并安全清空残留路径。
+- **追击/攻击再锁定（"只攻击一次就再也不攻击"修复）**：
+  - 速度修复：NPC MaxSpeed 90→125（玩家 120）——旧值导致玩家一跑 NPC 永远追不上、再也进不了攻击范围；
+  - 攻击视野宽限：短暂丢失视野(<0.6s)继续向最后已知方位压制射击，LOS 抖动/绕柱不再中断攻击；
+  - 主动绕圈搜索：搜索不再是原地左右看，而是以可疑点为中心切向绕行（55px 半径，远则靠近/近则后退/撞墙才反向），主动绕开墙角重新获取视线；
+  - 站立距离目标：对不可见玩家寻路时目标点回退 70px，避免直接贴脸走进死角，留出绕行与视线空间；
+  - 绕行方向持久化（mOrbitDir）：只有撞墙才换向，消除贴墙时逐帧抖动导致的"前后踱步"；
+  - 攻击距离保持带加宽为 35~65（中间带纯横向走位），消除前后振荡；
+  - 视线射线稳健化：起点取坦克前端(10px)、终点在玩家前方 12px 截断，避免贴身/贴墙时中心点射线被误判遮挡。
+- **攻击逻辑重做**：
+  - 瞄准用玩家实时方位（wanjiaAngle）而非滞后的身体朝向——开火瞬间子弹即指向玩家，不再等身体转完；
+  - 炮口偏移 9→12（>坦克对角半径 11.3）且沿开火方向放置——任何朝向开火都不会打中自己；
+  - **只有看得见才开火**（丢视野宽限 0.6s 内可向最后方位压制）；搜索期间向"最后目击位置"（已见过的旧坐标）做压制射击（1.2s 间隔）——**绝不隔墙发现或攻击玩家**。
+- **感官缓存**：每帧一次采样，SyncWorldState 与动作执行器共享（缺陷 11）。
+- 清理 `hsuldad` 与逐帧刷屏日志。
+
+### 10.3 行为流程（修复后）
+
+```
+发现玩家（只有"看见"或"被击中"）→ 立即交战
+  ★ 绝不隔墙感知：只有视野锥+无遮挡射线通过才算"看见"
+攻击中短暂丢失视野(<0.6s)  → 继续朝最后方位压制射击（不会"只开一枪"）
+玩家躲墙         → 前往最后目击点(站立距离70px) → 绕圈搜索 3s（单向绕行，不抖）
+                → 8s 内无果 → 脱战回巡逻（记忆衰减）
+看得见玩家      → 仇恨永远保持（追击不中断；NPC 速度125>玩家120 必能追上）
+看不见时        → 距离>ChaseRange×1.5 / 记忆耗尽 / 丢失>10s 才脱战
+被击中          → 硬直 1.0s（Survive）→ 后撤 1.2s/180px（SelfPreserve）
+                → 仇恨攻击方向：看得见记精确位置，看不见只沿方向调查 120px
+攻击走位         → 35~65 横向走位带，前后不振荡；攻击/追击边界 90~115 滞回
+```
+
+### 10.4 行为参数（`NPCGOBT.cpp` 顶部匿名命名空间）
+
+| 参数 | 值 | 含义 |
+|------|-----|------|
+| `kVisibleGrace` | 0.25s | 可见性锁存宽限 |
+| `kRangeHysteresis` | 25 | 攻击范围滞回带宽 |
+| `kAttackLosGrace` | 0.6s | 攻击中丢失视野的压制射击宽限 |
+| `kMuzzleOffset` | 12px | 炮口偏移（>坦克对角半径11.3，任何朝向开火不自伤） |
+| `kBlindSpread` | 0.25 rad | 搜索压制射击散布（朝最后目击位置） |
+| `kSuppressInterval` | 1.2s | 追击/搜索压制射击间隔 |
+| `ChaseRange` | 400 | 感知尺度（地图 644 宽）；脱战距离上限 = ×1.5 |
+| `kDisengageLostTime` | 10s | 脱战兜底时长 |
+| `kSuspiciousMemory` | 8s | 可疑记忆时长 |
+| `kSearchDuration` | 3s | 最后目击搜索时长（绕圈侦察） |
+| `kOrbitRadius` | 55px | 搜索绕行半径 |
+| `kStandOff` | 70px | 不可见目标的前进站立距离 |
+| `kRecentlyHurtDuration` | 2.5s | 受伤威胁时长 |
+| `kFleeDuration` / `kFleeDistance` | 1.2s / 180px | 后撤参数 |
+| `kRepathPlayerDrift` | 80px | 追击提前重寻路阈值 |
+| NPC MaxSpeed | 125 | NPC 移动速度（玩家 120，保证能追上） |
+
+---
+
+*文档结束。目标（希望）层缺陷（硬直中断、目标抖振、降级失效、无限仇恨、无调查行为等）已在 `NPCGOBT.h/.cpp` 与 `GOBT/gobot/` 框架中修复；方案一中的"听觉感知/预判射击/武器切换/掩体"等增强项可作为下一阶段继续实施。*

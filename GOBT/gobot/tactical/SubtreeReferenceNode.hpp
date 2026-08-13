@@ -36,8 +36,13 @@ public:
         if (!current_subtree_ || last_subgoal_ != sg) {
             BTNodePtr raw = library_->create_subtree(sg->type());
             if (!raw) {
-                // 无对应子树：上报失败
+                // 无对应子树：上报一次失败并弹出子目标。
+                // （修复：旧实现只上报不弹出，导致每个 tick 重复上报失败、
+                //   子目标永远滞留，失败计数无限累积。）
                 event_bus_->publish(events::kTacticalFailure, sg);
+                bb.pop_subgoal();
+                current_subtree_.reset();
+                last_subgoal_.reset();
                 return Status::Failure;
             }
             // 应用包装器（如 LayerBridgeNode）

@@ -24,6 +24,11 @@ public:
     // 基础优先级（注册时的初始值），用于失败降级后的恢复
     int base_priority() const { return base_priority_; }
     void restore_priority() { priority_ = base_priority_; }
+
+    // 是否允许失败后挂起（默认允许）。
+    // 生存类目标（如 Survive）应设为 false：永远不能被雪藏。
+    void set_suspendible(bool s) { suspendible_ = s; }
+    bool suspendible() const { return suspendible_; }
     const std::unordered_map<WorldKey, WorldValue>& target_state() const {
         return target_state_;
     }
@@ -42,6 +47,7 @@ private:
     std::unordered_map<WorldKey, WorldValue> target_state_;
     int priority_;
     int base_priority_ = 0;
+    bool suspendible_ = true;
 };
 
 // 子目标类型枚举：用于子树库映射

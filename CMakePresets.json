@@ -12,7 +12,7 @@
             "description": "Release 构建（Visual Studio 生成器 + x64）。编译器由 VS 生成器自动发现，不依赖 PATH/工具包环境，VS IDE 与 VS Code 通用",
             "generator": "Visual Studio 18 2026",
             "architecture": "x64",
-            "binaryDir": "${sourceDir}/build",
+            "binaryDir": "${sourceDir}/build/release",
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
             }
@@ -23,7 +23,7 @@
             "description": "Debug 构建（Visual Studio 生成器 + x64）",
             "generator": "Visual Studio 18 2026",
             "architecture": "x64",
-            "binaryDir": "${sourceDir}/build",
+            "binaryDir": "${sourceDir}/build/debug",
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
             }

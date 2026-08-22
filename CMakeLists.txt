@@ -26,26 +26,33 @@ if(MSVC)
     add_compile_definitions(WIN32_LEAN_AND_MEAN NOMINMAX)  # Windows 宏 + GLM 全局一致配置
 endif()
 
+# 收集源码：根目录 + Camera 目录（主可执行文件 PixelClean 的源文件）
 aux_source_directory(. DIRSRCS)
 aux_source_directory(Camera CAMERA_SRCS)
 
-
-if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
-	message("Debug 模式")
+# =============================================================================
+# 构建类型说明（重要）
+# 本工程支持多配置生成器（Visual Studio 生成器）与单配置生成器（Ninja）。
+# 多配置生成器在 configure 阶段 CMAKE_BUILD_TYPE 为空，真正的 Debug/Release 是在
+# 构建阶段通过 --config / IDE 配置（如 VS Code 的配置下拉框、VS 的解决方案配置）决定的。
+# 因此不能用 CMAKE_BUILD_TYPE 判断"当前是 Debug 还是 Release"。
+# 旧逻辑正是靠 CMAKE_BUILD_TYPE 分流，导致无论选 Debug 还是 Release，
+# configure 都走 Release 分支，把 /O2 与 WINDOWS 子系统全局应用到了所有配置上——
+# 这就是"明明选了 Debug，跑起来却是 Release 效果"的原因。
+# 现在改为：优化交给 CMake 按配置的缺省值（MSVC: Release=/O2, Debug=/Od），
+# 子系统/入口用按配置区分的 LINK_FLAGS，只对 Release 类配置生效。
+# =============================================================================
+message(STATUS "CMake generator: ${CMAKE_GENERATOR}")
+if(CMAKE_CONFIGURATION_TYPES AND CMAKE_CONFIGURATION_TYPES MATCHES "Debug")
+    message(STATUS "多配置生成器，可选配置: ${CMAKE_CONFIGURATION_TYPES}（构建时通过 --config 选择 Debug/Release）")
+elseif(CMAKE_BUILD_TYPE)
+    message(STATUS "单配置生成器，当前构建类型: ${CMAKE_BUILD_TYPE}")
 else()
-	message("Release 模式")
-	# MSVC 使用 /O2，GCC/Clang 使用 -O3
-	if(MSVC)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2")
-	else()
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-	endif()
-	# o2: 代码编译优化
-	# -Ofast：在进行某些优化时，可能会牺牲一些标准兼容性。
-	# Os: 优化代码大小,尽可能地缩小可执行文件的体积。
-	# -s: 关闭调试信息
-	# -march=native: 使用特定的 CPU 架构
+    message(STATUS "未显式指定构建类型（默认使用 CMake 的 Release 类优化缺省值）")
 endif()
+# 优化由各配置的 CMAKE_CXX_FLAGS_<CONFIG> 缺省值控制，不再手动往全局 CMAKE_CXX_FLAGS 追加 /O2，
+# 以免污染 Debug 配置。MSVC 缺省：Release=/O2, RelWithDebInfo=/O2 /Zi, Debug=/Od /Zi；
+# GCC 缺省：Release=-O3 -DNDEBUG, Debug=-O0 -g。
 
 # 设置 include 的引用头文件路径
 include_directories(
@@ -164,98 +171,62 @@ add_dependencies(PixelClean compile_shaders)
 #target_compile_definitions( VulKan PRIVATE _CONSOLE)
 #target_compile_definitions(VulKan PRIVATE -DWIN32_LEAN_AND_MEAN)
 
-if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
-	target_link_libraries(
-		#设置启动项
-		PixelClean
+# 统一链接所有依赖库（Debug 与 Release 的依赖列表完全一致，无需再按 CMAKE_BUILD_TYPE 分流）
+target_link_libraries(
+	#设置启动项
+	PixelClean
 
-		# 文件夹代码（按依赖顺序：依赖多的在前，被依赖的 vulkanLib 放最后）
-		vulkanToolLib
-		InterfaceUI
-		BlockSLib
-		ToolLib
-		AudioEngineLib
-		NetworkTCPLib
-		CharacterLib
-		ArmsLib
-		OpcodeLib
-		GameModsLib
-		MazeModsLib
-		TankTroubleLib
-		UnlimitednessMapModsLib
-		PhysicsBlockLib
-		SoloudTestLib
-		RadianceCascadesLib
-		FruitNinjaLib
-		WFCTestLib
-		vulkanLib
-		glfw
-		libevent
-		imgui
+	# 文件夹代码（按依赖顺序：依赖多的在前，被依赖的 vulkanLib 放最后）
+	vulkanToolLib
+	InterfaceUI
+	BlockSLib
+	ToolLib
+	AudioEngineLib
+	NetworkTCPLib
+	CharacterLib
+	ArmsLib
+	OpcodeLib
+	GameModsLib
+	MazeModsLib
+	TankTroubleLib
+	UnlimitednessMapModsLib
+	PhysicsBlockLib
+	SoloudTestLib
+	RadianceCascadesLib
+	FruitNinjaLib
+	WFCTestLib
+	vulkanLib
+	glfw
+	libevent
+	imgui
 
-		# Soloud 音频库
-		soloud
+	# Soloud 音频库
+	soloud
 
-		# VulKan API
-		vulkan-1.lib
+	# VulKan API
+	vulkan-1.lib
 
-		# zlib 数据压缩
-		zlib
+	# zlib 数据压缩
+	zlib
 
-		# WaveFunctionCollapse 波函数坍缩算法
-		WaveFunctionCollapse
+	# WaveFunctionCollapse 波函数坍缩算法
+	WaveFunctionCollapse
 
-		# SpdLog 日志库
-		spdlog
-	)
-else()
-	set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")#关闭控制台
+	# SpdLog 日志库
+	spdlog
+)
 
-
-	target_link_libraries(
-		#设置启动项
-		PixelClean 
-
-		# 文件夹代码（按依赖顺序：依赖多的在前，被依赖的 vulkanLib 放最后）
-		vulkanToolLib
-		InterfaceUI 
-		BlockSLib 
-		ToolLib 
-		AudioEngineLib
-		NetworkTCPLib
-		CharacterLib
-		ArmsLib
-		OpcodeLib
-		GameModsLib
-		MazeModsLib
-		TankTroubleLib
-		UnlimitednessMapModsLib
-		PhysicsBlockLib
-		SoloudTestLib
-		RadianceCascadesLib
-		FruitNinjaLib
-		WFCTestLib
-		vulkanLib
-		glfw
-		libevent
-		imgui
-
-		# Soloud 音频库
-		soloud
-	
-		# VulKan API
-		vulkan-1.lib 
-
-		# zlib 数据压缩
-		zlib
-
-		# WaveFunctionCollapse 波函数坍缩算法
-		WaveFunctionCollapse
-
-		# SpdLog 日志库
-		spdlog
-	)
-endif()
+# 子系统/入口按配置区分：
+#   Debug          保留控制台子系统（能看到 printf / stdout，方便调试）
+#   Release 类     隐藏控制台（/SUBSYSTEM:WINDOWS）并使用 mainCRTStartup 作为入口
+# 说明：多配置生成器在 link 阶段会按当前选中的配置套用对应的 LINK_FLAGS_<CONFIG>，
+# 而不是像旧逻辑那样把 WINDOWS 子系统无条件应用到所有配置上。
+set_target_properties(PixelClean PROPERTIES
+	LINK_FLAGS_DEBUG ""                                  # Debug: 默认控制台子系统
+	LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
+	LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
+	LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
+)
 
 
 

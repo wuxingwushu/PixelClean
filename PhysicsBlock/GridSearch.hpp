@@ -15,19 +15,63 @@ namespace PhysicsBlock
 #define CurerExcursionVector 1
 
     /**
-     * @brief   四叉网格搜索类
-     * @details 用于物理引擎中的空间索引，支持多层四叉网格和莫顿编码
-     *          通过分层网格实现高效的碰撞检测和对象查询
+     * @brief   四叉网格搜索类（内存优化版：索引化链表）
+     * @details 用于物理引擎中的空间索引，支持多层四叉网格和莫顿编码。
+     *
+     * 内存优化说明（方案 C：稠密索引数组 + 槽位链表）：
+     * - 旧实现 Grid 为 std::vector<std::vector<PhysicsFormwork*>>：
+     *   每格固定 24 字节（x64 三指针）+ 每占用格一个独立堆块（16B 头 + 容量），
+     *   且对象搬移后旧格容量永不回落（高水位内存），
+     *   1024 地图时 Grid 空载即约 537MB。
+     * - 新实现：每格仅 4 字节链头（mCellHead，整块连续分配，零逐格 malloc），
+     *   对象通过槽位（mSlots 下标）以链表串接（mNext），
+     *   1024 地图时索引区仅约 21.4MB；且 mGridDim 取整为 2 的幂后，
+     *   紧凑层偏移使索引区仅为旧布局的 1/4（对 2 的幂尺寸）或不超过旧布局（任意尺寸）。
+     * - 每帧 UpData 改为 O(对象数) 的整树重建：只清"脏格"（上帧写入过的格），
+     *   稳态零分配；多线程路径（UpDaraWorkeTask/End）保持"并行算索引 + 串行应用"结构。
      */
     class GridSearch
     {
     private:
         /**
-         * @brief   网格容器（一维展开）
-         * @details 存储所有网格层，每层包含多个物理对象指针列表
-         *          使用一维数组存储四叉树结构，通过偏移量计算每层的实际位置
+         * @brief   每格链表头（4 字节/格）
+         * @details 存储对象槽位下标（mSlots 的下标），UINT_MAX 表示该格为空。
+         *          取代旧实现"每格一个 std::vector"的 24 字节固定开销 + 逐格堆分配。
          */
-        std::vector<std::vector<PhysicsFormwork *>> Grid;
+        std::vector<unsigned int> mCellHead;
+
+        /**
+         * @brief   对象槽位容器（8 字节/对象）
+         * @details 存储网格内所有物理对象指针；槽位采用"删除回收进 mFreeSlots 栈"
+         *          的方式复用，槽位内容从不被 swap/搬移，因此链表里的槽位下标全程稳定。
+         */
+        std::vector<PhysicsFormwork *> mSlots;
+
+        /**
+         * @brief   槽位在格内链表中的下一槽位（4 字节/对象）
+         * @details mSlots[i] 与 mNext[i] 平行；遍历一格 = 从链头顺 mNext 走到底。
+         */
+        std::vector<unsigned int> mNext;
+
+        /**
+         * @brief   每帧多线程 UpData 计算的"新格号"暂存区（4 字节/对象）
+         * @details 各线程只写自己分到的槽位区间（写不相交，无数据竞争），
+         *          主线程 UpDaraWorkeTaskEnd 统一按此重建整树。
+         */
+        std::vector<unsigned int> mNewIndex;
+
+        /**
+         * @brief   空闲槽位栈
+         * @details Remove() 把槽位入栈，Add() 优先复用，对象数量波动时内存不增长。
+         */
+        std::vector<unsigned int> mFreeSlots;
+
+        /**
+         * @brief   上帧写入过的格子（脏格集合，无重复元素）
+         * @details 整树重建时只需把这些格的头清零（成本 ∝ 对象数），
+         *          而不是 memset 整张网格表（成本 ∝ 格数）。
+         */
+        std::vector<unsigned int> mDirtyCells;
 
         /**
          * @brief   网格外对象容器
@@ -37,16 +81,15 @@ namespace PhysicsBlock
         std::vector<PhysicsFormwork *> GridExtrovert;
 
         /**
-         * @brief   所有对象扁平列表（对象中心式更新的基础）
-         * @details 存储所有已添加到网格的物理对象指针
-         *          UpData 直接遍历此列表而非所有 Grid cell
+         * @brief   网格总格数（头部数组长度）
+         * @details 等于 SetMapRange 中紧凑布局的 (4^mStorey - 1) / 3
          */
-        std::vector<PhysicsFormwork *> mAllObjects;
+        unsigned int mGridSize = 0;
 
         /**
          * @brief   四叉网格层数
          * @details 表示网格的最大细分层数，层数越多网格越精细
-         *          第0层为根节点（整个空间），每增一层将空间四等分
+         *          第 mStorey 层为根节点（整个空间，1 格），每往下一层空间四等分
          */
         int mStorey = 0;
 
@@ -70,24 +113,6 @@ namespace PhysicsBlock
          */
         unsigned int mThreadCount = 0;
 
-        /**
-         * @brief   多线程 UpData 的每线程临时数据结构
-         * @details 每个线程独立拥有一份 UpDataVector，
-         *          存储该线程负责处理的对象索引变更信息，
-         *          避免多线程同时修改 Grid 造成数据竞争
-         */
-        struct UpDataVector{
-            std::vector<std::pair<PhysicsFormwork *, unsigned int>> FormworkIndex;
-            std::vector<PhysicsFormwork *> FormworkExtrovert;
-            std::vector<unsigned int> ExcursionVector;
-        };
-
-        /**
-         * @brief   多线程 UpData 数据数组指针
-         * @details 数组长度为 mThreadCount，每个元素对应一个线程的临时数据
-         */
-        UpDataVector* UpDataPtr = nullptr;
-
 #if CurerExcursionVector
         /**
          * @brief   预计算的每层偏移量数组
@@ -102,20 +127,16 @@ namespace PhysicsBlock
          * @brief 默认构造函数
          */
         GridSearch() {}
-        
+
         /**
          * @brief 析构函数
-         * @details 释放预计算的偏移量数组内存
+         * @details 释放预计算的偏移量数组内存（其余容器为 RAII 自动释放）
          */
         ~GridSearch()
         {
             if (ExcursionVector != nullptr)
             {
                 delete[] ExcursionVector;
-            }
-            if (UpDataPtr != nullptr)
-            {
-                delete[] UpDataPtr;
             }
         }
 
@@ -155,35 +176,35 @@ namespace PhysicsBlock
 #endif
 
         /**
-         * @brief   计算四叉网格某层的起始偏移量
-         * @param   storey 网格层数（从0开始，0表示最高层/根节点）
+         * @brief   计算四叉网格某层的起始偏移量（紧凑布局）
+         * @param   storey 网格层数（1 = 最细层，mStorey = 根层/整个空间）
          * @return  返回该层在一维数组中的起始索引
-         * @details 使用公式 (4^(k+1) - 1) / 3 计算偏移量
-         *          其中 k = mStorey - storey，表示从该层到最底层的层数差
+         * @details 公式：off(storey) = (4^(mStorey - storey) - 1) / 3
          *
-         * 四叉树一维展开原理：
-         *   第0层（根）：1个节点                 -> 偏移0
-         *   第1层：     4个节点                 -> 偏移1
-         *   第2层：     16个节点                -> 偏移1+4=5
-         *   第3层：     64个节点                -> 偏移1+4+16=21
+         * 紧凑布局原理（层 storey 含 4^(mStorey-storey) 个格子）：
+         *   storey = mStorey   （根，1 格）    -> 偏移 0
+         *   storey = mStorey-1 （4 格）        -> 偏移 1
+         *   storey = mStorey-2 （16 格）       -> 偏移 1+4 = 5
          *   ...
-         *   偏移量 = (4^1 - 1)/3 + (4^2 - 1)/3 + ... + (4^k - 1)/3 = (4^(k+1) - 1)/3
+         *   偏移 = 4^0 + 4^1 + ... + 4^(mStorey-storey-1) = (4^(mStorey-storey) - 1)/3
+         *
+         * 注意：旧实现公式为 (4^(mStorey-storey+1)-1)/3，为兼容任意非 2 的幂 mGridDim
+         * 每层预留了 4 倍容量（层坐标多 1 bit）；本实现将 mGridDim 取整为 2 的幂，
+         * 因此该公式即为精确紧凑布局：所有格子全部可达且数组长度仅为旧实现的 1/4
+         * （对 2 的幂尺寸）或 ≤ 旧实现（对任意尺寸）。
          */
         inline unsigned int Excursion(int storey)
         {
             int k = mStorey - storey;
-            if (k < 0)
-                return 0;
-            unsigned int n = k + 1;
-            unsigned int result = (1U << (2 * n)) - 1; // 2n位全1，即4^n - 1
-            result /= 3;                               // (4^n - 1) / 3
-            return result;
+            if (k <= 0)
+                return 0; // 根层（或超出范围）偏移为 0
+            return (unsigned int)(((1ULL << (2 * k)) - 1) / 3);
         }
 
         /**
          * @brief   计算对象应该放入的网格细分层
          * @param   R 对象的碰撞半径（世界坐标系单位）
-         * @return  返回网格层数（整数，0表示最高层）
+         * @return  返回网格层数（整数，1 = 最细层，mStorey = 根层）
          * @details 根据对象大小确定合适的网格层级
          *          大对象放入上层粗网格，小对象放入下层细网格
          *
@@ -192,9 +213,9 @@ namespace PhysicsBlock
          * 算法：
          * 1. 计算对象直径（2*R）并上取整
          * 2. 找到这个数值的最高有效位的位置
-         * 3. 该位置即为合适的网格层级
+         * 3. 该位置 + 1 即为合适的网格层级
          *
-         * 示例：R = 3.5，直径 = 8，取最高位得 index=3，所以 _storey=3
+         * 示例：R = 3.5，直径 = 8，取最高位得 index=3，所以 _storey=4
          */
         inline int Storey(FLOAT_ R)
         {
@@ -226,55 +247,15 @@ namespace PhysicsBlock
         }
 
         /**
-         * @brief   获取指定索引的网格
-         * @param   i 网格索引（一维数组中的位置）
-         * @return  返回网格内的对象列表引用
-         */
-        inline std::vector<PhysicsFormwork *> &at(unsigned int i) { return Grid[i]; }
-
-#if Morton_define
-        /**
-         * @brief   获取指定位置和层级的网格（莫顿编码版本）
-         * @param   x x 坐标（网格坐标，已转换为无符号）
-         * @param   y y 坐标（网格坐标，已转换为无符号）
-         * @param   _Excursion 该层的起始偏移量
-         * @param   _storey 网格层数
-         * @return  返回网格内的对象列表引用
-         * @details 通过莫顿码直接计算一维索引，比线性计算更快
-         */
-        inline std::vector<PhysicsFormwork *> &at(unsigned int x, unsigned int y, unsigned int _Excursion, int _storey)
-        {
-            return at(_Excursion + Morton2D(x, y));
-        }
-#else
-        /**
-         * @brief   获取指定位置和层级的网格（线性版本）
-         * @param   x x 坐标（网格坐标）
-         * @param   y y 坐标（网格坐标）
-         * @param   _Excursion 该层的起始偏移量
-         * @param   _storey 网格层数
-         * @return  返回网格内的对象列表引用
-         * @details 使用线性计算：index = offset + x * width + y
-         *          其中 width = 2^(mStorey + 1 - _storey)
-         */
-        inline std::vector<PhysicsFormwork *> &at(unsigned int x, unsigned int y, unsigned int _Excursion, int _storey)
-        {
-            return at(_Excursion + (x * (1U << (mStorey + 1 - _storey)) + y));
-        }
-#endif
-
-        /**
          * @brief   计算对象所在的网格索引
          * @param   xy 对象位置（世界坐标）
          * @param   R 对象碰撞半径
-         * @return  返回网格索引（一维数组中的位置）
+         * @return  返回网格索引（一维数组中的位置）；≥ mGridSize 表示网格外
          * @details 根据对象位置和大小计算应该放入的网格
          *          如果对象跨网格边界（不在任何子网格内），则放入上层更大的网格
-         *
-         * 跨边界判断：
-         *   对于一个对象，我们计算它所在的"理想"细网格
-         *   然后检查对象是否完全在该网格内（没有越界）
-         *   如果越界了，说明对象太大，放到上一层更粗的网格更合适
+         *          超大型对象（_storey > mStorey，比整个网格还大）直接返回无效索引，
+         *          由 Add/UpData 放入 GridExtrovert —— 修复了旧实现
+         *          "ExcursionVector[_storey] 越界读" 的内存安全问题
          */
         inline unsigned int atIndex(Vec2_ xy, FLOAT_ R)
         {
@@ -294,6 +275,11 @@ namespace PhysicsBlock
             // 确定应该放在哪一层
             int _storey = Storey(R);
 
+            // 对象比整张网格还大（/ 直径超过 mGridDim），直接判为网格外
+            // （旧实现在此会读到 ExcursionVector[_storey] 越界内存）
+            if (_storey > mStorey)
+                return mGridSize;
+
             // 右移相当于除以2^_storey，即计算在当前层的网格坐标
             pos >>= _storey;
 
@@ -307,48 +293,118 @@ namespace PhysicsBlock
             {
                 ++_storey; // 升级到上一层（更大的网格）
                 pos >>= 1; // 在上一层中的位置也要重新计算
+
+                // 升级后超过根层：比整个网格还大，判为网格外
+                if (_storey > mStorey)
+                    return mGridSize;
             }
 
 #if CurerExcursionVector
 #if Morton_define
             return ExcursionVector[_storey] + Morton2D((uint_fast16_t)pos.x, (uint_fast16_t)pos.y);
 #else
-            return ExcursionVector[_storey] + (pos.x * (1 << (mStorey + 1 - _storey))) + pos.y;
+            return ExcursionVector[_storey] + (pos.x * (1U << (mStorey - _storey))) + pos.y;
 #endif
 #else
 #if Morton_define
             return Excursion(_storey) + Morton2D((uint_fast16_t)pos.x, (uint_fast16_t)pos.y);
 #else
-            return Excursion(_storey) + (pos.x * (1 << (mStorey + 1 - _storey))) + pos.y;
+            return Excursion(_storey) + (pos.x * (1U << (mStorey - _storey))) + pos.y;
 #endif
 #endif
         }
 
         /**
-         * @brief   获取对象所在的网格
-         * @param   xy 对象位置（世界坐标）
-         * @param   R 对象碰撞半径
-         * @return  返回网格内的对象列表引用
+         * @brief   分配/复用对象槽位
+         * @param   atocr 物理对象指针
+         * @return  槽位下标（在 mSlots/mNext/mNewIndex 中平行）
+         * @details 优先复用 mFreeSlots 中的空槽位，否则追加新槽位。
+         *          槽位内容在生命周期内不会被搬移，保证链表中下标稳定。
          */
-        inline std::vector<PhysicsFormwork *> &at(Vec2_ xy, FLOAT_ R)
+        inline unsigned int NewSlot(PhysicsFormwork *atocr)
         {
-            return at(atIndex(xy, R));
+            unsigned int id;
+            if (mFreeSlots.empty())
+            {
+                id = (unsigned int)mSlots.size();
+                mSlots.push_back(atocr);
+                mNext.push_back(UINT_MAX);
+                mNewIndex.push_back(UINT_MAX);
+            }
+            else
+            {
+                id = mFreeSlots.back();
+                mFreeSlots.pop_back();
+                mSlots[id] = atocr;
+                mNext[id] = UINT_MAX;
+            }
+            return id;
+        }
+
+        /**
+         * @brief   把槽位头插到指定格子
+         * @param   cellIdx 格子索引
+         * @param   slot 对象槽位
+         * @details 头插 O(1)；若该格此前为空则记录为脏格，
+         *          供下一次整树重建时定点清零（避免 memset 整表）。
+         */
+        inline void LinkCell(unsigned int cellIdx, unsigned int slot)
+        {
+            bool wasEmpty = (mCellHead[cellIdx] == UINT_MAX);
+            mNext[slot] = mCellHead[cellIdx];
+            mCellHead[cellIdx] = slot;
+            if (wasEmpty)
+                mDirtyCells.push_back(cellIdx);
+        }
+
+        /**
+         * @brief   整树重建（供单线程 UpData 与多线程 UpDaraWorkeTaskEnd 共用）
+         * @details 前提：mNewIndex[i] 已填好（每槽位的新格号）。
+         *          1. 只清上帧写入过的脏格（成本 ∝ 对象数，而非格数）
+         *          2. 清空并重建网格外对象列表
+         *          3. 遍历所有槽位，把对象按新格号头插回网格
+         *          全程无任何堆分配（稳态零分配）
+         */
+        void ApplyRebuild()
+        {
+            // 1. 清零上帧写入过的格子
+            for (size_t i = 0; i < mDirtyCells.size(); ++i)
+                mCellHead[mDirtyCells[i]] = UINT_MAX;
+            mDirtyCells.clear();
+
+            // 2. 网格外列表整体重建（成员关系以本次计算结果为准）
+            GridExtrovert.clear();
+
+            // 3. 重建所有链接
+            for (size_t slot = 0; slot < mSlots.size(); ++slot)
+            {
+                PhysicsFormwork *Formwork = mSlots[slot];
+                if (Formwork == nullptr)
+                    continue; // 已删除的空槽位
+
+                unsigned int newIndex = mNewIndex[slot];
+                if (newIndex < mGridSize)
+                {
+                    LinkCell(newIndex, (unsigned int)slot);
+                    Formwork->mGridIndex = newIndex;
+                }
+                else
+                {
+                    GridExtrovert.push_back(Formwork);
+                    Formwork->mGridIndex = UINT_MAX;
+                }
+            }
         }
 
     public:
         /**
          * @brief   设置多线程 UpData 的线程数
          * @param   threadCount 线程数量（设为 0 使用单线程模式）
-         * @details 设置线程数并重新分配 UpDataPtr 数组。
-         *          如果之前已分配内存，会先释放旧内存再分配新数组。
+         * @details 方案 C 的并行路径采用了"槽位数组写不相交"的零拷贝设计，
+         *          不再需要每线程独立暂存容器。
          */
         void SetThreadCount(unsigned int threadCount) {
             mThreadCount = threadCount;
-            if (UpDataPtr != nullptr)
-            {
-                delete[] UpDataPtr;
-            }
-            UpDataPtr = new UpDataVector[threadCount];
         }
 
         /**
@@ -361,6 +417,10 @@ namespace PhysicsBlock
          *   输入Size后，实际网格空间是[-2*Size, 2*Size]（即4*Size宽高）
          *   这是因为偏移量设置为Size/2，使得原本[-Size/2, Size/2]的区域
          *   被偏移到[0, Size]，再乘以4得到最终空间
+         *
+         * 内存：（紧凑布局）
+         *   总格数 = (4^(mStorey) - 1) / 3，每格仅 4 字节（方案 C）
+         *   例如 Size=1024 时约 559 万格 × 4B ≈ 21.4MB（旧实现约 537MB）
          */
         void SetMapRange(unsigned int Size)
         {
@@ -371,32 +431,55 @@ namespace PhysicsBlock
                 ExcursionVector = nullptr;
             }
 #endif
-            Size *= 4;                               // 实际空间是输入的4倍
-            mGridDim = Size;                         // 记录网格维度，后续坐标 clamp 使用
-            mExcursion = {Size / 2.0f, Size / 2.0f}; // 偏移量，使负坐标变为正坐标
-            unsigned int GridSize = 1;               // 第0层的节点数
+            Size *= 4; // 实际空间是输入的4倍
 
-            // 计算网格层数和总大小
+            // 网格维度向上取整到 2 的幂（紧凑布局的关键前提）：
+            // 紧凑偏移 + 莫顿编码要求"层 storey 每维格子数 = 2^(mStorey-storey)"，
+            // 即 mGridDim 必须恰为 2^mStorey。旧实现 mGridDim=4*Size 可为任意值
+            // （如 SetMapRange(10) -> mGridDim=40, mStorey=floor(log2 40)=5），
+            // 此时层内坐标可超出 2^(mStorey-storey)，莫顿码会越过该层区域导致数组越界
+            // （旧实现靠每层 4 倍容量兜底，实测仅勉强容错、语义错乱）。
+            // 取整后世界覆盖 [-mGridDim/2, +mGridDim/2) 包含原范围 [-2*Size, 2*Size]，
+            // 空间语义不缩水，仅索引映射更紧凑。
+            unsigned int gridDim = 1;
+            while (gridDim < Size)
+                gridDim <<= 1;
+            mGridDim = gridDim;
+            mExcursion = {gridDim / 2.0f, gridDim / 2.0f}; // 偏移量，使负坐标变为正坐标
+
+            // 计算网格层数和总大小（完整四叉树计数）
             // 每次循环：空间尺寸缩小一半，节点数增加4倍加1
             // 循环结束时，GridSize = (4^0 + 4^1 + ... + 4^mStorey) = (4^(mStorey+1) - 1) / 3
-            while (Size >>= 1)
+            unsigned int GridSize = 1;
+            int storey = 0;
+            unsigned int t = gridDim;
+            while (t >>= 1)
             {
                 GridSize <<= 2; // GridSize = GridSize * 4
-                ++mStorey;      // 层数加1
+                ++storey;       // 层数加1
                 ++GridSize;     // 总节点数加上这一层的节点数
             }
+            mStorey = storey;
+
+            // 紧凑布局：总格数 = (4^mStorey - 1) / 3 = (完整计数 - 1) / 4
+            // 旧布局为兼容任意非 2 的幂 mGridDim，每层预留了 4 倍容量；
+            // mGridDim 取整为 2 的幂后此处即最紧凑且严格够用的尺寸。
+            GridSize = (GridSize - 1) / 4;
+            mGridSize = GridSize;
 
 #if CurerExcursionVector
             // 预计算每层的偏移量，避免运行时重复计算
-            ExcursionVector = new unsigned int[mStorey+1];
-            for (size_t i = 0; i <= mStorey; i++)
+            ExcursionVector = new unsigned int[mStorey + 1];
+            for (size_t i = 0; i <= (size_t)mStorey; i++)
             {
                 ExcursionVector[i] = Excursion((int)i);
             }
 #endif
-            Grid.clear();
-            Grid.resize(GridSize); // 调整网格容器大小
-            mAllObjects.clear();
+            // 重建索引表：全部置空。已有对象仍在槽位中，下次 UpData 会重新归位
+            // （旧实现 resize 会保留旧容量不释放内存；这里用 swap 确保释放）
+            std::vector<unsigned int>().swap(mCellHead);
+            mCellHead.resize(GridSize, UINT_MAX);
+            mDirtyCells.clear();
         }
 
         /**
@@ -445,20 +528,21 @@ namespace PhysicsBlock
         /**
          * @brief   添加物理对象到网格
          * @param   atocr 要添加的物理对象指针
-         * @details 根据对象位置和碰撞半径计算网格索引，将对象添加到对应网格
+         * @details 根据对象位置和碰撞半径计算网格索引，将对象头插到对应网格
          *          如果索引超出范围，添加到网格外容器
          *
          * 添加策略：
          *   1. 计算对象的网格索引（atIndex）
-         *   2. 如果索引在有效范围内，加入对应网格
+         *   2. 如果索引在有效范围内，头插对应网格（O(1)）
          *   3. 否则（超大型对象），加入网格外容器
          */
         void Add(PhysicsFormwork *atocr)
         {
             unsigned int index = atIndex(atocr->PFGetPos(), atocr->PFGetCollisionR());
-            if (index < Grid.size())
+            unsigned int slot = NewSlot(atocr);
+            if (index < mGridSize)
             {
-                at(index).push_back(atocr);
+                LinkCell(index, slot);
                 atocr->mGridIndex = index;
             }
             else
@@ -466,45 +550,41 @@ namespace PhysicsBlock
                 GridExtrovert.push_back(atocr);
                 atocr->mGridIndex = UINT_MAX;
             }
-            mAllObjects.push_back(atocr);
         }
 
         /**
          * @brief   从网格中移除物理对象
          * @param   atocr 要移除的物理对象指针
-         * @details 先在网格中查找并移除，如果不在网格中则从网格外容器中移除
+         * @details 先在格内链表中查找并摘下（O(k)，k = 该格对象数），
+         *          不在网格中则从网格外容器中移除（swap-and-pop）。
          *
-         * 移除策略（使用swap-and-pop优化）：
-         *   1. 不使用erase删除元素（可能触发大量元素移动）
-         *   2. 用最后一个元素覆盖要删除的元素
-         *   3. pop_back删除最后一个元素
-         *   时间复杂度从O(n)降低到O(1)
+         * 移除策略：
+         *   1. 利用 mGridIndex 定位到格子，沿链表找到对象前驱并摘下
+         *   2. 槽位回收进 mFreeSlots 供后续 Add 复用
+         *   3. 若不在网格内，从 GridExtrovert 用 swap-and-pop 移除
          */
         void Remove(PhysicsFormwork *atocr)
         {
-            for (size_t i = 0; i < mAllObjects.size(); ++i)
-            {
-                if (mAllObjects[i] == atocr)
-                {
-                    mAllObjects[i] = mAllObjects.back();
-                    mAllObjects.pop_back();
-                    break;
-                }
-            }
-
             unsigned int index = atocr->mGridIndex;
 
-            if (index < Grid.size())
+            if (index != UINT_MAX && index < mGridSize)
             {
-                for (size_t i = 0; i < Grid[index].size(); ++i)
+                // 沿格内链表查找并摘下
+                unsigned int prev = UINT_MAX;
+                for (unsigned int slot = mCellHead[index]; slot != UINT_MAX; prev = slot, slot = mNext[slot])
                 {
-                    if (Grid[index][i] == atocr)
+                    if (mSlots[slot] == atocr)
                     {
-                        Grid[index][i] = Grid[index].back();
-                        Grid[index].pop_back();
+                        if (prev == UINT_MAX)
+                            mCellHead[index] = mNext[slot]; // 摘的是链头
+                        else
+                            mNext[prev] = mNext[slot];      // 摘的是中间/尾部节点
+                        mSlots[slot] = nullptr;
+                        mFreeSlots.push_back(slot);
                         return;
                     }
                 }
+                // 未在该格找到：说明 mGridIndex 已过期，回退到网格外容器查找
             }
 
             for (size_t i = 0; i < GridExtrovert.size(); ++i)
@@ -542,10 +622,10 @@ namespace PhysicsBlock
          *
          * 算法：
          *   1. 将世界坐标转换为网格坐标（加偏移量）
-         *   2. 从最底层（第mStorey层）开始向上遍历
+         *   2. 从最底层（第1层）开始向上遍历到根层（第mStorey层）
          *   3. 每上一层，坐标右移1位（相当于坐标除以2）
-         *   4. 遍历所有在查询范围内的网格单元格
-         *   5. 将所有单元格中的对象合并到Out中
+         *   4. 逐格沿槽位链表收集对象（链头 0? mNext: 遍历）
+         *   5. 查询范围超出网格边界时，额外包含网格外容器
          */
         void Get(Vec2_ Spos, Vec2_ Epos, std::vector<PhysicsFormwork *> &Out)
         {
@@ -579,21 +659,31 @@ namespace PhysicsBlock
             }
 
             // 从最底层开始向上遍历所有层
-            unsigned int P = (unsigned int)Grid.size(); // P初始为总网格数的近似值
-
             for (int i = 1; i <= mStorey; ++i)
             {
                 iS >>= 1; // 上一层中的网格坐标
                 iE >>= 1;
-                P >>= 2; // 上一层每维的网格数量
 
-                // 遍历所有在查询范围内的网格单元格
+#if CurerExcursionVector
+                unsigned int off = ExcursionVector[i];
+#else
+                unsigned int off = Excursion(i);
+#endif
+
+                // 遍历所有在查询范围内的网格单元格，逐格沿槽位链表收集对象
                 for (size_t x = iS.x; x <= iE.x; ++x)
                 {
                     for (size_t y = iS.y; y <= iE.y; ++y)
                     {
-                        auto &cell = at(x, y, P, i);
-                        Out.insert(Out.end(), cell.begin(), cell.end());
+                        unsigned int cellIdx = off + Morton2D((uint_fast16_t)x, (uint_fast16_t)y);
+                        // 防御性边界检查：mGridDim 取整后公式恒在界内，
+                        // 此检查仅为莫顿码截断/异常输入的兜底，几乎不产生开销
+                        if (cellIdx >= mGridSize)
+                            continue;
+                        for (unsigned int slot = mCellHead[cellIdx]; slot != UINT_MAX; slot = mNext[slot])
+                        {
+                            Out.push_back(mSlots[slot]);
+                        }
                     }
                 }
             }
@@ -628,6 +718,8 @@ namespace PhysicsBlock
 
             glm::ivec2 pos = (atocr_pos);
             int _storey = Storey(R);
+            if (_storey > mStorey)
+                _storey = mStorey; // 超大对象取根层视野
             pos >>= _storey;
 
             // 计算网格边界
@@ -674,84 +766,45 @@ namespace PhysicsBlock
         }
 
         /**
-         * @brief   更新所有对象的网格位置
-         * @details 遍历所有网格和网格外对象，重新计算它们的网格索引
-         *          如果对象移动后索引发生变化，将对象移动到新的网格
+         * @brief   更新所有对象的网格位置（整树重建）
+         * @details 遍历所有对象槽位，重新计算网格索引并重建整棵网格树。
+         *          与旧的"增量搬移"不同，这里直接重建链接：
+         *          由于只清"脏格"（上帧写入过的格），复杂度为 O(对象数)，
+         *          代价远低于旧实现中逐格的 vector 增删/分配。
          *
          * 注意：这是一个O(n)复杂度的操作，应该尽量减少调用频率
          *       典型用法是每帧调用一次，而不是每帧为每个对象调用
          */
         void UpData()
         {
-            for (size_t i = 0; i < mAllObjects.size(); ++i)
+            // 计算每个对象的新格号（单线程版；多线程请用 UpDaraWorkeTask/End）
+            for (size_t slot = 0; slot < mSlots.size(); ++slot)
             {
-                PhysicsFormwork *Formwork = mAllObjects[i];
-                unsigned int newIndex = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
-                unsigned int oldIndex = Formwork->mGridIndex;
-
-                bool oldInGrid = (oldIndex < Grid.size());
-                bool newInGrid = (newIndex < Grid.size());
-
-                if (oldInGrid && newInGrid && newIndex == oldIndex)
+                PhysicsFormwork *Formwork = mSlots[slot];
+                if (Formwork == nullptr)
                     continue;
-
-                if (!oldInGrid && !newInGrid)
-                    continue;
-
-                if (oldInGrid)
-                {
-                    auto &cell = Grid[oldIndex];
-                    for (size_t j = 0; j < cell.size(); ++j)
-                    {
-                        if (cell[j] == Formwork)
-                        {
-                            cell[j] = cell.back();
-                            cell.pop_back();
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    for (size_t j = 0; j < GridExtrovert.size(); ++j)
-                    {
-                        if (GridExtrovert[j] == Formwork)
-                        {
-                            GridExtrovert[j] = GridExtrovert.back();
-                            GridExtrovert.pop_back();
-                            break;
-                        }
-                    }
-                }
-
-                if (newInGrid)
-                {
-                    Grid[newIndex].push_back(Formwork);
-                    Formwork->mGridIndex = newIndex;
-                }
-                else
-                {
-                    GridExtrovert.push_back(Formwork);
-                    Formwork->mGridIndex = UINT_MAX;
-                }
+                mNewIndex[slot] = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
             }
+            ApplyRebuild();
         }
 
         /**
          * @brief   多线程 UpData 工作函数
          * @param   ThreadSize 总线程数
          * @param   ThreadID 当前线程 ID（从 0 开始）
-         * @details 将 mAllObjects 按块均匀分配给各线程并行处理。
-         *          每个线程遍历自己负责的对象块，计算新的网格索引，
-         *          将需要移动的对象记录到 UpDataPtr[ThreadID] 中。
-         *          此函数不直接修改 Grid，避免多线程数据竞争。
+         * @details 将 mSlots 按块均匀分配给各线程并行处理。
+         *          每个线程遍历自己负责的槽位区间，计算新的网格索引，
+         *          直接写入 mNewIndex[slot]（各线程写不相交区间，无数据竞争）。
+         *          此函数不修改网格结构本身，真正的重建在 UpDaraWorkeTaskEnd 中完成。
          */
         void UpDaraWorkeTask(unsigned int ThreadSize, unsigned int ThreadID)
         {
-            auto& FormworkIndex = UpDataPtr[ThreadID].FormworkIndex;
+            if (ThreadSize == 0)
+                return;
 
-            unsigned int BlockSize = mAllObjects.size() / ThreadSize;
-            unsigned int BlockRemain = mAllObjects.size() % ThreadSize;
+            unsigned int Count = (unsigned int)mSlots.size();
+            unsigned int BlockSize = Count / ThreadSize;
+            unsigned int BlockRemain = Count % ThreadSize;
 
             unsigned int Start;
             unsigned int End;
@@ -768,84 +821,21 @@ namespace PhysicsBlock
 
             for (unsigned int i = Start; i < End; ++i)
             {
-                PhysicsFormwork *Formwork = mAllObjects[i];
-                unsigned int newIndex = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
-                unsigned int oldIndex = Formwork->mGridIndex;
-
-                bool oldInGrid = (oldIndex < Grid.size());
-                bool newInGrid = (newIndex < Grid.size());
-
-                if (oldInGrid && newInGrid && newIndex == oldIndex)
+                PhysicsFormwork *Formwork = mSlots[i];
+                if (Formwork == nullptr)
                     continue;
-
-                if (!oldInGrid && !newInGrid)
-                    continue;
-
-                FormworkIndex.push_back({Formwork, newIndex});
+                mNewIndex[i] = atIndex(Formwork->PFGetPos(), Formwork->PFGetCollisionR());
             }
         }
 
         /**
          * @brief   多线程 UpData 收尾函数（仅主线程调用）
          * @details 在所有工作线程完成 UpDaraWorkeTask 后，由主线程调用。
-         *          遍历所有线程的 UpDataPtr，将各线程记录的对象索引变更
-         *          实际应用到 Grid 中（从旧位置移除、添加到新位置）。
-         *          处理完毕后清空各线程的临时数据，为下一帧做准备。
+         *          根据各线程写入的 mNewIndex 重建整棵网格树（O(对象数)，零分配）。
          */
         void UpDaraWorkeTaskEnd()
         {
-            for (unsigned int i = 0; i < mThreadCount; ++i)
-            {
-                auto& FormworkIndex = UpDataPtr[i].FormworkIndex;
-
-                for (auto& entry : FormworkIndex)
-                {
-                    PhysicsFormwork *Formwork = entry.first;
-                    unsigned int newIndex = entry.second;
-                    unsigned int oldIndex = Formwork->mGridIndex;
-
-                    bool oldInGrid = (oldIndex < Grid.size());
-                    bool newInGrid = (newIndex < Grid.size());
-
-                    if (oldInGrid)
-                    {
-                        auto& cell = Grid[oldIndex];
-                        for (size_t j = 0; j < cell.size(); ++j)
-                        {
-                            if (cell[j] == Formwork)
-                            {
-                                cell[j] = cell.back();
-                                cell.pop_back();
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (size_t j = 0; j < GridExtrovert.size(); ++j)
-                        {
-                            if (GridExtrovert[j] == Formwork)
-                            {
-                                GridExtrovert[j] = GridExtrovert.back();
-                                GridExtrovert.pop_back();
-                                break;
-                            }
-                        }
-                    }
-
-                    if (newInGrid)
-                    {
-                        Grid[newIndex].push_back(Formwork);
-                        Formwork->mGridIndex = newIndex;
-                    }
-                    else
-                    {
-                        GridExtrovert.push_back(Formwork);
-                        Formwork->mGridIndex = UINT_MAX;
-                    }
-                }
-                FormworkIndex.clear();
-            }
+            ApplyRebuild();
         }
     };
 

@@ -1743,24 +1743,24 @@ namespace PhysicsBlock
 		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
 		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
 
-		// 液体：416 个水粒子（间距 0.5），从池子上方落入
+		// 液体：416 个水粒子铺成静水池（52×8，液面 ≈ −7），固体随后落入
 		PhysicsBlock::PhysicsLiquid *liquid = new PhysicsBlock::PhysicsLiquid(*myPhysicsWorld);
-		liquid->AddGrid({0, 2}, 26, 16, 0.5f, 1.0f, 0.4f);
+		liquid->AddGrid({-0.25f, -9.25f}, 52, 8, 0.5f, 1.0f, 0.4f);
 		(*myPhysicsWorld)->SetLiquid(liquid);
 
 		// 落入的刚体：三个不同密度的圆（ρ_液 = 1/0.5² = 4）
 		//   m=2  ρ=1.30 → 浮在水面    m=5  ρ=3.25 → 半浮/缓沉    m=12 ρ=7.80 → 沉底
-		// 方块（3×3 整体质量 9，等效 ρ≈0.64）→ 像木筏一样平浮在水面
-		// 初始位置相互错开，避免方块直接砸在圆上
-		PhysicsBlock::PhysicsCircle *c = new PhysicsBlock::PhysicsCircle({-6, 6.5f}, 0.7f, 2.0f, 0.8f);
+		// 方块（3×3，ρ=1）→ 木筏漂浮；长木板（8×2，ρ=1）→ 倾斜入水后自动躺平
+		// 初始位置相互错开，避免刚体互相砸落
+		PhysicsBlock::PhysicsCircle *c = new PhysicsBlock::PhysicsCircle({-10, 6.5f}, 0.7f, 2.0f, 0.8f);
 		(*myPhysicsWorld)->AddObject(c);
-		c = new PhysicsBlock::PhysicsCircle({0, 7.5f}, 0.7f, 5.0f, 0.8f);
+		c = new PhysicsBlock::PhysicsCircle({-7.5f, 7.5f}, 0.7f, 5.0f, 0.8f);
 		(*myPhysicsWorld)->AddObject(c);
-		c = new PhysicsBlock::PhysicsCircle({6, 6.5f}, 0.7f, 12.0f, 0.8f);
+		c = new PhysicsBlock::PhysicsCircle({10, 6.5f}, 0.7f, 12.0f, 0.8f);
 		(*myPhysicsWorld)->AddObject(c);
 
-		// 方块平放落入（无初始倾角，避免入水时翻滚导致姿态混乱）
-		PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape({-3, 10}, {3, 3});
+		// 方块平放落入（无初始倾角）
+		PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape({-4, 10}, {3, 3});
 		for (size_t i = 0; i < (box->width * box->height); ++i)
 		{
 			box->at(i).Entity = true;
@@ -1770,6 +1770,18 @@ namespace PhysicsBlock
 		box->UpdateAll();
 		box->angle = 0.0f;
 		(*myPhysicsWorld)->AddObject(box);
+
+		// 长木板（8×2）倾斜入水：矩形水线裁剪 + 扶正扭矩 → 应自动躺平漂浮
+		PhysicsBlock::PhysicsShape *plank = new PhysicsBlock::PhysicsShape({5, 11}, {8, 2});
+		for (size_t i = 0; i < (plank->width * plank->height); ++i)
+		{
+			plank->at(i).Entity = true;
+			plank->at(i).Collision = true;
+			plank->at(i).mass = 1.0f;
+		}
+		plank->UpdateAll();
+		plank->angle = 0.4f;
+		(*myPhysicsWorld)->AddObject(plank);
 	}
 
 }

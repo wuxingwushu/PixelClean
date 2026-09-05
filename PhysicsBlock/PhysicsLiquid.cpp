@@ -485,10 +485,10 @@ namespace PhysicsBlock
         const FLOAT_ areaPerParticle = mSpacing * mSpacing;
         const FLOAT_ rhoLiquid = mParticleMass / areaPerParticle; // 液体面密度（2D 中"密度"）
 
-        // 全局液面（整池水位）：所有液体粒子沿 up 方向的最大投影 + 池底约束。
+        // 全局液面（整池水位）：所有液体粒子沿 up 方向的最大投影。
         // 用全局水位而非"固体上方的局部水柱"：局部测量会被固体挤开的空腔骗过
         // （轻物沉到水里却永远"量"不到液面，从而浮不起来）；整池水位只有一个值，
-        // 对池内任何固体都是一致的真值，固体浸没比例 = (液面 − 固体底部)/直径。
+        // 对池内任何固体都是一致的真值。
         FLOAT_ surfaceLevel = -std::numeric_limits<FLOAT_>::max();
         for (auto *p : mParticles)
         {
@@ -507,48 +507,14 @@ namespace PhysicsBlock
             return; // 没有液体
         }
 
-        auto ApplyTo = [&](PhysicsParticle *solid, PhysicsAngle *angle)
+        // 通用：上浮速度上限（防"活塞效应"把整池水抬离水域）+ 液体阻力/角阻尼
+        auto ApplyCommon = [&](PhysicsParticle *solid, PhysicsAngle *angle, FLOAT_ frac)
         {
-            if (solid == nullptr || solid->invMass == FLOAT_(0))
-            {
-                return; // 静态/运动学固体不受浮力（碰撞依然阻挡液体）
-            }
-            const FLOAT_ R = solid->PFGetCollisionR();
-            if (R <= FLOAT_(0))
-            {
-                return;
-            }
-            const Vec2_ c = solid->PFGetPos();
-
-            // 浸没比例 = (全局液面 − 固体底部) / 直径（0..1）
-            const FLOAT_ bottomLevel = Dot(c, up) - R;
-            const FLOAT_ subDepth = surfaceLevel - bottomLevel;
-            const FLOAT_ frac = std::clamp(subDepth / (FLOAT_(2.0) * R), FLOAT_(0), FLOAT_(1));
-            if (frac <= FLOAT_(0.01))
-            {
-                return;
-            }
-
-            // 阿基米德浮力：Δv = g·(ρ_液/ρ_体)·浸没比例·dt·浮力倍率
-            const FLOAT_ rhoBody = solid->PFGetMass() / ((FLOAT_)M_PI * R * R);
-            if (rhoBody <= FLOAT_(0))
-            {
-                return;
-            }
-            const FLOAT_ accel = g * (rhoLiquid / rhoBody) * frac * param.buoyancy;
-            solid->speed += up * (accel * time);
-
-            // 上浮速度上限：浮力只用于"撑住+缓慢抬起"，不产生 "活塞效应"
-            // （方块快速上浮时投影会把液体一起抬升，液面永远在方块上方 → 浮力不消失 →
-            // 正反馈把整池水带离水域）。限制上浮速度后，水因重力回落而与固体分离，
-            // 浸没比例随之下降，浮力收敛到平衡点。
             const FLOAT_ upSpeed = Dot(solid->speed, up);
             if (upSpeed > param.maxRiseSpeed)
             {
                 solid->speed -= up * (upSpeed - param.maxRiseSpeed);
             }
-
-            // 液体阻力：浸没越深衰减越快；角速度被液体强阻尼（5×，抑制方块缓慢旋转漂移）
             const FLOAT_ dragRate = param.solidDrag * frac;
             solid->speed *= std::max(FLOAT_(0.0), FLOAT_(1.0) - dragRate * time);
             if (angle != nullptr)
@@ -558,13 +524,166 @@ namespace PhysicsBlock
             }
         };
 
-        for (auto *s : mWorld->PhysicsShapeS)
-        {
-            ApplyTo(s, s);
-        }
+        // ── 圆：外接圆盘 + 全局液面浸没比例（保持现有模型）──────────────
+        Vec2_ buoyancyTotal{0, 0}; // 浮力等大反向作用到液体（动量守恒）
         for (auto *c : mWorld->PhysicsCircleS)
         {
-            ApplyTo(c, c);
+            if (c == nullptr || c->invMass == FLOAT_(0))
+            {
+                continue;
+            }
+            const FLOAT_ R = c->radius;
+            if (R <= FLOAT_(0))
+            {
+                continue;
+            }
+            const FLOAT_ bottomLevel = Dot(c->pos, up) - R;
+            const FLOAT_ subDepth = surfaceLevel - bottomLevel;
+            const FLOAT_ frac = std::clamp(subDepth / (FLOAT_(2.0) * R), FLOAT_(0), FLOAT_(1));
+            if (frac <= FLOAT_(0.01))
+            {
+                continue;
+            }
+            const FLOAT_ rhoBody = c->mass / ((FLOAT_)M_PI * R * R);
+            if (rhoBody <= FLOAT_(0))
+            {
+                continue;
+            }
+            const FLOAT_ accel = g * (rhoLiquid / rhoBody) * frac * param.buoyancy;
+            const FLOAT_ force = accel * c->mass; // F = m·a
+            buoyancyTotal += up * force;
+            c->speed += up * (accel * time);
+            ApplyCommon(c, c, frac);
+        }
+
+        // ── 网格形状：真实矩形水线裁剪（含扶正扭矩）────────────────────
+        // 把形状的旋转矩形与水线做半边裁剪得到"浸没多边形"，浮力
+        // F = ρ液·g·V排 作用在浸没形心（质心之外 → 稳心效应 → 扶正扭矩）：
+        // 长方形木板倾斜时浸没形心偏向深水侧，扭矩把板子转回水平躺平。
+        for (auto *s : mWorld->PhysicsShapeS)
+        {
+            if (s == nullptr || s->invMass == FLOAT_(0))
+            {
+                continue;
+            }
+            // 实心面积（格子数 = 世界面积，格子 1×1）与密度
+            unsigned int cells = 0;
+            for (unsigned int x = 0; x < s->width; ++x)
+            {
+                for (unsigned int y = 0; y < s->height; ++y)
+                {
+                    if (s->at(x, y).Entity)
+                    {
+                        ++cells;
+                    }
+                }
+            }
+            if (cells == 0)
+            {
+                continue;
+            }
+            const FLOAT_ rhoBody = s->mass / (FLOAT_)cells;
+            if (rhoBody <= FLOAT_(0))
+            {
+                continue;
+            }
+
+            // 矩形的 4 个角（相对质心的局部坐标 → 旋转 → 世界坐标）
+            const Vec2_ localCorners[4] = {
+                {-s->CentreMass.x, -s->CentreMass.y},
+                {s->width - s->CentreMass.x, -s->CentreMass.y},
+                {s->width - s->CentreMass.x, s->height - s->CentreMass.y},
+                {-s->CentreMass.x, s->height - s->CentreMass.y}
+            };
+            Vec2_ corners[4];
+            for (int k = 0; k < 4; ++k)
+            {
+                corners[k] = vec2angle(localCorners[k], s->angle) + s->pos;
+            }
+
+            // 水线裁剪：保留 dot(p, up) <= surfaceLevel 的半边（Sutherland–Hodgman）
+            mClipPoly.clear();
+            for (int k = 0; k < 4; ++k)
+            {
+                const Vec2_ &a = corners[k];
+                const Vec2_ &b = corners[(k + 1) & 3];
+                const FLOAT_ ha = Dot(a, up);
+                const FLOAT_ hb = Dot(b, up);
+                const bool aIn = (ha <= surfaceLevel);
+                const bool bIn = (hb <= surfaceLevel);
+                if (aIn)
+                {
+                    mClipPoly.push_back(a);
+                }
+                if (aIn != bIn)
+                {
+                    const FLOAT_ t = (surfaceLevel - ha) / (hb - ha);
+                    mClipPoly.push_back(a + (b - a) * t);
+                }
+            }
+            if (mClipPoly.size() < 3)
+            {
+                continue; // 未浸没
+            }
+
+            // 浸没多边形：有符号面积（鞋带公式）与形心
+            FLOAT_ area2 = 0; // 2×面积（带符号）
+            Vec2_ centroid{0, 0};
+            const size_t m = mClipPoly.size();
+            for (size_t k = 0; k < m; ++k)
+            {
+                const Vec2_ &p0 = mClipPoly[k];
+                const Vec2_ &p1 = mClipPoly[(k + 1) % m];
+                const FLOAT_ cross = p0.x * p1.y - p1.x * p0.y;
+                area2 += cross;
+                centroid += (p0 + p1) * cross;
+            }
+            const FLOAT_ area = std::fabs(area2) * FLOAT_(0.5);
+            if (area <= FLOAT_(1e-4))
+            {
+                continue;
+            }
+            centroid /= (FLOAT_(3.0) * area2); // 形心公式（面积为带符号值）
+
+            // 阿基米德力作用于浸没形心：线速度 + 角速度（扶正扭矩）
+            const Vec2_ F = up * (rhoLiquid * g * area * param.buoyancy);
+            buoyancyTotal += F;
+            s->speed += F * (s->invMass * time);
+            const Vec2_ r = centroid - s->pos; // 力臂：质心 → 浸没形心
+            const FLOAT_ torque = Cross(r, F);
+            if (s->invMomentInertia > FLOAT_(0))
+            {
+                FLOAT_ dOmega = torque * s->invMomentInertia * time;
+                const FLOAT_ maxDOmega = 0.04f; // 单帧角冲量上限（防止数值过冲）
+                if (dOmega > maxDOmega)
+                {
+                    dOmega = maxDOmega;
+                }
+                else if (dOmega < -maxDOmega)
+                {
+                    dOmega = -maxDOmega;
+                }
+                s->angleSpeed += dOmega;
+            }
+
+            ApplyCommon(s, s, std::clamp(area / (FLOAT_)cells, FLOAT_(0), FLOAT_(1)));
+        }
+
+        // ── 浮力反作用施加到液体（动量守恒）───────────────────────────
+        // 关键：浮力必须作为"水↔固体"的内力——固体受到 F 向上的同时，液体必须
+        // 受到等大反向的 −F。否则浮力变成外部上推力，会把"水 + 全部浮体"整体
+        // 托离水池（数据实测：整池在无接触时一起升空）。等大反向均分给所有
+        // 液体粒子，总动量守恒由构造保证。
+        if (ModulusLength(buoyancyTotal) > FLOAT_(1e-6) && !mParticles.empty())
+        {
+            const Vec2_ dv = buoyancyTotal * (-time / (mParticleMass * (FLOAT_)mParticles.size()));
+            for (auto *p : mParticles)
+            {
+                if (p != nullptr)
+                {
+                    p->speed += dv;
+                }
+            }
         }
     }
 

@@ -96,7 +96,7 @@ namespace PhysicsBlock
         /// 把液体粒子钳制出 固体（形状/圆）与 地图，防止压力把粒子推入刚体内部；
         /// 同时把投影的动量反作用施加到动态固体上（液体对固体的制动/支撑）
         void ResolveSolidOverlap(FLOAT_ time);
-        /// 固体↔液体耦合：阿基米德浮力（按局部浸没比例）与液体阻力
+        /// 固体↔液体耦合：阿基米德浮力（圆=外接圆盘；网格形状=真实矩形水线裁剪，含扶正扭矩）与液体阻力
         void ApplySolidCoupling(FLOAT_ time);
 
         PhysicsWorld *mWorld = nullptr;
@@ -107,6 +107,7 @@ namespace PhysicsBlock
         std::vector<unsigned int> mNeighborIndex;   // 邻居扁平表
         std::vector<unsigned int> mNeighborOffset;  // 每粒子邻居区间起点（size = n+1）
         std::vector<PhysicsFormwork *> mSearchV;    // 网格查询缓冲（复用）
+        std::vector<Vec2_> mClipPoly;      // 水线裁剪后的浸没多边形（复用，避免每帧分配）
         FLOAT_ mParticleMass = 1.0f;       // 最近一次添加的粒子质量（浮力估算用）
         FLOAT_ mSpacing = 0.5f;            // 最近一次 AddGrid 的粒子间距（液体面密度估算用）
     };

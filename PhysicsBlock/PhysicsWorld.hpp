@@ -60,6 +60,7 @@ namespace PhysicsBlock
 {
 
 class PhysicsGPU;
+class PhysicsLiquid;
 
 #if MemoryPoolBool
 #if ThreadPoolBool
@@ -271,6 +272,11 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
         void SetGPU(PhysicsGPU* gpu) { mGPU = gpu; }
         void SetUseGPUApplyImpulse(bool use) { mUseGPUApplyImpulse = use; }
         bool IsUseGPUApplyImpulse() const { return mUseGPUApplyImpulse; }
+
+        // 液体模拟（可选；见 PhysicsLiquid）
+        PhysicsLiquid* mLiquid = nullptr;                       // 液体系统，悬空则无液体
+        void SetLiquid(PhysicsLiquid* liquid) { mLiquid = liquid; }
+        PhysicsLiquid* GetLiquid() const { return mLiquid; }
 
         // CPU 各阶段耗时统计 (ms)
         float mCollisionDetectionTimeMS = 0.0f;

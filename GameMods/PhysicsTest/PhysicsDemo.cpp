@@ -1685,4 +1685,89 @@ namespace PhysicsBlock
 		}
 	}
 
+	// 液体模拟：双密度松弛粒子流体（PhysicsLiquid）
+	// 场景：储水池 + 空中水团落下 + 落入的圆/方块
+	void PhysicsDemo23(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
+	{
+		if (*myPhysicsWorld != nullptr)
+		{
+			delete *myPhysicsWorld;
+		}
+		// 重力较强便于观察液面波动与溅射
+		*myPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
+		mCamera->setCameraPos({0, 2, 42});
+
+		// 容器地图：grid 64×64，centrality {32,32} → 世界坐标 = grid - 32
+		// 池底: grid 行 18..20；左右侧壁: 列 4..6 / 57..59，行 18..38；内柱: 列 40..41，行 18..23
+		const int MapSize = 64;
+		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		for (int i = 0; i < (MapSize * MapSize); ++i)
+		{
+			mMapStatic->at(i).Entity = false;
+			mMapStatic->at(i).Collision = false;
+			mMapStatic->at(i).mass = 1.0;
+			mMapStatic->at(i).Healthpoint = 24;
+		}
+		auto SetCell = [&](int x, int y)
+		{
+			mMapStatic->at(x, y).Entity = true;
+			mMapStatic->at(x, y).Collision = true;
+			mMapStatic->at(x, y).mass = 1.0f;
+		};
+		for (int x = 4; x <= 59; ++x)
+		{
+			for (int y = 18; y <= 20; ++y)
+			{
+				SetCell(x, y);
+			}
+		}
+		for (int y = 18; y <= 38; ++y)
+		{
+			for (int x = 4; x <= 6; ++x)
+			{
+				SetCell(x, y);
+			}
+			for (int x = 57; x <= 59; ++x)
+			{
+				SetCell(x, y);
+			}
+		}
+		// 内柱：水流绕行效果
+		for (int y = 18; y <= 23; ++y)
+		{
+			for (int x = 40; x <= 41; ++x)
+			{
+				SetCell(x, y);
+			}
+		}
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
+		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
+
+		// 液体：416 个水粒子（间距 0.5），从池子上方落入
+		PhysicsBlock::PhysicsLiquid *liquid = new PhysicsBlock::PhysicsLiquid(*myPhysicsWorld);
+		liquid->AddGrid({0, 2}, 26, 16, 0.5f, 1.0f, 0.4f);
+		(*myPhysicsWorld)->SetLiquid(liquid);
+
+		// 落入的刚体：三个不同密度的圆（ρ_液 = 1/0.5² = 4）
+		//   m=2  ρ=1.30 → 浮在水面    m=5  ρ=3.25 → 半浮/缓沉    m=12 ρ=7.80 → 沉底
+		// 方块（3×3 整体质量 9，等效 ρ≈0.64）→ 像木筏一样浮在水面
+		PhysicsBlock::PhysicsCircle *c = new PhysicsBlock::PhysicsCircle({-4, 9}, 0.7f, 2.0f, 0.8f);
+		(*myPhysicsWorld)->AddObject(c);
+		c = new PhysicsBlock::PhysicsCircle({0, 10.5f}, 0.7f, 5.0f, 0.8f);
+		(*myPhysicsWorld)->AddObject(c);
+		c = new PhysicsBlock::PhysicsCircle({4, 9}, 0.7f, 12.0f, 0.8f);
+		(*myPhysicsWorld)->AddObject(c);
+
+		PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape({0, 14}, {3, 3});
+		for (size_t i = 0; i < (box->width * box->height); ++i)
+		{
+			box->at(i).Entity = true;
+			box->at(i).Collision = true;
+			box->at(i).mass = 1.0f;
+		}
+		box->UpdateAll();
+		box->angle = 0.2f;
+		(*myPhysicsWorld)->AddObject(box);
+	}
+
 }

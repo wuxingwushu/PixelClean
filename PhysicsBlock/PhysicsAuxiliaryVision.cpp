@@ -1,6 +1,7 @@
 #include "PhysicsAuxiliaryVision.hpp"
 #include "MapDynamic.hpp"  // RenderMapOutline 中 _MapDynamic 分支需要具体类型
 #include "ImGuiPhysics.hpp" // ColorToVec4 宏 + Auxiliary_*Bool / Auxiliary_*Color 全局开关
+#include "PhysicsLiquid.hpp" // DrawLiquid：液体粒子着色绘制
 #include "BaseCalculate.hpp" // vec2angle / AngleFloatToAngleVec / AngleMat
 #include "../VulkanTool/AuxiliaryVision.h" // 完整的 inline 绘制方法
 // ImGui（drawUI 用）—— 与 ImGuiPhysics.cpp 保持一致的两种 include 路径
@@ -119,6 +120,24 @@ namespace PhysicsBlock
 	void DrawParticle(VulKan::AuxiliaryVision *av, PhysicsParticle *obj, glm::vec4 color)
 	{
 		av->Spot({obj->pos, 0}, 0.05f, color);
+	}
+
+	void DrawLiquid(VulKan::AuxiliaryVision *av, PhysicsLiquid *liquid, float spotSize)
+	{
+		if (av == nullptr || liquid == nullptr)
+			return;
+		const auto &particles = liquid->Particles();
+		const auto &density = liquid->Density();
+		for (size_t i = 0; i < particles.size(); ++i)
+		{
+			PhysicsParticle *p = particles[i];
+			if (p == nullptr)
+				continue;
+			// 按密度着色（深蓝 = 稀疏低压，亮蓝白 = 压缩高压）
+			const FLOAT_ rho = (i < density.size() ? density[i] : liquid->param.restDensity);
+			const glm::vec4 color = PhysicsLiquid::ColorByDensity(rho, liquid->param);
+			av->Spot({p->pos, 0}, spotSize, color);
+		}
 	}
 
 	void DrawCircle(VulKan::AuxiliaryVision *av, PhysicsCircle *obj, glm::vec4 color)
@@ -405,6 +424,9 @@ namespace PhysicsBlock
 			if (showAuxiliary)
 				DrawParticleAuxiliary(av, i);
 		}
+		// 渲染液体粒子（覆盖普通粒子小点，按密度着色）
+		if (world->GetLiquid() != nullptr)
+			DrawLiquid(av, world->GetLiquid());
 		// 渲染圆
 		for (auto i : world->GetPhysicsCircle())
 		{

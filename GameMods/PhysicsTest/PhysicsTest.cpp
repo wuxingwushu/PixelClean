@@ -367,6 +367,14 @@ namespace GAME
 					}
 				}
 
+				// 液体参数（当前场景存在液体系统时显示）
+				if (mPhysicsWorld->GetLiquid() != nullptr)
+				{
+					ImGui::Spacing();
+					ImGui::SeparatorText(u8"液体参数");
+					PhysicsBlock::PhysicsUI(mPhysicsWorld->GetLiquid());
+				}
+
 				ImGui::EndTabItem();
 			}
 

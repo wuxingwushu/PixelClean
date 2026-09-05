@@ -9,6 +9,7 @@
 #include "PhysicsBaseArbiter.hpp"
 #include "PhysicsBaseCollide.hpp"
 #include "PhysicsGPU.hpp"
+#include "PhysicsLiquid.hpp"
 #include <chrono>
 
 // ========== thread_local 静态成员定义 ==========
@@ -110,6 +111,13 @@ namespace PhysicsBlock
         }
         CollideGroupS.clear();
         CollideGroupVector.clear();
+
+        // 液体系统（先于物体列表销毁：内部只持有粒子指针，粒子随世界一并销毁）
+        if (mLiquid != nullptr)
+        {
+            delete mLiquid;
+            mLiquid = nullptr;
+        }
 
         if (GridWind != nullptr)
         {
@@ -828,6 +836,13 @@ namespace PhysicsBlock
         }
         xTn.clear();
         mGridSearch.UpDaraWorkeTaskEnd();
+
+        // 液体模拟（双密度松弛 PBF）：此时空间网格为最新位置，
+        // 先修正粒子位置，再启动下一帧碰撞检测任务（检测读到的是修正后的位置）
+        if (mLiquid != nullptr)
+        {
+            mLiquid->Update(time);
+        }
 
 #if ThreadPoolBool
         // 预分配每个线程的输出缓冲区

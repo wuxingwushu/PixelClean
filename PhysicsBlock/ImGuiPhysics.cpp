@@ -1,4 +1,5 @@
 #include "ImGuiPhysics.hpp"
+#include "PhysicsLiquid.hpp"
 #include <string>
 #if TranslatorLocality
 #include "../ImGui/imgui.h"
@@ -299,6 +300,27 @@ namespace PhysicsBlock
 		}
 		*/
 		return UpData;
+	}
+
+	bool PhysicsUI(PhysicsLiquid *Object)
+	{
+		if (Object == nullptr)
+			return false;
+
+		ImGui::PushID(Object);
+		ImGui::DragScalar("相互作用半径(h)", MyImGuiDataType, &Object->param.h, 0.01f, nullptr, nullptr, "%.3f");
+		ImGui::DragScalar("静息密度", MyImGuiDataType, &Object->param.restDensity, 0.01f, nullptr, nullptr, "%.3f");
+		ImGui::DragScalar("压力刚度(k)", MyImGuiDataType, &Object->param.stiffness, 50.0f, nullptr, nullptr, "%.0f");
+		ImGui::DragScalar("近场压力刚度", MyImGuiDataType, &Object->param.stiffnessNear, 50.0f, nullptr, nullptr, "%.0f");
+		ImGui::DragScalar("粘滞(线性)", MyImGuiDataType, &Object->param.viscosity, 0.1f, nullptr, nullptr, "%.2f");
+		ImGui::DragScalar("粘滞(二次)", MyImGuiDataType, &Object->param.viscosityQuadratic, 0.01f, nullptr, nullptr, "%.2f");
+		ImGui::DragScalar("浮力倍率", MyImGuiDataType, &Object->param.buoyancy, 0.01f, nullptr, nullptr, "%.2f");
+		ImGui::DragScalar("液体阻力", MyImGuiDataType, &Object->param.solidDrag, 0.05f, nullptr, nullptr, "%.2f");
+		ImGui::DragInt("松弛迭代次数", &Object->param.iterations, 1, 1, 16);
+		ImGui::DragScalar("速度上限", MyImGuiDataType, &Object->param.maxSpeed, 0.1f, nullptr, nullptr, "%.1f");
+		ImGui::Text("液体粒子: %d", (int)Object->Particles().size());
+		ImGui::PopID();
+		return false;
 	}
 
 }

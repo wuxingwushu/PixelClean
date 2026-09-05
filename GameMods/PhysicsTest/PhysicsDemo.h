@@ -1,6 +1,7 @@
 #pragma once
 #include "../../PhysicsBlock/PhysicsWorld.hpp"
 #include "../../PhysicsBlock/MapStatic.hpp"
+#include "../../PhysicsBlock/PhysicsLiquid.hpp"
 #include "../../Camera/Camera.h"
 
 namespace PhysicsBlock
@@ -74,6 +75,9 @@ namespace PhysicsBlock
 	// 动态地图（无限生成）
 	void PhysicsDemo22(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
 
+	// 液体模拟
+	void PhysicsDemo23(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
+
 	using DemoFunction = void (*)(PhysicsWorld **myPhysicsWorld, Camera *mCamera);
 	static DemoFunction DemoFunS[] = { 
 		PhysicsDemo0, 
@@ -98,7 +102,8 @@ namespace PhysicsBlock
 		PhysicsDemo19,
 		PhysicsDemo20,
 		PhysicsDemo21,
-		PhysicsDemo22
+		PhysicsDemo22,
+		PhysicsDemo23
 	 };
 	static const char* DemoNameS[] = { 
 		"外骨骼计算", 
@@ -123,7 +128,8 @@ namespace PhysicsBlock
 		"碰撞回调系统",
 		"运动学物体",
 		"触发器系统",
-		"动态地图（无限生成）"
+		"动态地图（无限生成）",
+		"液体模拟"
 	 };
 
 }

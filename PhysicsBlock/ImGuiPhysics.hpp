@@ -100,4 +100,9 @@ namespace PhysicsBlock
 	 * @return 是否修改导致需要更新对象信息 */
 	bool PhysicsUI(PhysicsWorld *Object);
 
+	/**
+	 * @brief 将 PhysicsLiquid 变量UI显示（液体参数滑杆）
+	 * @param Object PhysicsLiquid 指针 */
+	bool PhysicsUI(PhysicsLiquid *Object);
+
 }

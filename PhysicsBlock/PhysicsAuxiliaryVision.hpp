@@ -10,6 +10,7 @@ namespace VulKan
 
 namespace PhysicsBlock
 {
+	class PhysicsLiquid;
 	// ─────────────────────────────────────────────────────────────
 	// 基本图元
 	// ─────────────────────────────────────────────────────────────
@@ -44,6 +45,8 @@ namespace PhysicsBlock
 	void DrawShape(VulKan::AuxiliaryVision *av, PhysicsShape *obj, glm::vec4 color);
 	/// 绘制粒子本体（一个点）
 	void DrawParticle(VulKan::AuxiliaryVision *av, PhysicsParticle *obj, glm::vec4 color);
+	/// 绘制液体粒子（按密度着色：深蓝=低压，亮蓝白=高压）
+	void DrawLiquid(VulKan::AuxiliaryVision *av, PhysicsLiquid *liquid, float spotSize = 0.30f);
 	/// 绘制圆形本体
 	void DrawCircle(VulKan::AuxiliaryVision *av, PhysicsCircle *obj, glm::vec4 color);
 	/// 绘制线段本体

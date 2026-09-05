@@ -309,11 +309,13 @@ namespace PhysicsBlock
      *          1. 解析上一帧的碰撞对变更（ResolveCollideGroup）
      *          2. 碰撞检测（多线程）：遍历所有物体，使用网格搜索查找潜在碰撞对，
      *             调用对应的 Arbiter 函数进行精确碰撞检测
-     *          3. 预处理（PreStep）：为每个碰撞对、关节、连接体计算预求解参数
-     *          4. 冲量迭代求解（ApplyImpulse）：多次迭代求解约束，支持 GPU 加速
-     *          5. 位置更新（PhysicsPos）：根据速度和时间步长更新所有物体的位置
-     *          6. 后处理：运动学物体更新、碰撞回调分发、触发器处理、网格搜索树更新
-     *          7. 启动下一帧的碰撞检测任务（异步）
+     *          3. 外力/重力积分（PhysicsSpeed）：v += dt*(g + F/m)，先于约束求解，
+     *             使外力当帧生效、接触解算器直接看到含重力的速度
+     *          4. 预处理（PreStep）：为每个碰撞对、关节、连接体计算预求解参数
+     *          5. 冲量迭代求解（ApplyImpulse）：多次迭代求解约束，支持 GPU 加速
+     *          6. 位置更新（PhysicsPos）：使用解算后的速度更新所有物体的位置
+     *          7. 后处理：运动学物体更新、碰撞回调分发、触发器处理、网格搜索树更新
+     *          8. 启动下一帧的碰撞检测任务（异步）
      *          各阶段耗时分别记录到对应的性能统计变量中。 */
     void PhysicsWorld::PhysicsEmulator(FLOAT_ time)
     {
@@ -540,6 +542,69 @@ namespace PhysicsBlock
 
         FLOAT_ inv_dt = 1.0 / time;
 
+        // ===== 外力/重力积分（先于约束求解）=====
+        // 标准求解顺序：v += dt*(g + F/m) → 冲量解算 → x += dt*v。
+        // 旧实现是在位置更新之后才加力（x += dt*v → v += dt*(g+F/m)），
+        // 导致 AddForce 的力要滞后一帧才反映到位置，静止接触依赖
+        // "解算器抵消上一帧重力、本帧重力再加回"的跨帧交替维持（易微沉/微跳）。
+        // 现在外力当帧生效，接触解算器直接看到含重力的速度。
+#if ThreadPoolBool
+        const auto PhysicsSpeedXT_Fun = [this, time](int T_Num, int Tx)
+        {
+            int SizeD;
+            int SizeY;
+            ThreadTaskAllot(SizeD, SizeY, PhysicsShapeS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                PhysicsShapeS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
+            }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                PhysicsParticleS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
+            }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsCircleS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                PhysicsCircleS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
+            }
+            ThreadTaskAllot(SizeD, SizeY, PhysicsLineS.size(), T_Num, Tx);
+            for (; SizeD < SizeY; ++SizeD)
+            {
+                PhysicsLineS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
+            }
+        };
+        xTn.reserve(xThreadNum);
+        for (size_t i = 0; i < xThreadNum; ++i)
+        {
+            xTn.push_back(mThreadPool.enqueue(PhysicsSpeedXT_Fun, i, xThreadNum));
+        }
+        // 等待 外力积分 任务结束
+        for (auto &tf : xTn)
+        {
+            tf.wait();
+        }
+        xTn.clear();
+#else
+        // 外力 & 重力改变（先于约束求解）
+        for (auto i : PhysicsShapeS)
+        {
+            i->PhysicsSpeed(time, GravityAcceleration);
+        }
+        for (auto i : PhysicsParticleS)
+        {
+            i->PhysicsSpeed(time, GravityAcceleration);
+        }
+        for (auto i : PhysicsCircleS)
+        {
+            i->PhysicsSpeed(time, GravityAcceleration);
+        }
+        for (auto i : PhysicsLineS)
+        {
+            i->PhysicsSpeed(time, GravityAcceleration);
+        }
+#endif
+
         auto tPreStepStart = std::chrono::high_resolution_clock::now();
 
 #define Definite 0 // 是否需要确定性(暂时没法保证确定性，没有对解算的前后顺序进行排序)
@@ -676,7 +741,7 @@ namespace PhysicsBlock
 
 // 这个多线程不影响结果
 #if ThreadPoolBool
-        // 移动
+        // 位置积分（使用解算后的速度）
         const auto PhysicsPosXT_Fun = [this, time](int T_Num, int Tx)
         {
             bool JZ;
@@ -686,25 +751,21 @@ namespace PhysicsBlock
             for (; SizeD < SizeY; ++SizeD)
             {
                 PhysicsShapeS[SizeD]->PhysicsPos(time, GravityAcceleration);
-                PhysicsShapeS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
             ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 PhysicsParticleS[SizeD]->PhysicsPos(time, GravityAcceleration);
-                PhysicsParticleS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
             ThreadTaskAllot(SizeD, SizeY, PhysicsCircleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 PhysicsCircleS[SizeD]->PhysicsPos(time, GravityAcceleration);
-                PhysicsCircleS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
             ThreadTaskAllot(SizeD, SizeY, PhysicsLineS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
                 PhysicsLineS[SizeD]->PhysicsPos(time, GravityAcceleration);
-                PhysicsLineS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
         };
         xTn.reserve(xThreadNum);
@@ -719,26 +780,22 @@ namespace PhysicsBlock
         }
         xTn.clear();
 #else
-        // 移动 & 外力改变
+        // 位置积分
         for (auto i : PhysicsShapeS)
         {
             i->PhysicsPos(time, GravityAcceleration);
-            i->PhysicsSpeed(time, GravityAcceleration);
         }
         for (auto i : PhysicsParticleS)
         {
             i->PhysicsPos(time, GravityAcceleration);
-            i->PhysicsSpeed(time, GravityAcceleration);
         }
         for (auto i : PhysicsCircleS)
         {
             i->PhysicsPos(time, GravityAcceleration);
-            i->PhysicsSpeed(time, GravityAcceleration);
         }
         for (auto i : PhysicsLineS)
         {
             i->PhysicsPos(time, GravityAcceleration);
-            i->PhysicsSpeed(time, GravityAcceleration);
         }
 #endif
         mKinematic.UpdateKinematicMotion(time);

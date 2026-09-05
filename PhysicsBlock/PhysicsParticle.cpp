@@ -98,7 +98,7 @@ namespace PhysicsBlock
         if (invMass == 0)
             return;
 #if Define_MinSpoilageBool
-        speed *= Define_MinSpoilage; // 应用最小损耗系数，模拟阻力
+        speed *= MinSpoilageFactor(time); // 应用最小损耗系数，模拟阻力（按时间连续衰减，与帧率无关）
 #endif
         speed += time * (Ga + invMass * force);
         force = {0, 0}; // 重置力为零

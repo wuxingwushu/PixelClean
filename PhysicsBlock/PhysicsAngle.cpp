@@ -136,7 +136,7 @@ namespace PhysicsBlock
 
         PhysicsParticle::PhysicsSpeed(time, Ga);
 #if Define_MinSpoilageBool
-        angleSpeed *= Define_MinSpoilage;
+        angleSpeed *= MinSpoilageFactor(time); // 应用最小损耗系数（按时间连续衰减，与帧率无关）
 #endif
         angleSpeed += time * invMomentInertia * torque;
         torque = 0;

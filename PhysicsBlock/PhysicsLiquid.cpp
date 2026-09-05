@@ -485,27 +485,55 @@ namespace PhysicsBlock
         const FLOAT_ areaPerParticle = mSpacing * mSpacing;
         const FLOAT_ rhoLiquid = mParticleMass / areaPerParticle; // 液体面密度（2D 中"密度"）
 
-        // 全局液面（整池水位）：所有液体粒子沿 up 方向的最大投影。
-        // 用全局水位而非"固体上方的局部水柱"：局部测量会被固体挤开的空腔骗过
-        // （轻物沉到水里却永远"量"不到液面，从而浮不起来）；整池水位只有一个值，
-        // 对池内任何固体都是一致的真值。
-        FLOAT_ surfaceLevel = -std::numeric_limits<FLOAT_>::max();
-        for (auto *p : mParticles)
+        // 局部液面＝"与该固体有接触的水体"的顶面，而不是全池一个全局水位：
+        // 1) 对固体中心周围环带 [0.8R, R+1.5h] 采样水粒子——环带内都是与固体
+        //    接触/相邻的水珠（"需要和水有接触就是水面"），跳过固体自身占位；
+        // 2) 环带内高度排序，按最大间隙切簇，取下方连续水簇的顶面（剔除孤立
+        //    飞溅液滴），得到该固体所在位置的真实水面；
+        // 3) 远处水花、分离的水体不参与——每个固体各用自己的“单独的水面”。
+        const FLOAT_ gapTh = std::max(FLOAT_(1.0), mSpacing * FLOAT_(2.0));
+        auto LocalSurface = [&](const Vec2_ &c, FLOAT_ R) -> FLOAT_
         {
-            if (p == nullptr)
+            const FLOAT_ inner = R * FLOAT_(0.8);
+            const FLOAT_ outer = R + param.h * FLOAT_(1.5);
+            mWorld->mGridSearch.Get(c, outer, mSearchV);
+            mHeightBuf.clear();
+            for (auto *o : mSearchV)
             {
-                continue;
+                if (o == nullptr || o->PFGetType() != PhysicsObjectEnum::particle)
+                {
+                    continue;
+                }
+                const FLOAT_ d = Modulus(o->PFGetPos() - c);
+                if (d >= inner && d <= outer)
+                {
+                    mHeightBuf.push_back(Dot(o->PFGetPos(), up));
+                }
             }
-            const FLOAT_ h = Dot(p->pos, up);
-            if (h > surfaceLevel)
+            if (mHeightBuf.size() < 2)
             {
-                surfaceLevel = h;
+                return -std::numeric_limits<FLOAT_>::max(); // 环带内没有水体接触
             }
-        }
-        if (surfaceLevel <= -std::numeric_limits<FLOAT_>::max() * FLOAT_(0.5))
-        {
-            return; // 没有液体
-        }
+            std::sort(mHeightBuf.begin(), mHeightBuf.end());
+            FLOAT_ level = mHeightBuf.back();
+            FLOAT_ bestGap = FLOAT_(0);
+            size_t bestIdx = 0;
+            for (size_t i = 1; i < mHeightBuf.size(); ++i)
+            {
+                const FLOAT_ gap = mHeightBuf[i] - mHeightBuf[i - 1];
+                if (gap > bestGap)
+                {
+                    bestGap = gap;
+                    bestIdx = i;
+                }
+            }
+            if (bestGap > gapTh)
+            {
+                level = mHeightBuf[bestIdx - 1];
+            }
+            return level;
+        };
+        const FLOAT_ noWater = -std::numeric_limits<FLOAT_>::max() * FLOAT_(0.5);
 
         // 通用：上浮速度上限（防"活塞效应"把整池水抬离水域）+ 液体阻力/角阻尼
         auto ApplyCommon = [&](PhysicsParticle *solid, PhysicsAngle *angle, FLOAT_ frac)
@@ -524,7 +552,7 @@ namespace PhysicsBlock
             }
         };
 
-        // ── 圆：外接圆盘 + 全局液面浸没比例（保持现有模型）──────────────
+        // ── 圆：外接圆盘 + 局部接触水面浸没比例（保持现有模型）──────────────
         Vec2_ buoyancyTotal{0, 0}; // 浮力等大反向作用到液体（动量守恒）
         for (auto *c : mWorld->PhysicsCircleS)
         {
@@ -536,6 +564,11 @@ namespace PhysicsBlock
             if (R <= FLOAT_(0))
             {
                 continue;
+            }
+            const FLOAT_ surfaceLevel = LocalSurface(c->pos, R);
+            if (surfaceLevel <= noWater)
+            {
+                continue; // 周围没有水体接触
             }
             const FLOAT_ bottomLevel = Dot(c->pos, up) - R;
             const FLOAT_ subDepth = surfaceLevel - bottomLevel;
@@ -586,6 +619,12 @@ namespace PhysicsBlock
             if (rhoBody <= FLOAT_(0))
             {
                 continue;
+            }
+            // 该固体所在位置的局部接触水面（环带水体顶面）
+            const FLOAT_ surfaceLevel = LocalSurface(s->pos, s->radius);
+            if (surfaceLevel <= noWater)
+            {
+                continue; // 周围没有水体接触
             }
 
             // 矩形的 4 个角（相对质心的局部坐标 → 旋转 → 世界坐标）

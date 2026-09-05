@@ -108,6 +108,7 @@ namespace PhysicsBlock
         std::vector<unsigned int> mNeighborOffset;  // 每粒子邻居区间起点（size = n+1）
         std::vector<PhysicsFormwork *> mSearchV;    // 网格查询缓冲（复用）
         std::vector<Vec2_> mClipPoly;      // 水线裁剪后的浸没多边形（复用，避免每帧分配）
+        std::vector<FLOAT_> mHeightBuf;    // 粒子高度排序缓冲（液面估计复用，避免每帧分配）
         FLOAT_ mParticleMass = 1.0f;       // 最近一次添加的粒子质量（浮力估算用）
         FLOAT_ mSpacing = 0.5f;            // 最近一次 AddGrid 的粒子间距（液体面密度估算用）
     };

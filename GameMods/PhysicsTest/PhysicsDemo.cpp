@@ -1750,15 +1750,17 @@ namespace PhysicsBlock
 
 		// 落入的刚体：三个不同密度的圆（ρ_液 = 1/0.5² = 4）
 		//   m=2  ρ=1.30 → 浮在水面    m=5  ρ=3.25 → 半浮/缓沉    m=12 ρ=7.80 → 沉底
-		// 方块（3×3 整体质量 9，等效 ρ≈0.64）→ 像木筏一样浮在水面
-		PhysicsBlock::PhysicsCircle *c = new PhysicsBlock::PhysicsCircle({-4, 9}, 0.7f, 2.0f, 0.8f);
+		// 方块（3×3 整体质量 9，等效 ρ≈0.64）→ 像木筏一样平浮在水面
+		// 初始位置相互错开，避免方块直接砸在圆上
+		PhysicsBlock::PhysicsCircle *c = new PhysicsBlock::PhysicsCircle({-6, 6.5f}, 0.7f, 2.0f, 0.8f);
 		(*myPhysicsWorld)->AddObject(c);
-		c = new PhysicsBlock::PhysicsCircle({0, 10.5f}, 0.7f, 5.0f, 0.8f);
+		c = new PhysicsBlock::PhysicsCircle({0, 7.5f}, 0.7f, 5.0f, 0.8f);
 		(*myPhysicsWorld)->AddObject(c);
-		c = new PhysicsBlock::PhysicsCircle({4, 9}, 0.7f, 12.0f, 0.8f);
+		c = new PhysicsBlock::PhysicsCircle({6, 6.5f}, 0.7f, 12.0f, 0.8f);
 		(*myPhysicsWorld)->AddObject(c);
 
-		PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape({0, 14}, {3, 3});
+		// 方块平放落入（无初始倾角，避免入水时翻滚导致姿态混乱）
+		PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape({-3, 10}, {3, 3});
 		for (size_t i = 0; i < (box->width * box->height); ++i)
 		{
 			box->at(i).Entity = true;
@@ -1766,7 +1768,7 @@ namespace PhysicsBlock
 			box->at(i).mass = 1.0f;
 		}
 		box->UpdateAll();
-		box->angle = 0.2f;
+		box->angle = 0.0f;
 		(*myPhysicsWorld)->AddObject(box);
 	}
 

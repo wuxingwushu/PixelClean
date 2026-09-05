@@ -91,6 +91,13 @@ namespace PhysicsBlock
          */
         FLOAT_ friction = 0.2; 
 
+        /**
+         * @brief 液体粒子标记
+         * @details 由 PhysicsLiquid 设置。液体粒子不参与引擎的碰撞仲裁器
+         *          （粒子↔地图/形状/圆/线），固液交互全部由液体系统自行处理
+         *          （投影 + 反作用 + 浮力 + 阻力），避免深穿透 bias 导致刚体被猛踢/旋转。 */
+        bool IsLiquidParticle = false;
+
     public:
         /**
          * @brief 构造函数

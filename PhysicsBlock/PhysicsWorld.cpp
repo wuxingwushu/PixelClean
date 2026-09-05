@@ -390,6 +390,7 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (((PhysicsParticle *)i)->IsLiquidParticle) break; // 液体粒子：固液交互由液体系统自理（投影+反作用+浮力）
                         if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
                         if (PhysicsShapeS[SizeD]->DropCollision(((PhysicsParticle *)i)->pos).Collision)
                         {
@@ -459,6 +460,7 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (((PhysicsParticle *)i)->IsLiquidParticle) break; // 液体粒子：固液交互由液体系统自理
                         if (SameAssembly(PhysicsCircleS[SizeD], i)) break;
                         if (CollideAABB(PhysicsCircleS[SizeD], ((PhysicsParticle *)i)))
                         {
@@ -513,6 +515,7 @@ namespace PhysicsBlock
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsCircle *)i));
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (((PhysicsParticle *)i)->IsLiquidParticle) break; // 液体粒子：固液交互由液体系统自理
                         if (SameAssembly(PhysicsLineS[SizeD], i)) break;
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsParticle *)i));
                         break;
@@ -536,8 +539,9 @@ namespace PhysicsBlock
             ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
-                // 静止了，跳过碰撞遍历
-                if (PhysicsParticleS[SizeD]->StaticNum > 10)
+                // 液体粒子跳过引擎的粒子↔地图仲裁器（地形由液体投影自理），
+                // 静止的粒子则跳过碰撞遍历
+                if (PhysicsParticleS[SizeD]->IsLiquidParticle || PhysicsParticleS[SizeD]->StaticNum > 10)
                 {
                     continue;
                 }
@@ -920,6 +924,7 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsShapeS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (((PhysicsParticle *)i)->IsLiquidParticle) break; // 液体粒子：固液交互由液体系统自理（投影+反作用+浮力）
                         if (SameAssembly(PhysicsShapeS[SizeD], i)) break;
                         if (PhysicsShapeS[SizeD]->DropCollision(((PhysicsParticle *)i)->pos).Collision)
                         {
@@ -979,6 +984,7 @@ namespace PhysicsBlock
                         Arbiter(((PhysicsCircle *)i), PhysicsCircleS[SizeD]);
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (((PhysicsParticle *)i)->IsLiquidParticle) break; // 液体粒子：固液交互由液体系统自理
                         if (SameAssembly(PhysicsCircleS[SizeD], i)) break;
                         if (CollideAABB(PhysicsCircleS[SizeD], ((PhysicsParticle *)i)))
                         {
@@ -1024,6 +1030,7 @@ namespace PhysicsBlock
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsCircle *)i));
                         break;
                     case PhysicsObjectEnum::particle:
+                        if (((PhysicsParticle *)i)->IsLiquidParticle) break; // 液体粒子：固液交互由液体系统自理
                         if (SameAssembly(PhysicsLineS[SizeD], i)) break;
                         Arbiter(PhysicsLineS[SizeD], ((PhysicsParticle *)i));
                         break;
@@ -1047,6 +1054,11 @@ namespace PhysicsBlock
             ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
+                // 液体粒子跳过引擎的粒子↔地图仲裁器（地形由液体投影自理）
+                if (PhysicsParticleS[SizeD]->IsLiquidParticle)
+                {
+                    continue;
+                }
                 // 处理 点 与 地形 的碰撞
                 Arbiter(PhysicsParticleS[SizeD], wMapFormwork);
             }

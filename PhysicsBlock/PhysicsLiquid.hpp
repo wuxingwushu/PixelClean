@@ -40,7 +40,8 @@ namespace PhysicsBlock
             FLOAT_ maxSpeed = 12.0f;          // 速度上限（稳定性钳制）
             FLOAT_ maxPairDisplacement = 0.25f; // 单对粒子单次迭代最大位移（相对 h 的倍数）
             FLOAT_ buoyancy = 1.0f;           // 阿基米德浮力倍率（1=物理正确密度比；>1 更容易浮）
-            FLOAT_ solidDrag = 1.5f;          // 固体在液体中的速度阻尼（1/秒，按浸没比例缩放）
+            FLOAT_ solidDrag = 2.0f;          // 固体在液体中的速度阻尼（1/秒，按浸没比例缩放）
+            FLOAT_ maxRiseSpeed = 2.5f;       // 固体上浮速度上限（防止"活塞效应"把液体一起抬离水域）
         };
 
         /**
@@ -92,8 +93,9 @@ namespace PhysicsBlock
     private:
         /// 重建邻居表（扁平存储：mNeighborOffset[i]..mNeighborOffset[i+1] 为粒子 i 的邻居索引）
         void RebuildNeighbors();
-        /// 把液体粒子钳制出 固体（形状/圆）与 地图，防止压力把粒子推入刚体内部
-        void ResolveSolidOverlap();
+        /// 把液体粒子钳制出 固体（形状/圆）与 地图，防止压力把粒子推入刚体内部；
+        /// 同时把投影的动量反作用施加到动态固体上（液体对固体的制动/支撑）
+        void ResolveSolidOverlap(FLOAT_ time);
         /// 固体↔液体耦合：阿基米德浮力（按局部浸没比例）与液体阻力
         void ApplySolidCoupling(FLOAT_ time);
 

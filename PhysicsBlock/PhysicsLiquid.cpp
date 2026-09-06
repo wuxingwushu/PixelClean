@@ -67,6 +67,9 @@ namespace PhysicsBlock
         mPrevPos.clear();
         mNeighborIndex.clear();
         mNeighborOffset.clear();
+        // 重置浮力估算基准，防止 Clear 后仅 AddParticle（未 AddGrid）时沿用旧值
+        mParticleMass = 1.0f;
+        mSpacing = 0.5f;
     }
 
     void PhysicsLiquid::RebuildNeighbors()
@@ -338,21 +341,10 @@ namespace PhysicsBlock
             return bestLen < FLOAT_MAX ? best : from;
         };
 
-        // 投影反作用（动量守恒：粒子被推开的 Δp ⇔ 固体受到的 Δv = −Δp/dt·(m_p/m_s)）
-        // 只对动态固体生效；每帧每固体总反作用钳制。
-        // 注意：
-        // 1) 形状的**线反作用关闭**（=0）：任何"单滴水"的支撑反力都不可能托起整块
-        //    木板——板只会压着水滴下坠，水滴从板底滑出；支撑/制动交给浮力与阻力
-        //    （实测收敛稳定）。若有线反作用且上限高于 g，一滴水就能把整块板扛起
-        //    悬浮（用户实测的现象）；
-        // 2) 反作用"力矩"保留（接触点效应）：水滴顶在木板右端 → τ = r×F 使木板
-        //    旋转（抬升接触端、另一端下沉）→ 水滴被挤出/滑脱 → 分离坠落；
-        // 3) 小圆形（半径 < h）自身就能"挖"出包围空腔，圆的反作用同样关闭。
+        // 投影反作用"力矩"（接触点效应：水滴顶在木板右端 → τ = r×Δv → 木板旋转、
+        // 水滴滑脱、分离坠落）；线反作用已关闭（=0）——任何"单滴水"的支撑反力都
+        // 不可能托起整块木板，支撑/制动交给浮力与阻力。
         const FLOAT_ invDt = FLOAT_(1.0) / time;
-        const FLOAT_ maxReactionShapes = 0.0f;
-        const FLOAT_ maxReactionCircles = 0.0f;
-        std::vector<Vec2_> reactionShapes(shapes.size(), Vec2_{0, 0});
-        std::vector<Vec2_> reactionCircles(circles.size(), Vec2_{0, 0});
         std::vector<FLOAT_> reactionTorqueShapes(shapes.size(), FLOAT_(0)); // 接触点力矩累积（τ = r × Δv）
 
         for (size_t i = 0; i < n; ++i)
@@ -366,7 +358,7 @@ namespace PhysicsBlock
                 pos = NearestFree(pos, [&](const Vec2_ &cand) { return !map->FMGetCollide(cand); }, maxStepMap);
             }
 
-            // ── 圆形固体：径向推出到圆外 + 反作用 ──
+            // ── 圆形固体：径向推出到圆外（无反作用：小圆会挖出包围空腔，易成"潜艇"）──
             for (size_t ci = 0; ci < circles.size(); ++ci)
             {
                 auto *c = circles[ci];
@@ -380,20 +372,14 @@ namespace PhysicsBlock
                 {
                     continue;
                 }
-                Vec2_ newPos;
                 if (r < FLOAT_(1e-4))
                 {
-                    newPos = c->pos + Vec2_{FLOAT_(0.01), c->radius};
+                    pos = c->pos + Vec2_{FLOAT_(0.01), c->radius};
                 }
                 else
                 {
-                    newPos = c->pos + d * ((c->radius + FLOAT_(0.01)) / r);
+                    pos = c->pos + d * ((c->radius + FLOAT_(0.01)) / r);
                 }
-                if (c->invMass != FLOAT_(0) && c->mass > FLOAT_(0))
-                {
-                    reactionCircles[ci] += (newPos - pos) * (-invDt * (mParticleMass / c->mass));
-                }
-                pos = newPos;
             }
 
             // ── 网格形状固体：逐格判定（无 DropCollision 的越界钳制！）──
@@ -434,9 +420,9 @@ namespace PhysicsBlock
                     maxStepShape);
                 if (s->invMass != FLOAT_(0) && s->mass > FLOAT_(0))
                 {
-                    const Vec2_ reactV = (newPos - pos) * (-invDt * (mParticleMass / s->mass)); // 反作用速度增量
-                    reactionShapes[si] += reactV;
-                    // 接触点力矩：作用点 ≈ 粒子位置，力臂 = 接触点 − 质心
+                    // 接触点力矩：作用点 ≈ 粒子位置，力臂 = 接触点 − 质心。
+                    // 反作用速度增量 reactV = −Δp/dt·(m_p/m_s)（方向为推开方向之反）。
+                    const Vec2_ reactV = (newPos - pos) * (-invDt * (mParticleMass / s->mass));
                     const Vec2_ arm = pos - s->pos;
                     reactionTorqueShapes[si] += Cross(arm, reactV);
                 }
@@ -446,7 +432,7 @@ namespace PhysicsBlock
             p->pos = pos;
         }
 
-        // 施加钳制后的反作用速度 + 接触点反作用力矩
+        // 施加钳制后的接触点反作用力矩
         for (size_t si = 0; si < shapes.size(); ++si)
         {
             PhysicsShape *s = shapes[si];
@@ -454,21 +440,13 @@ namespace PhysicsBlock
             {
                 continue;
             }
-            Vec2_ &v = reactionShapes[si];
-            const FLOAT_ len = Modulus(v);
-            if (len > maxReactionShapes)
-            {
-                v *= (maxReactionShapes / len);
-            }
-            s->speed += v;
-            // 力矩 → 角速度：τ = (m·r×Δv)·dt·invI 形式（反作用至接触点）
-            // 单点支撑（如右端一滴水）会使 τ>0 → 木块逆时针旋转，水滴被挤出滑脱，
-            // 木块与水滴分离并在重力下倒回液体——不会出现"单滴托起整块木板"。
-            // ×8 为杠杆耦合增益：让旋转在零点几秒内可见、水滴快速滑脱。
+            // 单点支撑（如右端一滴水）会使 τ>0 → 木板逆时针旋转，水滴被挤出滑脱，
+            // 木板与水滴分离并在重力下倒回液体——不会出现"单滴托起整块木板"。
             if (s->invMomentInertia > FLOAT_(0) && reactionTorqueShapes[si] != FLOAT_(0))
             {
-                FLOAT_ dOmega = reactionTorqueShapes[si] * s->mass * s->invMomentInertia * time * 8.0f;
-                const FLOAT_ maxDOmega = 0.03f; // 单帧角冲量上限（防止数值过冲）
+                FLOAT_ dOmega = reactionTorqueShapes[si] * s->mass * s->invMomentInertia
+                              * time * param.reactionTorqueGain;
+                const FLOAT_ maxDOmega = param.maxTorqueImpulse; // 单帧角冲量上限（防止数值过冲）
                 if (dOmega > maxDOmega)
                 {
                     dOmega = maxDOmega;
@@ -479,20 +457,6 @@ namespace PhysicsBlock
                 }
                 s->angleSpeed += dOmega;
             }
-        }
-        for (size_t ci = 0; ci < circles.size(); ++ci)
-        {
-            if (circles[ci] == nullptr)
-            {
-                continue;
-            }
-            Vec2_ &v = reactionCircles[ci];
-            const FLOAT_ len = Modulus(v);
-            if (len > maxReactionCircles)
-            {
-                v *= (maxReactionCircles / len);
-            }
-            circles[ci]->speed += v;
         }
     }
 
@@ -596,10 +560,10 @@ namespace PhysicsBlock
             solid->speed *= std::max(FLOAT_(0.0), FLOAT_(1.0) - dragRate * time);
             if (angle != nullptr)
             {
-                const FLOAT_ angularRate = dragRate * FLOAT_(5.0);
+                const FLOAT_ angularRate = dragRate * param.angularDampingFactor;
                 angle->angleSpeed *= std::max(FLOAT_(0.0), FLOAT_(1.0) - angularRate * time);
                 // 角速度绝对上限：防带角速度穿过水面时无阻尼摇摆自激
-                const FLOAT_ maxAngular = 3.0f;
+                const FLOAT_ maxAngular = param.maxAngularSpeed;
                 const FLOAT_ aspd = std::fabs(angle->angleSpeed);
                 if (aspd > maxAngular)
                 {
@@ -632,7 +596,7 @@ namespace PhysicsBlock
             if (frac <= FLOAT_(0.01))
             {
                 // 未浸没但仍与水接触 → 先施加液体阻力/角阻尼（防带角速度穿过水面摇摆）
-                ApplyCommon(c, c, 0.1f);
+                ApplyCommon(c, c, param.contactDamping);
                 continue;
             }
             const FLOAT_ rhoBody = c->mass / ((FLOAT_)M_PI * R * R);
@@ -721,7 +685,7 @@ namespace PhysicsBlock
             if (mClipPoly.size() < 3)
             {
                 // 未浸没但仍与水接触 → 仅施加液体阻力/角阻尼（防止带角速度穿过水面摇摆）
-                ApplyCommon(s, s, 0.1f);
+                ApplyCommon(s, s, param.contactDamping);
                 continue; // 未浸没
             }
 
@@ -740,7 +704,7 @@ namespace PhysicsBlock
             const FLOAT_ area = std::fabs(area2) * FLOAT_(0.5);
             if (area <= FLOAT_(1e-4))
             {
-                ApplyCommon(s, s, 0.1f);
+                ApplyCommon(s, s, param.contactDamping);
                 continue;
             }
             centroid /= (FLOAT_(3.0) * area2); // 形心公式（面积为带符号值）
@@ -754,7 +718,7 @@ namespace PhysicsBlock
             if (s->invMomentInertia > FLOAT_(0))
             {
                 FLOAT_ dOmega = torque * s->invMomentInertia * time;
-                const FLOAT_ maxDOmega = 0.04f; // 单帧角冲量上限（防止数值过冲）
+                const FLOAT_ maxDOmega = param.maxTorqueImpulse; // 单帧角冲量上限（防止数值过冲）
                 if (dOmega > maxDOmega)
                 {
                     dOmega = maxDOmega;

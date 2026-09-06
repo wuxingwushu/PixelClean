@@ -1660,6 +1660,10 @@ namespace PhysicsBlock
         }
         for (auto i : PhysicsParticleS)
         {
+            if (i->IsLiquidParticle)
+            {
+                continue; // 液体粒子属流体子系统，不计入刚体动能统计
+            }
             Energy += i->mass * ModulusLength(i->speed);
         }
         for (auto i : PhysicsCircleS)

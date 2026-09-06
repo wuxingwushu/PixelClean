@@ -417,14 +417,16 @@ namespace PhysicsBlock
 			if (showAuxiliary)
 				DrawShapeAuxiliary(av, i);
 		}
-		// 渲染物理点
+		// 渲染物理点（液体粒子由 DrawLiquid 单独渲染，此处跳过避免双重绘制）
 		for (auto i : world->GetPhysicsParticle())
 		{
+			if (i->IsLiquidParticle)
+				continue;
 			DrawParticle(av, i, ObjectBodyColor(i->StaticNum));
 			if (showAuxiliary)
 				DrawParticleAuxiliary(av, i);
 		}
-		// 渲染液体粒子（覆盖普通粒子小点，按密度着色）
+		// 渲染液体粒子（按密度着色）
 		if (world->GetLiquid() != nullptr)
 			DrawLiquid(av, world->GetLiquid());
 		// 渲染圆

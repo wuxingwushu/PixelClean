@@ -316,6 +316,12 @@ namespace PhysicsBlock
 		ImGui::DragScalar("粘滞(二次)", MyImGuiDataType, &Object->param.viscosityQuadratic, 0.01f, nullptr, nullptr, "%.2f");
 		ImGui::DragScalar("浮力倍率", MyImGuiDataType, &Object->param.buoyancy, 0.01f, nullptr, nullptr, "%.2f");
 		ImGui::DragScalar("液体阻力", MyImGuiDataType, &Object->param.solidDrag, 0.05f, nullptr, nullptr, "%.2f");
+		ImGui::DragScalar("上浮速度上限", MyImGuiDataType, &Object->param.maxRiseSpeed, 0.05f, nullptr, nullptr, "%.2f");
+		ImGui::DragScalar("接触阻尼比例", MyImGuiDataType, &Object->param.contactDamping, 0.01f, nullptr, nullptr, "%.2f");
+		ImGui::DragScalar("角阻尼倍数", MyImGuiDataType, &Object->param.angularDampingFactor, 0.5f, nullptr, nullptr, "%.1f");
+		ImGui::DragScalar("角速度上限", MyImGuiDataType, &Object->param.maxAngularSpeed, 0.1f, nullptr, nullptr, "%.1f");
+		ImGui::DragScalar("撬转力矩增益", MyImGuiDataType, &Object->param.reactionTorqueGain, 0.5f, nullptr, nullptr, "%.1f");
+		ImGui::DragScalar("角冲量上限", MyImGuiDataType, &Object->param.maxTorqueImpulse, 0.005f, nullptr, nullptr, "%.3f");
 		ImGui::DragInt("松弛迭代次数", &Object->param.iterations, 1, 1, 16);
 		ImGui::DragScalar("速度上限", MyImGuiDataType, &Object->param.maxSpeed, 0.1f, nullptr, nullptr, "%.1f");
 		ImGui::Text("液体粒子: %d", (int)Object->Particles().size());

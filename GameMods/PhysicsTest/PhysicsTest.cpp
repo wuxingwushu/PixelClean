@@ -315,6 +315,12 @@ namespace GAME
 					      mPhysicsWorld->PhysicsCircleS.size() +
 					      mPhysicsWorld->PhysicsParticleS.size() +
 					      mPhysicsWorld->PhysicsLineS.size()));
+				if (mPhysicsWorld->GetLiquid() != nullptr)
+				{
+					ImGui::Text(u8"液体粒子: %d   液体参数密度: %.2f",
+						(int)mPhysicsWorld->GetLiquid()->Particles().size(),
+						(double)mPhysicsWorld->GetLiquid()->param.restDensity);
+				}
 				ImGui::Text(u8"碰撞对: %d    关节: %d    连接点: %d",
 					(int)mPhysicsWorld->CollideGroupVector.size(),
 					(int)mPhysicsWorld->PhysicsJointS.size(),

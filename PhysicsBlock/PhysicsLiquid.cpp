@@ -341,16 +341,19 @@ namespace PhysicsBlock
         // 投影反作用（动量守恒：粒子被推开的 Δp ⇔ 固体受到的 Δv = −Δp/dt·(m_p/m_s)）
         // 只对动态固体生效；每帧每固体总反作用钳制。
         // 注意：
-        // 1) 反作用不能太强——静压压缩也会让粒子每帧被投影出去（不全是固体的运动
-        //    造成的），过强的反作用会压过浮力，使轻物体沉在水里；
-        // 2) 小圆形（半径 < h）自身就能"挖"出包围空腔，周围粒子稀疏时浮力本就不够，
-        //    此时反作用只会雪上加霜（上方水柱压着圆圈 → 反作用向下 → 永久潜艇），
-        //    因此圆的反作用直接关闭，只保留方块/大形状的制动反作用。
+        // 1) 形状的**线反作用关闭**（=0）：任何"单滴水"的支撑反力都不可能托起整块
+        //    木板——板只会压着水滴下坠，水滴从板底滑出；支撑/制动交给浮力与阻力
+        //    （实测收敛稳定）。若有线反作用且上限高于 g，一滴水就能把整块板扛起
+        //    悬浮（用户实测的现象）；
+        // 2) 反作用"力矩"保留（接触点效应）：水滴顶在木板右端 → τ = r×F 使木板
+        //    旋转（抬升接触端、另一端下沉）→ 水滴被挤出/滑脱 → 分离坠落；
+        // 3) 小圆形（半径 < h）自身就能"挖"出包围空腔，圆的反作用同样关闭。
         const FLOAT_ invDt = FLOAT_(1.0) / time;
-        const FLOAT_ maxReactionShapes = 0.6f;
+        const FLOAT_ maxReactionShapes = 0.0f;
         const FLOAT_ maxReactionCircles = 0.0f;
         std::vector<Vec2_> reactionShapes(shapes.size(), Vec2_{0, 0});
         std::vector<Vec2_> reactionCircles(circles.size(), Vec2_{0, 0});
+        std::vector<FLOAT_> reactionTorqueShapes(shapes.size(), FLOAT_(0)); // 接触点力矩累积（τ = r × Δv）
 
         for (size_t i = 0; i < n; ++i)
         {
@@ -431,7 +434,11 @@ namespace PhysicsBlock
                     maxStepShape);
                 if (s->invMass != FLOAT_(0) && s->mass > FLOAT_(0))
                 {
-                    reactionShapes[si] += (newPos - pos) * (-invDt * (mParticleMass / s->mass));
+                    const Vec2_ reactV = (newPos - pos) * (-invDt * (mParticleMass / s->mass)); // 反作用速度增量
+                    reactionShapes[si] += reactV;
+                    // 接触点力矩：作用点 ≈ 粒子位置，力臂 = 接触点 − 质心
+                    const Vec2_ arm = pos - s->pos;
+                    reactionTorqueShapes[si] += Cross(arm, reactV);
                 }
                 pos = newPos;
             }
@@ -439,10 +446,11 @@ namespace PhysicsBlock
             p->pos = pos;
         }
 
-        // 施加钳制后的反作用速度
+        // 施加钳制后的反作用速度 + 接触点反作用力矩
         for (size_t si = 0; si < shapes.size(); ++si)
         {
-            if (shapes[si] == nullptr)
+            PhysicsShape *s = shapes[si];
+            if (s == nullptr)
             {
                 continue;
             }
@@ -452,7 +460,25 @@ namespace PhysicsBlock
             {
                 v *= (maxReactionShapes / len);
             }
-            shapes[si]->speed += v;
+            s->speed += v;
+            // 力矩 → 角速度：τ = (m·r×Δv)·dt·invI 形式（反作用至接触点）
+            // 单点支撑（如右端一滴水）会使 τ>0 → 木块逆时针旋转，水滴被挤出滑脱，
+            // 木块与水滴分离并在重力下倒回液体——不会出现"单滴托起整块木板"。
+            // ×8 为杠杆耦合增益：让旋转在零点几秒内可见、水滴快速滑脱。
+            if (s->invMomentInertia > FLOAT_(0) && reactionTorqueShapes[si] != FLOAT_(0))
+            {
+                FLOAT_ dOmega = reactionTorqueShapes[si] * s->mass * s->invMomentInertia * time * 8.0f;
+                const FLOAT_ maxDOmega = 0.03f; // 单帧角冲量上限（防止数值过冲）
+                if (dOmega > maxDOmega)
+                {
+                    dOmega = maxDOmega;
+                }
+                else if (dOmega < -maxDOmega)
+                {
+                    dOmega = -maxDOmega;
+                }
+                s->angleSpeed += dOmega;
+            }
         }
         for (size_t ci = 0; ci < circles.size(); ++ci)
         {
@@ -485,19 +511,55 @@ namespace PhysicsBlock
         const FLOAT_ areaPerParticle = mSpacing * mSpacing;
         const FLOAT_ rhoLiquid = mParticleMass / areaPerParticle; // 液体面密度（2D 中"密度"）
 
-        // 局部液面＝"与该固体有接触的水体"的顶面，而不是全池一个全局水位：
-        // 1) 对固体中心周围环带 [0.8R, R+1.5h] 采样水粒子——环带内都是与固体
-        //    接触/相邻的水珠（"需要和水有接触就是水面"），跳过固体自身占位；
-        // 2) 环带内高度排序，按最大间隙切簇，取下方连续水簇的顶面（剔除孤立
-        //    飞溅液滴），得到该固体所在位置的真实水面；
-        // 3) 远处水花、分离的水体不参与——每个固体各用自己的“单独的水面”。
+        // 液面锚定＝全局主水簇（粒子数最多的连续水体重心高度区）的顶面；
+        // 接触判定＝固体环带内是否有水（"需要和水有接触就是水面"）。
+        // 全局主水簇隔离了"固体自身携带的水花"：木板上升时投影会带起一小簇水，
+        // 它永远比整池水少一个量级 → 即使跟着木板漂到 8 个单位外，液面依然
+        // 是主水池的顶面 → 木板离池面越远浮力越小 → 落回水中，不会互相悬浮。
+        // 分离的独立水洼（小簇且远离主池）会自成簇——若它成为该固体环带内
+        // 唯一接触的水，则仍按主池液面处理（Demo 场景单水池，稳定性优先）。
         const FLOAT_ gapTh = std::max(FLOAT_(1.0), mSpacing * FLOAT_(2.0));
+        FLOAT_ mainSurfaceLevel = -std::numeric_limits<FLOAT_>::max();
+        {
+            mHeightBuf.clear();
+            for (auto *p : mParticles)
+            {
+                if (p != nullptr)
+                {
+                    mHeightBuf.push_back(Dot(p->pos, up));
+                }
+            }
+            if (!mHeightBuf.empty())
+            {
+                std::sort(mHeightBuf.begin(), mHeightBuf.end());
+                FLOAT_ bestTop = mHeightBuf.back();
+                size_t bestCount = 0;
+                size_t clusterStart = 0;
+                for (size_t i = 1; i <= mHeightBuf.size(); ++i)
+                {
+                    const bool cut = (i == mHeightBuf.size()) ||
+                                     (mHeightBuf[i] - mHeightBuf[i - 1] > gapTh);
+                    if (cut)
+                    {
+                        const size_t cnt = i - clusterStart;
+                        if (cnt > bestCount)
+                        {
+                            bestCount = cnt;
+                            bestTop = mHeightBuf[i - 1];
+                        }
+                        clusterStart = i;
+                    }
+                }
+                mainSurfaceLevel = bestTop;
+            }
+        }
         auto LocalSurface = [&](const Vec2_ &c, FLOAT_ R) -> FLOAT_
         {
+            // 接触判定：环带 [0.8R, R+4h] 内至少 2 个水粒子
             const FLOAT_ inner = R * FLOAT_(0.8);
-            const FLOAT_ outer = R + param.h * FLOAT_(1.5);
+            const FLOAT_ outer = R + param.h * FLOAT_(4.0);
             mWorld->mGridSearch.Get(c, outer, mSearchV);
-            mHeightBuf.clear();
+            unsigned int count = 0;
             for (auto *o : mSearchV)
             {
                 if (o == nullptr || o->PFGetType() != PhysicsObjectEnum::particle)
@@ -507,31 +569,18 @@ namespace PhysicsBlock
                 const FLOAT_ d = Modulus(o->PFGetPos() - c);
                 if (d >= inner && d <= outer)
                 {
-                    mHeightBuf.push_back(Dot(o->PFGetPos(), up));
+                    ++count;
+                    if (count >= 2)
+                    {
+                        break;
+                    }
                 }
             }
-            if (mHeightBuf.size() < 2)
+            if (count < 2)
             {
                 return -std::numeric_limits<FLOAT_>::max(); // 环带内没有水体接触
             }
-            std::sort(mHeightBuf.begin(), mHeightBuf.end());
-            FLOAT_ level = mHeightBuf.back();
-            FLOAT_ bestGap = FLOAT_(0);
-            size_t bestIdx = 0;
-            for (size_t i = 1; i < mHeightBuf.size(); ++i)
-            {
-                const FLOAT_ gap = mHeightBuf[i] - mHeightBuf[i - 1];
-                if (gap > bestGap)
-                {
-                    bestGap = gap;
-                    bestIdx = i;
-                }
-            }
-            if (bestGap > gapTh)
-            {
-                level = mHeightBuf[bestIdx - 1];
-            }
-            return level;
+            return mainSurfaceLevel;
         };
         const FLOAT_ noWater = -std::numeric_limits<FLOAT_>::max() * FLOAT_(0.5);
 
@@ -549,6 +598,13 @@ namespace PhysicsBlock
             {
                 const FLOAT_ angularRate = dragRate * FLOAT_(5.0);
                 angle->angleSpeed *= std::max(FLOAT_(0.0), FLOAT_(1.0) - angularRate * time);
+                // 角速度绝对上限：防带角速度穿过水面时无阻尼摇摆自激
+                const FLOAT_ maxAngular = 3.0f;
+                const FLOAT_ aspd = std::fabs(angle->angleSpeed);
+                if (aspd > maxAngular)
+                {
+                    angle->angleSpeed *= (maxAngular / aspd);
+                }
             }
         };
 
@@ -575,6 +631,8 @@ namespace PhysicsBlock
             const FLOAT_ frac = std::clamp(subDepth / (FLOAT_(2.0) * R), FLOAT_(0), FLOAT_(1));
             if (frac <= FLOAT_(0.01))
             {
+                // 未浸没但仍与水接触 → 先施加液体阻力/角阻尼（防带角速度穿过水面摇摆）
+                ApplyCommon(c, c, 0.1f);
                 continue;
             }
             const FLOAT_ rhoBody = c->mass / ((FLOAT_)M_PI * R * R);
@@ -662,6 +720,8 @@ namespace PhysicsBlock
             }
             if (mClipPoly.size() < 3)
             {
+                // 未浸没但仍与水接触 → 仅施加液体阻力/角阻尼（防止带角速度穿过水面摇摆）
+                ApplyCommon(s, s, 0.1f);
                 continue; // 未浸没
             }
 
@@ -680,6 +740,7 @@ namespace PhysicsBlock
             const FLOAT_ area = std::fabs(area2) * FLOAT_(0.5);
             if (area <= FLOAT_(1e-4))
             {
+                ApplyCommon(s, s, 0.1f);
                 continue;
             }
             centroid /= (FLOAT_(3.0) * area2); // 形心公式（面积为带符号值）

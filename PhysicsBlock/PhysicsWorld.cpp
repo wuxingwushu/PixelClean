@@ -1406,6 +1406,12 @@ namespace PhysicsBlock
             }
             // 自动清理该粒子的地形碰撞回调绑定
             mCollision.RemoveTerrainHitListener(particle);
+            // 通知液体系统先摘掉指针，避免其内部列表悬空（液体粒子归世界所有，
+            // 但 PhysicsLiquid 另行保存了指针数组用于邻居/浮力计算）
+            if (mLiquid != nullptr)
+            {
+                mLiquid->NotifyParticleRemoved(particle);
+            }
             delete particle;
             break;
         }

@@ -1,5 +1,6 @@
 #include "PhysicsTrigger.hpp"
 #include "PhysicsFormwork.hpp"
+#include "PhysicsParticle.hpp" // 触发器需按 IsLiquidParticle 跳过液体粒子
 #include "GridSearch.hpp"
 
 namespace PhysicsBlock
@@ -160,6 +161,14 @@ namespace PhysicsBlock
                 for (auto *obj : nearbyObjects)
                 {
                     if (obj == nullptr)
+                    {
+                        continue;
+                    }
+
+                    // 液体粒子属于流体子系统（PhysicsLiquid）：每帧有数百个且位置连续变化，
+                    // 逐个触发 Enter/Stay/Exit 会产生海量回调（且没有实际语义），默认跳过。
+                    if (obj->PFGetType() == PhysicsObjectEnum::particle &&
+                        ((PhysicsParticle *)obj)->IsLiquidParticle)
                     {
                         continue;
                     }

@@ -324,7 +324,7 @@ namespace PhysicsBlock
 		static const float kGainMax = 4.0f;
 		static const float kTorqueImpMax = 1.0f;
 		static const float kFrameDispMax = 2.0f;
-		static const float kMapEscapeMin = 0.05f, kMapEscapeMax = 4.0f;
+		static const float kMapEscapeMin = 0.05f, kMapEscapeMax = 16.0f;
 		static const float kBinWidthMax = 8.0f;
 
 		ImGui::PushID(Object);
@@ -336,6 +336,7 @@ namespace PhysicsBlock
 		ImGui::DragScalar("近场压力刚度", MyImGuiDataType, &Object->param.stiffnessNear, 50.0f, &kZero, &kStiffMax, "%.0f");
 		ImGui::DragScalar("内聚力(表面张力)", MyImGuiDataType, &Object->param.surfaceTension, 0.01f, &kZero, &kTensionMax, "%.3f");
 		ImGui::DragScalar("内聚欠密上限", MyImGuiDataType, &Object->param.maxDensityDeficit, 0.05f, &kZero, &kDeficitMax, "%.2f");
+		ImGui::DragScalar("速度平滑(0=关)", MyImGuiDataType, &Object->param.velocitySmoothing, 0.01f, &kZero, &kOne, "%.2f");
 		ImGui::DragScalar("粘滞(线性)", MyImGuiDataType, &Object->param.viscosity, 0.1f, &kZero, &kViscMax, "%.2f");
 		ImGui::DragScalar("粘滞(二次)", MyImGuiDataType, &Object->param.viscosityQuadratic, 0.01f, &kZero, &kViscMax, "%.2f");
 		ImGui::DragScalar("浮力倍率", MyImGuiDataType, &Object->param.buoyancy, 0.01f, &kZero, &kBuoyMax, "%.2f");

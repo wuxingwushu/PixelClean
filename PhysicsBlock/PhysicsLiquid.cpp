@@ -45,6 +45,9 @@ namespace PhysicsBlock
         mDensity.push_back(FLOAT_(0));
         mDensityNear.push_back(FLOAT_(0));
         mShift.push_back(Vec2_{0, 0});
+        mPreProjPos.push_back(pos);
+        mProjNormal.push_back(Vec2_{0, 0});
+        mProjBodyVel.push_back(Vec2_{0, 0});
         mParticleMass = mass; // 记录粒子质量（浮力/面密度估算用）
         mIndexMapDirty = true;
         return p;
@@ -94,8 +97,13 @@ namespace PhysicsBlock
         mDensityNear.clear();
         mPrevPos.clear();
         mShift.clear();
+        mPreProjPos.clear();
+        mProjNormal.clear();
+        mProjBodyVel.clear();
         mNeighborIndex.clear();
         mNeighborOffset.clear();
+        mBoundary.clear();
+        mBoundaryOffset.clear();
         mIndexMap.clear();
         mIndexMapDirty = true;
         // 重置浮力估算基准，防止 Clear 后仅 AddParticle（未 AddGrid）时沿用旧值
@@ -133,12 +141,18 @@ namespace PhysicsBlock
             if (i < mShift.size() && last < mShift.size())
             {
                 mShift[i] = mShift[last];
+            if (i < mPreProjPos.size() && last < mPreProjPos.size()) mPreProjPos[i] = mPreProjPos[last];
+            if (i < mProjNormal.size() && last < mProjNormal.size()) mProjNormal[i] = mProjNormal[last];
+            if (i < mProjBodyVel.size() && last < mProjBodyVel.size()) mProjBodyVel[i] = mProjBodyVel[last];
             }
             mParticles.pop_back();
             if (mPrevPos.size() > mParticles.size()) mPrevPos.pop_back();
             if (mDensity.size() > mParticles.size()) mDensity.pop_back();
             if (mDensityNear.size() > mParticles.size()) mDensityNear.pop_back();
             if (mShift.size() > mParticles.size()) mShift.pop_back();
+            if (mPreProjPos.size() > mParticles.size()) mPreProjPos.pop_back();
+            if (mProjNormal.size() > mParticles.size()) mProjNormal.pop_back();
+            if (mProjBodyVel.size() > mParticles.size()) mProjBodyVel.pop_back();
             mIndexMapDirty = true;
             return;
         }
@@ -208,6 +222,141 @@ namespace PhysicsBlock
         }
     }
 
+    void PhysicsLiquid::RebuildBoundarySamples(FLOAT_ h, FLOAT_ spacingEff)
+    {
+        const size_t n = mParticles.size();
+        mBoundaryOffset.assign(n + 1, 0);
+        mBoundary.clear();
+        if (n == 0)
+        {
+            return;
+        }
+        MapFormwork *map = mWorld->GetMapFormwork();
+        const auto &shapes = mWorld->PhysicsShapeS;
+        const auto &circles = mWorld->PhysicsCircleS;
+        const FLOAT_ h2 = h * h;
+        // 每个实体格按流体间距子采样（每点权重 1）：只取格心会让薄板表面的密度
+        // 贡献严重不足（格心到表面 0.5~1.0，核值几乎为 0）。
+        const int sub = std::max(1, (int)std::lround(FLOAT_(1) / std::max(spacingEff, FLOAT_(1e-3))));
+        const FLOAT_ subInv = FLOAT_(1) / (FLOAT_)sub;
+
+        for (size_t i = 0; i < n; ++i)
+        {
+            const Vec2_ pi = mParticles[i]->pos;
+
+            // ── 地图：h 盒内的实体格 ──
+            if (map != nullptr)
+            {
+                const glm::ivec2 c0 = ToInt(pi - Vec2_{h, h});
+                const glm::ivec2 c1 = ToInt(pi + Vec2_{h, h});
+                for (int cx = c0.x; cx <= c1.x; ++cx)
+                {
+                    for (int cy = c0.y; cy <= c1.y; ++cy)
+                    {
+                        const Vec2_ cc{(FLOAT_)cx + FLOAT_(0.5), (FLOAT_)cy + FLOAT_(0.5)};
+                        if (!map->FMGetCollide(cc))
+                        {
+                            continue; // 空格子
+                        }
+                        for (int sx = 0; sx < sub; ++sx)
+                        {
+                            for (int sy = 0; sy < sub; ++sy)
+                            {
+                                const Vec2_ pc = cc + Vec2_{
+                                    ((FLOAT_)sx + FLOAT_(0.5)) * subInv - FLOAT_(0.5),
+                                    ((FLOAT_)sy + FLOAT_(0.5)) * subInv - FLOAT_(0.5)};
+                                if (ModulusLength(pc - pi) < h2)
+                                {
+                                    mBoundary.push_back(BoundarySample{pc, FLOAT_(1)});
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── 形状：局部格坐标下的 h 盒 ──
+            for (auto *s : shapes)
+            {
+                if (s == nullptr)
+                {
+                    continue;
+                }
+                const Vec2_ d = pi - s->pos;
+                if (ModulusLength(d) > (s->radius + h) * (s->radius + h))
+                {
+                    continue; // 远距粗筛
+                }
+                const Vec2_ local = vec2angle(d, -s->angle) + s->CentreMass;
+                const int x0 = std::max(0, (int)std::floor(local.x - h));
+                const int x1 = std::min((int)s->width - 1, (int)std::floor(local.x + h));
+                const int y0 = std::max(0, (int)std::floor(local.y - h));
+                const int y1 = std::min((int)s->height - 1, (int)std::floor(local.y + h));
+                for (int gx = x0; gx <= x1; ++gx)
+                {
+                    for (int gy = y0; gy <= y1; ++gy)
+                    {
+                        if (!s->at(gx, gy).Collision)
+                        {
+                            continue;
+                        }
+                        const Vec2_ lc{(FLOAT_)gx + FLOAT_(0.5), (FLOAT_)gy + FLOAT_(0.5)};
+                        const Vec2_ cellW = vec2angle(lc - s->CentreMass, s->angle) + s->pos;
+                        const Vec2_ ux = vec2angle(Vec2_{subInv, 0}, s->angle);
+                        const Vec2_ uy = vec2angle(Vec2_{0, subInv}, s->angle);
+                        for (int sx = 0; sx < sub; ++sx)
+                        {
+                            for (int sy = 0; sy < sub; ++sy)
+                            {
+                                const Vec2_ pw = cellW
+                                                 + ux * (((FLOAT_)sx + FLOAT_(0.5)) - FLOAT_(0.5) * (FLOAT_)sub)
+                                                 + uy * (((FLOAT_)sy + FLOAT_(0.5)) - FLOAT_(0.5) * (FLOAT_)sub);
+                                if (ModulusLength(pw - pi) < h2)
+                                {
+                                    mBoundary.push_back(BoundarySample{pw, FLOAT_(1)});
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── 圆：圆内网格采样 ──
+            for (auto *c : circles)
+            {
+                if (c == nullptr || c->radius <= FLOAT_(0))
+                {
+                    continue;
+                }
+                const Vec2_ d = pi - c->pos;
+                if (ModulusLength(d) > (c->radius + h) * (c->radius + h))
+                {
+                    continue;
+                }
+                const FLOAT_ step = std::max(spacingEff, c->radius * FLOAT_(0.5));
+                const FLOAT_ wSample = (step * step) / std::max(spacingEff * spacingEff, FLOAT_(1e-6));
+                const int nSide = (int)std::ceil(c->radius / step);
+                for (int gx = -nSide; gx <= nSide; ++gx)
+                {
+                    for (int gy = -nSide; gy <= nSide; ++gy)
+                    {
+                        const Vec2_ pw = c->pos + Vec2_{(FLOAT_)gx * step, (FLOAT_)gy * step};
+                        if (Modulus(pw - c->pos) > c->radius)
+                        {
+                            continue;
+                        }
+                        if (ModulusLength(pw - pi) < h2)
+                        {
+                            mBoundary.push_back(BoundarySample{pw, wSample});
+                        }
+                    }
+                }
+            }
+
+            mBoundaryOffset[i + 1] = (unsigned int)mBoundary.size();
+        }
+    }
+
     void PhysicsLiquid::Update(FLOAT_ time)
     {
         const size_t n = mParticles.size();
@@ -257,11 +406,23 @@ namespace PhysicsBlock
         }
 
         RebuildNeighbors(h);
+        // 流体静息间距（由 h 与 ρ0 反解，标定 C≈0.336）→ 边界采样的子采样步长
+        {
+            FLOAT_ spacingEff = h * SQRT_(FLOAT_(0.336) / std::max(restDensity, FLOAT_(1e-6)));
+            if (!(spacingEff > FLOAT_(1e-3)) || !std::isfinite(spacingEff))
+            {
+                spacingEff = std::max(mSpacing, FLOAT_(1e-3));
+            }
+            RebuildBoundarySamples(h, spacingEff);
+        }
 
         // ─── 双密度松弛（Clavet 2005 风格）─────────────────────────
         for (int iter = 0; iter < iterations; ++iter)
         {
             // 1) 密度（当前位置快照）
+            //    注意：**边界粒子也计入密度**（Akinci 2012 的做法）。若不记入，固体
+            //    占据的空间在密度场里是"空洞"，水会不断往固体内挤、再被投影推回，
+            //    形成"贴壁的水以 maxSpeed 弹射、永不收敛"的恶性循环。
             for (size_t i = 0; i < n; ++i)
             {
                 const Vec2_ &pi = mParticles[i]->pos;
@@ -279,6 +440,20 @@ namespace PhysicsBlock
                     const FLOAT_ q = FLOAT_(1.0) - r * invH;
                     rho += q * q;
                     rhoNear += q * q * q;
+                }
+                for (unsigned int k = mBoundaryOffset[i]; k < mBoundaryOffset[i + 1]; ++k)
+                {
+                    const BoundarySample &b = mBoundary[k];
+                    const FLOAT_ r = Modulus(b.pos - pi);
+                    if (r >= h)
+                    {
+                        continue;
+                    }
+                    const FLOAT_ q = FLOAT_(1.0) - r * invH;
+                    // 只补**压缩密度**：近场压力是恒正斥力项，若边界也参与近场，
+                    // 壁面一侧的斥力会被放大且没有对称补偿 → 水被持续推向池内，
+                    // 形成永不停止的环流。
+                    rho += b.weight * q * q;
                 }
                 mDensity[i] = rho;
                 mDensityNear[i] = rhoNear;
@@ -328,6 +503,23 @@ namespace PhysicsBlock
                     mShift[j] += D * (invMj / totalInv);
                     mShift[i] -= D * (invMi / totalInv);
                 }
+                // 边界粒子（固体/地图）：不可移动，只有流体粒子被推开。
+                // 只取压力项（P/Pnear），不取内聚力（流体与固体之间没有"表面张力"）。
+                for (unsigned int k = mBoundaryOffset[i]; k < mBoundaryOffset[i + 1]; ++k)
+                {
+                    const BoundarySample &b = mBoundary[k];
+                    const Vec2_ d = b.pos - mParticles[i]->pos; // 从 i 指向边界采样点
+                    const FLOAT_ r = Modulus(d);
+                    if (r < FLOAT_(1e-5) || r >= h)
+                    {
+                        continue;
+                    }
+                    const FLOAT_ q = FLOAT_(1.0) - r * invH;
+                    FLOAT_ Dmag = dt2 * (P * q + Pnear * q * q);
+                    Dmag = std::clamp(Dmag, -maxPairD, maxPairD);
+                    // 边界不动 → 流体承担全部位移，方向为"离开边界"
+                    mShift[i] -= d * (Dmag / r);
+                }
             }
             // 3) 统一施加（单粒子单迭代位移安全钳制）
             for (size_t i = 0; i < n; ++i)
@@ -348,10 +540,27 @@ namespace PhysicsBlock
         ResolveSolidOverlap(time);
 
         // ─── 速度回代：v = Δx/dt（PBF 标准做法，含重力/碰撞/压力的综合效果）───
+        // 关键（Ihmsen 2011 的粒子推出做法）：用**投影前**的位置回代，再只去掉
+        // "撞进固体"的法向速度分量。若直接对投影后的位置回代，固定步长推出
+        // （0.02 → 2 u/s）与深穿透推出（1~2 单位 → 钳到 maxSpeed）都会变成
+        // 每帧注入的假速度 —— 这就是"贴壁/贴底的水一直沸腾、永不收敛"的根源。
         const FLOAT_ invDt = FLOAT_(1.0) / time;
         for (size_t i = 0; i < n; ++i)
         {
-            Vec2_ v = (mParticles[i]->pos - mPrevPos[i]) * invDt;
+            Vec2_ v = (mPreProjPos[i] - mPrevPos[i]) * invDt;
+            const FLOAT_ nLen = Modulus(mProjNormal[i]);
+            if (nLen > FLOAT_(1e-9))
+            {
+                const Vec2_ n = mProjNormal[i] / nLen;
+                const Vec2_ vBody = mProjBodyVel[i];
+                Vec2_ vRel = v - vBody;
+                const FLOAT_ vn = Dot(vRel, n);
+                if (vn < FLOAT_(0))
+                {
+                    vRel -= n * vn; // 位置修正不产生"弹射"速度，只保留切向滑动
+                }
+                v = vBody + vRel;
+            }
             if (maxSpeed <= FLOAT_(0))
             {
                 v = Vec2_{0, 0};
@@ -392,6 +601,40 @@ namespace PhysicsBlock
                 const Vec2_ impulse = rhat * (I * FLOAT_(0.5));
                 mParticles[i]->speed -= impulse;
                 mParticles[j]->speed += impulse;
+            }
+        }
+
+        // ─── 可选速度平滑（XSPH 风格）：对邻居速度做核加权平均 ─────────────
+        // 专治"贴壁/贴底的水一直抖"。默认 0 = 关闭（保持原有手感）；
+        // 觉得水面静不下来时按 0.1 / 0.2 / 0.3 逐档加。
+        const FLOAT_ smoothing = std::clamp(param.velocitySmoothing, FLOAT_(0), FLOAT_(1));
+        if (smoothing > FLOAT_(0))
+        {
+            for (size_t i = 0; i < n; ++i)
+            {
+                mShift[i] = mParticles[i]->speed; // 暂存新速度（Jacobi 式，避免顺序相关）
+            }
+            for (size_t i = 0; i < n; ++i)
+            {
+                Vec2_ dv{0, 0};
+                FLOAT_ wsum = FLOAT_(0);
+                for (unsigned int k = mNeighborOffset[i]; k < mNeighborOffset[i + 1]; ++k)
+                {
+                    const unsigned int j = mNeighborIndex[k];
+                    const FLOAT_ r = Modulus(mParticles[i]->pos - mParticles[j]->pos);
+                    if (r >= h)
+                    {
+                        continue;
+                    }
+                    const FLOAT_ q = FLOAT_(1.0) - r * invH;
+                    const FLOAT_ w = q * q;
+                    dv += (mParticles[j]->speed - mParticles[i]->speed) * w;
+                    wsum += w;
+                }
+                if (wsum > FLOAT_(1e-9))
+                {
+                    mParticles[i]->speed += dv * (smoothing / wsum);
+                }
             }
         }
 
@@ -438,7 +681,6 @@ namespace PhysicsBlock
         const auto &lines = mWorld->PhysicsLineS;
 
         const FLOAT_ h = std::max(param.h, FLOAT_(1e-3));
-        const FLOAT_ stepBase = FLOAT_(0.02f);
         const FLOAT_ maxStepMap = std::max(param.mapEscapeRadius, FLOAT_(0)) * h;
         const Vec2_ stepDirs[8] = {
             {0, 1}, {0, -1}, {1, 0}, {-1, 0},
@@ -446,19 +688,21 @@ namespace PhysicsBlock
             {FLOAT_(-0.7071), FLOAT_(0.7071)}, {FLOAT_(-0.7071), FLOAT_(-0.7071)}
         };
 
-        // 粗到细最近空闲点搜索：
-        //   粗扫（≈12 步）先定位能逃逸的射线，再在该段内细扫（stepBase）取最近点。
-        //   相比"逐 0.02 步扫满 maxLen"，同样覆盖全部射程但步数恒定，
-        //   且深穿透时不会再因为射程不够而静默失败。
+        // 粗扫 + 二分细化，求**精确穿透深度**的最近空闲点：
+        //   1) 粗扫（≈12 步）先定位能逃逸的射线，得到"最后一个实心点/第一个空闲点"区间；
+        //   2) 在区间内二分到 tol，得到几乎精确的边界距离。
+        //   精确性对稳定性至关重要：固定步长（例如 0.02）会让静止粒子每次接触都被
+        //   多推一个步长，位置抖动且速度回代被注入假速度。
         //   preferDir 非零时，优先只考虑"朝来路反方向"的射线，避免沿最近路径
         //   推穿薄壁（隧穿）；若该半平面内无解则回退到全部方向。
         auto NearestFree = [&](Vec2_ from, auto &&IsFree, FLOAT_ maxLen, Vec2_ preferDir) -> Vec2_
         {
-            if (maxLen <= stepBase)
+            if (maxLen <= FLOAT_(1e-5))
             {
                 return from;
             }
-            const FLOAT_ coarseStep = std::max(stepBase, maxLen / FLOAT_(12.0));
+            const FLOAT_ coarseStep = std::max(FLOAT_(0.05), maxLen / FLOAT_(12.0));
+            const FLOAT_ tol = FLOAT_(1e-4);
             const FLOAT_ preferLen = Modulus(preferDir);
             const Vec2_ prefer = (preferLen > FLOAT_(1e-6)) ? (preferDir / preferLen) : Vec2_{0, 0};
             const bool hasPrefer = (preferLen > FLOAT_(1e-6));
@@ -474,40 +718,43 @@ namespace PhysicsBlock
                     {
                         continue; // 会朝来路继续深入的方向，第一轮排除
                     }
-                    FLOAT_ lastSolid = 0;
+                    const Vec2_ dir = stepDirs[di];
+                    FLOAT_ lo = 0;  // 已知实心（含起点）
+                    FLOAT_ hi = -1; // 已知空闲
                     for (FLOAT_ len = coarseStep; len <= maxLen + FLOAT_(1e-4); len += coarseStep)
                     {
-                        if (IsFree(from + stepDirs[di] * len))
+                        if (IsFree(from + dir * len))
                         {
-                            // 首个自由点落在 (lastSolid, len]，在其中细扫取最近
-                            bool foundFine = false;
-                            for (FLOAT_ fine = lastSolid + stepBase; fine <= len; fine += stepBase)
-                            {
-                                if (IsFree(from + stepDirs[di] * fine))
-                                {
-                                    if (fine < bestLen)
-                                    {
-                                        bestLen = fine;
-                                        best = from + stepDirs[di] * fine;
-                                    }
-                                    foundFine = true;
-                                    break;
-                                }
-                            }
-                            if (!foundFine && len < bestLen)
-                            {
-                                // 细扫因浮点累加错过区间端点：退化为粗扫点
-                                bestLen = len;
-                                best = from + stepDirs[di] * len;
-                            }
+                            hi = len;
                             break;
                         }
-                        lastSolid = len;
+                        lo = len;
+                    }
+                    if (hi < 0)
+                    {
+                        continue; // 该方向射程内无空闲点
+                    }
+                    for (int it = 0; it < 24 && (hi - lo) > tol; ++it)
+                    {
+                        const FLOAT_ mid = (lo + hi) * FLOAT_(0.5);
+                        if (IsFree(from + dir * mid))
+                        {
+                            hi = mid;
+                        }
+                        else
+                        {
+                            lo = mid;
+                        }
+                    }
+                    if (hi < bestLen)
+                    {
+                        bestLen = hi;
+                        best = from + dir * hi;
                     }
                 }
                 if (bestLen < FLOAT_MAX)
                 {
-                    break; // 第一轮已找到解，无需全方向兜底
+                    break;
                 }
             }
             return bestLen < FLOAT_MAX ? best : from;
@@ -523,6 +770,10 @@ namespace PhysicsBlock
             Vec2_ pos = p->pos;
             // 逃逸偏好方向 = 本帧进入解算前的来路反向（把它推回出发的那一侧）
             const Vec2_ preferDir = mPrevPos[i] - pos;
+            // 投影前的位置与接触信息：速度回代用"投影前位置"，接触法线用于碰撞响应
+            mPreProjPos[i] = pos;
+            mProjNormal[i] = Vec2_{0, 0};
+            mProjBodyVel[i] = Vec2_{0, 0};
 
             // ── 单粒子投影：固体（圆/形状/线）与地图交替迭代至稳定 ──
             // 顺序很关键：若先推地图再推固体，固体可能把粒子重新压回地图格子里
@@ -583,15 +834,18 @@ namespace PhysicsBlock
                         [&](const Vec2_ &cand) { return !ShapeSolidAt(s, cand); },
                         maxStepShape,
                         preferDir);
-                    if (pass == 0 && s->invMass != FLOAT_(0) && s->mass > FLOAT_(0) && newPos != pos)
+                    if (newPos != pos)
                     {
-                        // 接触点力矩：作用点 ≈ 粒子位置，力臂 = 接触点 − 质心。
-                        // 反作用冲量 J = −m_p·Δx/dt（PBD 语义：粒子的速度变化即 Δx/dt），
-                        // Δω = invI·(r × J)。reactionTorqueGain 是对 PBD 位置修正
-                        // 当作速度冲量时 1/dt 放大的人为补偿（1.0 = 物理正确）。
-                        const Vec2_ impulse = (newPos - pos) * (-mParticleMass * invDt);
-                        const Vec2_ arm = pos - s->pos;
-                        mTorqueBuf[si] += Cross(arm, impulse);
+                        mProjNormal[i] += (newPos - pos);
+                        mProjBodyVel[i] = s->speed;
+                        if (pass == 0 && s->invMass != FLOAT_(0) && s->mass > FLOAT_(0))
+                        {
+                            // 接触点力矩：作用点 ≈ 粒子位置，力臂 = 接触点 − 质心。
+                            // 反作用冲量 J = −m_p·Δx/dt，Δω = invI·(r × J)。
+                            const Vec2_ impulse = (newPos - pos) * (-mParticleMass * invDt);
+                            const Vec2_ arm = pos - s->pos;
+                            mTorqueBuf[si] += Cross(arm, impulse);
+                        }
                     }
                     pos = newPos;
                 }
@@ -632,18 +886,27 @@ namespace PhysicsBlock
                     const FLOAT_ nLen = Modulus(n);
                     if (nLen > FLOAT_(1e-9))
                     {
-                        pos = closest + n * (FLOAT_(0.01) / nLen);
+                        const Vec2_ newPos = closest + n * (FLOAT_(1e-3) / nLen);
+                        mProjNormal[i] += (newPos - pos);
+                        mProjBodyVel[i] = l->speed;
+                        pos = newPos;
                     }
                 }
 
-                // ── 地图：把粒子钳制出碰撞格子（细粒度最近空闲点，保持切向滑动）──
+                // ── 地图：把粒子钳制出碰撞格子（精确最近空闲点，保持切向滑动）──
                 if (map != nullptr && map->FMGetCollide(pos))
                 {
-                    pos = NearestFree(
+                    const Vec2_ newPos = NearestFree(
                         pos,
                         [&](const Vec2_ &cand) { return !map->FMGetCollide(cand); },
                         maxStepMap,
                         preferDir);
+                    if (newPos != pos)
+                    {
+                        mProjNormal[i] += (newPos - pos);
+                        mProjBodyVel[i] = Vec2_{0, 0}; // 地图是静态的
+                    }
+                    pos = newPos;
                 }
 
                 if (pos == before)
@@ -1085,6 +1348,37 @@ namespace PhysicsBlock
                 {
                     break;
                 }
+            }
+        }
+
+        // 7) 时间低通：水面高度逐帧抖动会让浮力跟着抖 → 浮体上下泵水 → 水静不下来。
+        //    这里对每个桶的水面高度做一阶低通（top = 新·s + 旧·(1−s)），切断该正反馈。
+        //    桶数变化（水面横向范围变化）时重新初始化，避免用到错位的旧值。
+        {
+            const FLOAT_ s = std::clamp(param.surfaceSmoothing, FLOAT_(0), FLOAT_(1));
+            if (s < FLOAT_(1) && s > FLOAT_(0))
+            {
+                if ((int)mBinTopSmooth.size() != mBinNum)
+                {
+                    mBinTopSmooth.assign((size_t)mBinNum, FLOAT_(0));
+                }
+                for (int i = 0; i < mBinNum; ++i)
+                {
+                    SurfaceBin &bin = mBins[(size_t)i];
+                    if (!bin.valid)
+                    {
+                        continue;
+                    }
+                    if (mBinTopSmooth[(size_t)i] != FLOAT_(0))
+                    {
+                        bin.top = bin.top * s + mBinTopSmooth[(size_t)i] * (FLOAT_(1) - s);
+                    }
+                    mBinTopSmooth[(size_t)i] = bin.top;
+                }
+            }
+            else if ((int)mBinTopSmooth.size() != mBinNum)
+            {
+                mBinTopSmooth.assign((size_t)mBinNum, FLOAT_(0));
             }
         }
 

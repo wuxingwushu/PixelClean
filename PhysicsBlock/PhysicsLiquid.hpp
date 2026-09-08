@@ -77,6 +77,10 @@ namespace PhysicsBlock
                                               // 0.1 ≈ 与默认近场压力同量级（孤立水滴/水花会缓慢并拢，
                                               // 自由液面不会被拉塌）；调大更有"黏稠成团"感
             FLOAT_ maxDensityDeficit = 1.0f;  // 内聚项允许的最大欠密量（防止无限吸引塌缩）
+            FLOAT_ velocitySmoothing = 0.0f;  // 速度平滑（XSPH 风格，0 = 关闭）：
+                                              // 对邻居速度做核加权平均，专治"贴壁/贴底
+                                              // 的水一直抖"。默认 0 保持原有手感，
+                                              // 觉得水面不稳时可以 0.1~0.3 逐档加
             FLOAT_ viscosity = 10.0f;         // 线性粘滞 σ（越大流动越"稠"，静置收敛越快）
             FLOAT_ viscosityQuadratic = 1.0f; // 二次粘滞 β（高速时额外耗散，抑制振荡）
             int    iterations = 3;            // 密度松弛迭代次数
@@ -84,10 +88,17 @@ namespace PhysicsBlock
             FLOAT_ maxPairDisplacement = 0.25f; // 单对粒子单次迭代最大位移（相对 h 的倍数）
             FLOAT_ maxFrameDisplacement = 0.5f; // 单粒子单帧压力位移上限（相对 h 的倍数；
                                                 // 会被自动钳到 mapEscapeRadius 之内，保证推得出来）
-            FLOAT_ mapEscapeRadius = 0.75f;   // 地图投影最大推出距离（相对 h 的倍数）
+            FLOAT_ mapEscapeRadius = 4.0f;    // 地图投影最大推出距离（相对 h 的倍数）。
+                                              // 必须大于地图上最厚实体的半宽：否则粒子
+                                              // 卡在厚墙/立柱里出不来，会一路穿过地板
+                                              // 无限下坠（射程内搜索步数恒定，代价为零）
             FLOAT_ surfaceBinWidth = 0.0f;    // 局部水面高度场的水平分辨率（世界单位）：
                                               // 0 = 自动 = max(h, 2×静息间距)（默认 ≈ 1 个地图格）；
                                               // 调小 → 水面更精细（代价：每桶粒子更少、噪声更大）
+            FLOAT_ surfaceSmoothing = 0.25f;  // 水面高度的时间低通系数（0~1，0=关闭）：
+                                              // 每帧 top = 新值·s + 旧值·(1−s)。水面逐帧抖动
+                                              // 会让浮力跟着抖 → 浮体上下泵水 → 水静不下来；
+                                              // 这一层滤波专门切断该正反馈
             FLOAT_ buoyancy = 1.0f;           // 阿基米德浮力倍率（1=物理正确密度比；>1 更容易浮）
             FLOAT_ solidDrag = 2.0f;          // 固体在液体中的速度阻尼（1/秒，按浸没比例缩放）
             FLOAT_ maxRiseSpeed = 2.5f;       // 固体上浮速度上限（防止"活塞效应"把液体一起抬离水域）
@@ -163,10 +174,21 @@ namespace PhysicsBlock
         static glm::vec4 ColorByDensity(FLOAT_ density, const Params &param);
 
     private:
+        /// 边界采样点（地图/形状的实体格、圆内部采样，按流体间距子采样）
+        struct BoundarySample
+        {
+            Vec2_ pos;     // 世界坐标
+            FLOAT_ weight; // ψ_b：等效流体粒子数（体积权重）
+        };
+
         /// 重建指针→索引映射（惰性：仅在粒子增删后重建，避免每帧哈希）
         void BuildIndexMap();
         /// 重建邻居表（扁平存储：mNeighborOffset[i]..mNeighborOffset[i+1] 为粒子 i 的邻居索引）
         void RebuildNeighbors(FLOAT_ h);
+        /// 重建每个流体粒子附近的**边界采样点**（固体/地图的实体格按流体间距子采样）。
+        /// 它们参与密度求和（消除固体边界处的密度缺失）并在位移阶段把流体推开；
+        /// 自身不可移动 → 水不会往固体内挤，也不会被反复"挤入-推出"而弹射。
+        void RebuildBoundarySamples(FLOAT_ h, FLOAT_ spacingEff);
         /// 把液体粒子钳制出 固体（形状/圆/线）与 地图，防止压力把粒子推入刚体内部；
         /// 同时把投影的动量反作用（力矩）施加到动态固体上
         void ResolveSolidOverlap(FLOAT_ time);
@@ -204,8 +226,16 @@ namespace PhysicsBlock
         std::vector<FLOAT_> mDensityNear;  // 近场密度
         std::vector<Vec2_> mPrevPos;       // 上一步修正后的位置（PBF 速度回代基准）
         std::vector<Vec2_> mShift;         // 单次迭代的位移累加（Jacobi，避免顺序偏差）
+        // ── 投影与速度解耦（Ihmsen 2011 的"粒子推出"做法）──
+        // 投影只修位置：速度用**投影前**的位置回代，再只去掉"撞进固体"的法向分量。
+        // 否则固定步长/深穿透的推出位移会被放大成 v=Δx/dt，每帧给粒子注入假速度。
+        std::vector<Vec2_> mPreProjPos;    // 投影前位置（速度回代基准）
+        std::vector<Vec2_> mProjNormal;    // 本帧投影方向累加（指向固体外侧）
+        std::vector<Vec2_> mProjBodyVel;   // 推开它的刚体速度（地图 = 0）
         std::vector<unsigned int> mNeighborIndex;   // 邻居扁平表
         std::vector<unsigned int> mNeighborOffset;  // 每粒子邻居区间起点（size = n+1）
+        std::vector<BoundarySample> mBoundary;      // 边界采样点扁平表
+        std::vector<unsigned int> mBoundaryOffset;  // 每粒子边界区间起点（size = n+1）
         std::vector<PhysicsFormwork *> mSearchV;    // 网格查询缓冲（复用）
         std::vector<Vec2_> mClipPoly;      // 水线裁剪后的浸没多边形（复用，避免每帧分配）
         std::vector<FLOAT_> mTorqueBuf;    // 每形状的接触点力矩冲量累积（复用）
@@ -218,7 +248,8 @@ namespace PhysicsBlock
         std::vector<unsigned char> mEligible; // 该粒子是否属于"实质水体"簇（剔除小水花）
         std::vector<unsigned char> mExposed;  // 该粒子是否"直接暴露在空气中"（其正上方无水体/刚体）
         std::vector<size_t> mClusterCount;   // 各高度簇的粒子数（建场时用）
-        std::vector<SurfaceBin> mBins;     // 每桶：自由水面高度（含中间量）
+        std::vector<SurfaceBin> mBins;
+        std::vector<FLOAT_> mBinTopSmooth; // 上帧的水面高度（时间低通用）     // 每桶：自由水面高度（含中间量）
         FLOAT_ mBinOrigin = 0;             // 桶 0 的水平起点（世界坐标沿水平轴的投影）
         FLOAT_ mBinWidth = 1.0f;           // 桶宽（世界单位）
         int mBinNum = 0;                   // 桶数量

@@ -27,10 +27,18 @@ namespace PhysicsBlock
      *             力矩（撬转）+ 阿基米德浮力（圆形=外接圆盘；网格形状=**逐格**
      *             与水线裁剪，力作用于浸没形心 → 稳心效应扶正）+ 液体阻力/角阻尼
      *             + 浮力等大反向施加到液体（动量守恒，防"活塞效应"整池升空）；
-     *          4. 液面锚定"固体接触到的最大高度簇"顶面（按高度分段聚类，
-     *             若接触到的簇过小——例如被固体带起来的水花——回落到全局主簇，
-     *             避免"固体踩着自己带起的水悬浮"）；接触判定=固体环带
-     *             [0.8R, R+4h] 内是否有**液体**粒子。
+     *          4. 液面 = **沿水平轴的局部水面高度场**（不是全局平面）。把液体粒子按
+     *             垂直于重力的水平轴分桶（桶宽默认 ≈ max(h, 2×静息间距)，可用
+     *             param.surfaceBinWidth 覆盖），每桶取"自由水面"粒子作为该水平
+     *             区域的水面高度。自由水面 = 该粒子暴露在空气中（正上方无水体、
+     *             无动态刚体）+ 下方有 ≥2 层连续水柱且水柱底部不在刚体上 +
+     *             其下方一段竖直范围内没有动态刚体。这样"被浮体压住的水"、
+     *             "堆在浮体顶面的水"、"浮体正下方的深水"都不算水面，对应的桶
+     *             改由左右最近的有效桶填充 → 浮体不会踩着自己推到身上的水升空。
+     *             固体逐格/逐圆取自己所在桶的水面做水线裁剪：悬在池壁外、岸上、
+     *             或跨越两个水池的部分各用各的水面，互不干扰；相邻有效桶之间线性
+     *             插值（跨到无水桶立即中断），并有坡度限制兜底。接触判定 =
+     *             固体环带 [0.8R, R+4h] 内是否有液体粒子。
      * @note  已知边界与语义限制（设计取舍，使用前请阅读）：
      *          - 液体粒子跳过引擎仲裁器 ⇒ **与地图/固体之间没有库仑摩擦**，
      *            池壁侧的水只受粘滞，不会"爬壁"；
@@ -39,7 +47,13 @@ namespace PhysicsBlock
      *          - 等质量假设：粒子宜相同质量；浮力面密度由 h/restDensity 反解
      *            （见 ApplySolidCoupling），多质量混合时仍以"最近一次添加"的
      *            mParticleMass 为准；
-     *          - 浮力反作用按全部液体粒子均分（动量守恒近似，非环带局部）；
+     *          - 浮力反作用按全部液体粒子均匀分摊（动量守恒近似，非环带局部）；
+     *          - 只有"够大"的水体参与水面高度场：主水簇 + 规模 ≥ 主簇 1/6 的其他
+     *            水簇。因此**很小的孤立水洼（< 主簇 1/6）不提供浮力**，很薄的水膜
+     *            （< 2 个粒子层）也不算自由水面——这两条是"浮体不能踩着自己带起的
+     *            水悬浮"的代价；
+     *          - 水面在桶内是平的、跨桶是折线；需要更细的水面变化时减小
+     *            param.surfaceBinWidth（代价：每桶粒子更少、噪声更大）；
      *          - 投影的**线**反作用被有意关闭（只保留力矩，且增益为人工标定值）：
      *            水流无法水平推动刚体，制动只靠浮力与阻力；
      *          - 未接入 JSON 序列化（反序列化世界不还原液体；
@@ -71,6 +85,9 @@ namespace PhysicsBlock
             FLOAT_ maxFrameDisplacement = 0.5f; // 单粒子单帧压力位移上限（相对 h 的倍数；
                                                 // 会被自动钳到 mapEscapeRadius 之内，保证推得出来）
             FLOAT_ mapEscapeRadius = 0.75f;   // 地图投影最大推出距离（相对 h 的倍数）
+            FLOAT_ surfaceBinWidth = 0.0f;    // 局部水面高度场的水平分辨率（世界单位）：
+                                              // 0 = 自动 = max(h, 2×静息间距)（默认 ≈ 1 个地图格）；
+                                              // 调小 → 水面更精细（代价：每桶粒子更少、噪声更大）
             FLOAT_ buoyancy = 1.0f;           // 阿基米德浮力倍率（1=物理正确密度比；>1 更容易浮）
             FLOAT_ solidDrag = 2.0f;          // 固体在液体中的速度阻尼（1/秒，按浸没比例缩放）
             FLOAT_ maxRiseSpeed = 2.5f;       // 固体上浮速度上限（防止"活塞效应"把液体一起抬离水域）
@@ -134,6 +151,14 @@ namespace PhysicsBlock
         Params param;
 
         /**
+         * @brief 查询某世界坐标处的**局部水面高度**（调试/测试用）
+         * @param pos      查询位置（只用其水平分量，y 不影响结果）
+         * @param outLevel 输出：该水平位置的水面高度（= dot(pos, -gravity) 坐标系的读数）
+         * @return true = 该水平区域有实质水体；false = 无水（空气/仅零星水花）
+         * @note 数据来自最近一次 Update 建立的水面高度场；第一次 Update 之前恒为 false */
+        bool QuerySurfaceLevel(Vec2_ pos, FLOAT_ &outLevel) const;
+
+        /**
          * @brief 密度 → 颜色（粒子流体着色：深蓝(低压) → 亮白蓝(高压)） */
         static glm::vec4 ColorByDensity(FLOAT_ density, const Params &param);
 
@@ -145,9 +170,33 @@ namespace PhysicsBlock
         /// 把液体粒子钳制出 固体（形状/圆/线）与 地图，防止压力把粒子推入刚体内部；
         /// 同时把投影的动量反作用（力矩）施加到动态固体上
         void ResolveSolidOverlap(FLOAT_ time);
-        /// 固体↔液体耦合：阿基米德浮力（圆=外接圆盘；网格形状=逐格水线裁剪，含扶正扭矩）
-        /// 与液体阻力
+        /// 固体↔液体耦合：阿基米德浮力（圆=外接圆盘；网格形状=逐格 × 逐区域水面裁剪，
+        /// 含扶正扭矩）与液体阻力
         void ApplySolidCoupling(FLOAT_ time);
+        /// 桶内稳健顶面（自由水面）；该桶没有可用水面时返回 mNoWater
+        FLOAT_ BinTopAt(int bin) const;
+        /// 局部水面高度（相邻有水桶之间分段线性插值，跨到无水桶立即中断）；无水返回 mNoWater
+        FLOAT_ SurfaceAt(FLOAT_ u) const;
+        /// 点是否落在某个**动态刚体**（形状/圆）内部（水面高度场用它排除"被刚体
+        /// 压住/带起的水"，否则浮体会踩着自己推到身上的水不断升高）
+        bool InsideDynamicSolid(const Vec2_ &pos) const;
+        /// 形状逐格实心判定（越界 = 空闲，与 PhysicsShape::DropCollision 的坐标约定一致）
+        bool ShapeSolidAt(PhysicsShape *s, const Vec2_ &cand) const;
+
+        /**
+         * @brief 水面高度场的一个水平桶
+         * @details top/valid 是结果；其余字段是建场时的中间量 */
+        struct SurfaceBin
+        {
+            FLOAT_ top = 0;            // 自由水面高度（valid 时有效）
+            FLOAT_ lastV = 0;          // 降序扫描：该桶上一个（更高的）粒子高度
+            FLOAT_ lastVUp = 0;        // 升序扫描：该桶上一个（更低的）粒子高度
+            unsigned int chain = 0;    // 当前连续水柱层数（升序扫描，含当前粒子）
+            bool hasWater = false;     // 该桶含实质水粒子
+            bool chainOnSolid = false; // 当前水柱底部是否坐在动态刚体上
+            bool valid = false;        // 是否已得到可用水面
+            unsigned int topIdx = 0;   // 提供该水面的粒子下标（调试用）
+        };
 
         PhysicsWorld *mWorld = nullptr;
         std::vector<PhysicsParticle *> mParticles;
@@ -159,13 +208,22 @@ namespace PhysicsBlock
         std::vector<unsigned int> mNeighborOffset;  // 每粒子邻居区间起点（size = n+1）
         std::vector<PhysicsFormwork *> mSearchV;    // 网格查询缓冲（复用）
         std::vector<Vec2_> mClipPoly;      // 水线裁剪后的浸没多边形（复用，避免每帧分配）
-        std::vector<FLOAT_> mHeightBuf;    // 粒子高度排序缓冲（液面估计复用，避免每帧分配）
         std::vector<FLOAT_> mTorqueBuf;    // 每形状的接触点力矩冲量累积（复用）
-        std::vector<FLOAT_> mClusterMin;   // 高度簇：下界
-        std::vector<FLOAT_> mClusterMax;   // 高度簇：上界
-        std::vector<FLOAT_> mClusterTop;   // 高度簇：顶面（=上界，单独存便于阅读）
-        std::vector<size_t> mClusterCount; // 高度簇：粒子数
-        std::vector<size_t> mRingCount;    // 环带内各簇的粒子数（每固体复用）
+        // ── 局部水面高度场（水平分桶）──
+        // 液面不再是"一个全局平面"，而是沿水平轴（垂直于重力）分桶的
+        // 高度场：每个桶记录该水平区间内**实质水体**的顶面高度。
+        // 固体逐格取自己所在的桶 → 悬在池壁外/岸上的部分自然没有水面 → 不计入浸没。
+        std::vector<unsigned int> mOrder;  // 高度降序的粒子索引（分簇/分桶复用）
+        std::vector<FLOAT_> mHeightOf;     // 与 mParticles 平行的高度缓存（dot(pos, up)）
+        std::vector<unsigned char> mEligible; // 该粒子是否属于"实质水体"簇（剔除小水花）
+        std::vector<unsigned char> mExposed;  // 该粒子是否"直接暴露在空气中"（其正上方无水体/刚体）
+        std::vector<size_t> mClusterCount;   // 各高度簇的粒子数（建场时用）
+        std::vector<SurfaceBin> mBins;     // 每桶：自由水面高度（含中间量）
+        FLOAT_ mBinOrigin = 0;             // 桶 0 的水平起点（世界坐标沿水平轴的投影）
+        FLOAT_ mBinWidth = 1.0f;           // 桶宽（世界单位）
+        int mBinNum = 0;                   // 桶数量
+        FLOAT_ mGapTh = 1.0f;              // 高度分簇的间隙阈值（建场时更新）
+        FLOAT_ mNoWater = 0;               // "无水"哨兵值（建场时更新）
         std::unordered_map<const PhysicsParticle *, unsigned int> mIndexMap; // 指针→索引
         bool mIndexMapDirty = true;        // 粒子增删后置位，Update 时惰性重建
         FLOAT_ mParticleMass = 1.0f;       // 最近一次添加的粒子质量（浮力估算用）

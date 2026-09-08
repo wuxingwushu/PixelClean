@@ -325,6 +325,7 @@ namespace PhysicsBlock
 		static const float kTorqueImpMax = 1.0f;
 		static const float kFrameDispMax = 2.0f;
 		static const float kMapEscapeMin = 0.05f, kMapEscapeMax = 4.0f;
+		static const float kBinWidthMax = 8.0f;
 
 		ImGui::PushID(Object);
 		// 所有滑杆都带上下限：Update 内部虽已清洗非法值，但界面上限能避免
@@ -349,6 +350,7 @@ namespace PhysicsBlock
 		ImGui::DragScalar("速度上限", MyImGuiDataType, &Object->param.maxSpeed, 0.1f, &kZero, &kSpeedMax, "%.1f");
 		ImGui::DragScalar("单帧位移上限", MyImGuiDataType, &Object->param.maxFrameDisplacement, 0.05f, &kZero, &kFrameDispMax, "%.2f");
 		ImGui::DragScalar("地图推出半径", MyImGuiDataType, &Object->param.mapEscapeRadius, 0.05f, &kMapEscapeMin, &kMapEscapeMax, "%.2f");
+		ImGui::DragScalar("水面分辨率(0=自动)", MyImGuiDataType, &Object->param.surfaceBinWidth, 0.05f, &kZero, &kBinWidthMax, "%.2f");
 		ImGui::Text("液体粒子: %d", (int)Object->Particles().size());
 		ImGui::PopID();
 		return false;

@@ -24,13 +24,14 @@ namespace PhysicsBlock
         }
         mSearchV.clear();
         mClipPoly.clear();
-        mHeightBuf.clear();
         mTorqueBuf.clear();
-        mClusterMin.clear();
-        mClusterMax.clear();
-        mClusterTop.clear();
+        mOrder.clear();
+        mHeightOf.clear();
+        mEligible.clear();
+        mExposed.clear();
         mClusterCount.clear();
-        mRingCount.clear();
+        mBins.clear();
+        mBinNum = 0;
         mIndexMap.clear();
     }
 
@@ -559,17 +560,7 @@ namespace PhysicsBlock
                 // 注意：PhysicsShape::DropCollision 会把越界坐标钳制到边界格（边界修正），
                 // 而实心形状的边界格恒为"碰撞" → 任何点都判定为在形状内部 →
                 // 最近的"空闲点"搜索永远失败 → 粒子困在方块内部 → 仲裁器深穿透 bias 猛踢方块。
-                // 因此这里必须用带越界检查的逐格测试（越界 = 空闲）。
-                auto ShapeSolidAt = [&](PhysicsShape *s, const Vec2_ &cand) -> bool
-                {
-                    const Vec2_ local = vec2angle(cand - s->pos, -s->angle);
-                    const glm::ivec2 g = ToInt(local + s->CentreMass);
-                    if (g.x < 0 || g.y < 0 || g.x >= (int)s->width || g.y >= (int)s->height)
-                    {
-                        return false; // 越界即空闲
-                    }
-                    return s->at(g.x, g.y).Collision;
-                };
+                // 因此这里必须用带越界检查的逐格测试（越界 = 空闲）——见 ShapeSolidAt。
                 for (size_t si = 0; si < shapes.size(); ++si)
                 {
                     auto *s = shapes[si];
@@ -684,6 +675,120 @@ namespace PhysicsBlock
         }
     }
 
+    bool PhysicsLiquid::ShapeSolidAt(PhysicsShape *s, const Vec2_ &cand) const
+    {
+        const Vec2_ local = vec2angle(cand - s->pos, -s->angle);
+        const glm::ivec2 g = ToInt(local + s->CentreMass);
+        if (g.x < 0 || g.y < 0 || g.x >= (int)s->width || g.y >= (int)s->height)
+        {
+            return false; // 越界即空闲
+        }
+        return s->at(g.x, g.y).Collision;
+    }
+
+    bool PhysicsLiquid::InsideDynamicSolid(const Vec2_ &pos) const
+    {
+        if (mWorld == nullptr)
+        {
+            return false;
+        }
+        for (auto *c : mWorld->PhysicsCircleS)
+        {
+            if (c != nullptr && Modulus(pos - c->pos) < c->radius)
+            {
+                return true;
+            }
+        }
+        for (auto *s : mWorld->PhysicsShapeS)
+        {
+            if (s == nullptr)
+            {
+                continue;
+            }
+            // 粗筛：形状的外接圆
+            const Vec2_ d = pos - s->pos;
+            if (ModulusLength(d) > (s->radius + FLOAT_(0.5)) * (s->radius + FLOAT_(0.5)))
+            {
+                continue;
+            }
+            if (ShapeSolidAt(s, pos))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    FLOAT_ PhysicsLiquid::BinTopAt(int bin) const
+    {
+        if (bin < 0 || bin >= mBinNum)
+        {
+            return mNoWater;
+        }
+        const SurfaceBin &b = mBins[(size_t)bin];
+        return b.valid ? b.top : mNoWater;
+    }
+
+    FLOAT_ PhysicsLiquid::SurfaceAt(FLOAT_ u) const
+    {
+        if (mBinNum <= 0 || !(mBinWidth > FLOAT_(0)))
+        {
+            return mNoWater;
+        }
+        const FLOAT_ f = (u - mBinOrigin) / mBinWidth;
+        const int bi = (int)f; // f >= 0 时向下取整
+        if (bi < 0 || bi >= mBinNum)
+        {
+            return mNoWater; // 该水平坐标超出水面范围 → 无水
+        }
+        const FLOAT_ here = BinTopAt(bi);
+        if (here <= mNoWater)
+        {
+            return mNoWater; // 该水平区域没有实质水体
+        }
+        const FLOAT_ frac = f - (FLOAT_)bi; // 桶内位置 [0,1)
+        if (frac < FLOAT_(0.5))
+        {
+            const FLOAT_ prev = BinTopAt(bi - 1);
+            if (prev > mNoWater)
+            {
+                return prev + (here - prev) * (frac + FLOAT_(0.5));
+            }
+        }
+        else
+        {
+            const FLOAT_ next = BinTopAt(bi + 1);
+            if (next > mNoWater)
+            {
+                return here + (next - here) * (frac - FLOAT_(0.5));
+            }
+        }
+        return here;
+    }
+
+    bool PhysicsLiquid::QuerySurfaceLevel(Vec2_ pos, FLOAT_ &outLevel) const
+    {
+        outLevel = mNoWater;
+        if (mWorld == nullptr || mBinNum <= 0)
+        {
+            return false;
+        }
+        const FLOAT_ g = Modulus(mWorld->GravityAcceleration);
+        if (g < FLOAT_(1e-6))
+        {
+            return false;
+        }
+        const Vec2_ up = -mWorld->GravityAcceleration / g;
+        const Vec2_ right = Vec2_{up.y, -up.x};
+        const FLOAT_ level = SurfaceAt(Dot(pos, right));
+        if (level <= mNoWater)
+        {
+            return false;
+        }
+        outLevel = level;
+        return true;
+    }
+
     void PhysicsLiquid::ApplySolidCoupling(FLOAT_ time)
     {
         if (mWorld == nullptr || mParticles.empty())
@@ -712,82 +817,309 @@ namespace PhysicsBlock
         }
         const FLOAT_ rhoLiquid = mParticleMass / (spacingEff * spacingEff);
 
-        // ── 液面：按高度分段聚类 ────────────────────────────────────
-        // 全局主簇（粒子数最多的连续高度区）作为"整池液面"的兜底参考，
-        // 同时保留每个簇的范围，供固体按"它实际接触到的水"选择液面。
-        // 这样既修掉"多池/水洼按主池算"的错误，又保留原有保护：
-        // 固体把一小簇水带上天时，该簇太小 → 回落到主池液面 → 浮力≈0 → 落回水中。
+        // ── 局部水面高度场（沿水平轴分桶）────────────────────────────
+        // 液面不再是"一个全局平面"：把液体粒子按垂直于重力的水平轴分桶，
+        // 每桶记录该水平区间的水面高度。固体逐格/逐圆取自己所在桶的水面做水线
+        // 裁剪 → 悬在池壁外、岸上、或跨越两个水池的部分各用各的水面，
+        // 不会因为"全局水位"把干燥部分算成浸没。
+        //
+        // 只统计"实质水体"：先按高度分簇，剔除粒子数过少的簇（被固体带起来的
+        // 小水花），否则一块木板可以踩着自己带起的水悬浮。
         const FLOAT_ gapTh = std::max(FLOAT_(1.0), spacingEff * FLOAT_(2.0));
-        mHeightBuf.clear();
-        mHeightBuf.reserve(mParticles.size());
-        for (auto *p : mParticles)
-        {
-            if (p != nullptr)
-            {
-                mHeightBuf.push_back(Dot(p->pos, up));
-            }
-        }
-        mClusterMin.clear();
-        mClusterMax.clear();
-        mClusterTop.clear();
-        mClusterCount.clear();
-        FLOAT_ mainSurfaceLevel = -std::numeric_limits<FLOAT_>::max();
-        if (!mHeightBuf.empty())
-        {
-            std::sort(mHeightBuf.begin(), mHeightBuf.end());
-            size_t clusterStart = 0;
-            for (size_t i = 1; i <= mHeightBuf.size(); ++i)
-            {
-                const bool cut = (i == mHeightBuf.size()) ||
-                                 (mHeightBuf[i] - mHeightBuf[i - 1] > gapTh);
-                if (cut)
-                {
-                    mClusterMin.push_back(mHeightBuf[clusterStart]);
-                    mClusterMax.push_back(mHeightBuf[i - 1]);
-                    mClusterTop.push_back(mHeightBuf[i - 1]);
-                    mClusterCount.push_back(i - clusterStart);
-                    clusterStart = i;
-                }
-            }
-            size_t mainIdx = 0;
-            for (size_t ci = 1; ci < mClusterCount.size(); ++ci)
-            {
-                if (mClusterCount[ci] > mClusterCount[mainIdx])
-                {
-                    mainIdx = ci;
-                }
-            }
-            mainSurfaceLevel = mClusterTop[mainIdx];
-        }
-        // "够格当作液面"的最小簇规模：防止固体自带的水花被当成液面
         const size_t clusterMinCount = std::max<size_t>(2, mParticles.size() / 50);
-        mRingCount.assign(mClusterCount.size(), 0);
+        const Vec2_ right = Vec2_{up.y, -up.x}; // 水平轴（垂直于重力）
+        const size_t n = mParticles.size();
 
-        auto ClusterOf = [&](FLOAT_ level) -> int
+        // 1) 高度缓存 + 高度降序索引
+        mHeightOf.resize(n);
+        mOrder.resize(n);
+        FLOAT_ uMin = std::numeric_limits<FLOAT_>::max();
+        FLOAT_ uMax = -std::numeric_limits<FLOAT_>::max();
+        for (size_t i = 0; i < n; ++i)
         {
-            for (size_t ci = 0; ci < mClusterCount.size(); ++ci)
+            mHeightOf[i] = Dot(mParticles[i]->pos, up);
+            mOrder[i] = (unsigned int)i;
+            const FLOAT_ u = Dot(mParticles[i]->pos, right);
+            if (u < uMin) uMin = u;
+            if (u > uMax) uMax = u;
+        }
+        std::sort(mOrder.begin(), mOrder.end(),
+                  [&](unsigned int a, unsigned int b) { return mHeightOf[a] > mHeightOf[b]; });
+
+        // 2) 桶划分：桶宽默认 ≈ max(h, 2×静息间距)（默认参数下 = 1 个地图格），
+        //    也可用 param.surfaceBinWidth 显式指定；粒子铺得很开时限桶数，
+        //    避免超大水面的内存/耗时爆炸。
+        const FLOAT_ binWanted = (param.surfaceBinWidth > FLOAT_(0))
+                                      ? param.surfaceBinWidth
+                                      : std::max(h, spacingEff * FLOAT_(2.0));
+        mBinWidth = std::max(binWanted, FLOAT_(1e-3));
+        const FLOAT_ uSpan = std::max(uMax - uMin, FLOAT_(0));
+        const int kMaxBins = 2048;
+        if (uSpan > FLOAT_(0) && uSpan / mBinWidth > (FLOAT_)kMaxBins)
+        {
+            mBinWidth = uSpan / (FLOAT_)kMaxBins;
+        }
+        mBinOrigin = uMin;
+        mBinNum = (uSpan > FLOAT_(0)) ? ((int)(uSpan / mBinWidth) + 1) : 1;
+        if (mBinNum < 1)
+        {
+            mBinNum = 1;
+        }
+        mBins.clear();
+        mBins.resize((size_t)mBinNum);
+
+        // 3) 全局分簇（高度间隙 > gapTh 切开）→ 标记"实质水体"粒子。
+        //    只有"够大"的簇参与水面高度场：主簇（粒子数最多）以及规模不小于
+        //    主簇 1/6 的其他簇（真正的第二个水池）。被浮体抬起的水、飞溅水柱、
+        //    小水洼里被带起的水花都远小于该门槛 → 不参与 → 不会把水面抬起来
+        //    （否则浮体会踩着自己带起的水一路升空：实测正反馈）。
+        mEligible.assign(n, (unsigned char)0);
+        {
+            mClusterCount.clear();
+            size_t clusterStart = 0;
+            size_t mainCount = 0;
+            for (size_t i = 1; i <= n; ++i)
             {
-                if (level >= mClusterMin[ci] - FLOAT_(1e-4) && level <= mClusterMax[ci] + FLOAT_(1e-4))
+                const bool cut = (i == n) || (mHeightOf[mOrder[i - 1]] - mHeightOf[mOrder[i]] > gapTh);
+                if (!cut)
                 {
-                    return (int)ci;
+                    continue;
+                }
+                const size_t cnt = i - clusterStart;
+                mClusterCount.push_back(cnt);
+                if (cnt > mainCount)
+                {
+                    mainCount = cnt;
+                }
+                clusterStart = i;
+            }
+            const size_t eligibleMin = std::max(clusterMinCount, mainCount / 6);
+            clusterStart = 0;
+            size_t ci = 0;
+            for (size_t i = 1; i <= n; ++i)
+            {
+                const bool cut = (i == n) || (mHeightOf[mOrder[i - 1]] - mHeightOf[mOrder[i]] > gapTh);
+                if (!cut)
+                {
+                    continue;
+                }
+                if (mClusterCount[ci] >= eligibleMin)
+                {
+                    for (size_t k = clusterStart; k < i; ++k)
+                    {
+                        mEligible[mOrder[k]] = 1;
+                    }
+                }
+                ++ci;
+                clusterStart = i;
+            }
+        }
+
+        // 4) 识别"自由水面"粒子。
+        //    自由水面 = ① 正上方 probe 内没有水、也没有动态刚体（真正暴露在空气中）；
+        //               ② 下方有连续 ≥minChain 层水，且水柱根部不在动态刚体上；
+        //               ③ 其正下方一段竖直范围内没有动态刚体（见 ColumnClearOfSolids）。
+        //    这三条把"被浮体压住的水"（上方是刚体）、"堆在浮体顶面的水"（水柱根在
+        //    刚体上）、"浮体正下方的深水"（上方是水）全部排除；这些桶随后由邻居水面
+        //    填充。否则浮体会踩着自己推到身上的水不断抬高水面，形成正反馈
+        //   （实测：木板会一路升空，只能靠 maxRiseSpeed 压住）。
+        const FLOAT_ probe = std::max(spacingEff * FLOAT_(1.5), gapTh * FLOAT_(0.5));
+        // 候选水面有效性：从候选粒子**向下** candidateDepth 的竖直段内不得有动态刚体。
+        // 这一条专门干掉"被投影推到刚体顶面上的那层水"：它上方是空气、下方也有水（自身
+        // 就是水柱），但正下方 1~2 个粒子层处就是刚体 → 判为被刚体托着 → 不算自由水面。
+        const FLOAT_ candidateDepth = std::max(h * FLOAT_(1.5), spacingEff * FLOAT_(3.0));
+        const FLOAT_ columnSampleStep = std::max(spacingEff * FLOAT_(0.5), FLOAT_(0.05));
+        const unsigned int minChain = 2;
+        auto ColumnClearOfSolids = [&](const Vec2_ &p) -> bool
+        {
+            for (FLOAT_ d = columnSampleStep; d <= candidateDepth; d += columnSampleStep)
+            {
+                if (InsideDynamicSolid(p - up * d))
+                {
+                    return false;
                 }
             }
-            return -1;
+            return true;
         };
 
-        // 固体接触到的液面：环带 [0.8R, R+4h] 内液体粒子最多的簇的顶面；
-        // 该簇太小时回落到全局主簇液面。环带内没有液体粒子 → 无水体接触。
-        auto LocalSurface = [&](const Vec2_ &c, FLOAT_ R) -> FLOAT_
+        // 4a) 降序扫描：标记"暴露在空气中"的粒子（本桶内其正上方 probe 内没有水，
+        //     且正上方 probe 内没有动态刚体）
+        mExposed.assign(n, (unsigned char)0);
+        for (size_t k = 0; k < n; ++k)
         {
-            if (mClusterCount.empty())
+            const unsigned int pi = mOrder[k];
+            if (mEligible[pi] == 0)
             {
-                return -std::numeric_limits<FLOAT_>::max();
+                continue;
             }
+            const Vec2_ pos = mParticles[pi]->pos;
+            const FLOAT_ v = mHeightOf[pi];
+            const FLOAT_ u = Dot(pos, right);
+            const int bi = (int)((u - mBinOrigin) / mBinWidth);
+            if (bi < 0 || bi >= mBinNum)
+            {
+                continue;
+            }
+            SurfaceBin &bin = mBins[(size_t)bi];
+            const bool waterAbove = bin.hasWater && ((bin.lastV - v) <= probe);
+            bin.lastV = v;
+            bin.hasWater = true;
+            if (!waterAbove && !InsideDynamicSolid(pos + up * probe))
+            {
+                mExposed[pi] = 1;
+            }
+        }
+
+        // 4b) 升序扫描（mOrder 逆序）：统计水柱层数与根部，选出每桶的水面
+        {
+            FLOAT_ lastVUp = -std::numeric_limits<FLOAT_>::max();
+            unsigned int chain = 0;
+            bool chainOnSolid = false;
+            for (size_t idx = n; idx-- > 0;)
+            {
+                const unsigned int pi = mOrder[idx];
+                if (mEligible[pi] == 0)
+                {
+                    continue;
+                }
+                const Vec2_ pos = mParticles[pi]->pos;
+                const FLOAT_ v = mHeightOf[pi];
+                if (chain > 0 && (v - lastVUp) <= gapTh)
+                {
+                    ++chain; // 与下方粒子连续 → 水柱加高一层
+                }
+                else
+                {
+                    chain = 1; // 新水柱：记录它的底部是否坐在动态刚体上
+                    chainOnSolid = InsideDynamicSolid(pos - up * probe);
+                }
+                lastVUp = v;
+                if (chain >= minChain && !chainOnSolid && mExposed[pi] != 0 &&
+                    ColumnClearOfSolids(pos))
+                {
+                    const FLOAT_ u = Dot(pos, right);
+                    const int bi = (int)((u - mBinOrigin) / mBinWidth);
+                    if (bi >= 0 && bi < mBinNum)
+                    {
+                        SurfaceBin &bin = mBins[(size_t)bi];
+                        bin.hasWater = true;
+                        if (!bin.valid || v > bin.top)
+                        {
+                            bin.top = v;
+                            bin.valid = true;
+                            bin.topIdx = pi;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5) 填充：桶里有水但找不到自由水面（水面被浮体挡住/压住，例如木板正下方的水）
+        //    → 借用左右最近一个有效桶的水面。**完全没水的桶不会被填充**
+        //    （这正是"悬在池壁外/岸上的部分没有水面"的来源）。
+        {
+            int src = -1;
+            for (int i = 0; i < mBinNum; ++i)
+            {
+                if (mBins[(size_t)i].valid)
+                {
+                    src = i;
+                }
+                else if (src >= 0 && mBins[(size_t)i].hasWater)
+                {
+                    mBins[(size_t)i].top = mBins[(size_t)src].top;
+                    mBins[(size_t)i].valid = true;
+                }
+            }
+            src = -1;
+            for (int i = mBinNum - 1; i >= 0; --i)
+            {
+                if (mBins[(size_t)i].valid)
+                {
+                    src = i;
+                }
+                else if (src >= 0 && mBins[(size_t)i].hasWater)
+                {
+                    mBins[(size_t)i].top = mBins[(size_t)src].top;
+                    mBins[(size_t)i].valid = true;
+                }
+            }
+        }
+
+        // 6) 坡度限制：水面不能出现"相邻桶之间超过 maxSlopeStep 的悬崖"。
+        //    只对**相邻的有效桶**生效——被池壁隔开的另一个水池中间隔着无水桶，
+        //    因此不受影响（多水池/水洼各自的高度仍然保留）。
+        //    这一层是兜底：万一还有水被浮体局部抬高，最多也只能高出邻居这么多。
+        {
+            const FLOAT_ maxSlopeStep = std::max(FLOAT_(0.5), spacingEff * FLOAT_(2.0));
+            for (int pass = 0; pass < 16; ++pass)
+            {
+                bool changed = false;
+                for (int i = 0; i < mBinNum; ++i)
+                {
+                    SurfaceBin &bin = mBins[(size_t)i];
+                    if (!bin.valid)
+                    {
+                        continue;
+                    }
+                    if (i > 0 && mBins[(size_t)(i - 1)].valid)
+                    {
+                        const FLOAT_ limit = mBins[(size_t)(i - 1)].top + maxSlopeStep;
+                        if (bin.top > limit)
+                        {
+                            bin.top = limit;
+                            changed = true;
+                        }
+                    }
+                    if (i + 1 < mBinNum && mBins[(size_t)(i + 1)].valid)
+                    {
+                        const FLOAT_ limit = mBins[(size_t)(i + 1)].top + maxSlopeStep;
+                        if (bin.top > limit)
+                        {
+                            bin.top = limit;
+                            changed = true;
+                        }
+                    }
+                }
+                if (!changed)
+                {
+                    break;
+                }
+            }
+        }
+
+        // 水面查询：相邻有效桶之间分段线性插值（水面是折线而非台阶），
+        // 跨到无水桶立即中断（悬在池壁外/岸上的区域拿不到水面 → 不计浸没）。
+        mGapTh = gapTh;
+        mNoWater = -std::numeric_limits<FLOAT_>::max() * FLOAT_(0.5);
+        const FLOAT_ noWater = mNoWater;
+        auto LocalSurfaceAt = [&](FLOAT_ u) -> FLOAT_ { return SurfaceAt(u); };
+        // 跨水陆边界时的水面：在 [u-span, u+span] 上取有水的采样点求平均
+        auto LocalSurfaceSpan = [&](FLOAT_ u, FLOAT_ span) -> FLOAT_
+        {
+            FLOAT_ sum = FLOAT_(0);
+            int cnt = 0;
+            const FLOAT_ samples[3] = {u, u - span, u + span};
+            for (int i = 0; i < 3; ++i)
+            {
+                const FLOAT_ level = LocalSurfaceAt(samples[i]);
+                if (level > noWater)
+                {
+                    sum += level;
+                    ++cnt;
+                }
+            }
+            return (cnt > 0) ? (sum / (FLOAT_)cnt) : noWater;
+        };
+
+        // 水体接触判定：环带 [0.8R, R+4h] 内是否有 ≥2 个液体粒子。
+        // 只用于区分"完全没碰到水"与"碰到水但没浸没（只加阻尼）"。
+        auto HasWaterContact = [&](const Vec2_ &c, FLOAT_ R) -> bool
+        {
             const FLOAT_ inner = R * FLOAT_(0.8);
             const FLOAT_ outer = R + h * FLOAT_(4.0);
-            std::fill(mRingCount.begin(), mRingCount.end(), (size_t)0);
             mWorld->mGridSearch.Get(c - Vec2_{outer, outer}, c + Vec2_{outer, outer}, mSearchV);
-            unsigned int total = 0;
+            unsigned int count = 0;
             for (auto *o : mSearchV)
             {
                 if (o == nullptr || o->PFGetType() != PhysicsObjectEnum::particle)
@@ -803,38 +1135,18 @@ namespace PhysicsBlock
                 {
                     continue; // 属于另一个液体实例
                 }
-                const Vec2_ &pp = lp->pos;
-                const FLOAT_ d = Modulus(pp - c);
+                const FLOAT_ d = Modulus(lp->pos - c);
                 if (d < inner || d > outer)
                 {
                     continue;
                 }
-                ++total;
-                const int ci = ClusterOf(Dot(pp, up));
-                if (ci >= 0 && (size_t)ci < mRingCount.size())
+                if (++count >= 2)
                 {
-                    ++mRingCount[(size_t)ci];
+                    return true;
                 }
             }
-            if (total < 2)
-            {
-                return -std::numeric_limits<FLOAT_>::max(); // 环带内没有水体接触
-            }
-            size_t bestIdx = 0;
-            for (size_t ci = 1; ci < mRingCount.size(); ++ci)
-            {
-                if (mRingCount[ci] > mRingCount[bestIdx])
-                {
-                    bestIdx = ci;
-                }
-            }
-            if (mRingCount[bestIdx] >= clusterMinCount)
-            {
-                return mClusterTop[bestIdx]; // 固体接触到的水体自成规模 → 用它的液面
-            }
-            return mainSurfaceLevel; // 接触的只是一小簇（多为被带起来的水花）→ 回落到主池
+            return false;
         };
-        const FLOAT_ noWater = -std::numeric_limits<FLOAT_>::max() * FLOAT_(0.5);
 
         // 通用：上浮速度上限（防"活塞效应"把整池水抬离水域）+ 液体阻力/角阻尼
         const FLOAT_ maxRiseSpeed = std::max(param.maxRiseSpeed, FLOAT_(0));
@@ -878,7 +1190,7 @@ namespace PhysicsBlock
         const FLOAT_ buoyancyGain = std::max(param.buoyancy, FLOAT_(0));
         const FLOAT_ contactDamping = std::max(param.contactDamping, FLOAT_(0));
 
-        // ── 圆：外接圆盘 + 局部接触水面浸没比例（保持现有模型）──────────────
+        // ── 圆：外接圆盘 + 局部接触水面浸没比例 ─────────────────────────
         Vec2_ buoyancyTotal{0, 0}; // 浮力等大反向作用到液体（动量守恒）
         for (auto *c : mWorld->PhysicsCircleS)
         {
@@ -891,10 +1203,17 @@ namespace PhysicsBlock
             {
                 continue;
             }
-            const FLOAT_ surfaceLevel = LocalSurface(c->pos, R);
-            if (surfaceLevel <= noWater)
+            if (!HasWaterContact(c->pos, R))
             {
                 continue; // 周围没有水体接触
+            }
+            // 局部水面：圆跨越水陆边界（例如半悬在池壁上方）时，
+            // 取圆心与左右两侧采样点中有水者的平均 → 按实际浸没的那半边算浮力
+            const FLOAT_ surfaceLevel = LocalSurfaceSpan(Dot(c->pos, right), R);
+            if (surfaceLevel <= noWater)
+            {
+                ApplyCommon(c, contactDamping); // 碰到水但没有水面（只在零星水花里）
+                continue;
             }
             const FLOAT_ bottomLevel = Dot(c->pos, up) - R;
             const FLOAT_ subDepth = surfaceLevel - bottomLevel;
@@ -949,9 +1268,8 @@ namespace PhysicsBlock
             {
                 continue;
             }
-            // 该固体所在位置的局部接触水面
-            const FLOAT_ surfaceLevel = LocalSurface(s->pos, s->radius);
-            if (surfaceLevel <= noWater)
+            // 水体接触判定：完全没碰到水就直接跳过（碰到水但没浸没 → 只加阻尼）
+            if (!HasWaterContact(s->pos, s->radius))
             {
                 continue; // 周围没有水体接触
             }
@@ -975,20 +1293,29 @@ namespace PhysicsBlock
                     {
                         continue;
                     }
+                    // 该格自己的水面高度：按格心的水平坐标查局部水面高度场。
+                    // 悬在池壁外/岸上的格子落在"无水桶"里 → 直接跳过，
+                    // 不再被全局水位误判为浸没。
+                    const Vec2_ cellCentre = CellToWorld((FLOAT_)x + FLOAT_(0.5), (FLOAT_)y + FLOAT_(0.5));
+                    const FLOAT_ cellSurface = LocalSurfaceAt(Dot(cellCentre, right));
+                    if (cellSurface <= noWater)
+                    {
+                        continue; // 该格所在水平区域没有实质水体
+                    }
                     const Vec2_ quad[4] = {
                         CellToWorld((FLOAT_)x, (FLOAT_)y),
                         CellToWorld((FLOAT_)(x + 1), (FLOAT_)y),
                         CellToWorld((FLOAT_)(x + 1), (FLOAT_)(y + 1)),
                         CellToWorld((FLOAT_)x, (FLOAT_)(y + 1))
                     };
-                    // Sutherland–Hodgman：保留 dot(p, up) <= surfaceLevel 的半边
+                    // Sutherland–Hodgman：保留 dot(p, up) <= 该格局部水面 的半边
                     mClipPoly.clear();
                     for (int k = 0; k < 4; ++k)
                     {
                         const Vec2_ &a = quad[k];
                         const Vec2_ &b = quad[(k + 1) & 3];
-                        const FLOAT_ ha = Dot(a, up) - surfaceLevel;
-                        const FLOAT_ hb = Dot(b, up) - surfaceLevel;
+                        const FLOAT_ ha = Dot(a, up) - cellSurface;
+                        const FLOAT_ hb = Dot(b, up) - cellSurface;
                         const bool aIn = (ha <= FLOAT_(0));
                         const bool bIn = (hb <= FLOAT_(0));
                         if (aIn)

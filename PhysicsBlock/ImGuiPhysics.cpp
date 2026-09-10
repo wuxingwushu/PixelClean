@@ -325,6 +325,7 @@ namespace PhysicsBlock
 		static const float kTorqueImpMax = 1.0f;
 		static const float kFrameDispMax = 2.0f;
 		static const float kMapEscapeMin = 0.05f, kMapEscapeMax = 16.0f;
+		static const float kSampleMin = 0.1f, kSampleMax = 8.0f;
 		static const float kBinWidthMax = 8.0f;
 
 		ImGui::PushID(Object);
@@ -337,15 +338,19 @@ namespace PhysicsBlock
 		ImGui::DragScalar("内聚力(表面张力)", MyImGuiDataType, &Object->param.surfaceTension, 0.01f, &kZero, &kTensionMax, "%.3f");
 		ImGui::DragScalar("内聚欠密上限", MyImGuiDataType, &Object->param.maxDensityDeficit, 0.05f, &kZero, &kDeficitMax, "%.2f");
 		ImGui::DragScalar("速度平滑(0=关)", MyImGuiDataType, &Object->param.velocitySmoothing, 0.01f, &kZero, &kOne, "%.2f");
+		ImGui::DragScalar("水面时间低通", MyImGuiDataType, &Object->param.surfaceSmoothing, 0.01f, &kZero, &kOne, "%.2f");
+		ImGui::DragScalar("单对位移上限", MyImGuiDataType, &Object->param.maxPairDisplacement, 0.01f, &kZero, &kFrameDispMax, "%.2f");
 		ImGui::DragScalar("粘滞(线性)", MyImGuiDataType, &Object->param.viscosity, 0.1f, &kZero, &kViscMax, "%.2f");
 		ImGui::DragScalar("粘滞(二次)", MyImGuiDataType, &Object->param.viscosityQuadratic, 0.01f, &kZero, &kViscMax, "%.2f");
 		ImGui::DragScalar("浮力倍率", MyImGuiDataType, &Object->param.buoyancy, 0.01f, &kZero, &kBuoyMax, "%.2f");
+		ImGui::DragScalar("反作用速度上限", MyImGuiDataType, &Object->param.maxReactionSpeed, 0.1f, &kZero, &kSpeedMax, "%.2f");
 		ImGui::DragScalar("液体阻力", MyImGuiDataType, &Object->param.solidDrag, 0.05f, &kZero, &kDragMax, "%.2f");
 		ImGui::DragScalar("上浮速度上限", MyImGuiDataType, &Object->param.maxRiseSpeed, 0.05f, &kZero, &kSpeedMax, "%.2f");
 		ImGui::DragScalar("接触阻尼比例", MyImGuiDataType, &Object->param.contactDamping, 0.01f, &kZero, &kOne, "%.2f");
 		ImGui::DragScalar("角阻尼倍数", MyImGuiDataType, &Object->param.angularDampingFactor, 0.5f, &kZero, &kAngFactorMax, "%.1f");
 		ImGui::DragScalar("角速度上限", MyImGuiDataType, &Object->param.maxAngularSpeed, 0.1f, &kZero, &kAngSpeedMax, "%.1f");
 		ImGui::DragScalar("撬转力矩增益", MyImGuiDataType, &Object->param.reactionTorqueGain, 0.01f, &kZero, &kGainMax, "%.3f");
+		ImGui::DragScalar("接触阻力增益", MyImGuiDataType, &Object->param.reactionDragGain, 0.01f, &kZero, &kGainMax, "%.3f");
 		ImGui::DragScalar("角冲量上限", MyImGuiDataType, &Object->param.maxTorqueImpulse, 0.005f, &kZero, &kTorqueImpMax, "%.3f");
 		ImGui::DragInt("松弛迭代次数", &Object->param.iterations, 1, 1, 16);
 		ImGui::DragScalar("速度上限", MyImGuiDataType, &Object->param.maxSpeed, 0.1f, &kZero, &kSpeedMax, "%.1f");

@@ -71,7 +71,7 @@ namespace PhysicsBlock
 		PhysicsShape1->angle = 0;
 		(*myPhysicsWorld)->AddObject(PhysicsShape1);
 
-		PhysicsShape1 = new PhysicsBlock::PhysicsShape({ -2, 6 }, { 4, 4 });
+		PhysicsShape1 = new PhysicsBlock::PhysicsShape({-2, 6}, {4, 4});
 		for (size_t i = 0; i < (PhysicsShape1->width * PhysicsShape1->height); ++i)
 		{
 			PhysicsShape1->at(i).Collision = true;
@@ -91,7 +91,7 @@ namespace PhysicsBlock
 		PhysicsShape1->angle = 3.14 / 4;
 		(*myPhysicsWorld)->AddObject(PhysicsShape1);
 
-		PhysicsBlock::PhysicsShape* PhysicsShape2 = new PhysicsBlock::PhysicsShape({ -0.5, 7.5 }, { 1, 1 });
+		PhysicsBlock::PhysicsShape *PhysicsShape2 = new PhysicsBlock::PhysicsShape({-0.5, 7.5}, {1, 1});
 		for (size_t i = 0; i < (PhysicsShape2->width * PhysicsShape2->height); ++i)
 		{
 			PhysicsShape2->at(i).Collision = true;
@@ -1144,19 +1144,19 @@ namespace PhysicsBlock
 		(*myPhysicsWorld)->AddObject(PhysicsCircle1);
 	}
 
-	void PhysicsDemo18(PhysicsWorld** myPhysicsWorld, Camera* mCamera)
+	void PhysicsDemo18(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
 	{
 		if ((*myPhysicsWorld) != nullptr)
 		{
 			delete (*myPhysicsWorld);
 		}
-		(*myPhysicsWorld) = new PhysicsBlock::PhysicsWorld({ 0.0, -9.8 }, false);
+		(*myPhysicsWorld) = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
 		int MapSize = 20;
 
 		// 设置摄像机位置
-		mCamera->setCameraPos({ 0, 0, MapSize * 2 });
+		mCamera->setCameraPos({0, 0, MapSize * 2});
 
-		PhysicsBlock::MapStatic* mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
+		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
 		for (int i = 0; i < (MapSize * MapSize); ++i)
 		{
 			mMapStatic->at(i).Entity = false;
@@ -1173,15 +1173,15 @@ namespace PhysicsBlock
 			mMapStatic->at(i, 0).Entity = true;
 			mMapStatic->at(i, 0).Collision = true;
 		}
-		mMapStatic->SetCentrality({ MapSize / 2, MapSize / 2 });
+		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
 		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
 
 		// === PhysicsAssembly Demo ===
-		PhysicsBlock::PhysicsAssembly* assembly = new PhysicsBlock::PhysicsAssembly();
+		PhysicsBlock::PhysicsAssembly *assembly = new PhysicsBlock::PhysicsAssembly();
 
 		// 1. 一个矩形形状 — 主体
 		const FLOAT_ BR = 1.5;
-		PhysicsBlock::PhysicsShape* bodyShape = new PhysicsBlock::PhysicsShape({ 0, 0 }, { 3, 3 });
+		PhysicsBlock::PhysicsShape *bodyShape = new PhysicsBlock::PhysicsShape({0, 0}, {3, 3});
 		for (size_t i = 0; i < (bodyShape->width * bodyShape->height); ++i)
 		{
 			bodyShape->at(i).Entity = false;
@@ -1192,39 +1192,40 @@ namespace PhysicsBlock
 		{
 			for (int y = 0; y < 3; ++y)
 			{
-				if (x == 1 && y == 1) continue;
+				if (x == 1 && y == 1)
+					continue;
 				bodyShape->at(x, y).Entity = true;
 				bodyShape->at(x, y).Collision = true;
 			}
 		}
 		bodyShape->UpdateAll();
-		bodyShape->pos = { 0, -4 };
+		bodyShape->pos = {0, -4};
 		bodyShape->angle = 0;
 		assembly->Add(bodyShape);
 
 		// 2. 一个圆形 — 顶部轮子
-		PhysicsBlock::PhysicsCircle* topCircle = new PhysicsBlock::PhysicsCircle({ 0, -1.5 }, BR, 1);
+		PhysicsBlock::PhysicsCircle *topCircle = new PhysicsBlock::PhysicsCircle({0, -1.5}, BR, 1);
 		assembly->Add(topCircle);
 
 		// 3. 小型圆 — 分布在主体周围（用作 PhysicsJunctionSS 的端点）
-		PhysicsBlock::PhysicsCircle* p1 = new PhysicsBlock::PhysicsCircle({ -BR, -4 }, 0.2, 1);
-		PhysicsBlock::PhysicsCircle* p2 = new PhysicsBlock::PhysicsCircle({ BR, -4 }, 0.2, 1);
-		PhysicsBlock::PhysicsCircle* p3 = new PhysicsBlock::PhysicsCircle({ 0, -7 }, 0.2, 1);
+		PhysicsBlock::PhysicsCircle *p1 = new PhysicsBlock::PhysicsCircle({-BR, -4}, 0.2, 1);
+		PhysicsBlock::PhysicsCircle *p2 = new PhysicsBlock::PhysicsCircle({BR, -4}, 0.2, 1);
+		PhysicsBlock::PhysicsCircle *p3 = new PhysicsBlock::PhysicsCircle({0, -7}, 0.2, 1);
 		assembly->Add(p1);
 		assembly->Add(p2);
 		assembly->Add(p3);
 
 		// 4. 线段 — 连接两个小圆
-		PhysicsBlock::PhysicsLine* line1 = new PhysicsBlock::PhysicsLine({ -BR, -4 }, { BR, -4 }, 1);
+		PhysicsBlock::PhysicsLine *line1 = new PhysicsBlock::PhysicsLine({-BR, -4}, {BR, -4}, 1);
 		assembly->Add(line1);
 
 		// 5. 用 PhysicsJoint 将顶部圆和主体刚性连接
-		PhysicsBlock::PhysicsJoint* jointCS = new PhysicsBlock::PhysicsJoint;
-		jointCS->Set(topCircle, bodyShape, { 0, -2.5 });
+		PhysicsBlock::PhysicsJoint *jointCS = new PhysicsBlock::PhysicsJoint;
+		jointCS->Set(topCircle, bodyShape, {0, -2.5});
 
 		// 6. 用 PhysicsJunctionSS 将小圆连接到主体（绳索约束）
-		PhysicsBlock::PhysicsJunctionSS* juncP1 = new PhysicsBlock::PhysicsJunctionSS(bodyShape, { 0, -1.0 }, p1, { 0, 0 }, PhysicsBlock::cord);
-		PhysicsBlock::PhysicsJunctionSS* juncP2 = new PhysicsBlock::PhysicsJunctionSS(bodyShape, { 1.0, 0 }, p2, { 0, 0 }, PhysicsBlock::cord);
+		PhysicsBlock::PhysicsJunctionSS *juncP1 = new PhysicsBlock::PhysicsJunctionSS(bodyShape, {0, -1.0}, p1, {0, 0}, PhysicsBlock::cord);
+		PhysicsBlock::PhysicsJunctionSS *juncP2 = new PhysicsBlock::PhysicsJunctionSS(bodyShape, {1.0, 0}, p2, {0, 0}, PhysicsBlock::cord);
 
 		// 将组装体注册到物理世界
 		(*myPhysicsWorld)->AddObject(assembly);
@@ -1235,9 +1236,9 @@ namespace PhysicsBlock
 		(*myPhysicsWorld)->AddObject(juncP2);
 
 		// 7. 外部测试物体 — 会对组装体产生碰撞
-		PhysicsBlock::PhysicsCircle* externalCircle = new PhysicsBlock::PhysicsCircle({ 5, -1 }, BR * 0.6, 1);
+		PhysicsBlock::PhysicsCircle *externalCircle = new PhysicsBlock::PhysicsCircle({5, -1}, BR * 0.6, 1);
 		(*myPhysicsWorld)->AddObject(externalCircle);
-		PhysicsBlock::PhysicsShape* externalShape = new PhysicsBlock::PhysicsShape({ -5, -1 }, { 2, 2 });
+		PhysicsBlock::PhysicsShape *externalShape = new PhysicsBlock::PhysicsShape({-5, -1}, {2, 2});
 		for (size_t i = 0; i < (externalShape->width * externalShape->height); ++i)
 		{
 			externalShape->at(i).Entity = true;
@@ -1248,7 +1249,7 @@ namespace PhysicsBlock
 		externalShape->angle = 0.5;
 		(*myPhysicsWorld)->AddObject(externalShape);
 
-		PhysicsBlock::PhysicsParticle* externalParticle = new PhysicsBlock::PhysicsParticle({ 5, 2 }, 1);
+		PhysicsBlock::PhysicsParticle *externalParticle = new PhysicsBlock::PhysicsParticle({5, 2}, 1);
 		(*myPhysicsWorld)->AddObject(externalParticle);
 	}
 
@@ -1326,20 +1327,14 @@ namespace PhysicsBlock
 		(*myPhysicsWorld)->mCollision.SetCollisionLayers(platform, layerAll);
 		(*myPhysicsWorld)->mCollision.SetCollisionPriority(platform, 10);
 
-		(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(floor,
-			[](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
-				PhysicsLog("[FLOOR Enter] Object hit floor\n");
-			});
+		(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(floor, [](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter)
+																{ PhysicsLog("[FLOOR Enter] Object hit floor\n"); });
 
-		(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(divider,
-			[](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
-				PhysicsLog("[DIVIDER Enter] Object hit divider\n");
-			});
+		(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(divider, [](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter)
+																{ PhysicsLog("[DIVIDER Enter] Object hit divider\n"); });
 
-		(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(platform,
-			[](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
-				PhysicsLog("[PLATFORM Enter] Object landed on platform\n");
-			});
+		(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(platform, [](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter)
+																{ PhysicsLog("[PLATFORM Enter] Object landed on platform\n"); });
 
 		for (int i = 0; i < 4; ++i)
 		{
@@ -1358,15 +1353,14 @@ namespace PhysicsBlock
 			(*myPhysicsWorld)->mCollision.SetCollisionLayers(box, layerObjA);
 
 			int idx = i;
-			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(box,
-				[idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
+			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(box, [idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter)
+																	{
 					if (arbiter->numContacts > 0)
 						PhysicsLog("[ENTER] Box#%d hit at (%.1f,%.1f) depth=%.3f normal=(%.2f,%.2f)\n",
 							idx,
 							arbiter->contacts[0].position.x, arbiter->contacts[0].position.y,
 							-arbiter->contacts[0].separation,
-							arbiter->contacts[0].normal.x, arbiter->contacts[0].normal.y);
-				});
+							arbiter->contacts[0].normal.x, arbiter->contacts[0].normal.y); });
 		}
 
 		for (int i = 0; i < 6; ++i)
@@ -1378,18 +1372,15 @@ namespace PhysicsBlock
 			(*myPhysicsWorld)->mCollision.SetCollisionLayers(ball, layerObjB);
 
 			int idx = i;
-			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(ball,
-				[idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
+			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(ball, [idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter)
+																	{
 					if (arbiter->numContacts > 0)
 						PhysicsLog("[ENTER] Ball#%d at (%.1f,%.1f) depth=%.3f\n",
 							idx,
 							arbiter->contacts[0].position.x, arbiter->contacts[0].position.y,
-							-arbiter->contacts[0].separation);
-				});
-			(*myPhysicsWorld)->mCollision.AddCollisionExitListener(ball,
-				[idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
-					PhysicsLog("[EXIT]  Ball#%d separated\n", idx);
-				});
+							-arbiter->contacts[0].separation); });
+			(*myPhysicsWorld)->mCollision.AddCollisionExitListener(ball, [idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter)
+																   { PhysicsLog("[EXIT]  Ball#%d separated\n", idx); });
 		}
 
 		for (int i = 0; i < 3; ++i)
@@ -1401,16 +1392,12 @@ namespace PhysicsBlock
 			(*myPhysicsWorld)->mCollision.SetCollisionLayers(ghost, layerGhost);
 
 			int idx = i;
-			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(ghost,
-				[idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter) {
-					PhysicsLog("[GHOST#%d] Ghost touched something (no effect)\n", idx);
-				});
+			(*myPhysicsWorld)->mCollision.AddCollisionEnterListener(ghost, [idx](const PhysicsFormwork *a, const PhysicsFormwork *b, const BaseArbiter *arbiter)
+																	{ PhysicsLog("[GHOST#%d] Ghost touched something (no effect)\n", idx); });
 		}
 
-		(*myPhysicsWorld)->mCollision.SetCollisionPriority(
-			(*myPhysicsWorld)->PhysicsCircleS[0], 90);
-		(*myPhysicsWorld)->mCollision.SetCollisionPriority(
-			(*myPhysicsWorld)->PhysicsCircleS[3], 30);
+		(*myPhysicsWorld)->mCollision.SetCollisionPriority((*myPhysicsWorld)->PhysicsCircleS[0], 90);
+		(*myPhysicsWorld)->mCollision.SetCollisionPriority((*myPhysicsWorld)->PhysicsCircleS[3], 30);
 	}
 
 	void PhysicsDemo20(PhysicsWorld **myPhysicsWorld, Camera *mCamera)
@@ -1534,46 +1521,35 @@ namespace PhysicsBlock
 		Bounds triggerZone1({-6, 7}, {10, 4});
 		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(hTrigger1, triggerZone1);
 
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger1, TriggerEventType::Enter,
-			[](PhysicsFormwork *other) {
-				PhysicsLog("[Trigger Enter] Object entered Zone-1 at y=%.1f\n", other->PFGetPos().y);
-			});
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger1, TriggerEventType::Exit,
-			[](PhysicsFormwork *other) {
-				PhysicsLog("[Trigger Exit] Object left Zone-1 at y=%.1f\n", other->PFGetPos().y);
-			});
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger1, TriggerEventType::Enter, [](PhysicsFormwork *other)
+													   { PhysicsLog("[Trigger Enter] Object entered Zone-1 at y=%.1f\n", other->PFGetPos().y); });
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger1, TriggerEventType::Exit, [](PhysicsFormwork *other)
+													   { PhysicsLog("[Trigger Exit] Object left Zone-1 at y=%.1f\n", other->PFGetPos().y); });
 
 		PhysicsBlock::TriggerHandle hTrigger2 = (*myPhysicsWorld)->mTrigger.CreateTrigger();
 		Bounds triggerZone2({6, 0}, {8, 4});
 		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(hTrigger2, triggerZone2);
 		(*myPhysicsWorld)->mTrigger.SetTriggerLayers(hTrigger2, 1 << 0);
 
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger2, TriggerEventType::Enter,
-			[](PhysicsFormwork *other) {
-				PhysicsLog("[Trigger Enter] Object entered Zone-2 (Layer-0 only) at y=%.1f\n",
-					other->PFGetPos().y);
-			});
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger2, TriggerEventType::Stay,
-			[](PhysicsFormwork *other) {
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger2, TriggerEventType::Enter, [](PhysicsFormwork *other)
+													   { PhysicsLog("[Trigger Enter] Object entered Zone-2 (Layer-0 only) at y=%.1f\n",
+																	other->PFGetPos().y); });
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger2, TriggerEventType::Stay, [](PhysicsFormwork *other)
+													   {
 				static int frameCount = 0;
 				if (++frameCount % 30 == 0)
 					PhysicsLog("[Trigger Stay] Object staying in Zone-2 at (%.1f, %.1f)\n",
-						other->PFGetPos().x, other->PFGetPos().y);
-			});
+						other->PFGetPos().x, other->PFGetPos().y); });
 
 		PhysicsBlock::TriggerHandle hTrigger3 = (*myPhysicsWorld)->mTrigger.CreateTrigger();
 		Bounds triggerZone3({0, -5}, {14, 6});
 		(*myPhysicsWorld)->mTrigger.SetTriggerBounds(hTrigger3, triggerZone3);
 
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger3, TriggerEventType::Enter,
-			[](PhysicsFormwork *other) {
-				PhysicsLog("[Trigger Enter] Object entered Catch-Zone at (%.1f, %.1f)\n",
-					other->PFGetPos().x, other->PFGetPos().y);
-			});
-		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger3, TriggerEventType::Exit,
-			[](PhysicsFormwork *other) {
-				PhysicsLog("[Trigger Exit] Object escaped Catch-Zone\n");
-			});
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger3, TriggerEventType::Enter, [](PhysicsFormwork *other)
+													   { PhysicsLog("[Trigger Enter] Object entered Catch-Zone at (%.1f, %.1f)\n",
+																	other->PFGetPos().x, other->PFGetPos().y); });
+		(*myPhysicsWorld)->mTrigger.AddTriggerListener(hTrigger3, TriggerEventType::Exit, [](PhysicsFormwork *other)
+													   { PhysicsLog("[Trigger Exit] Object escaped Catch-Zone\n"); });
 
 		for (int g = 0; g < 4; ++g)
 		{
@@ -1623,9 +1599,10 @@ namespace PhysicsBlock
 		static PerlinNoise mPerlinNoise;
 
 		mMapDynamic->SetCallback(
-			[](PhysicsBlock::BaseGrid** mT, int x, int y, void* Data) {
-				PerlinNoise* noise = (PerlinNoise*)Data;
-				PhysicsBlock::BaseGrid* grid = *mT;
+			[](PhysicsBlock::BaseGrid **mT, int x, int y, void *Data)
+			{
+				PerlinNoise *noise = (PerlinNoise *)Data;
+				PhysicsBlock::BaseGrid *grid = *mT;
 				for (int ix = 0; ix < PixelBlockEdgeSize; ++ix)
 				{
 					for (int iy = 0; iy < PixelBlockEdgeSize; ++iy)
@@ -1641,8 +1618,9 @@ namespace PhysicsBlock
 				}
 			},
 			&mPerlinNoise,
-			[](PhysicsBlock::BaseGrid** mT, void* Data) {
-				PhysicsBlock::BaseGrid* grid = *mT;
+			[](PhysicsBlock::BaseGrid **mT, void *Data)
+			{
+				PhysicsBlock::BaseGrid *grid = *mT;
 				for (unsigned int ix = 0; ix < PixelBlockEdgeSize; ++ix)
 				{
 					for (unsigned int iy = 0; iy < PixelBlockEdgeSize; ++iy)
@@ -1652,8 +1630,7 @@ namespace PhysicsBlock
 					}
 				}
 			},
-			nullptr
-		);
+			nullptr);
 
 		mMapDynamic->SetPos(0, 0);
 		mMapDynamic->ALLUpData(0, 0);
@@ -1697,9 +1674,11 @@ namespace PhysicsBlock
 		*myPhysicsWorld = new PhysicsBlock::PhysicsWorld({0.0, -9.8}, false);
 		mCamera->setCameraPos({0, 2, 42});
 
-		// 容器地图：grid 64×64，centrality {32,32} → 世界坐标 = grid - 32
-		// 池底: grid 行 18..20；左右侧壁: 列 4..6 / 57..59，行 18..38；内柱: 列 40..41，行 18..23
-		const int MapSize = 64;
+		// 容器地图：grid 80×80，centrality {40,40} → 世界坐标 = grid - 40
+		// 池底(4格厚): 列 4..75，行 18..21 → 世界 y ∈ [-22,-18)；池面(底顶) = -18
+		// 左右侧壁(4格厚): 列 4..7 / 72..75，行 18..48 → 世界 x ∈ [-36,-32) / [32,35)
+		// 内柱(绕流，3格宽): 列 52..54，行 18..26 → 世界 x ∈ [12,15)，顶 = -13（漫流）
+		const int MapSize = 80;
 		PhysicsBlock::MapStatic *mMapStatic = new PhysicsBlock::MapStatic(MapSize, MapSize);
 		for (int i = 0; i < (MapSize * MapSize); ++i)
 		{
@@ -1714,28 +1693,28 @@ namespace PhysicsBlock
 			mMapStatic->at(x, y).Collision = true;
 			mMapStatic->at(x, y).mass = 1.0f;
 		};
-		for (int x = 4; x <= 59; ++x)
+		for (int x = 4; x <= 75; ++x)
 		{
-			for (int y = 18; y <= 20; ++y)
+			for (int y = 18; y <= 21; ++y)
 			{
 				SetCell(x, y);
 			}
 		}
-		for (int y = 18; y <= 38; ++y)
+		for (int y = 18; y <= 48; ++y)
 		{
-			for (int x = 4; x <= 6; ++x)
+			for (int x = 4; x <= 7; ++x)
 			{
 				SetCell(x, y);
 			}
-			for (int x = 57; x <= 59; ++x)
+			for (int x = 72; x <= 75; ++x)
 			{
 				SetCell(x, y);
 			}
 		}
 		// 内柱：水流绕行效果
-		for (int y = 18; y <= 23; ++y)
+		for (int y = 18; y <= 26; ++y)
 		{
-			for (int x = 40; x <= 41; ++x)
+			for (int x = 52; x <= 54; ++x)
 			{
 				SetCell(x, y);
 			}
@@ -1743,41 +1722,41 @@ namespace PhysicsBlock
 		mMapStatic->SetCentrality({MapSize / 2, MapSize / 2});
 		(*myPhysicsWorld)->SetMapFormwork(mMapStatic);
 
-		// 液体：416 个水粒子铺成静水池（52×8，液面 ≈ −7），固体随后落入
-		PhysicsBlock::PhysicsLiquid *liquid = new PhysicsBlock::PhysicsLiquid(*myPhysicsWorld);
-		liquid->AddGrid({-0.25f, -9.25f}, 52, 8, 0.5f, 1.0f, 0.4f);
+		// 液体：约 1900 个水粒子铺满整个池子（124×16，液面 ≈ −10.2），固体随后落入。
+		// AddGrid 按 Floaty 的 initSpacing = 0.8·粒径 关系自动换算粒子尺度
+		// （r = spacing/1.6、h = 3r、ρ0 = 静息点阵核密度）；内柱范围内的粒子自动跳过。
+		PhysicsBlock::PhysicsLiquid *liquid = new PhysicsBlock::PhysicsLiquid((*myPhysicsWorld));
+		liquid->AddGrid({-0.25f, -14.25f}, 124, 16, 0.5f, 1.0f, 0.4f);
 		(*myPhysicsWorld)->SetLiquid(liquid);
 
 		// 落入的刚体：三个不同密度的圆（ρ_液 = 1/0.5² = 4）
 		//   m=2  ρ=1.30 → 浮在水面    m=5  ρ=3.25 → 半浮/缓沉    m=12 ρ=7.80 → 沉底
-		// 方块（3×3，ρ=1）→ 木筏漂浮；长木板（8×2，ρ=1）→ 倾斜入水后自动躺平
-		// 初始位置相互错开，避免刚体互相砸落
-		PhysicsBlock::PhysicsCircle *c = new PhysicsBlock::PhysicsCircle({-10, 6.5f}, 0.7f, 2.0f, 0.8f);
+		PhysicsBlock::PhysicsCircle *c = new PhysicsBlock::PhysicsCircle({-16, 6.5f}, 0.7f, 1.0f, 0.8f);
 		(*myPhysicsWorld)->AddObject(c);
-		c = new PhysicsBlock::PhysicsCircle({-7.5f, 7.5f}, 0.7f, 5.0f, 0.8f);
+		c = new PhysicsBlock::PhysicsCircle({-12, 9.0f}, 0.7f, 3.25f, 0.8f);
 		(*myPhysicsWorld)->AddObject(c);
-		c = new PhysicsBlock::PhysicsCircle({10, 6.5f}, 0.7f, 12.0f, 0.8f);
+		c = new PhysicsBlock::PhysicsCircle({18, 6.5f}, 0.7f, 12.0f, 0.8f);
 		(*myPhysicsWorld)->AddObject(c);
 
-		// 方块平放落入（无初始倾角）
-		PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape({-4, 10}, {3, 3});
+		// 方块（3×3，ρ=1）→ 木筏漂浮
+		PhysicsBlock::PhysicsShape *box = new PhysicsBlock::PhysicsShape({-6, 12}, {3, 3});
 		for (size_t i = 0; i < (box->width * box->height); ++i)
 		{
 			box->at(i).Entity = true;
 			box->at(i).Collision = true;
-			box->at(i).mass = 1.0f;
+			box->at(i).mass = 0.3f;
 		}
 		box->UpdateAll();
 		box->angle = 0.0f;
 		(*myPhysicsWorld)->AddObject(box);
 
-		// 长木板（8×2）倾斜入水：矩形水线裁剪 + 扶正扭矩 → 应自动躺平漂浮
-		PhysicsBlock::PhysicsShape *plank = new PhysicsBlock::PhysicsShape({5, 11}, {8, 2});
+		// 长木板（8×2）倾斜入水：PBF 压力浮力自然扶正
+		PhysicsBlock::PhysicsShape *plank = new PhysicsBlock::PhysicsShape({8, 15}, {8, 2});
 		for (size_t i = 0; i < (plank->width * plank->height); ++i)
 		{
 			plank->at(i).Entity = true;
 			plank->at(i).Collision = true;
-			plank->at(i).mass = 1.0f;
+			plank->at(i).mass = 0.2f;
 		}
 		plank->UpdateAll();
 		plank->angle = 0.4f;

@@ -8,7 +8,9 @@
 #include <climits>
 #include "PhysicsBaseArbiter.hpp"
 #include "PhysicsBaseCollide.hpp"
+#if PhysicsGPUBool
 #include "PhysicsGPU.hpp"
+#endif // PhysicsGPUBool
 #include "PhysicsLiquid.hpp"
 #include <chrono>
 
@@ -573,6 +575,11 @@ namespace PhysicsBlock
             ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
+                // 液体粒子由 PhysicsLiquid 的 PBF 子步积分器自理（Floaty 半隐式欧拉 + CFL）
+                if (PhysicsParticleS[SizeD]->IsLiquidParticle)
+                {
+                    continue;
+                }
                 PhysicsParticleS[SizeD]->PhysicsSpeed(time, GravityAcceleration);
             }
             ThreadTaskAllot(SizeD, SizeY, PhysicsCircleS.size(), T_Num, Tx);
@@ -605,6 +612,11 @@ namespace PhysicsBlock
         }
         for (auto i : PhysicsParticleS)
         {
+            // 液体粒子由 PhysicsLiquid 的 PBF 子步积分器自理（Floaty 半隐式欧拉 + CFL）
+            if (i->IsLiquidParticle)
+            {
+                continue;
+            }
             i->PhysicsSpeed(time, GravityAcceleration);
         }
         for (auto i : PhysicsCircleS)
@@ -677,11 +689,13 @@ namespace PhysicsBlock
 
         auto tImpulseStart = std::chrono::high_resolution_clock::now();
 
+#if PhysicsGPUBool
         if (mGPU && mGPU->IsReady() && mUseGPUApplyImpulse) {
             mApplyImpulseCPUTimeMS = 0.0f;
             mGPU->ExecuteGPUApplyImpulse(inv_dt, ApplyImpulseSize);
         }
         else 
+#endif // PhysicsGPUBool
         {
             
 // 这里使用多线程虽然会增加不确定性，但是现在我暂时不需求确定性。所以舍弃也无所谓
@@ -767,6 +781,11 @@ namespace PhysicsBlock
             ThreadTaskAllot(SizeD, SizeY, PhysicsParticleS.size(), T_Num, Tx);
             for (; SizeD < SizeY; ++SizeD)
             {
+                // 液体粒子由 PhysicsLiquid 的 PBF 子步积分器自理（Floaty 半隐式欧拉 + CFL）
+                if (PhysicsParticleS[SizeD]->IsLiquidParticle)
+                {
+                    continue;
+                }
                 PhysicsParticleS[SizeD]->PhysicsPos(time, GravityAcceleration);
             }
             ThreadTaskAllot(SizeD, SizeY, PhysicsCircleS.size(), T_Num, Tx);
@@ -799,6 +818,11 @@ namespace PhysicsBlock
         }
         for (auto i : PhysicsParticleS)
         {
+            // 液体粒子由 PhysicsLiquid 的 PBF 子步积分器自理（Floaty 半隐式欧拉 + CFL）
+            if (i->IsLiquidParticle)
+            {
+                continue;
+            }
             i->PhysicsPos(time, GravityAcceleration);
         }
         for (auto i : PhysicsCircleS)
@@ -841,8 +865,9 @@ namespace PhysicsBlock
         xTn.clear();
         mGridSearch.UpDaraWorkeTaskEnd();
 
-        // 液体模拟（双密度松弛 PBF）：此时空间网格为最新位置，
-        // 先修正粒子位置，再启动下一帧碰撞检测任务（检测读到的是修正后的位置）
+        // 液体模拟（Position Based Fluids，算法移植自 Floaty-main）：此时空间网格为最新位置，
+        // 液体在此完成 PBF 子步积分/约束求解/固液双向耦合，
+        // 再启动下一帧碰撞检测任务（检测读到的是修正后的位置）
         if (mLiquid != nullptr)
         {
             mLiquid->Update(time);

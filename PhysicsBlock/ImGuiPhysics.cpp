@@ -309,55 +309,40 @@ namespace PhysicsBlock
 
 		// 滑杆上下限（ImGui 需要 const void* 指向 FLOAT_，此处即 float）
 		static const float kZero = 0.0f;
-		static const float kOne = 1.0f;
-		static const float kHMin = 0.05f, kHMax = 8.0f;
-		static const float kRestMin = 0.05f, kRestMax = 50.0f;
-		static const float kStiffMax = 20000.0f;
-		static const float kDeficitMax = 5.0f;
-		static const float kTensionMax = 2.0f;
-		static const float kViscMax = 100.0f;
-		static const float kBuoyMax = 10.0f;
-		static const float kDragMax = 50.0f;
-		static const float kSpeedMax = 100.0f;
-		static const float kAngFactorMax = 50.0f;
-		static const float kAngSpeedMax = 50.0f;
-		static const float kGainMax = 4.0f;
-		static const float kTorqueImpMax = 1.0f;
-		static const float kFrameDispMax = 2.0f;
-		static const float kMapEscapeMin = 0.05f, kMapEscapeMax = 16.0f;
-		static const float kSampleMin = 0.1f, kSampleMax = 8.0f;
-		static const float kBinWidthMax = 8.0f;
+		static const float kRMin = 0.01f, kRMax = 2.0f;
+		static const float kHMin = 0.01f, kHMax = 8.0f;
+		static const float kRestMin = 0.01f, kRestMax = 200.0f;
+		static const float kEpsMin = 0.0001f, kEpsMax = 10000.0f;
+		static const float kCflMin = 0.01f, kCflMax = 1.0f;
+		static const float kCohMax = 0.001f;
+		static const float kCurvMax = 0.0005f;
 
 		ImGui::PushID(Object);
-		// 所有滑杆都带上下限：Update 内部虽已清洗非法值，但界面上限能避免
-		// "拖到 0 才发现液体炸了"的困惑（h→0 会让 1/h 发散）。
-		ImGui::DragScalar("相互作用半径(h)", MyImGuiDataType, &Object->param.h, 0.01f, &kHMin, &kHMax, "%.3f");
-		ImGui::DragScalar("静息密度", MyImGuiDataType, &Object->param.restDensity, 0.01f, &kRestMin, &kRestMax, "%.3f");
-		ImGui::DragScalar("压力刚度(k)", MyImGuiDataType, &Object->param.stiffness, 50.0f, &kZero, &kStiffMax, "%.0f");
-		ImGui::DragScalar("近场压力刚度", MyImGuiDataType, &Object->param.stiffnessNear, 50.0f, &kZero, &kStiffMax, "%.0f");
-		ImGui::DragScalar("内聚力(表面张力)", MyImGuiDataType, &Object->param.surfaceTension, 0.01f, &kZero, &kTensionMax, "%.3f");
-		ImGui::DragScalar("内聚欠密上限", MyImGuiDataType, &Object->param.maxDensityDeficit, 0.05f, &kZero, &kDeficitMax, "%.2f");
-		ImGui::DragScalar("速度平滑(0=关)", MyImGuiDataType, &Object->param.velocitySmoothing, 0.01f, &kZero, &kOne, "%.2f");
-		ImGui::DragScalar("水面时间低通", MyImGuiDataType, &Object->param.surfaceSmoothing, 0.01f, &kZero, &kOne, "%.2f");
-		ImGui::DragScalar("单对位移上限", MyImGuiDataType, &Object->param.maxPairDisplacement, 0.01f, &kZero, &kFrameDispMax, "%.2f");
-		ImGui::DragScalar("粘滞(线性)", MyImGuiDataType, &Object->param.viscosity, 0.1f, &kZero, &kViscMax, "%.2f");
-		ImGui::DragScalar("粘滞(二次)", MyImGuiDataType, &Object->param.viscosityQuadratic, 0.01f, &kZero, &kViscMax, "%.2f");
-		ImGui::DragScalar("浮力倍率", MyImGuiDataType, &Object->param.buoyancy, 0.01f, &kZero, &kBuoyMax, "%.2f");
-		ImGui::DragScalar("反作用速度上限", MyImGuiDataType, &Object->param.maxReactionSpeed, 0.1f, &kZero, &kSpeedMax, "%.2f");
-		ImGui::DragScalar("液体阻力", MyImGuiDataType, &Object->param.solidDrag, 0.05f, &kZero, &kDragMax, "%.2f");
-		ImGui::DragScalar("上浮速度上限", MyImGuiDataType, &Object->param.maxRiseSpeed, 0.05f, &kZero, &kSpeedMax, "%.2f");
-		ImGui::DragScalar("接触阻尼比例", MyImGuiDataType, &Object->param.contactDamping, 0.01f, &kZero, &kOne, "%.2f");
-		ImGui::DragScalar("角阻尼倍数", MyImGuiDataType, &Object->param.angularDampingFactor, 0.5f, &kZero, &kAngFactorMax, "%.1f");
-		ImGui::DragScalar("角速度上限", MyImGuiDataType, &Object->param.maxAngularSpeed, 0.1f, &kZero, &kAngSpeedMax, "%.1f");
-		ImGui::DragScalar("撬转力矩增益", MyImGuiDataType, &Object->param.reactionTorqueGain, 0.01f, &kZero, &kGainMax, "%.3f");
-		ImGui::DragScalar("接触阻力增益", MyImGuiDataType, &Object->param.reactionDragGain, 0.01f, &kZero, &kGainMax, "%.3f");
-		ImGui::DragScalar("角冲量上限", MyImGuiDataType, &Object->param.maxTorqueImpulse, 0.005f, &kZero, &kTorqueImpMax, "%.3f");
-		ImGui::DragInt("松弛迭代次数", &Object->param.iterations, 1, 1, 16);
-		ImGui::DragScalar("速度上限", MyImGuiDataType, &Object->param.maxSpeed, 0.1f, &kZero, &kSpeedMax, "%.1f");
-		ImGui::DragScalar("单帧位移上限", MyImGuiDataType, &Object->param.maxFrameDisplacement, 0.05f, &kZero, &kFrameDispMax, "%.2f");
-		ImGui::DragScalar("地图推出半径", MyImGuiDataType, &Object->param.mapEscapeRadius, 0.05f, &kMapEscapeMin, &kMapEscapeMax, "%.2f");
-		ImGui::DragScalar("水面分辨率(0=自动)", MyImGuiDataType, &Object->param.surfaceBinWidth, 0.05f, &kZero, &kBinWidthMax, "%.2f");
-		ImGui::Text("液体粒子: %d", (int)Object->Particles().size());
+		ImGui::TextDisabled(u8"Position Based Fluids（Floaty 算法）");
+
+		// —— 几何尺度（Floaty main.ts：kernelRadius = 3r、restDensity = 1.5/(2r)²）——
+		if (ImGui::DragScalar(u8"粒子半径(r)", MyImGuiDataType, &Object->param.particleRadius, 0.005f, &kRMin, &kRMax, "%.3f"))
+		{
+			Object->param.SyncFromParticleRadius();
+		}
+		ImGui::DragScalar(u8"核半径(h=3r)", MyImGuiDataType, &Object->param.kernelRadius, 0.005f, &kHMin, &kHMax, "%.3f");
+		ImGui::DragScalar(u8"静息密度(1.5/d²)", MyImGuiDataType, &Object->param.restDensity, 0.05f, &kRestMin, &kRestMax, "%.3f");
+
+		// —— SimulationParams（Floaty main.ts 默认值）——
+		ImGui::DragInt(u8"子步数(6≈Floaty 1/600步长)", &Object->param.substeps, 1, 1, 50);
+		ImGui::DragScalar(u8"松弛(eps=50)", MyImGuiDataType, &Object->param.eps, 0.5f, &kEpsMin, &kEpsMax, "%.2f");
+		ImGui::DragScalar(u8"CFL 系数(0.12)", MyImGuiDataType, &Object->param.cfl, 0.005f, &kCflMin, &kCflMax, "%.3f");
+
+		// —— 表面张力（强度由系数控制）——
+		ImGui::Checkbox(u8"表面张力（内聚+曲率）", &Object->param.surfaceTension);
+		ImGui::DragScalar(u8"内聚（水滴感；大=史莱姆）", MyImGuiDataType, &Object->param.cohesion, 0.000002f, &kZero, &kCohMax, "%.6f");
+		ImGui::DragScalar(u8"曲率（曲面平滑）", MyImGuiDataType, &Object->param.curvature, 0.000001f, &kZero, &kCurvMax, "%.6f");
+
+		// —— 水的黏性（XSPH 速度平滑）——
+		static const float kViscMax = 1.0f;
+		ImGui::DragScalar(u8"黏性(XSPH 帧级, 水≈0.05~0.15)", MyImGuiDataType, &Object->param.viscosity, 0.005f, &kZero, &kViscMax, "%.3f");
+
+		ImGui::Text(u8"液体粒子: %d", (int)Object->Particles().size());
 		ImGui::PopID();
 		return false;
 	}

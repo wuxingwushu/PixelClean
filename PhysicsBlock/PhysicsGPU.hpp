@@ -1,4 +1,8 @@
 #pragma once
+#include "BaseDefine.h" // PhysicsGPUBool 总开关
+
+#if PhysicsGPUBool // ── 关闭时本文件整体不参与编译（默认，无需 VulkanSDK）──
+
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <chrono>
@@ -107,3 +111,5 @@ private:
 };
 
 } // namespace PhysicsBlock
+
+#endif // PhysicsGPUBool

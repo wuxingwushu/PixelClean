@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "BaseDefine.h"  // PhysicsGPUBool 总开关
 #include "MapFormwork.hpp"     // 地图样板
 #include "PhysicsShape.hpp"    // 有形状物体
 #include "PhysicsParticle.hpp" // 物理粒子
@@ -59,7 +60,9 @@
 namespace PhysicsBlock
 {
 
+#if PhysicsGPUBool
 class PhysicsGPU;
+#endif
 class PhysicsLiquid;
 
 #if MemoryPoolBool
@@ -265,13 +268,15 @@ constexpr unsigned kMainThreadPoolIndex = kMaxPoolThreads - 1;
          *          并在每帧物理模拟结束后触发相应的回调。 */
         PhysicsTrigger mTrigger;
 
-        // GPU 计算后端
+        // GPU 计算后端（PhysicsGPUBool 关闭时整段移除，退化为纯 CPU 求解）
+#if PhysicsGPUBool
         PhysicsGPU* mGPU = nullptr;            // GPU 物理求解器
         bool mUseGPUApplyImpulse = false;      // 运行时 GPU 开关
 
         void SetGPU(PhysicsGPU* gpu) { mGPU = gpu; }
         void SetUseGPUApplyImpulse(bool use) { mUseGPUApplyImpulse = use; }
         bool IsUseGPUApplyImpulse() const { return mUseGPUApplyImpulse; }
+#endif // PhysicsGPUBool
 
         // 液体模拟（可选；见 PhysicsLiquid）
         PhysicsLiquid* mLiquid = nullptr;                       // 液体系统，悬空则无液体

@@ -1,3 +1,7 @@
+#include "BaseDefine.h" // PhysicsGPUBool 总开关
+
+#if PhysicsGPUBool // ── 关闭时本文件整体不参与编译（默认，无需 VulkanSDK / VulkanTool）──
+
 #include "PhysicsGPU.hpp"
 #include "PhysicsWorld.hpp"
 #include "../VulkanTool/Calculate.h"
@@ -1088,3 +1092,5 @@ void PhysicsGPU::ExecuteGPUApplyImpulse(float inv_dt, unsigned int impulseSize) 
 }
 
 } // namespace PhysicsBlock
+
+#endif // PhysicsGPUBool

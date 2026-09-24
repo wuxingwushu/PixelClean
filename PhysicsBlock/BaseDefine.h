@@ -40,3 +40,18 @@ namespace PhysicsBlock
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+
+// ─────────────────────────────────────────────────────────────
+// PhysicsBlock 编译期功能开关（唯一修改点）
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * @brief GPU 加速（Vulkan 计算）总开关
+ * @details 0 = 关闭（默认，本仓库不含 VulkanSDK / VulkanTool 依赖，必须为 0 才能编译）
+ *          1 = 开启（需要 <vulkan/vulkan.h> 与 ../VulkanTool、../Vulkan 目录齐全）
+ *          关闭时：PhysicsGPU 类不参与编译，PhysicsWorld 退化为纯 CPU 求解，
+ *          PhysicsWorld::SetGPU / mGPU / mUseGPUApplyImpulse 等接口一并移除。
+ *          注：本开关只影响"物理求解"。画面渲染与它无关，
+ *          辅助视觉统一走本项目的 OpenGL 立即模式（glVertex2f 等）。 */
+#define PhysicsGPUBool 1

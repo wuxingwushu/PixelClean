@@ -29,9 +29,21 @@ namespace PhysicsBlock
     // ═════════════════════════════════════════════════════════
     static const FLOAT_ kPi = FLOAT_(3.141592);
     static const FLOAT_ kTau = FLOAT_(6.2831853);
-    // 邻居哈希桶数（Floaty NeighborLinkedList::HASH_SIZE；与类内 kHashSize 同值，
-    // 文件级常量供自由函数 HashCell 使用）
-    static const int kHashBuckets = 370111;
+
+    // 二维 poly6 核幅度 4/(π·h⁸)（Floaty lib.rs poly6_scale）。
+    // 参数标定（SyncFromParticleRadius）与 λ 求解共用同一公式，只此一处。
+    static inline FLOAT_ Poly6Scale(FLOAT_ h2)
+    {
+        return FLOAT_(4.0) / (kPi * h2 * h2 * h2 * h2);
+    }
+
+    // poly6 核权重 (h²−r²)³（Floaty 核函数本体；自贡献 = r2 取 0）。
+    // 密度求和（参数标定 / λ 求解）与 XSPH 归一化共用，避免三次方展开写三遍。
+    static inline FLOAT_ Poly6Weight(FLOAT_ h2, FLOAT_ r2)
+    {
+        const FLOAT_ t = h2 - r2;
+        return t * t * t;
+    }
 
     // ═════════════════════════════════════════════════════════
     // Params
@@ -52,10 +64,9 @@ namespace PhysicsBlock
         // 这 5% 的"初始压缩"经 v = Δx/dt 放大成**出生喷泉**（能量泵）——
         // 粒子一经生成就自己炸开再塌回，水体无故翻腾。点阵精确取值后 C=0 出生，喷泉消失。
         const FLOAT_ s = FLOAT_(1.6) * r;
-        const FLOAT_ h = kernelRadius;
-        const FLOAT_ h2 = h * h;
-        const FLOAT_ poly6Scale = FLOAT_(4.0) / (kPi * h2 * h2 * h2 * h2);
-        FLOAT_ rho = poly6Scale * h2 * h2 * h2; // 自贡献（与 SolveFluidJacobi 一致）
+        const FLOAT_ h2 = kernelRadius * kernelRadius;
+        const FLOAT_ poly6Scale = Poly6Scale(h2);
+        FLOAT_ rho = poly6Scale * Poly6Weight(h2, FLOAT_(0)); // 自贡献（与 SolveFluidJacobi 一致）
         for (int i = -3; i <= 3; ++i)
         {
             for (int j = -3; j <= 3; ++j)
@@ -67,8 +78,7 @@ namespace PhysicsBlock
                 const FLOAT_ d2 = dx * dx + dy * dy;
                 if (d2 < h2)
                 {
-                    const FLOAT_ t = h2 - d2;
-                    rho += poly6Scale * t * t * t;
+                    rho += poly6Scale * Poly6Weight(h2, d2);
                 }
             }
         }
@@ -98,7 +108,10 @@ namespace PhysicsBlock
         if (substeps > 100)
             substeps = 100;
         if (eps < FLOAT_(1e-4))
-            eps = FLOAT_(50) / powf(particleRadius / FLOAT_(0.15), 2.0f);
+        {
+            const FLOAT_ k = particleRadius / FLOAT_(0.15); // 与 SyncFromParticleRadius 同一尺度比
+            eps = FLOAT_(50) / (k * k);
+        }
         if (cfl <= FLOAT_(0))
             cfl = FLOAT_(0.12);
         if (cohesion < FLOAT_(0))
@@ -176,19 +189,17 @@ namespace PhysicsBlock
         // 若边遍历边删除会导致迭代器失效。
         std::vector<PhysicsParticle *> pending;
         pending.swap(mParticles);
-        if (mWorld != nullptr)
+        for (auto *p : pending)
         {
-            for (auto *p : pending)
+            if (p == nullptr)
             {
-                if (p != nullptr)
-                {
-                    mWorld->RemoveObject(p); // RemoveObject 内部会 delete
-                }
+                continue;
             }
-        }
-        else
-        {
-            for (auto *p : pending)
+            if (mWorld != nullptr)
+            {
+                mWorld->RemoveObject(p); // RemoveObject 内部会 delete
+            }
+            else
             {
                 delete p;
             }
@@ -200,6 +211,7 @@ namespace PhysicsBlock
         mPrevPos.clear();
         mGrad.clear();
         mDelta.clear();
+        mBoundaryDisp.clear();
         mLambda.clear();
         mInside.clear();
         mNext.clear();
@@ -210,35 +222,28 @@ namespace PhysicsBlock
         mSamples.clear();
         mSampleWeight.clear();
         mSolids.clear();
-        mStatics.clear();
         mSolidXf.clear();
     }
 
     void PhysicsLiquid::NotifyParticleRemoved(PhysicsParticle *p)
     {
-        if (p == nullptr)
+        const auto it = std::find(mParticles.begin(), mParticles.end(), p);
+        if (it == mParticles.end())
         {
             return;
         }
-        for (size_t i = 0; i < mParticles.size(); ++i)
+        // 尾部交换删除（mParticles 与平行数组 mDensity 同步维护）
+        const size_t i = (size_t)(it - mParticles.begin());
+        const size_t last = mParticles.size() - 1;
+        mParticles[i] = mParticles[last];
+        if (i < mDensity.size() && last < mDensity.size())
         {
-            if (mParticles[i] != p)
-            {
-                continue;
-            }
-            // 尾部交换删除（mParticles 与平行数组同步维护）
-            const size_t last = mParticles.size() - 1;
-            mParticles[i] = mParticles[last];
-            if (i < mDensity.size() && last < mDensity.size())
-            {
-                mDensity[i] = mDensity[last];
-            }
-            mParticles.pop_back();
-            if (mDensity.size() > mParticles.size())
-            {
-                mDensity.pop_back();
-            }
-            return;
+            mDensity[i] = mDensity[last];
+        }
+        mParticles.pop_back();
+        if (mDensity.size() > mParticles.size())
+        {
+            mDensity.pop_back();
         }
     }
 
@@ -252,14 +257,22 @@ namespace PhysicsBlock
         return (s < mSampleWeight.size()) ? mSampleWeight[s] : FLOAT_(0);
     }
 
-    // ── 旋转内联（等价 vec2angle / AngleMat::Anticlockwise，但吃预计算 {cos,sin}） ──
-    static inline Vec2_ RotateCS(const Vec2_ &p, const Vec2_ &cs)
-    {
-        return Vec2_{p.x * cs.x - p.y * cs.y, p.x * cs.y + p.y * cs.x};
-    }
+    // ── 旋转：复用 BaseCalculate 的 vec2angle(pos, {cos,sin}) 重载 ──
+    // （旧版把同一 2×2 乘加在本地再抄一份；逆旋转 = 取 −angle，即把 sin 取反）
     static inline Vec2_ RotateInvCS(const Vec2_ &p, const Vec2_ &cs)
     {
-        return Vec2_{p.x * cs.x + p.y * cs.y, -p.x * cs.y + p.y * cs.x};
+        return vec2angle(p, Vec2_{cs.x, -cs.y});
+    }
+
+    // ── 位移上限钳制（Floaty enforceCFL：|Δx| ≤ maxLen，超限按比例缩回） ──
+    // 边界推出 / 刚体拟合 / CFL 回代四处共用同一规则，公式只此一份。
+    static inline void ClampDisplacement(Vec2_ &v, FLOAT_ maxLen)
+    {
+        const FLOAT_ len2 = ModulusLength(v);
+        if (len2 > maxLen * maxLen)
+        {
+            v *= maxLen / sqrt(len2);
+        }
     }
 
     // 刚体是否包含该点（形状逐格 / 圆平方距离；线段太薄视为不包含）。
@@ -300,7 +313,7 @@ namespace PhysicsBlock
             SolidXf xf;
             xf.body = body;
             xf.pos = body->pos;
-            xf.cs = Vec2_{(FLOAT_)cos(body->angle), (FLOAT_)sin(body->angle)};
+            xf.cs = AngleFloatToAngleVec(body->angle);
             xf.radius = body->PFGetCollisionR();
             xf.dynamic = (body->invMass > FLOAT_(0));
             if (body->PFGetType() == PhysicsObjectEnum::shape)
@@ -321,11 +334,9 @@ namespace PhysicsBlock
         mSamples.clear();
         mSampleWeight.clear();
         mSolids.clear();
-        mStatics.clear();
         mSamples.reserve(kMaxSolidSamples);
         mSampleWeight.reserve(kMaxSolidSamples);
         mSolids.reserve(16);
-        mStatics.reserve(8);
 
         const size_t n = mParticles.size();
         if (n == 0)
@@ -367,9 +378,14 @@ namespace PhysicsBlock
         // shape / circle / line 都派生自 PhysicsAngle（与 MouseInteraction 同一约定）
         std::vector<PhysicsAngle *> candidates;
         candidates.reserve(mWorld->PhysicsShapeS.size() + mWorld->PhysicsCircleS.size() + mWorld->PhysicsLineS.size());
-        for (auto *s : mWorld->PhysicsShapeS) candidates.push_back((PhysicsAngle *)s);
-        for (auto *c : mWorld->PhysicsCircleS) candidates.push_back((PhysicsAngle *)c);
-        for (auto *l : mWorld->PhysicsLineS) candidates.push_back((PhysicsAngle *)l);
+        auto Collect = [&candidates](const auto &bodies)
+        {
+            for (auto *b : bodies)
+                candidates.push_back((PhysicsAngle *)b);
+        };
+        Collect(mWorld->PhysicsShapeS);
+        Collect(mWorld->PhysicsCircleS);
+        Collect(mWorld->PhysicsLineS);
 
         for (PhysicsAngle *body : candidates)
         {
@@ -389,9 +405,7 @@ namespace PhysicsBlock
             {
                 // 网格形状：每个实体格按间距细分采样（格子世界尺寸 1×1）
                 PhysicsShape *s = (PhysicsShape *)body;
-                int per = (int)floor(FLOAT_(1) / spacing + FLOAT_(0.5));
-                if (per < 1)
-                    per = 1;
+                const int per = std::max(1, (int)floor(FLOAT_(1) / spacing + FLOAT_(0.5)));
                 const FLOAT_ step = FLOAT_(1) / per;
                 bool overflow = false;
                 for (unsigned int x = 0; x < s->width && !overflow; ++x)
@@ -420,9 +434,7 @@ namespace PhysicsBlock
                 PushSample(body, Vec2_{0, 0});
                 for (FLOAT_ ring = spacing; ring <= c->radius; ring += spacing)
                 {
-                    int cnt = (int)floor(kTau * ring / spacing + FLOAT_(0.5));
-                    if (cnt < 3)
-                        cnt = 3;
+                    const int cnt = std::max(3, (int)floor(kTau * ring / spacing + FLOAT_(0.5)));
                     for (int k = 0; k < cnt; ++k)
                     {
                         const FLOAT_ a = kTau * k / cnt;
@@ -436,9 +448,7 @@ namespace PhysicsBlock
             {
                 // 线段：沿轴布点（局部 x 轴，半长 = radius）
                 PhysicsLine *l = (PhysicsLine *)body;
-                int cnt = (int)floor(FLOAT_(2) * l->radius / spacing + FLOAT_(0.5));
-                if (cnt < 2)
-                    cnt = 2;
+                const int cnt = std::max(2, (int)floor(FLOAT_(2) * l->radius / spacing + FLOAT_(0.5)));
                 for (int k = 0; k <= cnt; ++k)
                 {
                     const FLOAT_ t = -l->radius + FLOAT_(2) * l->radius * k / cnt;
@@ -456,20 +466,9 @@ namespace PhysicsBlock
             {
                 continue;
             }
-            // Floaty 质量加权 PBD：w = 1/m_采样 = 采样数/刚体总质量；静态体 w = 0
-            FLOAT_ w = FLOAT_(0);
-            if (body->invMass > FLOAT_(0))
-            {
-                w = (FLOAT_)(end - begin) / body->PFGetMass();
-            }
-            else
-            {
-                mStatics.push_back(body);
-            }
-            for (int s = begin; s < end; ++s)
-            {
-                mSampleWeight.push_back(w);
-            }
+            // Floaty 质量加权 PBD：w = 1/m_采样 = 采样数/刚体总质量；静态体 w = 0（永不移动）
+            const FLOAT_ w = (body->invMass > FLOAT_(0)) ? (FLOAT_)(end - begin) / body->PFGetMass() : FLOAT_(0);
+            mSampleWeight.insert(mSampleWeight.end(), (size_t)(end - begin), w);
             mSolids.push_back(SolidTrack(body, begin, end));
         }
 
@@ -487,10 +486,10 @@ namespace PhysicsBlock
             {
                 continue;
             }
-            const Vec2_ cs = Vec2_{(FLOAT_)cos(body->angle), (FLOAT_)sin(body->angle)};
+            const Vec2_ cs = AngleFloatToAngleVec(body->angle);
             for (int s = st.begin; s < st.end; ++s)
             {
-                mPos[n + s] = body->pos + RotateCS(mSamples[s].local, cs);
+                mPos[n + s] = body->pos + vec2angle(mSamples[s].local, cs);
             }
         }
     }
@@ -522,12 +521,12 @@ namespace PhysicsBlock
     // 邻居搜索（Floaty src/lib.rs NeighborLinkedList.find_neighbors）
     // ═════════════════════════════════════════════════════════
 
-    static inline int HashCell(int gx, int gy)
+    int PhysicsLiquid::HashCell(int gx, int gy)
     {
         // Floaty: ((gx * 92837111) ^ (gy * 689287499)) % HASH_SIZE
         // 用无符号回绕保证负坐标一致（Floaty 世界坐标恒正，本引擎大量使用负坐标）
         const unsigned int h = (unsigned int)gx * 92837111u ^ (unsigned int)gy * 689287499u;
-        return (int)(h % (unsigned int)kHashBuckets);
+        return (int)(h % (unsigned int)kHashSize);
     }
 
     void PhysicsLiquid::FindNeighbors(FLOAT_ gridSpacing)
@@ -685,10 +684,10 @@ namespace PhysicsBlock
         // Floaty lib.rs：
         //   poly6_scale = 4.0 / (pi * h2 * h2 * h2 * h2)   （2D poly6 核）
         //   spiky_scale = 10.0 / (pi * h2 * h2 * h)        （2D spiky 梯度）
-        const FLOAT_ poly6Scale = FLOAT_(4.0) / (kPi * h2 * h2 * h2 * h2);
+        const FLOAT_ poly6Scale = Poly6Scale(h2);
         const FLOAT_ spikyScale = FLOAT_(10.0) / (kPi * h2 * h2 * h);
         const FLOAT_ restInv = FLOAT_(1) / param.restDensity;
-        const FLOAT_ selfRho = poly6Scale * h2 * h2 * h2; // 自贡献（Floaty: rho = poly6_scale * h2³）
+        const FLOAT_ selfRho = poly6Scale * Poly6Weight(h2, FLOAT_(0)); // 自贡献（Floaty: rho = poly6_scale * h2³）
 
         // —— λ 求解（Jacobi：λ_i = −C_i / (Σ|∇C|² + eps)，C<0 时 λ=0）——
         // 每 i 独立写 mLambda/mGrad/mDensity/mPair* → 数据并行
@@ -707,40 +706,38 @@ namespace PhysicsBlock
                 const int last = mFirst[i + 1];
                 for (int k = first; k < last; ++k)
                 {
+                    // 默认写 mPairW[k] < 0 哨兵（无效对），Δp 遍直接跳过——两遍跳过集完全一致。
+                    // Floaty：刚体↔刚体相互作用忽略；在刚体内部的流体忽略。
+                    mPairW[k] = -FLOAT_(1);
                     const int j = mNeighbors[k];
-                    // Floaty：刚体↔刚体相互作用忽略；在刚体内部的流体忽略
-                    //（无效对写 mPairW[k] < 0 哨兵，Δp 遍直接跳过——两遍跳过集完全一致）
                     if (j < 0 || (i >= n && (size_t)j >= n) || ((size_t)j < n && mInside[j]))
                     {
-                        mPairW[k] = -FLOAT_(1);
                         continue;
                     }
 
                     const FLOAT_ dx = mPos[i].x - mPos[j].x;
                     const FLOAT_ dy = mPos[i].y - mPos[j].y;
                     const FLOAT_ r2 = dx * dx + dy * dy;
-                    if (r2 < h2 && r2 > FLOAT_(0))
+                    if (r2 <= FLOAT_(0) || r2 >= h2)
                     {
-                        rho += poly6Scale * (h2 - r2) * (h2 - r2) * (h2 - r2);
-                        const FLOAT_ r = sqrt(r2);
-                        const FLOAT_ w = h - r;
-                        // 单位方向用"一次倒数 + 乘法"（旧式 dx/r, dy/r = 每对两次除法，
-                        // 数十万对/秒的除法是最大单项指令开销；同公式换乘倒数）
-                        const FLOAT_ invR = FLOAT_(1) / r;
-                        const Vec2_ u = Vec2_{dx * invR, dy * invR};
-                        // 配对缓存：单位方向 + 核距（Δp 遍复用，省掉第二次 dx/dy/r²/√r/核求值）
-                        mPairDir[k] = u;
-                        mPairW[k] = w;
-                        // Floaty: cur_grad = d/r * (spiky_scale * w * w * -3) / restDensity
-                        const FLOAT_ gscale = (spikyScale * w * w * -FLOAT_(3)) * restInv;
-                        const Vec2_ curGrad = u * gscale;
-                        sumGrad2 += curGrad.x * curGrad.x + curGrad.y * curGrad.y;
-                        gradSum += curGrad;
+                        continue;
                     }
-                    else
-                    {
-                        mPairW[k] = -FLOAT_(1);
-                    }
+
+                    rho += poly6Scale * Poly6Weight(h2, r2);
+                    const FLOAT_ r = sqrt(r2);
+                    const FLOAT_ w = h - r;
+                    // 单位方向用"一次倒数 + 乘法"（旧式 dx/r, dy/r = 每对两次除法，
+                    // 数十万对/秒的除法是最大单项指令开销；同公式换乘倒数）
+                    const FLOAT_ invR = FLOAT_(1) / r;
+                    const Vec2_ u = Vec2_{dx * invR, dy * invR};
+                    // 配对缓存：单位方向 + 核距（Δp 遍复用，省掉第二次 dx/dy/r²/√r/核求值）
+                    mPairDir[k] = u;
+                    mPairW[k] = w;
+                    // Floaty: cur_grad = d/r * (spiky_scale * w * w * -3) / restDensity
+                    const FLOAT_ gscale = (spikyScale * w * w * -FLOAT_(3)) * restInv;
+                    const Vec2_ curGrad = u * gscale;
+                    sumGrad2 += curGrad.x * curGrad.x + curGrad.y * curGrad.y;
+                    gradSum += curGrad;
                 }
             }
 
@@ -763,43 +760,32 @@ namespace PhysicsBlock
         });
 
         // —— Δp 求解（Jacobi：Δp_i = inv_m · Σ[(λ_i+λ_j)∇W + 内聚 + 曲率]）——
-        // 每 i 独立写 mDelta（λ/grad 缓存本遍只读）→ 数据并行
+        // 每 i 独立写 mDelta（λ/grad 缓存本遍只读）→ 数据并行。
+        // 压力项对"流体粒子"与"刚体采样点"（Floaty blob 分支）同式；只有表面张力
+        // （内聚 + 曲率）仅作用于流体↔流体对，故合并为一个循环 + 一处附加分支。
+        const bool surfaceTension = param.surfaceTension;
         ParallelRange(mWorld->mThreadPool, N, [&](size_t rangeBegin, size_t rangeEnd)
         {
         for (size_t i = rangeBegin; i < rangeEnd; ++i)
         {
-            const bool insideI = (i < n) && (mInside[i] != 0);
+            const bool isSample = (i >= n);
+            const bool insideI = !isSample && (mInside[i] != 0);
+            const FLOAT_ invM = isSample ? SampleWeight(i) : FLOAT_(1);
             Vec2_ delta{0, 0};
-            const FLOAT_ invM = (i >= n) ? SampleWeight(i) : FLOAT_(1);
 
-            if (i >= n)
+            if (!insideI) // 采样点恒参与；在刚体内部的流体粒子跳过（Floaty inside 规则）
             {
-                // 刚体采样点（Floaty blob 分支）：只与流体作用
                 const int first = mFirst[i];
                 const int last = mFirst[i + 1];
                 for (int k = first; k < last; ++k)
                 {
                     const FLOAT_ w = mPairW[k];
                     if (w < FLOAT_(0))
-                        continue;
-                    const int j = mNeighbors[k];
-                    delta += mPairDir[k] * ((spikyScale * w * w * -FLOAT_(3)) * restInv * (mLambda[i] + mLambda[j]));
-                }
-            }
-            else if (!insideI)
-            {
-                // 流体粒子
-                const int first = mFirst[i];
-                const int last = mFirst[i + 1];
-                for (int k = first; k < last; ++k)
-                {
-                    const FLOAT_ w = mPairW[k];
-                    if (w < FLOAT_(0))
-                        continue;
+                        continue; // λ 遍标记的无效对
                     const int j = mNeighbors[k];
                     delta += mPairDir[k] * ((spikyScale * w * w * -FLOAT_(3)) * restInv * (mLambda[i] + mLambda[j]));
 
-                    if ((size_t)j < n && param.surfaceTension)
+                    if (!isSample && (size_t)j < n && surfaceTension)
                     {
                         // 表面张力（Akinci 内聚 + 曲率，Floaty lib.rs 流体↔流体分支）：
                         //   cohesion = d/r * (-0.01*0.01)
@@ -925,12 +911,7 @@ namespace PhysicsBlock
             // 渐进逃逸。表面可以一次找到，但位移必须分帧摊销——整段应用会让
             // 逃逸粒子瞬间砸进邻近水体（局部密度 +150% 的冲击波）。
             Vec2_ move = target - p;
-            const FLOAT_ maxDisp = param.cfl * param.kernelRadius;
-            const FLOAT_ len2 = ModulusLength(move);
-            if (len2 > maxDisp * maxDisp)
-            {
-                move *= maxDisp / sqrt(len2);
-            }
+            ClampDisplacement(move, maxDisp);
             mBoundaryDisp[i] = move;
             p += move;
         }
@@ -939,14 +920,11 @@ namespace PhysicsBlock
     // Δp 应用 + 刚体拟合投影（Floaty 的软体约束投影槽位 → 刚体最小二乘拟合）
     void PhysicsLiquid::ApplyDeltas()
     {
-        const size_t n = mFluidCount;
-        for (size_t i = 0; i < n; ++i)
+        // 流体与刚体采样点同为 p += Δp（mDelta 已含各自的 inv_m 权重）
+        const size_t N = mPos.size();
+        for (size_t i = 0; i < N; ++i)
         {
-            mPos[i] += mDelta[i]; // 流体 w = 1（mDelta 已含 inv_m）
-        }
-        for (size_t s = 0; s < mSamples.size(); ++s)
-        {
-            mPos[n + s] += mDelta[n + s]; // 采样点：Δp·w（质量加权 PBD）
+            mPos[i] += mDelta[i];
         }
         ProjectSolids();
     }
@@ -966,7 +944,7 @@ namespace PhysicsBlock
 
             // 最小二乘刚体拟合：平移 = 平均位移；转动 = Σ(r×d)/Σr²
             //（cos/sin 每刚体一对；旧版逐采样点调 vec2angle 重复算三角函数）
-            const Vec2_ cs = Vec2_{(FLOAT_)cos(body->angle), (FLOAT_)sin(body->angle)};
+            const Vec2_ cs = AngleFloatToAngleVec(body->angle);
             Vec2_ t{0, 0};
             FLOAT_ rot = 0;
             FLOAT_ den = 0;
@@ -974,7 +952,7 @@ namespace PhysicsBlock
             {
                 const Vec2_ d = mDelta[n + s];
                 t += d;
-                const Vec2_ r = RotateCS(mSamples[s].local, cs); // 采样点当前力臂
+                const Vec2_ r = vec2angle(mSamples[s].local, cs); // 采样点当前力臂
                 rot += r.x * d.y - r.y * d.x;
                 den += r.x * r.x + r.y * r.y;
             }
@@ -983,15 +961,8 @@ namespace PhysicsBlock
 
             // 位移钳制（Floaty enforceCFL 的 blob 槽位：每子步 ≤ cfl·h）
             const FLOAT_ maxDisp = param.cfl * param.kernelRadius;
-            const FLOAT_ len2 = ModulusLength(t);
-            if (len2 > maxDisp * maxDisp)
-            {
-                t *= maxDisp / sqrt(len2);
-            }
-            if (dTheta > maxDisp)
-                dTheta = maxDisp;
-            if (dTheta < -maxDisp)
-                dTheta = -maxDisp;
+            ClampDisplacement(t, maxDisp);
+            dTheta = std::clamp(dTheta, -maxDisp, maxDisp);
 
             body->pos += t;
             body->angle += dTheta;
@@ -1000,10 +971,10 @@ namespace PhysicsBlock
 
             // 本刚体采样点重锚定 + 变换缓存就地刷新
             //（替代旧的整表 SyncSamplePositions / 全量重建；静态体从不移动无需重锚定）
-            const Vec2_ csNew = Vec2_{(FLOAT_)cos(body->angle), (FLOAT_)sin(body->angle)};
+            const Vec2_ csNew = AngleFloatToAngleVec(body->angle);
             for (int s = st.begin; s < st.end; ++s)
             {
-                mPos[n + s] = body->pos + RotateCS(mSamples[s].local, csNew);
+                mPos[n + s] = body->pos + vec2angle(mSamples[s].local, csNew);
             }
             if (bi < mSolidXf.size())
             {
@@ -1036,11 +1007,7 @@ namespace PhysicsBlock
                 bVel = b * (FLOAT_)(sqrt(aLen2) / sqrt(bLen2)); // 逃逸修正不注入速度
             }
             Vec2_ d = a + bVel;
-            const FLOAT_ len2 = ModulusLength(d);
-            if (len2 > maxDisp * maxDisp)
-            {
-                d *= maxDisp / sqrt(len2);
-            }
+            ClampDisplacement(d, maxDisp);
             mVel[i] = d * invDt;
             mPos[i] = mPrevPos[i] + d + (b - bVel); // 位置保留全部边界修正
         }
@@ -1083,7 +1050,7 @@ namespace PhysicsBlock
                 const FLOAT_ r2 = dx * dx + dy * dy;
                 if (r2 < h2 && r2 > FLOAT_(0))
                 {
-                    const FLOAT_ w = (h2 - r2) * (h2 - r2) * (h2 - r2); // poly6 权重（归一化后无量纲）
+                    const FLOAT_ w = Poly6Weight(h2, r2); // poly6 权重（归一化后无量纲）
                     avg += (mVel[j] - mVel[i]) * w;
                     wsum += w;
                 }
@@ -1103,27 +1070,17 @@ namespace PhysicsBlock
         for (SolidTrack &st : mSolids)
         {
             PhysicsAngle *body = st.body;
-            if (body == nullptr || body->invMass <= FLOAT_(0))
+            if (body != nullptr && body->invMass > FLOAT_(0))
             {
-                st.accumT = Vec2_{0, 0};
-                st.accumR = 0;
-                continue;
+                Vec2_ dv = st.accumT / time;
+                FLOAT_ dw = st.accumR / time;
+                ClampDisplacement(dv, maxSpeed);
+                dw = std::clamp(dw, -maxSpeed, maxSpeed);
+                body->speed += dv;
+                body->angleSpeed += dw;
+                body->StaticNum = 0; // 唤醒
             }
-            Vec2_ dv = st.accumT / time;
-            FLOAT_ dw = st.accumR / time;
-            const FLOAT_ len2 = ModulusLength(dv);
-            if (len2 > maxSpeed * maxSpeed)
-            {
-                dv *= maxSpeed / sqrt(len2);
-            }
-            if (dw > maxSpeed)
-                dw = maxSpeed;
-            if (dw < -maxSpeed)
-                dw = -maxSpeed;
-            body->speed += dv;
-            body->angleSpeed += dw;
-            body->StaticNum = 0; // 唤醒
-            st.accumT = Vec2_{0, 0};
+            st.accumT = Vec2_{0, 0}; // 静态体同样清零，下次本帧累计从 0 起算
             st.accumR = 0;
         }
     }
@@ -1172,9 +1129,9 @@ namespace PhysicsBlock
 
         // 2) 子步循环（Floaty: dt = dtFrame / substeps）
         const int substeps = param.substeps;
+        const FLOAT_ dt = time / (FLOAT_)substeps; // 子步步长（循环不变量）
         for (int s = 0; s < substeps; ++s)
         {
-            const FLOAT_ dt = time / (FLOAT_)substeps;
             IntegrateFluid(dt);   // v += dt·(g + F/m); prevPos = pos; pos += v·dt
             SolveFluidJacobi();   // λ + Δp（含内聚/曲率、刚体采样点）
             ApplyDeltas();        // pos += Δp + 刚体拟合投影

@@ -198,6 +198,7 @@ namespace PhysicsBlock
         void SyncPositions();                   ///< 组合位置快照（流体 + 采样点）
         void SyncSamplePositions();             ///< 采样点重新锚定到刚体位姿
         void FindNeighbors(FLOAT_ gridSpacing); ///< 哈希链表邻居搜索（Floaty NeighborLinkedList）
+        static int HashCell(int gx, int gy);    ///< 网格坐标 → 哈希桶（Floaty 哈希链表）
         void MarkInside();                      ///< 流体粒子在动态刚体内部标记（Floaty makeIsInsideForFluid）
         void IntegrateFluid(FLOAT_ dt);         ///< 半隐式欧拉（Floaty simulate 的积分段）
         void SolveFluidJacobi();                ///< λ + Δp（Floaty solve_fluid_jacobi）
@@ -264,7 +265,6 @@ namespace PhysicsBlock
         std::vector<SolidSample> mSamples;   ///< 刚体采样点
         std::vector<FLOAT_> mSampleWeight;   ///< 采样点权重 w（与 mSamples 对齐）
         std::vector<SolidTrack> mSolids;     ///< 参与耦合的刚体
-        std::vector<PhysicsAngle *> mStatics; ///< 静态刚体（边界钳制用）
     };
 
 }

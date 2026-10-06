@@ -159,7 +159,7 @@ namespace PhysicsBlock
         // Floaty main.ts: initSpacing = 0.8 * particleDiameter ⇒ r = spacing / 1.6。
         // 由间距反推粒子尺度并按 Floaty 公式同步 kernelRadius / restDensity，
         // 使任何场景间距都保持 Floaty 的无量纲参数组（h=3r、ρ0=1.5/(2r)²）。
-        if (spacing > FLOAT_(0))
+        if (spacing > FLOAT_(0) && mParticles.empty()) // R15：只在空液体（首次填充）时同步
         {
             param.particleRadius = spacing / FLOAT_(1.6);
             param.SyncFromParticleRadius();
@@ -214,6 +214,7 @@ namespace PhysicsBlock
         mBoundaryDisp.clear();
         mLambda.clear();
         mInside.clear();
+        mNearSolid.clear();
         mNext.clear();
         mFirst.clear();
         mNeighbors.clear();
@@ -222,6 +223,7 @@ namespace PhysicsBlock
         mSamples.clear();
         mSampleWeight.clear();
         mSolids.clear();
+        mStaticBodies.clear();
         mSolidXf.clear();
     }
 
@@ -302,14 +304,16 @@ namespace PhysicsBlock
         return false;
     }
 
-    // 重建刚体变换缓存（与 mSolids 同序；BuildSolidSamples 末尾调用）
+    // 重建刚体变换缓存（BuildSolidSamples 末尾调用）
+    // 内容 = 动态体（[0, mSolids.size())，可采样、可投影）+ 静态体（纯几何钳制，R2-A）。
+    // 动态体在前保证 xfIndex == mSolids 下标，ProjectSolids 可就地按下标刷新（不重排）。
     void PhysicsLiquid::RefreshSolidXform()
     {
         mSolidXf.clear();
-        mSolidXf.reserve(mSolids.size());
-        for (const SolidTrack &st : mSolids)
+        mSolidXf.reserve(mSolids.size() + mStaticBodies.size());
+
+        auto MakeXf = [](PhysicsAngle *body) -> SolidXf
         {
-            PhysicsAngle *body = st.body;
             SolidXf xf;
             xf.body = body;
             xf.pos = body->pos;
@@ -325,7 +329,17 @@ namespace PhysicsBlock
                 const FLOAT_ r9 = ((PhysicsCircle *)body)->radius * FLOAT_(0.9);
                 xf.radius2 = r9 * r9;
             }
-            mSolidXf.push_back(xf);
+            return xf;
+        };
+
+        for (const SolidTrack &st : mSolids)
+        {
+            mSolidXf.push_back(MakeXf(st.body));
+        }
+        // 静态体：只提供几何钳制；位姿永不变化，帧内无需再刷新
+        for (const SolidTrack &st : mStaticBodies)
+        {
+            mSolidXf.push_back(MakeXf(st.body));
         }
     }
 
@@ -334,9 +348,11 @@ namespace PhysicsBlock
         mSamples.clear();
         mSampleWeight.clear();
         mSolids.clear();
+        mStaticBodies.clear();
         mSamples.reserve(kMaxSolidSamples);
         mSampleWeight.reserve(kMaxSolidSamples);
         mSolids.reserve(16);
+        mStaticBodies.reserve(16);
 
         const size_t n = mParticles.size();
         if (n == 0)
@@ -389,13 +405,31 @@ namespace PhysicsBlock
 
         for (PhysicsAngle *body : candidates)
         {
-            if (body == nullptr || body->PFGetMass() <= FLOAT_(0))
+            // 质量/惯量双零 = 既不可移动也不参与求解 → 完全隐形体（水直接穿过），显式排除
+            if (body == nullptr || (body->PFGetMass() <= FLOAT_(0) && body->invMass <= FLOAT_(0)))
             {
                 continue;
             }
             if (!NearFluid(body))
             {
                 continue;
+            }
+
+            // ── R2-A：静态刚体（invMass=0 && mass>0）退出密度采样 ──
+            // "静态"的判据统一为 invMass==0（旧实现按 mass>0 入样、按 invMass==0 给 w=0，
+            // 两处判据不一致会漏出"mass==0 的幽灵静态体"）。
+            // 挡水职责与地形统一交给 SolveMapBoundaries 的几何钳制：静态体只登记变换
+            // 缓存（纯几何体），不布采样点、不进 mPos/邻居系统。
+            // 收益：N 回落到纯流体规模，λ/Δp/邻居搜索/ApplyDeltas 全量随之缩小；
+            // 且静态体 w=0 的采样点本来就是零回报路径（λ/Δp 算完在投影时整体丢弃）。
+            if (body->invMass <= FLOAT_(0))
+            {
+                mStaticBodies.push_back(SolidTrack(body, 0, 0, 0));
+                continue;
+            }
+            if (body->PFGetMass() <= FLOAT_(0))
+            {
+                continue; // 防御：invMass>0 却 mass<=0（退化构造）会让下面的 w 除零
             }
 
             const int begin = (int)mSamples.size();
@@ -466,13 +500,16 @@ namespace PhysicsBlock
             {
                 continue;
             }
-            // Floaty 质量加权 PBD：w = 1/m_采样 = 采样数/刚体总质量；静态体 w = 0（永不移动）
-            const FLOAT_ w = (body->invMass > FLOAT_(0)) ? (FLOAT_)(end - begin) / body->PFGetMass() : FLOAT_(0);
+            // Floaty 质量加权 PBD：w = 1/m_采样 = 采样数/刚体总质量
+            //（静态体已在上面 continue，此处恒为动态体；采样点与质量同为正，无除零）
+            const FLOAT_ w = (FLOAT_)(end - begin) / body->PFGetMass();
             mSampleWeight.insert(mSampleWeight.end(), (size_t)(end - begin), w);
-            mSolids.push_back(SolidTrack(body, begin, end));
+            // xfIndex = 本条目在 mSolids 中的下标；RefreshSolidXform 先排动态体，
+            // 故它同时也是该体在 mSolidXf 中的下标（ProjectSolids 就地刷新用）
+            mSolids.push_back(SolidTrack(body, begin, end, (int)mSolids.size()));
         }
 
-        RefreshSolidXform(); // 刚体查询缓存（与 mSolids 同序）
+        RefreshSolidXform(); // 刚体查询缓存：动态体 + 静态体（纯几何钳制）
     }
 
     void PhysicsLiquid::SyncSamplePositions()
@@ -612,8 +649,12 @@ namespace PhysicsBlock
     {
         const size_t n = mFluidCount;
         mInside.assign(n, 0);
-        for (const SolidXf &xf : mSolidXf)
+        // mSolidXf = 动态体 [0, mSolids.size()) 在前 + 静态体在后，
+        // 故按下标上界遍历即可只扫动态体（静态体的 inside 语义无意义）
+        const size_t dyn = std::min(mSolids.size(), mSolidXf.size());
+        for (size_t bi = 0; bi < dyn; ++bi)
         {
+            const SolidXf &xf = mSolidXf[bi];
             if (!xf.dynamic)
             {
                 continue; // 静态刚体由边界钳制处理（Floaty 的 inside 只针对移动软体）
@@ -623,6 +664,109 @@ namespace PhysicsBlock
                 if (!mInside[i] && SolidContains(xf, mPos[i]))
                 {
                     mInside[i] = 1;
+                }
+            }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════
+    // 近边界候选标记（R3：帧级预筛，子步内边界探测只对候选执行）
+    // ═════════════════════════════════════════════════════════
+
+    /**
+     * @brief 标记"本帧可能触边"的流体粒子（R3）
+     * @details 正确性依据 —— **帧内位移上界**（全部由解得参数给出，非经验常数）：
+     *      · 每子步净位移 ≤ 0.9·cfl·h（EnforceCFL 的 maxDisp），共 substeps 个子步
+     *        → 全帧漂移 ≤ 0.9·cfl·h·substeps；
+     *      · 每子步另有边界推出位移与 Δp 修正，二者同受 cfl·h 级钳制，故余量
+     *        再叠加一个 cfl·h 即覆盖单步内的位置级修正。
+     *      于是"帧初到一切固体表面距离 > 余量"的粒子，整个 Update 内都不可能进入
+     *      固体，也不会在任何子步被 PointSolid 命中 → 可整帧跳过边界阶段。
+     *
+     *      候选取并集：
+     *        (a) 帧初已在固体内的粒子（复用 MarkInside 结果——它们必须走逃逸路径，
+     *            同时也是"帧初深陷"这一类漏判的兜底）；
+     *        (b) 刚体侧：与任一近流体刚体（静态 + 动态）包围圆外扩 margin 相交；
+     *        (c) 地形侧：任一"可能落在 margin 内"的地图格为实体。
+     *
+     *      (c) 的取格方式：对帧初位置所在的格做"margin 邻域"查询（默认参数下为
+     *      3×3）。任意与 p 距离 ≤ margin 的实体格必然落在该邻域内——格为 1×1
+     *      世界单位，margin = 0.9·cfl·h·substeps + cfl·h（默认 ≈ 0.35）远小于 1，
+     *      故无需遍历整图；扫描半径由 margin 反推，参数异常时自动放宽。
+     *      越界格由 FMGetCollide 自行返回 false（MapStatic 已有越界保护），
+     *      因此无需在此重复边界判断。
+     *
+     * @note 本函数只影响"是否执行探测"，不改变探测结果：候选集是真实触边条件的
+     *      保守超集，故 SolveMapBoundaries 的物理行为与未预筛时逐位一致。 */
+    void PhysicsLiquid::MarkNearSolid()
+    {
+        const size_t n = mFluidCount;
+        mNearSolid.assign(n, 0);
+        if (n == 0)
+        {
+            return;
+        }
+
+        // 余量 = 全帧漂移（0.9·cfl·h·substeps）+ 每子步位置级修正上限（cfl·h）
+        const FLOAT_ cflDisp = param.cfl * param.kernelRadius;
+        const FLOAT_ margin = FLOAT_(0.9) * cflDisp * (FLOAT_)param.substeps + cflDisp;
+
+        MapFormwork *map = mWorld->GetMapFormwork();
+        const Vec2_ centrality = (map != nullptr) ? map->FMGetCentrality() : Vec2_{0, 0};
+
+        // ── (a) 帧初在动态刚体内 + (b) 刚体包围圆外扩 margin ──
+        for (size_t i = 0; i < n; ++i)
+        {
+            if (mInside[i])
+            {
+                mNearSolid[i] = 1; // (a) 必须走逃逸
+                continue;
+            }
+            const Vec2_ p = mPos[i];
+            for (const SolidXf &xf : mSolidXf)
+            {
+                const FLOAT_ r = xf.radius + margin; // 包围圆外扩：保守覆盖形状体角部
+                const FLOAT_ dx = p.x - xf.pos.x;
+                const FLOAT_ dy = p.y - xf.pos.y;
+                if (dx * dx + dy * dy <= r * r)
+                {
+                    mNearSolid[i] = 1;
+                    break;
+                }
+            }
+        }
+
+        // ── (c) 地形侧：margin 邻域内的地图格 ──
+        // 扫描半径 = floor(margin)+1（而非写死 3×3）。推导：p 在其格内的局部坐标
+        // u,v ∈ [0,1]，当 |i| ≥ 2 且 |j| ≥ 2 时实体格 (i,j) 到 p 的最近点距离
+        // ≥ (|i|−1) 与 (|j|−1) 的欧氏长度 ≥ (⌊margin⌋+1)·√2 > margin，故可跳过。
+        // 默认参数下 margin ≈ 0.35 → 半径 1（即 3×3），与理论一致。
+        if (map != nullptr)
+        {
+            const int scan = (int)floor(margin) + 1;
+            for (size_t i = 0; i < n; ++i)
+            {
+                if (mNearSolid[i])
+                {
+                    continue;
+                }
+                const Vec2_ local = mPos[i] + centrality; // 世界 → 地图局部（与 FMGetCollide 同式）
+                const int gx = ToInt(local.x);
+                const int gy = ToInt(local.y);
+
+                // 注意：不能用"格内小数部分"把邻域收窄——粒子恰在格边界时
+                //（典型：站在地板上表面，y 正好等于格边界）小数部分为 0，
+                // 会把真正相邻的实体格误判为"更远格"而漏掉（实测漏判已复现）。
+                for (int ox = -scan; ox <= scan && !mNearSolid[i]; ++ox)
+                {
+                    for (int oy = -scan; oy <= scan; ++oy)
+                    {
+                        if (map->FMGetCollide(glm::ivec2(gx + ox, gy + oy)))
+                        {
+                            mNearSolid[i] = 1;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -824,7 +968,8 @@ namespace PhysicsBlock
             {
                 return true;
             }
-            // 静态 + 动态刚体统一走变换缓存（AABB 快筛；动态刚体内部挤出 = 修复幽灵穿透）
+            // 静态（纯几何钳制体，R2-A）+ 动态刚体统一走变换缓存
+            //（AABB 快筛；动态刚体内部挤出 = 修复幽灵穿透）
             for (const SolidXf &xf : mSolidXf)
             {
                 if (SolidContains(xf, p))
@@ -876,6 +1021,12 @@ namespace PhysicsBlock
 
         for (size_t i = 0; i < n; ++i)
         {
+            // R3 预筛：帧初离一切固体表面 > margin 的粒子整个 Update 内不可能触边，
+            // 6 个子步全部免探测（候选取自 MarkNearSolid，是真实触边条件的保守超集）
+            if (!mNearSolid[i])
+            {
+                continue;
+            }
             mBoundaryDisp[i] = Vec2_{0, 0};
             Vec2_ &p = mPos[i];
             if (!PointSolid(p))
@@ -1122,10 +1273,12 @@ namespace PhysicsBlock
         mFluidCount = n;
 
         // 1) 刚体布点（Floaty 的 blob 粒子）→ 组合位置 → 邻居搜索 → inside 标记
+        //    → 近边界候选标记（R3 帧级预筛；必须在 MarkInside 之后，因为它复用 inside 结果）
         BuildSolidSamples();
         SyncPositions();
         FindNeighbors(FLOAT_(1.3) * param.kernelRadius); // Floaty: gridSpacing = 1.3 * kernelRadius
         MarkInside();
+        MarkNearSolid();
 
         // 2) 子步循环（Floaty: dt = dtFrame / substeps）
         const int substeps = param.substeps;

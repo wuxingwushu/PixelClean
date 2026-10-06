@@ -67,6 +67,23 @@ namespace PhysicsBlock
                 bool Event : 1;     // 碰撞事件
             };
         };
+
+        /**
+         * @brief 默认零初始化（约定：全零默认 + 调用方置位）
+         * @details 否则 new GridBlock[n] 对 union 部分是默认初始化 = 堆垃圾：
+         *          调用方没显式设置的 Collision/mass 会跨运行随机取值——
+         *          UpdateMinOutline 读 Collision 位算轮廓、UpdateInfo 读 mass 累加
+         *          质量/质心，导致碰撞半径/质量随机、整个模拟不可复现。
+         *          两个 union 的兄弟成员各有独立字节，逐个写零保证全覆盖。 */
+        GridBlock()
+        {
+            FrictionFactor = 0.2;
+            Healthpoint = 0;
+            mass = 0;
+            DistanceField = 0;
+            DirectionField = 0;
+            type = (GridBlockType)0;
+        }
     };
 
     // 碰撞在网格的那个边上（x正为右， y正为上）

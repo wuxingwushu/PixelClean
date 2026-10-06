@@ -1,6 +1,7 @@
 #pragma once
 #include "PhysicsWorld.hpp"
 #include <vector>
+#include <future>
 
 namespace PhysicsBlock
 {
@@ -25,11 +26,16 @@ namespace PhysicsBlock
      *          固液双向耦合同样照搬 Floaty 的做法（README "Two-Way coupling"：
      *          *Unified Particle Physics for Real-Time Applications* 的质量加权 PBD）——
      *          Floaty 里参与 PBF 的软体 "blob 粒子" 在本引擎对应 **刚体采样点**：
-     *          · 刚体（网格形状/圆/线）按流体粒子间距布采样点，加入同一 PBF 邻居系统；
+     *          · 动态刚体（网格形状/圆/线）按流体粒子间距布采样点，加入同一 PBF 邻居系统；
+     *            采样布局（局部锚点）按"几何指纹"跨帧缓存，几何不变则零重建（R1）；
      *          · 采样点计入密度约束、按 w = 1/m_采样 参与 Δp（刚体质量越大位移越小）；
      *          · Δp 经最小二乘刚体拟合（平移 = 平均位移，转动 = Σ(r×d)/Σr²）投影回刚体，
      *            浮力由压力梯度**自然涌现**（无需任何经验浮力/阻力参数）；
-     *          · 静态刚体（invMass=0）采样点 w=0：只提供密度边界、永不移动；
+     *          · 静态刚体（invMass=0 && mass>0）**不布采样点**（R2-A，已落地）：
+     *            其采样是零回报路径（w=0 的 λ/Δp 纯消耗，投影时又整体丢弃），
+     *            挡水与地形统一交给 SolveMapBoundaries 的几何钳制，贴墙手感与地形一致。
+     *            静态体因此不进 mPos，N 回落到纯流体规模（静态构件越多降幅越大）；
+     *            它仍作为"纯几何钳制体"留在变换缓存 mSolidXf 中，故挡水能力不变；
      *          · 流体粒子陷入动态刚体内部时按 Floaty 的 `inside` 规则跳过压力项
      *      （不再与该刚体作用，自然流出，防"被刚体带起的水悬浮"）。
      *
@@ -42,7 +48,8 @@ namespace PhysicsBlock
      *          - 刚体自身的重力/碰撞积分由 PhysicsWorld 完成（液体粒子则完全由
      *        本类积分，PhysicsWorld 对 IsLiquidParticle 跳过 PhysicsSpeed/PhysicsPos）；
      *          - 液体粒子质量按 Floaty 的单位质量公式求解（`mass` 字段仅作引擎记账）。
-     * @note   求解为单线程（Floaty 用 rayon 加速属工程优化，不属算法）。
+     * @note   λ/Δp 两遍按 i 独立做数据并行分片（结果与串行逐位一致、确定性）；
+     *          邻居搜索等其余阶段单线程。
      * @note   未接入 JSON 序列化（反序列化世界不还原液体）。 */
     class PhysicsLiquid
     {
@@ -126,7 +133,10 @@ namespace PhysicsBlock
          * @param friction 摩擦因数
          * @details 依 Floaty 的 `initSpacing = 0.8 * particleDiameter` 反推粒子尺度
          *      r = spacing/1.6 并按 Floaty 公式同步 kernelRadius / restDensity，
-         *      使场景无论用什么间距都保持 Floaty 的无量纲参数组。 */
+         *      使场景无论用什么间距都保持 Floaty 的无量纲参数组。
+         *      参数同步只在液体为空（首次填充）时自动执行（R15）；之后追加水块
+         *      不再静默重写已调过的参数组，需要换尺度请显式调用
+         *      param.SyncFromParticleRadius()。 */
         void AddGrid(Vec2_ center, int numX, int numY, FLOAT_ spacing, FLOAT_ mass = 1.0f, FLOAT_ friction = 0.2f);
 
         /**
@@ -145,9 +155,12 @@ namespace PhysicsBlock
          * @brief 每物理步执行液体更新（PhysicsEmulator 内部自动调用）
          * @param time 时间步长（秒，= Floaty 的 dtFrame）
          * @details 完整的 Floaty PBF 流程：
-         *      刚体布点 → 邻居搜索(1.3h) → inside 标记 → substeps × {
-         *        半隐式欧拉积分 → λ/Δp Jacobi 求解（内聚+曲率） → Δp 应用 + 刚体拟合投影
-         *        → 边界钳制（地形，位移不入速度） → CFL 位移钳制（v = Δx/dt）} → 速度回代。 */
+         *      刚体布点（动态体布局；静态体只刷新变换缓存）→ 组合位置
+         *      → 邻居搜索(1.3h) → inside 标记 → **近边界候选标记**（帧级；子步内
+         *      边界探测只对候选执行，深水粒子全程免探测）
+         *      → substeps × { 半隐式欧拉积分 → λ/Δp Jacobi 求解（内聚+曲率）
+         *        → Δp 应用 + 刚体拟合投影 → 边界钳制（地形/静态/动态刚体，位移不入速度）
+         *        → CFL 位移钳制（v = Δx/dt）} → XSPH 黏性 → 速度回代。 */
         void Update(FLOAT_ time);
 
         /// 最近一次求解得到的密度（与 Particles() 一一对应，用于着色/调试）
@@ -180,17 +193,56 @@ namespace PhysicsBlock
         };
 
         /**
-         * @brief 参与双向耦合的刚体（含静态体：w=0）
-         * @details 与 mSolidXf 一一对应（同序构建），下标可互查 */
+         * @brief 参与密度采样的刚体（仅动态体；静态体不布采样点，见 mStaticBodies）
+         * @details 采样区间对应 mSamples；xfIndex 是其变换缓存在 mSolidXf 中的下标
+         *      （恒等于本条目在 mSolids 中的下标——RefreshSolidXform 先排动态体） */
         struct SolidTrack
         {
             PhysicsAngle *body = nullptr;
             int begin = 0, end = 0; ///< 采样点在 mSamples 的区间 [begin, end)
+            int xfIndex = 0;        ///< 在 mSolidXf 中的下标（= mSolids 下标）
             Vec2_ accumT{0};        ///< 本帧累计平移修正
             FLOAT_ accumR = 0;      ///< 本帧累计转动修正
 
             SolidTrack() = default;
-            SolidTrack(PhysicsAngle *b, int b0, int e0) : body(b), begin(b0), end(e0) {}
+            SolidTrack(PhysicsAngle *b, int b0, int e0, int xf0)
+                : body(b), begin(b0), end(e0), xfIndex(xf0) {}
+        };
+
+        /**
+         * @brief 子步循环不变量（每 Update 求值一次，各子步阶段共享，R7）
+         * @details h/ρ0/核归一化/CFL 上限等在整个 Update 内不随子步变化，
+         *      旧版每子步重算属纯冗余。 */
+        struct SolverConst
+        {
+            FLOAT_ h = 0, h2 = 0;         ///< 核半径及其平方
+            FLOAT_ poly6Scale = 0;        ///< poly6 核幅度 4/(π·h⁸)
+            FLOAT_ spikyScale = 0;        ///< spiky 梯度幅度 10/(π·h⁵)
+            FLOAT_ restInv = 0;           ///< 1/ρ0
+            FLOAT_ selfRho = 0;           ///< 密度自贡献
+            FLOAT_ cflDisp = 0;           ///< cfl·h（边界推出/刚体拟合钳制上限）
+            FLOAT_ cflDispVel = 0;       ///< 0.9·cfl·h（速度回代位移上限）
+            FLOAT_ boundaryStep = 0;     ///< 边界搜索步长 max(0.05h, 0.02)
+            FLOAT_ boundaryJitter = 0;   ///< 深陷逃逸抖动 0.01h
+            FLOAT_ gridSpacing = 0;      ///< 邻居格宽 1.3h（候选标记复用同一哈希网格）
+            int fastSteps = 2;           ///< 边界近程搜索步数
+        };
+
+        /**
+         * @brief 动态刚体采样布局缓存条目（R1）
+         * @details 局部锚点只取决于刚体几何，按几何指纹跨帧复用；几何变更
+         *      （图案/半径）指纹不符自动重建。条目仅以指针作键值比较、悬垂键
+         *      从不解引用，地址复用时由指纹校验兜底；连续 64 帧未命中即回收。 */
+        struct SolidLayout
+        {
+            PhysicsAngle *body = nullptr;
+            unsigned long long fingerprint = 0; ///< 几何指纹（类型种子 + 图案哈希/半径位型）
+            std::vector<Vec2_> locals;         ///< 局部锚点布局
+            size_t lastUsed = 0;                ///< 最近命中帧号（清扫用）
+
+            SolidLayout() = default;
+            SolidLayout(PhysicsAngle *b, unsigned long long fp, size_t used)
+                : body(b), fingerprint(fp), lastUsed(used) {}
         };
 
         // —— 流程各阶段（对应 Floaty solver.ts / lib.rs 同名函数） ——
@@ -200,6 +252,7 @@ namespace PhysicsBlock
         void FindNeighbors(FLOAT_ gridSpacing); ///< 哈希链表邻居搜索（Floaty NeighborLinkedList）
         static int HashCell(int gx, int gy);    ///< 网格坐标 → 哈希桶（Floaty 哈希链表）
         void MarkInside();                      ///< 流体粒子在动态刚体内部标记（Floaty makeIsInsideForFluid）
+        void MarkNearSolid();                   ///< 帧级近边界候选标记（R3；子步内边界探测只对候选执行）
         void IntegrateFluid(FLOAT_ dt);         ///< 半隐式欧拉（Floaty simulate 的积分段）
         void SolveFluidJacobi();                ///< λ + Δp（Floaty solve_fluid_jacobi）
         void SolveMapBoundaries();              ///< 地形/静态刚体钳制（Floaty solveFluidBoundaries）
@@ -234,7 +287,7 @@ namespace PhysicsBlock
 
         void RefreshSolidXform(); ///< 重建刚体变换缓存（BuildSolidSamples 末尾调用）
 
-        std::vector<SolidXf> mSolidXf; ///< 与 mSolids 同序的变换缓存
+        std::vector<SolidXf> mSolidXf; ///< 变换缓存：动态体 [0,mSolids.size()) + 静态体（纯几何钳制）
         std::vector<Vec2_> mPairDir;   ///< 邻居对单位方向 dx/r（λ/Δp 两遍复用，省一遍核求值/开方）
         std::vector<FLOAT_> mPairW;    ///< 邻居对核距 w = h−r（<0 = 无效对）
 
@@ -252,6 +305,13 @@ namespace PhysicsBlock
         std::vector<Vec2_> mBoundaryDisp; ///< 本子步边界推出位移（位置级约束，不计入速度）
         std::vector<FLOAT_> mLambda; ///< 约束乘子（Floaty lambdas）
         std::vector<unsigned char> mInside; ///< 在动态刚体内部（Floaty inside）
+        /**
+         * @brief 帧级"近边界候选"标记（R3，仅流体）
+         * @details 帧内位移有严格上界（每子步 ≤ 0.9·cfl·h，子步数 substeps），
+         *      故"帧初离一切固体表面 > 漂移量 + 每步位移"的粒子整个 Update 内
+         *      不可能触边——该判定每帧只需一次。SolveMapBoundaries 只对本标记
+         *      为 1 的粒子跑 PointSolid / 逃逸搜索，深水粒子 6 个子步全部免探测。 */
+        std::vector<unsigned char> mNearSolid;
 
         // —— 邻居（Floaty NeighborLinkedList） ——
         std::vector<int> mNext;                 ///< 哈希链表 next
@@ -264,7 +324,12 @@ namespace PhysicsBlock
         // —— 刚体双向耦合 ——
         std::vector<SolidSample> mSamples;   ///< 刚体采样点
         std::vector<FLOAT_> mSampleWeight;   ///< 采样点权重 w（与 mSamples 对齐）
-        std::vector<SolidTrack> mSolids;     ///< 参与耦合的刚体
+        std::vector<SolidTrack> mSolids;     ///< 参与密度采样的刚体（仅动态体，R2-A）
+        /**
+         * @brief 纯几何钳制体（静态刚体，invMass=0 && mass>0，R2-A）
+         * @details 不布采样点、不进 mPos/密度系统，但保留在 mSolidXf 中供
+         *      PointSolid 几何挤出（挡水与地形统一走这一条路径）。 */
+        std::vector<SolidTrack> mStaticBodies;
     };
 
 }

@@ -54,8 +54,9 @@ namespace PhysicsBlock
         /**
          * @brief 碰撞半径
          * @details 用于碰撞检测的半径，定义了物体的碰撞边界
+         * @note 默认 0：三参构造不传半径的派生类若忘记回填，读到的是确定值而非堆垃圾
          */
-        FLOAT_ radius;               
+        FLOAT_ radius = 0;
 
 #if PhysicsBlock_Serialization
         /**

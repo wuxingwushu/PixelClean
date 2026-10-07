@@ -19,6 +19,12 @@ namespace VulKan {
 		//VK_NV_FRAMEBUFFER_MIXED_SAMPLES_EXTENSION_NAME
 	};
 
+	//判断某台物理设备是否满足本程序的最低要求（各向异性采样 + VK_KHR_swapchain）。
+	//不满足时通过 reasonOut 说明原因（reasonOut 传 nullptr 表示不需要原因）。
+	//做成不依赖 Device 实例的自由函数：Vulkan/instance.cpp 在创建真实 VkInstance 之前就要用它
+	//判断"机器上到底有没有一台能用的显卡"（有显卡但都不能用时自动降级到 CPU 软件渲染）。
+	bool physicalDeviceMeetsMinimumRequirements(VkPhysicalDevice device, std::string* reasonOut);
+
 	struct GPUComputeCapabilities {
 		uint32_t smCount;
 		uint32_t subgroupSize;
@@ -33,7 +39,7 @@ namespace VulKan {
 
 		~Device();
 
-		//在所以设备中选择分数最高的
+		//按设置里的"渲染设备"（自动最高性能/自动最低性能/CPU 软件渲染/指定设备）选出这一次要用的物理设备
 		void pickPhysicalDevice();
 
 		//给设备评分
@@ -41,6 +47,14 @@ namespace VulKan {
 
 		//判断设备是否符合要求
 		bool isDeviceSuitable(VkPhysicalDevice device);
+
+		//说明设备为何不满足要求（诊断用，满足时返回空串）
+		std::string describeDeviceRejection(VkPhysicalDevice device);
+
+		//当前选中的物理设备是否支持几何着色器。
+		//CPU 软件设备（SwiftShader / llvmpipe 等）不支持几何着色器，此时
+		//UVDynamicDiagram 管线会退化成"顶点着色器实例化展块"，见 CreatePipeline.cpp。
+		[[nodiscard]] inline bool supportsGeometryShader() const noexcept { return mSupportsGeometryShader; }
 
 		//初始化队列族
 		void initQueueFamilies(VkPhysicalDevice device);
@@ -84,6 +98,9 @@ namespace VulKan {
 
 		//逻辑设备
 		VkDevice mDevice{ VK_NULL_HANDLE };
+
+		//选中的物理设备是否支持几何着色器（在 pickPhysicalDevice 里填写）
+		bool mSupportsGeometryShader{ false };
 
 		#if defined(_WIN32) || defined(__ANDROID__)
 		//创建的内存分配器

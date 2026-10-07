@@ -11,6 +11,7 @@
 #include "../DebugLog.h"
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 namespace GAME {
 	ImGuiInterFace::ImGuiInterFace(
@@ -192,7 +193,7 @@ namespace GAME {
 		ImGui_ImplAndroid_NewFrame();
 #endif
 		ImGui::NewFrame();
-		mShaderTexture->CalculationScreen(TOOL::FPStime);
+		//mShaderTexture->CalculationScreen(TOOL::FPStime);
 		switch (InterfaceIndexes)
 		{
 		case 0:
@@ -303,6 +304,47 @@ namespace GAME {
 		float startY = (Global::mHeight - totalH) * 0.5f;
 
 		BeginFullscreenPanel(u8"##main", layout.normalFontScale);
+
+		//左上角提醒：当前在用 CPU 软件渲染（很慢）。
+		//画在标题/按钮之前：下面那些控件用的是绝对坐标 SetCursorPos，
+		//先画它们再回到左上角写这块文字，光标会被拽回去，后面的控件位置就全乱了。
+		if (Global::RunningOnSoftwareRenderer) {
+			float noticeFontScale = layout.normalFontScale * 0.7f;
+			ImGui::SetWindowFontScale(noticeFontScale);
+			ImGui::SetCursorPos(ImVec2(16.0f * scale, 12.0f * scale));
+
+			//先给文字铺一层底：背景图很亮（横向条纹），橙色文字直接压上去几乎看不清
+			//格式串里的 %s 直接换成设备名，这样量出来的宽高就是实际渲染的宽高
+			char noticeText[512];
+			snprintf(noticeText, sizeof(noticeText),
+				u8"CPU 软件渲染（%s）：%s", Global::RunningDeviceName.c_str(),
+				Global::CpuSoftwareRenderReason.c_str());
+
+			ImVec2 noticeTextPos = ImGui::GetCursorScreenPos();
+			ImVec2 noticeTextSize = ImGui::CalcTextSize(noticeText, nullptr, false, 0.0f);
+			float noticePadX = 10.0f * scale;
+			float noticePadY = 6.0f * scale;
+			float noticeRounding = 6.0f * scale;
+
+			//上下居中：ImGui 排版时把基线画在「文字框顶 + Ascent」处（imgui_draw.cpp 里
+			// font_off_y += IM_ROUND(baked->Ascent)），所以字形墨迹是以 顶+Ascent/2 为中心的。
+			//之前直接把底色框按 文字高度+2*pad 画、文字却从框顶开始写，墨迹自然偏下。
+			ImFontBaked* bakedFont = ImGui::GetFontBaked();
+			float glyphOffsetY = (bakedFont != nullptr) ? bakedFont->Ascent * 0.5f : ImGui::GetTextLineHeight() * 0.5f;
+			float boxH = ImGui::GetTextLineHeight() + noticePadY * 2.0f;
+			float boxCenterY = noticeTextPos.y + boxH * 0.5f;
+
+			ImVec2 boxMin(noticeTextPos.x - noticePadX, noticeTextPos.y);
+			ImVec2 boxMax(noticeTextPos.x + noticeTextSize.x + noticePadX, noticeTextPos.y + boxH);
+
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+			drawList->AddRectFilled(boxMin, boxMax, IM_COL32(18, 18, 20, 205), noticeRounding);
+			drawList->AddRect(boxMin, boxMax, IM_COL32(255, 200, 90, 120), noticeRounding, 0, 1.5f * scale);
+
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (boxCenterY - glyphOffsetY) - noticeTextPos.y);
+			ImGui::TextColored(ImVec4(1.0f, 0.78f, 0.35f, 1.0f), "%s", noticeText);
+			ImGui::SetWindowFontScale(layout.normalFontScale);
+		}
 
 		float curY = startY;
 
@@ -496,6 +538,40 @@ namespace GAME {
 		ImGui::End();
 	}
 
+	//物理设备类型 → 界面显示文字（deviceType 就是 VkPhysicalDeviceType 的原值，
+	//这里不引入 vulkan 头，免得界面层依赖渲染层）
+	static const char* VulkanDeviceTypeText(int deviceType) {
+		switch (deviceType) {
+		case 1: return u8"集成显卡";
+		case 2: return u8"独立显卡";
+		case 3: return u8"虚拟显卡";
+		case 4: return u8"CPU 软件设备";
+		default: return u8"其它设备";
+		}
+	}
+
+	//把"渲染设备设置"映射成下拉框索引：
+	//0=自动选择最高性能 1=自动选择最低性能 2=CPU 软件渲染 3+i=第 i 台识别到的设备
+	static int VulkanDeviceComboIndexFromSetting() {
+		if (Global::VulkanDeviceMode != Global::VulkanDeviceModeEnum::Specific) {
+			return (int)Global::VulkanDeviceMode;
+		}
+		for (size_t i = 0; i < Global::VulkanDetectedDevices.size(); i++) {
+			if (Global::VulkanDetectedDevices[i].name == Global::VulkanDeviceName) {
+				return 3 + (int)i;
+			}
+		}
+		return 0;//指定的设备这次没识别到：先显示成"自动选择最高性能"（保存时也会写成它）
+	}
+
+	//设置里指定的那台设备这次是否真的被识别到了
+	static bool VulkanSpecifiedDeviceFound() {
+		for (const auto& device : Global::VulkanDetectedDevices) {
+			if (device.name == Global::VulkanDeviceName) return true;
+		}
+		return false;
+	}
+
 	void ImGuiInterFace::SetInterface() {
 		static int SetServerPort;
 		static int SetClientPort;
@@ -508,6 +584,13 @@ namespace GAME {
 		static float SetSoundEffectsVolume;
 		static float SetFontZoomRatio;
 		static bool SetMonitorCompatibleMode;
+		//渲染设备：下拉框索引 0=自动选择最高性能 1=自动选择最低性能 2=CPU 软件渲染 3+i=第 i 台识别到的设备
+		//（改完要重启才生效，因为用哪个 ICD、甚至用哪台物理设备在创建 VkInstance 时就定死了）
+		static int SetVulkanDeviceMode = (int)Global::VulkanDeviceModeEnum::AutoBest;
+		static bool VulkanDeviceModeChanged = false;
+		//这一帧下拉框对应的待保存选择（模式 + 指定设备名），"保存"按钮用它落盘
+		Global::VulkanDeviceModeEnum pendingVulkanDeviceMode = Global::VulkanDeviceMode;
+		std::string pendingVulkanDeviceName = Global::VulkanDeviceName;
 
 		static char SetKeyW[2];
 		static char SetKeyS[2];
@@ -545,6 +628,10 @@ namespace GAME {
 			SetFontZoomRatio = Global::FontZoomRatio;
 			SetMonitor = Global::Monitor;
 			SetMonitorCompatibleMode = Global::MonitorCompatibleMode;
+			SetVulkanDeviceMode = VulkanDeviceComboIndexFromSetting();
+			pendingVulkanDeviceMode = Global::VulkanDeviceMode;
+			pendingVulkanDeviceName = Global::VulkanDeviceName;
+			VulkanDeviceModeChanged = false;
 		}
 
 		DrawBackground(mImGuiTexture, mCurrentFrame, Global::mWidth, Global::mHeight);
@@ -609,6 +696,88 @@ namespace GAME {
 		ImGui::Checkbox(u8"VulKan 验证层", &SetVulKanValidationLayer);
 		HelpMarker2(u8"VulKan 校验层（部分设备不支持）");
 		ImGui::Spacing();
+		{
+			//渲染设备选择：只影响下次启动，因为用哪个 ICD、甚至用哪台物理设备在创建 VkInstance 时就定死了
+			ImGui::TextUnformatted(u8"渲染设备");
+			ImGui::SameLine();
+			ImGui::PushItemWidth(inputW);
+
+			//前三项固定，后面按启动时探测到的显卡顺序逐台追加（列表来自 Global::VulkanDetectedDevices，
+			//由 Vulkan/instance.cpp 在创建真实 instance 之前填充）
+			static std::vector<std::string> deviceModeLabels;
+			static std::vector<const char*> deviceModeItems;
+			deviceModeLabels.clear();
+			deviceModeItems.clear();
+			deviceModeLabels.push_back(u8"自动选择最高性能");
+			deviceModeLabels.push_back(u8"自动选择最低性能");
+			deviceModeLabels.push_back(u8"CPU 软件渲染");
+			for (const auto& device : Global::VulkanDetectedDevices) {
+				std::string label = device.name;
+				label += u8"（";
+				label += VulkanDeviceTypeText(device.deviceType);
+				if (!device.usable) label += u8"，不满足最低要求";
+				label += u8"）";
+				deviceModeLabels.push_back(std::move(label));
+			}
+			for (const auto& label : deviceModeLabels) deviceModeItems.push_back(label.c_str());
+
+			//设备列表变了（换了机器、拔了显卡）时，旧索引可能越界，退回当前设置对应的那一项
+			if (SetVulkanDeviceMode < 0 || SetVulkanDeviceMode >= (int)deviceModeItems.size()) {
+				SetVulkanDeviceMode = VulkanDeviceComboIndexFromSetting();
+			}
+
+			const bool comboChanged = ImGui::Combo(u8"##VulkanDeviceMode", &SetVulkanDeviceMode,
+				deviceModeItems.data(), (int)deviceModeItems.size());
+
+			//把下拉框索引翻译成"渲染设备设置"（模式 + 指定设备名），保存按钮用它
+			if (SetVulkanDeviceMode >= 3 && SetVulkanDeviceMode - 3 < (int)Global::VulkanDetectedDevices.size()) {
+				pendingVulkanDeviceMode = Global::VulkanDeviceModeEnum::Specific;
+				pendingVulkanDeviceName = Global::VulkanDetectedDevices[SetVulkanDeviceMode - 3].name;
+			}
+			else {
+				int mode = SetVulkanDeviceMode;
+				if (mode < 0 || mode > 2) mode = 0;
+				pendingVulkanDeviceMode = (Global::VulkanDeviceModeEnum)mode;
+			}
+
+			if (comboChanged) {
+				VulkanDeviceModeChanged = (pendingVulkanDeviceMode != Global::VulkanDeviceMode) ||
+					(pendingVulkanDeviceMode == Global::VulkanDeviceModeEnum::Specific &&
+						pendingVulkanDeviceName != Global::VulkanDeviceName);
+			}
+
+			ImGui::PopItemWidth();
+			HelpMarker2(u8"用显卡还是用 CPU 软件渲染（SwiftShader）。\n"
+				u8"「自动选择最高性能」：在识别到的设备里挑性能最高的（有独立显卡时就是它）。\n"
+				u8"「自动选择最低性能」：挑性能最低的那台（省电、兼容性测试用）；只要有显卡设备就不会选 CPU 软件渲染。\n"
+				u8"「CPU 软件渲染」：强制用 CPU，很慢，仅用于验证程序能跑。\n"
+				u8"列表里剩下的是这次识别到的设备，选中就直接用那一台。\n"
+				u8"标注了「不满足最低要求」的设备无法启动（缺少各向异性采样或 VK_KHR_swapchain）。\n"
+				u8"「自动选择最高/最低性能」在机器上没有可用显卡时会自动降级到 CPU 软件渲染，并在左上角提示原因。\n"
+				u8"切换后需要重启程序才生效（用哪个驱动、哪台设备在创建 Vulkan 实例时就定死了）。");
+			if (VulkanDeviceModeChanged) {
+				ImGui::TextColored(ImVec4(1.0f, 0.78f, 0.35f, 1.0f), u8"※ 重启程序后生效");
+			}
+			else {
+				if (Global::IsSpecificDeviceMode() && !VulkanSpecifiedDeviceFound()) {
+					ImGui::TextColored(ImVec4(1.0f, 0.78f, 0.35f, 1.0f),
+						u8"※ 指定的设备「%s」这次没识别到，本次自动改用最高性能设备",
+						Global::VulkanDeviceName.c_str());
+				}
+				if (Global::RunningOnSoftwareRenderer) {
+					ImGui::TextColored(ImVec4(1.0f, 0.78f, 0.35f, 1.0f), u8"当前：CPU 软件渲染（%s）",
+						Global::RunningDeviceName.c_str());
+				}
+				else if (!Global::RunningDeviceName.empty()) {
+					//指定设备的模式下，当前跑的这台就是设置里点名的那台（没识别到时会先给出上面的警告）
+					const bool usingSpecifiedDevice = Global::IsSpecificDeviceMode() && VulkanSpecifiedDeviceFound();
+					ImGui::TextColored(ImVec4(0.6f, 0.9f, 0.6f, 1.0f),
+						usingSpecifiedDevice ? u8"当前：指定设备（%s）" : u8"当前：显卡渲染（%s）",
+						Global::RunningDeviceName.c_str());
+				}
+			}
+		}
+		ImGui::Spacing();
 		ImGui::Checkbox(u8"监视器", &SetMonitor);
 		if (SetMonitor) {
 			ImGui::SameLine();
@@ -671,6 +840,8 @@ namespace GAME {
 			Global::ClientIP = SetClientIP;
 			Global::VulKanValidationLayer = SetVulKanValidationLayer;
 			Global::Monitor = SetMonitor;
+			Global::VulkanDeviceMode = pendingVulkanDeviceMode;
+			Global::VulkanDeviceName = pendingVulkanDeviceName;
 
 			Global::Storage();
 			InterfaceIndexes = PreviousLayerInterface;

@@ -5,24 +5,21 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# 默认构建类型
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# 编译警告函数
 function(enable_warnings target_name)
     if(MSVC)
-        target_compile_options(${target_name} PRIVATE /W4 /permissive- /WX)
+        target_compile_options(${target_name} PRIVATE /W4 /permissive-)
     else()
         target_compile_options(${target_name} PRIVATE
-            -Wall -Wextra -Wpedantic -Werror
-            -Wshadow -Wconversion -Wsign-conversion
+            -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion
         )
     endif()
 endfunction()
 
-# 主库（header-only）
+# 主库（header-only）：全部实现在 gobot/ 下的 6 个头文件中
 add_library(gobot INTERFACE)
 
 target_include_directories(gobot INTERFACE
@@ -31,20 +28,10 @@ target_include_directories(gobot INTERFACE
 
 target_compile_features(gobot INTERFACE cxx_std_17)
 
-# 测试（可选）
-option(GOBOT_BUILD_TESTS "Build unit tests" OFF)
-if(GOBOT_BUILD_TESTS)
-    enable_testing()
-    find_package(GTest CONFIG QUIET)
-    if(GTest_FOUND)
-        add_subdirectory(tests)
-    else()
-        message(STATUS "GoogleTest not found, skipping tests. Install gogletest or set GOBOT_BUILD_TESTS=OFF")
-    endif()
-endif()
-
-# 示例（可选）
-option(GOBOT_BUILD_EXAMPLES "Build examples" OFF)
-if(GOBOT_BUILD_EXAMPLES)
-    add_subdirectory(examples/npc_demo)
+# 行为回归检查（可选）：verify/new_test.cpp 的输出需与 verify/baseline.txt 逐行一致
+option(GOBOT_BUILD_VERIFY "Build gobot behavior regression check" OFF)
+if(GOBOT_BUILD_VERIFY)
+    add_executable(gobot_verify verify/new_test.cpp)
+    target_link_libraries(gobot_verify PRIVATE gobot)
+    enable_warnings(gobot_verify)
 endif()

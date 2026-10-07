@@ -348,23 +348,38 @@ namespace VulKan
 		// 设置shader
 		std::vector<VulKan::Shader *> shaderGroup{};
 
-		VulKan::Shader *shaderVertex = new VulKan::Shader(Device, SpotV_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
-		shaderGroup.push_back(shaderVertex);
+		//CPU 软件设备（SwiftShader / llvmpipe 等）不支持几何着色器：
+		//改用"顶点着色器实例化展块"（每个点 -> 一个 size x size 的方块），效果与 SpotNormal.geom 等价
+		const bool quadExpand = !Device->supportsGeometryShader();
+		LOGI("[CreatePipeline] SpotPipeline: geometryShader=%s，使用%s",
+			quadExpand ? "不支持" : "支持",
+			quadExpand ? "顶点着色器实例化展块" : "几何着色器展开几何体");
 
-		VulKan::Shader *shaderGeometry = new VulKan::Shader(Device, SpotNormal_spv, VK_SHADER_STAGE_GEOMETRY_BIT, "main");
-		shaderGroup.push_back(shaderGeometry);
+		if (quadExpand) {
+			VulKan::Shader *shaderVertex = new VulKan::Shader(Device, SpotQuadV_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
+			shaderGroup.push_back(shaderVertex);
+		}
+		else {
+			VulKan::Shader *shaderVertex = new VulKan::Shader(Device, SpotV_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
+			shaderGroup.push_back(shaderVertex);
+
+			VulKan::Shader *shaderGeometry = new VulKan::Shader(Device, SpotNormal_spv, VK_SHADER_STAGE_GEOMETRY_BIT, "main");
+			shaderGroup.push_back(shaderGeometry);
+		}
 
 		VulKan::Shader *shaderFragment = new VulKan::Shader(Device, SpotF_spv, VK_SHADER_STAGE_FRAGMENT_BIT, "main");
 		shaderGroup.push_back(shaderFragment);
 
 		Pipeline->setShaderGroup(shaderGroup);
+		Pipeline->mQuadExpansionByVertexShader = quadExpand;
 
 		// 顶点的排布模式
 		std::vector<VkVertexInputBindingDescription> vertexBindingDes{};
 		vertexBindingDes.resize(1);
 		vertexBindingDes[0].binding = 0;
 		vertexBindingDes[0].stride = sizeof(float) * (3 + 1 + 4); // 位置， 大小， 颜色
-		vertexBindingDes[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		//回退方案下每个实例就是一个点（顶点缓冲按实例步进），几何着色器方案下每个点是一个顶点
+		vertexBindingDes[0].inputRate = quadExpand ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
 
 		std::vector<VkVertexInputAttributeDescription> attributeDes{};
 		attributeDes.resize(3);
@@ -391,7 +406,7 @@ namespace VulKan
 
 		// 图元装配
 		Pipeline->mAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		Pipeline->mAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST; // 说明那些 MVP 变换完的点，组成什么（这里是组成离散的点）
+		Pipeline->mAssemblyState.topology = quadExpand ? VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP : VK_PRIMITIVE_TOPOLOGY_POINT_LIST; // 回退方案：每个实例的 4 个顶点组成方块
 		Pipeline->mAssemblyState.primitiveRestartEnable = VK_FALSE;
 
 		// 光栅化设置
@@ -510,23 +525,38 @@ namespace VulKan
 		// 设置shader
 		std::vector<VulKan::Shader *> shaderGroup{};
 
-		VulKan::Shader *shaderVertex = new VulKan::Shader(Device, CircleV_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
-		shaderGroup.push_back(shaderVertex);
+		//CPU 软件设备（SwiftShader / llvmpipe 等）不支持几何着色器：
+		//改用"顶点着色器实例化画圆环"（每个点 -> 61 个顶点的 line_strip），效果与 CircleNormal.geom 等价
+		const bool quadExpand = !Device->supportsGeometryShader();
+		LOGI("[CreatePipeline] CirclePipeline: geometryShader=%s，使用%s",
+			quadExpand ? "不支持" : "支持",
+			quadExpand ? "顶点着色器实例化画圆环(line_strip)" : "几何着色器展开几何体");
 
-		VulKan::Shader *shaderGeometry = new VulKan::Shader(Device, CircleNormal_spv, VK_SHADER_STAGE_GEOMETRY_BIT, "main");
-		shaderGroup.push_back(shaderGeometry);
+		if (quadExpand) {
+			VulKan::Shader *shaderVertex = new VulKan::Shader(Device, CircleQuadV_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
+			shaderGroup.push_back(shaderVertex);
+		}
+		else {
+			VulKan::Shader *shaderVertex = new VulKan::Shader(Device, CircleV_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
+			shaderGroup.push_back(shaderVertex);
+
+			VulKan::Shader *shaderGeometry = new VulKan::Shader(Device, CircleNormal_spv, VK_SHADER_STAGE_GEOMETRY_BIT, "main");
+			shaderGroup.push_back(shaderGeometry);
+		}
 
 		VulKan::Shader *shaderFragment = new VulKan::Shader(Device, CircleF_spv, VK_SHADER_STAGE_FRAGMENT_BIT, "main");
 		shaderGroup.push_back(shaderFragment);
 
 		Pipeline->setShaderGroup(shaderGroup);
+		Pipeline->mQuadExpansionByVertexShader = quadExpand;
 
 		// 顶点的排布模式
 		std::vector<VkVertexInputBindingDescription> vertexBindingDes{};
 		vertexBindingDes.resize(1);
 		vertexBindingDes[0].binding = 0;
 		vertexBindingDes[0].stride = sizeof(float) * (3 + 1 + 4); // 位置， 半径， 颜色
-		vertexBindingDes[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		//回退方案下每个实例就是一个点（顶点缓冲按实例步进），几何着色器方案下每个点是一个顶点
+		vertexBindingDes[0].inputRate = quadExpand ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
 
 		std::vector<VkVertexInputAttributeDescription> attributeDes{};
 		attributeDes.resize(3);
@@ -553,7 +583,7 @@ namespace VulKan
 
 		// 图元装配
 		Pipeline->mAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		Pipeline->mAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST; // 说明那些 MVP 变换完的点，组成什么（这里是组成离散的线段）
+		Pipeline->mAssemblyState.topology = quadExpand ? VK_PRIMITIVE_TOPOLOGY_LINE_STRIP : VK_PRIMITIVE_TOPOLOGY_POINT_LIST; // 回退方案：每个实例的 61 个顶点连成圆环
 		Pipeline->mAssemblyState.primitiveRestartEnable = VK_FALSE;
 
 		// 光栅化设置
@@ -1005,29 +1035,49 @@ namespace VulKan
 		Pipeline->setViewports({viewport});
 		Pipeline->setScissors({scissor});
 
-		// 设置shader
+		//设置shader
 		std::vector<VulKan::Shader *> shaderGroup{};
 
-		VulKan::Shader *shaderVertex = new VulKan::Shader(Device, UVDynamicDiagramV_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
-		shaderGroup.push_back(shaderVertex);
+		//CPU 软件设备（SwiftShader / llvmpipe 等）不支持几何着色器：
+		//此时改用"顶点着色器实例化展块"的回退方案 —— 顶点缓冲按实例步进（每实例 1 个点），
+		//每个实例画 4 个顶点组成 triangle_strip 方块，效果与 UVDynamicDiagram.geom 完全等价。
+		//回退时每个单元格是独立的 4 顶点方块，不能再用 POINT_LIST 渲染。
+		const bool quadExpand = !Device->supportsGeometryShader();
+		LOGI("[CreatePipeline] UVDynamicDiagramPipeline: geometryShader=%s，使用%s",
+			quadExpand ? "不支持" : "支持",
+			quadExpand ? "顶点着色器实例化展块(顶点缓冲按实例步进)" : "几何着色器展开几何体");
 
-		VulKan::Shader *shaderGeometry = new VulKan::Shader(Device, UVDynamicDiagramG_spv, VK_SHADER_STAGE_GEOMETRY_BIT, "main");
-		shaderGroup.push_back(shaderGeometry);
+		if (quadExpand) {
+			VulKan::Shader *shaderVertex = new VulKan::Shader(Device, UVDynamicDiagramQuadV_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
+			shaderGroup.push_back(shaderVertex);
 
-		VulKan::Shader *shaderFragment = new VulKan::Shader(Device, UVDynamicDiagramF_spv, VK_SHADER_STAGE_FRAGMENT_BIT, "main");
-		shaderGroup.push_back(shaderFragment);
+			VulKan::Shader *shaderFragment = new VulKan::Shader(Device, UVDynamicDiagramQuadF_spv, VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+			shaderGroup.push_back(shaderFragment);
+		}
+		else {
+			VulKan::Shader *shaderVertex = new VulKan::Shader(Device, UVDynamicDiagramV_spv, VK_SHADER_STAGE_VERTEX_BIT, "main");
+			shaderGroup.push_back(shaderVertex);
+
+			VulKan::Shader *shaderGeometry = new VulKan::Shader(Device, UVDynamicDiagramG_spv, VK_SHADER_STAGE_GEOMETRY_BIT, "main");
+			shaderGroup.push_back(shaderGeometry);
+
+			VulKan::Shader *shaderFragment = new VulKan::Shader(Device, UVDynamicDiagramF_spv, VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+			shaderGroup.push_back(shaderFragment);
+		}
 
 		Pipeline->setShaderGroup(shaderGroup);
+		Pipeline->mQuadExpansionByVertexShader = quadExpand;
 
 		// 顶点的排布模式
 		std::vector<VkVertexInputBindingDescription> vertexBindingDes{};
 		vertexBindingDes.resize(2);
 		vertexBindingDes[0].binding = 0;
 		vertexBindingDes[0].stride = sizeof(float) * 2;
-		vertexBindingDes[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		//回退方案下一个实例就是一个单元格，位置要按实例步进；几何着色器方案下每个点本身是一个顶点
+		vertexBindingDes[0].inputRate = quadExpand ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
 		vertexBindingDes[1].binding = 1;
 		vertexBindingDes[1].stride = sizeof(int);
-		vertexBindingDes[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		vertexBindingDes[1].inputRate = quadExpand ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
 
 		std::vector<VkVertexInputAttributeDescription> attributeDes{};
 		attributeDes.resize(2);
@@ -1048,7 +1098,9 @@ namespace VulKan
 
 		// 图元装配
 		Pipeline->mAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		Pipeline->mAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST; // 说明那些 MVP 变换完的点，组成什么（这里是组成离散的三角形）
+		//几何着色器方案：每个单元格是一个点，由几何着色器展开成方块
+		//回退方案：每个实例的 4 个顶点直接组成 triangle_strip 方块，不再需要几何着色器
+		Pipeline->mAssemblyState.topology = quadExpand ? VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP : VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 		Pipeline->mAssemblyState.primitiveRestartEnable = VK_FALSE;
 
 		// 光栅化设置

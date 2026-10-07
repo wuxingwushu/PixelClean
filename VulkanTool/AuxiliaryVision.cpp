@@ -237,18 +237,32 @@ namespace {
 			InheritanceInfo.framebuffer = wSwapChain->getFrameBuffer(i);
 
 			mCommandBuffer[i]->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, InheritanceInfo);
+			const bool spotQuadExpand = wPipelineS->GetPipeline(PipelineMods::SpotMods)->mQuadExpansionByVertexShader;
 			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::SpotMods)->getPipeline());
 			mCommandBuffer[i]->bindVertexBuffer({ AuxiliarySpotS->getBuffer() });
 			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::SpotMods)->getLayout(), mDescriptorSetSpot->getDescriptorSet(i));
-			mCommandBuffer[i]->draw(mSpotRecordedCount);
+			if (spotQuadExpand) {
+				//几何着色器不可用：顶点着色器实例化展块，每个实例 4 个顶点拼成 size x size 的方块
+				mCommandBuffer[i]->draw(4, mSpotRecordedCount);
+			}
+			else {
+				mCommandBuffer[i]->draw(mSpotRecordedCount);
+			}
 			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::LineMods)->getPipeline());
 			mCommandBuffer[i]->bindVertexBuffer({ AuxiliaryLineS->getBuffer() });
 			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::LineMods)->getLayout(), mDescriptorSetLine->getDescriptorSet(i));
 			mCommandBuffer[i]->draw(mLineRecordedCount);
+			const bool circleQuadExpand = wPipelineS->GetPipeline(PipelineMods::CircleMods)->mQuadExpansionByVertexShader;
 			mCommandBuffer[i]->bindGraphicPipeline(wPipelineS->GetPipeline(PipelineMods::CircleMods)->getPipeline());
 			mCommandBuffer[i]->bindVertexBuffer({ AuxiliaryCircleS->getBuffer() });
 			mCommandBuffer[i]->bindDescriptorSet(wPipelineS->GetPipeline(PipelineMods::CircleMods)->getLayout(), mDescriptorSetCircle->getDescriptorSet(i));
-			mCommandBuffer[i]->draw(mCircleRecordedCount);
+			if (circleQuadExpand) {
+				//几何着色器不可用：顶点着色器实例化画圆环，每个实例 61 个顶点（SEGMENTS + 1）连成 line_strip
+				mCommandBuffer[i]->draw(61, mCircleRecordedCount);
+			}
+			else {
+				mCommandBuffer[i]->draw(mCircleRecordedCount);
+			}
 
 			mCommandBuffer[i]->end();
 		}

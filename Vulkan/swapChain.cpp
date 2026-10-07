@@ -33,7 +33,12 @@ namespace VulKan {
 		VkExtent2D extent = chooseExtent(swapChainSupportInfo.mCapabilities);
 
 		//设置图像缓冲数量
+		//至少 3 张：软件光栅化设备（SwiftShader）的 minImageCount 只有 1，若按 minImageCount + 1
+		//申请只能拿到 2 张图，ImGui 要求交换链图像数 >= 3（MinImageCount），Debug 下会断言失败。
 		mImageCount = swapChainSupportInfo.mCapabilities.minImageCount + 1;
+		if (mImageCount < 3) {
+			mImageCount = 3;
+		}
 
 		//如果maxImageCount为0，说明只要内存不爆炸，我们就可以设定任意数量的images
 		if (swapChainSupportInfo.mCapabilities.maxImageCount > 0 && mImageCount > swapChainSupportInfo.mCapabilities.maxImageCount) {

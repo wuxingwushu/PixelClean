@@ -54,8 +54,11 @@ namespace VulKan {
 
 		//画数量（有多少个点）
 		void draw(size_t vertexCount);//没有顶点索引时用这个
+		//画数量（有多少个实例，每个实例包含 vertexCountPerInstance 个顶点）
+		//用于"顶点着色器实例化展块"：每个实例是一个单元格，顶点缓冲按实例步进读取
+		void draw(size_t vertexCountPerInstance, size_t instanceCount);
 		//画索引数量（有多少个点）
-		void drawIndex(size_t indexCount);//有顶点索引时用这个
+		void drawIndex(size_t indexCount);//有索引时用这个
 
 		//结束渲染管线
 		void endRenderPass();

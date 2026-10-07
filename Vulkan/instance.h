@@ -14,6 +14,14 @@ const std::vector<const char*> validationLayers = {
 };
 
 namespace VulKan {
+	//决定这次运行用显卡还是用 CPU 软件渲染(SwiftShader)，必要时设置进程内的 VK_ICD_FILENAMES。
+	//必须在任何 Vulkan 调用之前调用（main 里 InitSpdLog 之后、创建 Application 之前）。
+	//判据是"临时建一个 VkInstance 让 loader 自己枚举设备"，不再只看旧式注册表键
+	//HKLM\SOFTWARE\Khronos\Vulkan\Drivers（loader 1.4 起 ICD 也可以由驱动的 PnP 注册信息提供，
+	//只看旧键会把这类显卡误判成没有驱动，导致「自动选择最高性能」被错误地切成 CPU 软件渲染）。
+	//这次枚举到的硬件设备会写进 Global::VulkanDetectedDevices，供设置界面列出"识别到的显卡"。
+	//返回 false 表示既没有可用的显卡驱动也没找到 SwiftShader，此时创建 instance 一定失败。
+	bool ensureVulkanIcdAvailable();
 	
 	class Instance {
 	public:

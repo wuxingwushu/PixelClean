@@ -1,5 +1,7 @@
 #include "application.h"
 #include "Vulkan/Window.h"
+#include "Vulkan/instance.h"
+#include "GlobalVariable.h"
 #include "../DebugLog.h"
 
 #if defined(_WIN32)
@@ -58,6 +60,17 @@ extern "C" int pixelclean_main(int argc, char** argv) {
 	TOOL::InitTimer();
 	LOGD("Tools initialized");
 	//TOOL::InitLog();
+
+	//没有任何 Vulkan 驱动(ICD)时自动切到 SwiftShader（CPU 软件渲染），
+	//否则后面创建 instance 一定失败（VK_ERROR_INCOMPATIBLE_DRIVER）。
+	//必须在创建 Application（内部创建 VkInstance）之前执行。
+	VulKan::ensureVulkanIcdAvailable();
+
+	//设置里选了 CPU 软件渲染时，软件设备上开校验层会拖慢好几倍，直接关掉（设置项本身不改）
+	if (Global::IsCpuRenderingMode() && Global::VulKanValidationLayer) {
+		Global::VulKanValidationLayer = false;
+		LOGI("CPU rendering mode: Vulkan validation layer disabled for this run");
+	}
 
 
 	GAME::Application* app = nullptr;

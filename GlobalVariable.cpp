@@ -68,6 +68,16 @@ void MainCommandBufferUpdateRequest() {
 			MusicVolume = Ini.Get<float>("Set", "MusicVolume", 0.5f);
 			SoundEffectsVolume = Ini.Get<float>("Set", "SoundEffectsVolume", 0.5f);
 			FontZoomRatio = Ini.Get<float>("Set", "FontZoomRatio", 1.0f);
+			{
+				//用 int 中转：inih 对自定义枚举没有特化，直接传枚举会编译失败
+				int vulkanDeviceMode = Ini.Get<int>("Set", "VulkanDeviceMode", (int)VulkanDeviceModeEnum::AutoBest);
+				if (vulkanDeviceMode < (int)VulkanDeviceModeEnum::AutoBest || vulkanDeviceMode > (int)VulkanDeviceModeEnum::Specific) {
+					vulkanDeviceMode = (int)VulkanDeviceModeEnum::AutoBest;
+				}
+				VulkanDeviceMode = (VulkanDeviceModeEnum)vulkanDeviceMode;
+			}
+			//指定设备（VulkanDeviceMode == Specific）时用哪一台；老配置文件里没有这个键，取默认空串
+			VulkanDeviceName = Ini.Get<std::string>("Set", "VulkanDeviceName", "");
 			KeyW = Ini.Get<unsigned char>("Key", "KeyW", 'W');
 			KeyS = Ini.Get<unsigned char>("Key", "KeyS", 'S');
 			KeyA = Ini.Get<unsigned char>("Key", "KeyA", 'A');
@@ -88,6 +98,8 @@ void MainCommandBufferUpdateRequest() {
 			MusicVolume = 0.5f;
 			SoundEffectsVolume = 0.5f;
 			FontZoomRatio = 1.0f;
+			VulkanDeviceMode = VulkanDeviceModeEnum::AutoBest;
+			VulkanDeviceName.clear();
 			KeyW = 'W';
 			KeyS = 'S';
 			KeyA = 'A';
@@ -109,6 +121,18 @@ void MainCommandBufferUpdateRequest() {
 		Ini.UpdateEntry("Set", "MusicVolume", MusicVolume);
 		Ini.UpdateEntry("Set", "SoundEffectsVolume", SoundEffectsVolume);
 		Ini.UpdateEntry("Set", "FontZoomRatio", FontZoomRatio);
+		Ini.UpdateEntry("Set", "VulkanDeviceMode", (int)VulkanDeviceMode);
+		{
+			//VulkanDeviceName 是后加的键：老配置文件里没有它，而 UpdateEntry 对不存在的键会抛异常，
+			//所以先看键在不在，不在就用 InsertEntry 补上
+			const std::set<std::string> setKeys = Ini.Keys("Set");
+			if (setKeys.find("VulkanDeviceName") == setKeys.end()) {
+				Ini.InsertEntry("Set", "VulkanDeviceName", VulkanDeviceName);
+			}
+			else {
+				Ini.UpdateEntry("Set", "VulkanDeviceName", VulkanDeviceName);
+			}
+		}
 		Ini.UpdateEntry("Key", "KeyW", KeyW);
 		Ini.UpdateEntry("Key", "KeyS", KeyS);
 		Ini.UpdateEntry("Key", "KeyA", KeyA);
@@ -130,6 +154,13 @@ void MainCommandBufferUpdateRequest() {
 	float MusicVolume;
 	float SoundEffectsVolume;
 	float FontZoomRatio;
+
+	VulkanDeviceModeEnum VulkanDeviceMode = VulkanDeviceModeEnum::AutoBest;
+	std::string VulkanDeviceName;
+	std::vector<VulkanDeviceInfo> VulkanDetectedDevices;
+	bool RunningOnSoftwareRenderer = false;
+	std::string RunningDeviceName;
+	std::string CpuSoftwareRenderReason = "未检测到显卡 Vulkan 驱动";
 
 	unsigned char KeyW;
 	unsigned char KeyS;

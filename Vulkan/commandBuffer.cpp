@@ -69,6 +69,11 @@ namespace VulKan {
 		vkCmdDraw(mCommandBuffer, vertexCount, 1, 0, 0);
 	}
 
+	void CommandBuffer::draw(size_t vertexCountPerInstance, size_t instanceCount) {
+		//每个实例画 vertexCountPerInstance 个顶点（如 4 个顶点组成一个方块），共 instanceCount 个实例
+		vkCmdDraw(mCommandBuffer, static_cast<uint32_t>(vertexCountPerInstance), static_cast<uint32_t>(instanceCount), 0, 0);
+	}
+
 	void CommandBuffer::drawIndex(size_t indexCount) {
 		vkCmdDrawIndexed(mCommandBuffer, indexCount, 1, 0, 0, 0);
 	}

@@ -30,15 +30,22 @@
 #define SpotNormal_spv			ShaderPath"SpotNormal.spv"
 #define SpotF_spv				ShaderPath"SpotShaderF.spv"	
 #define SpotV_spv				ShaderPath"SpotShaderV.spv"
+// 无几何着色器的回退版本：顶点着色器实例化展块
+#define SpotQuadV_spv			ShaderPath"SpotShaderQuadV.spv"
 //画圆
 #define CircleNormal_spv		ShaderPath"CircleNormal.spv"
 #define CircleF_spv				ShaderPath"CircleShaderF.spv"	
 #define CircleV_spv				ShaderPath"CircleShaderV.spv"
+// 无几何着色器的回退版本：顶点着色器实例化画圆环
+#define CircleQuadV_spv			ShaderPath"CircleShaderQuadV.spv"
 #define DamagePromptF_spv		ShaderPath"DamagePromptF.spv"
 #define DamagePromptV_spv		ShaderPath"DamagePromptV.spv"
 #define UVDynamicDiagramF_spv	ShaderPath"UVDynamicDiagramF.spv"
 #define UVDynamicDiagramG_spv	ShaderPath"UVDynamicDiagramG.spv"
 #define UVDynamicDiagramV_spv	ShaderPath"UVDynamicDiagramV.spv"
+// 无几何着色器的回退版本（CPU 软件设备 / SwiftShader）：顶点着色器实例化展块
+#define UVDynamicDiagramQuadV_spv	ShaderPath"UVDynamicDiagramQuadV.spv"
+#define UVDynamicDiagramQuadF_spv	ShaderPath"UVDynamicDiagramQuadF.spv"
 #define BlockWorldV_spv			ShaderPath"BlockWorldShaderV.spv"
 #define BlockWorldF_spv			ShaderPath"BlockWorldShaderF.spv"
 #define Background_spv			ShaderPath"Background.spv"

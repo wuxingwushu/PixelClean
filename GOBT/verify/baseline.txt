@@ -1,0 +1,27 @@
+fallback count=1 type=8 name=lonely
+t1    status=Running goal=hunt    subgoal=hunt.strike  queue=1 kills=0 pv=1 ev=SUBGOAL_COMPLETED
+t2    status=Running goal=hunt    subgoal=hunt.strike  queue=1 kills=0 pv=1 ev=-
+t3    status=Running goal=hunt    subgoal=hunt.scout   queue=2 kills=1 pv=1 ev=SUBGOAL_COMPLETED
+t4    status=Failure goal=hunt    subgoal=hunt.strike  queue=1 kills=1 pv=1 ev=TACTICAL_FAILURE
+t5    status=Running goal=hunt    subgoal=hunt.scout   queue=2 kills=2 pv=1 ev=SUBGOAL_COMPLETED
+t6    status=Failure goal=hunt    subgoal=hunt.strike  queue=1 kills=2 pv=1 ev=TACTICAL_FAILURE
+t7    status=Success goal=hunt    subgoal=(none)       queue=0 kills=3 pv=1 ev=SUBGOAL_COMPLETED|GOAL_COMPLETED
+t8    status=Running goal=wander  subgoal=wander.step  queue=1 kills=3 pv=1 ev=-
+t9    status=Running goal=wander  subgoal=wander.step  queue=1 kills=3 pv=1 ev=SUBGOAL_COMPLETED
+t10   status=Running goal=wander  subgoal=wander.step  queue=1 kills=3 pv=1 ev=-
+t11   status=Failure goal=wander  subgoal=(none)       queue=0 kills=3 pv=1 ev=TACTICAL_FAILURE
+t12   status=Running goal=wander  subgoal=wander.step  queue=1 kills=3 pv=1 ev=-
+t13   status=Failure goal=wander  subgoal=(none)       queue=0 kills=3 pv=1 ev=TACTICAL_FAILURE
+t14   status=Running goal=wander  subgoal=wander.step  queue=1 kills=3 pv=1 ev=-
+t15   status=Failure goal=wander  subgoal=(none)       queue=0 kills=3 pv=1 ev=TACTICAL_FAILURE
+suspended_wander=1 goals=3
+t16   status=Running goal=wander  subgoal=wander.step  queue=1 kills=3 pv=1 ev=-
+suspended_wander=0
+t17   status=Success goal=(none)  subgoal=(none)       queue=0 kills=3 pv=1 ev=-
+t18   status=Success goal=(none)  subgoal=(none)       queue=0 kills=3 pv=1 ev=-
+t19   status=Running goal=wander  subgoal=wander.step  queue=1 kills=3 pv=1 ev=SUBGOAL_COMPLETED
+ws cross_int_float=1 cross_str=0 getraw=1 getraw_missing=0 raw_count=1
+clone original=3 copy=99
+tree root=StrategicGoalNode children=1 has_move=1 has_combat=0
+action cost=2.5 precond=1 effects=0
+layerbridge Running Running Running Running created=2 ev=STRATEGIC_INTERRUPT

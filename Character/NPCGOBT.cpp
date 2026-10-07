@@ -3,9 +3,10 @@
 #include "../Tool/Tool.h"
 #include "../GlobalVariable.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
-#include <iostream>
+#include <thread>
 
 namespace GAME {
 
@@ -29,6 +30,8 @@ namespace {
     constexpr float kFleeDuration       = 1.2f;    // 后撤最短时长（秒）
     constexpr float kFleeDistance       = 180.0f;  // 后撤目标距离（像素）
     constexpr float kRepathPlayerDrift  = 80.0f;   // 追击提前重寻路：玩家偏离路径终点（像素）
+    constexpr float kPathfindTimeout    = 2.0f;    // JPS 任务滞留上限（秒）——目标非法时 JPS 提前 return，
+                                                   // 完成标志可能永远保持旧值 true，必须自行兜底
     constexpr float kIdealAttackDist    = 50.0f;   // 攻击理想距离
     constexpr float kStrafePeriod       = 1.2f;    // 侧移换向周期（秒）
     constexpr int   kJpsClampMargin     = 5;       // JPS 目标钳制到范围边缘的内缩量
@@ -79,14 +82,12 @@ NPCGOBT::NPCGOBT(GamePlayer* npc, PathfindingDecorator* pathfinding, Arms* arms)
     mSubtreeLib = std::make_shared<gobot::SubtreeLibrary>();
 
     // 世界状态默认值：消除"未初始化键"依赖。
-    // 出生即视为：未受伤 / 已恢复 / 未交战 / 无威胁。
+    // 出生即视为：已恢复 / 未交战 / 无威胁。
     {
         auto& ws = *mBlackboard->world_state();
-        ws.set(NPCWS::kInjured, false);
         ws.set(NPCWS::kInjuryRecovered, true);
         ws.set(NPCWS::kPlayerVisible, false);
         ws.set(NPCWS::kPlayerInRange, false);
-        ws.set(NPCWS::kPlayerInViewField, false);
         ws.set(NPCWS::kPlayerEngaged, false);
         ws.set(NPCWS::kRecentlyHurt, false);
     }
@@ -109,11 +110,30 @@ NPCGOBT::~NPCGOBT()
 {
     LOGD("NPCGOBT::~NPCGOBT() called");
     // GOBT 组件由 shared_ptr 自动释放
-    delete mNPC;
-    while (!mJPS->GetPathfindingCompleted()) {
-        std::cout << "~NPCGOBT() AStar 等待线程结束" << std::endl;
+
+    // ★ 析构顺序：
+    //   1) 先等 JPS 任务退出 —— 线程池持有 mJPS 裸指针，任务在途时析构 = 悬垂写入；
+    //      旧实现是"先 delete mNPC 再等线程"，等待期间 mNPC/LPath 已被销毁。
+    //   2) 再 delete mJPS。
+    //   3) 最后 delete mNPC。
+    //   等待日志按 1ms 步进但每 500ms 才打印一次，避免每帧刷屏（原来是每次循环一条 std::cout）。
+    constexpr int kMaxWaitMs = 2000;
+    int waited = 0;
+    while (!mJPS->GetPathfindingCompleted() && waited < kMaxWaitMs) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (waited % 500 == 0) {
+            LOGD("NPCGOBT::~NPCGOBT() 等待 JPS 寻路任务退出... (%dms)", waited);
+        }
+        ++waited;
     }
+    if (waited >= kMaxWaitMs) {
+        LOGD("NPCGOBT::~NPCGOBT() 警告：等待 JPS 超时(%dms)，继续析构", waited);
+    }
+
     delete mJPS;
+    mJPS = nullptr;
+    delete mNPC;
+    mNPC = nullptr;
 }
 
 // ============================================================================
@@ -136,7 +156,10 @@ void NPCGOBT::SetupGoals()
     LOGD("NPCGOBT::SetupGoals() 注册目标 [Survive] 优先级=100, 满足条件=%s=true (不可挂起)",
          NPCWS::kInjuryRecovered.c_str());
 
-    // 目标 2：自保（优先级 90）——受伤威胁未消退时与敌人拉开距离
+    // 目标 2：自保（优先级 90）——存在"未处理的受伤威胁"时与敌人拉开距离。
+    // ★ kRecentlyHurt 由 SyncWorldState 只在边沿写入（新伤害置 true；计时耗尽或
+    //   Retreat 成功的 Effect 置 false），所以 Retreat 的 Effect 不会被逐帧覆盖，
+    //   目标不再在"满足/不满足"之间抖动并反复重建子目标。
     mGoalManager->add_goal(std::make_shared<Goal>(
         "SelfPreserve",
         std::unordered_map<WorldKey, WorldValue>{{NPCWS::kRecentlyHurt, false}},
@@ -155,9 +178,10 @@ void NPCGOBT::SetupGoals()
     // 目标 4：巡逻区域（优先级 20）——默认行为，永不满足
     mGoalManager->add_goal(std::make_shared<Goal>(
         "PatrolArea",
-        std::unordered_map<WorldKey, WorldValue>{{"patrol_done", true}},
+        std::unordered_map<WorldKey, WorldValue>{{NPCWS::kPatrolDone, true}},
         20));
-    LOGD("NPCGOBT::SetupGoals() 注册目标 [PatrolArea] 优先级=20, 满足条件=patrol_done=true (无限fallback)");
+    LOGD("NPCGOBT::SetupGoals() 注册目标 [PatrolArea] 优先级=20, 满足条件=%s=true (无限fallback)",
+         NPCWS::kPatrolDone.c_str());
 
     LOGD("NPCGOBT::SetupGoals() 目标注册完成，共4个目标");
 }
@@ -297,7 +321,9 @@ void NPCGOBT::SetupSubtreeLibrary()
     LOGD("NPCGOBT::SetupSubtreeLibrary() 注册子树 [MoveTo → ChaseAction] (前置条件: playerEngaged)");
 
     // --- Retreat 子树（SelfPreserve）---
-    // 效果：recently_hurt=false → 威胁解除，SelfPreserve 目标满足
+    // 效果：recently_hurt=false → 威胁解除，SelfPreserve 目标满足。
+    // ★ 该 Effect 现在真正生效：SyncWorldState 只在边沿写 kRecentlyHurt，
+    //   不再每帧把它覆盖回 true（旧实现下这个 Effect 活不过一帧）。
     mSubtreeLib->register_subtree(SubgoalType::Flee, [this]() -> BTNodePtr {
         auto action = std::make_shared<Action>(
             "RetreatAction",
@@ -371,29 +397,28 @@ void NPCGOBT::SyncWorldState()
     int currentDamage = mNPC->mPixelQueue->GetNumber();
     bool newDamage = currentDamage > 0;
 
-    ws.set(NPCWS::kInjured, newDamage);
     if (newDamage) {
-        // 新伤：激活 Survive（硬直）；刷新受伤威胁计时（驱动 SelfPreserve）
+        // 新伤：激活 Survive（硬直）；重新武装受伤威胁（驱动 SelfPreserve）
         ws.set(NPCWS::kInjuryRecovered, false);
         mRecentlyHurtTimer = kRecentlyHurtDuration;
         // 被击中即仇恨并调查攻击方向：
         //  - 看得见 → 记下玩家精确位置；
-        //  - 看不见 → 只沿受伤方向前进一段距离作为调查点（只知道方向，不隔墙知道精确坐标）
+        //  - 看不见 → 只知道"大致来自哪个方向"，沿最后目击方位推一段调查点
+        //    （绝不读 Global::GamePlayerX/Y 反推方向——那等于隔墙知道玩家精确坐标）
         mEngaged = true;
         mPlayerLostTime = 0.0f;
+        // 玩家再次暴露 → 立刻解除"追不上"累积造成的挂起，否则贴脸也不交战
+        mGoalManager->unsuspend("FightEnemy");
         if (flags & SensoryMessages_Visible) {
             mSuspicious = true;
             mSuspiciousPos = {(int)Global::GamePlayerX, (int)Global::GamePlayerY};
             mSuspiciousTimer = kSuspiciousMemory;
         } else {
             glm::vec2 npcPos = mNPC->GetObjectCollision()->pos;
-            glm::vec2 dir{Global::GamePlayerX - npcPos.x, Global::GamePlayerY - npcPos.y};
-            float len = glm::length(dir);
-            if (len > 0.001f) {
-                dir = dir / len;
-            } else {
-                dir = qianjinfang;
-            }
+            // 有目击记录 → 用记录方位；从未见过玩家 → 只能沿当前朝向（无任何方向信息）
+            const float dirAngle = mLastKnownValid ? mLastKnownPlayerAngle
+                                                   : mNPC->GetObjectCollision()->angle;
+            glm::vec2 dir = PhysicsBlock::vec2angle(glm::vec2{1.0f, 0.0f}, dirAngle);
             constexpr float kDamageInvestigateDist = 120.0f;
             mSuspicious = true;
             mSuspiciousPos = {(int)(npcPos.x + dir.x * kDamageInvestigateDist),
@@ -404,14 +429,22 @@ void NPCGOBT::SyncWorldState()
              currentDamage);
     }
     // ★ 关键修复：不再因伤害队列归零而置 injury_recovered=true。
-    //   该键只由 Recover 动作成功后的 Effect 写入（单一写入方），
+    //   该键只由 Recover 动作成功后的 Effect 写入（唯一的置 true 写入方），
     //   否则硬直开始 1 帧后目标即被误判满足而切走（旧实现的硬直实际只持续 1 帧）。
-    lastDamageCount_ = currentDamage;
 
+    // ★ 只在边沿写入 kRecentlyHurt（新伤害 → true；计时耗尽 → false），
+    //   不再每帧强制覆盖 true：否则 Retreat 动作的 Effect(recently_hurt=false)
+    //   下一帧就被重新置 true，目标在满足/不满足间抖动，
+    //   约每 2 帧走一轮"重分解 → 新建节点 → 子目标成功 → 弹出 → 事件"，
+    //   直到 2.5s 计时耗尽（kFleeDuration/kFleeDistance 的单轮语义被悄悄改写）。
     if (mRecentlyHurtTimer > 0.0f) {
         mRecentlyHurtTimer -= FPSTime;
     }
-    ws.set(NPCWS::kRecentlyHurt, mRecentlyHurtTimer > 0.0f);
+    if (newDamage) {
+        ws.set(NPCWS::kRecentlyHurt, true);          // 重新武装：覆盖上一次 Retreat 的解除
+    } else if (mRecentlyHurtTimer <= 0.0f) {
+        ws.set(NPCWS::kRecentlyHurt, false);         // 计时耗尽兜底（Retreat 未能完成时）
+    }
 
     // ============================================================
     // 2) 可见性锁存（0.25s 宽限，防视野锥/射线抖动导致目标抖振）
@@ -445,6 +478,12 @@ void NPCGOBT::SyncWorldState()
         if (flags & SensoryMessages_Visible) {
             mEngaged = true;
             mPlayerLostTime = 0.0f;
+            // 玩家重新暴露 → 清除"追不上"造成的挂起（挂起只是让反复失败的目标冷却，
+            // 一旦重新看见玩家就必须立刻恢复交战，否则会出现"贴脸站着不动"）
+            if (mGoalManager->is_suspended("FightEnemy")) {
+                mGoalManager->unsuspend("FightEnemy");
+                LOGD("NPCGOBT::SyncWorldState() 重新发现玩家 → 解除 [FightEnemy] 挂起");
+            }
             LOGD("NPCGOBT::SyncWorldState() 发现玩家(可见, 距离=%.1f) → 进入交战, 激活 [FightEnemy]",
                  mPlayerDistance);
         }
@@ -458,7 +497,11 @@ void NPCGOBT::SyncWorldState()
         // 只在"看不见"时才考虑脱战（看得见就永远保持仇恨）
         if (!(flags & SensoryMessages_Visible)) {
             bool outOfLeash = mPlayerDistance > ChaseRange * kEngageLeashMult;
-            bool memoryGone = !mSuspicious;
+            // ★ 关键：不能用 !mSuspicious 判"记忆耗尽"——该标志只表示"还有一个可用的
+            //   最后目击点"，它会被 DoChase 在认领目击点时清掉；用它判断会让刚派出的
+            //   调查/搜索在 1 帧后就被判定"无果"而掐断（整条搜索/绕圈/压制射击子系统不可达）。
+            //   真正的"调查无果" = 记忆计时耗尽 且 已不再调查/搜索。
+            bool memoryGone = (mSuspiciousTimer <= 0.0f) && !mInvestigating && !mSearching;
             bool lostTooLong = mPlayerLostTime > kDisengageLostTime;
 
             if (outOfLeash || memoryGone || lostTooLong) {
@@ -475,21 +518,24 @@ void NPCGOBT::SyncWorldState()
     }
 
     // ============================================================
-    // 5) 可疑位置记忆衰减
+    // 5) 可疑位置记忆衰减（与"是否已被认领"无关：认领只表示正在前往，
+    //    记忆本身必须继续计时，否则计时会被冻结、脱战兜底失效）
     // ============================================================
-    if (mSuspicious && mSuspiciousTimer > 0.0f) {
+    if (mSuspiciousTimer > 0.0f) {
         mSuspiciousTimer -= FPSTime;
         if (mSuspiciousTimer <= 0.0f) {
+            mSuspiciousTimer = 0.0f;
             mSuspicious = false;
         }
     }
 
     // ============================================================
     // 6) 写入世界状态（供目标选择/分解/前置条件读取）
+    //    写入方约定：本函数只负责"感知事实"三键；kRecentlyHurt 见上方边沿写入；
+    //    kInjuryRecovered 由 Recover 动作的 Effect 独占写入。
     // ============================================================
     ws.set(NPCWS::kPlayerVisible, mVisibleLatched);
     ws.set(NPCWS::kPlayerInRange, mInRangeLatched);
-    ws.set(NPCWS::kPlayerInViewField, (flags & SensoryMessages_VisualField) != 0);
     ws.set(NPCWS::kPlayerEngaged, mEngaged);
 }
 
@@ -543,15 +589,16 @@ int NPCGOBT::GetSensoryMessages()
         }
     }
 
-    // 攻击范围判定（严格值；世界状态使用锁存值）
-    if (mPlayerDistance < AttackRange) {
-        flags |= SensoryMessages_Range;
-    }
-
-    // ★ 关键规则：只有"看得见"才能刷新可疑位置记忆。
+    // ★ 关键规则：只有"看得见"才能刷新最后目击记录与可疑位置记忆。
     //   绝不通过近身感知/伤害等其他渠道持续更新玩家坐标——
     //   NPC 不可以隔着墙壁发现或追踪玩家。
+    //   （wanjiaAngle / mPlayerDistance 每帧都按真值算出，但仅 Visible 帧可信；
+    //     不可见时一律改用 mLastKnownPlayerPos / mLastKnownPlayerAngle。）
     if (flags & SensoryMessages_Visible) {
+        mLastKnownPlayerPos = {Global::GamePlayerX, Global::GamePlayerY};
+        mLastKnownPlayerAngle = wanjiaAngle;
+        mLastKnownValid = true;
+
         mSuspicious = true;
         mSuspiciousPos = {(int)Global::GamePlayerX, (int)Global::GamePlayerY};
         mSuspiciousTimer = kSuspiciousMemory;
@@ -566,14 +613,12 @@ int NPCGOBT::GetSensoryMessages()
 // ============================================================================
 
 // --- 待机（对应原 FSM Standby 状态的执行逻辑） ---
-gobot::Status NPCGOBT::DoStandby(gobot::Context& ctx)
+gobot::Status NPCGOBT::DoStandby(gobot::Context&)
 {
-    // 恢复受控模式（击飞态由 MovementComponent 自动切回）
-    if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
-        mNPC->GetMovement()->SetMode(MovementMode::Controlled);
-    }
+    // ctx 未使用：感官/世界状态都由本类成员维护
+    EnsureControlled();
 
-    // 首次进入待机：重置独立计时器（避免受其他动作 mTime 归零影响）
+    // 首次进入待机：重置独立计时器（避免受其他状态计时器归零影响）
     if (!mStandbyEntered) {
         mStandbyTimer = 0.0f;
         mStandbyEntered = true;
@@ -586,7 +631,7 @@ gobot::Status NPCGOBT::DoStandby(gobot::Context& ctx)
     // 待机时缓慢转向前进方向
     mNPC->GetMovement()->SetLookAngle(PhysicsBlock::EdgeVecToCosAngleFloat(qianjinfang));
 
-    // 1.5s 后转巡逻（使用独立计时器，不受 mTime 归零影响）
+    // 1.5s 后转巡逻（使用独立计时器，不受其他状态计时器归零影响）
     if (mStandbyTimer > 1.5f) {
         mStandbyEntered = false; // 重置标志，为下次进入待机准备
         LOGD("NPCGOBT::DoStandby() 待机超时(%.2f>1.5) → Success, 将切换到巡逻", mStandbyTimer);
@@ -604,6 +649,14 @@ void NPCGOBT::ClearPathSafe()
     mJpsSubmitted = false;
 }
 
+// --- 恢复受控移动模式（击飞(Ragdoll)态由 MovementComponent 自行结束，不要抢） ---
+void NPCGOBT::EnsureControlled()
+{
+    if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
+        mNPC->GetMovement()->SetMode(MovementMode::Controlled);
+    }
+}
+
 // ============================================================================
 // 辅助方法
 // ============================================================================
@@ -614,17 +667,15 @@ JPSVec2 NPCGOBT::FindRandomWalkablePosition(const glm::vec2& currentPos)
     // 搜索半径：使用 JPS 范围的一半，确保寻路能成功
     const int patrolRange = mRange / 2;
     const int maxAttempts = 100;
+    if (patrolRange < 1) {
+        return {INT_MIN, INT_MIN};   // JPS 窗口过小：无合法采样空间（原实现此处会 rand()%0）
+    }
 
     for (int i = 0; i < maxAttempts; ++i) {
-        int rx = (int)currentPos.x + (rand() % (patrolRange * 2)) - patrolRange;
-        int ry = (int)currentPos.y + (rand() % (patrolRange * 2)) - patrolRange;
-
-        // 检查是否在 JPS 合法范围内（相对起点）
-        int dx = rx - (int)currentPos.x;
-        int dy = ry - (int)currentPos.y;
-        if (dx < -mRange || dx >= mRange || dy < -mRange || dy >= mRange) {
-            continue;
-        }
+        // 采样范围 [-patrolRange, patrolRange-1]，恒落在 JPS 窗口内
+        // （原先另有一处 dx/dy 越界检查，因采样半径只有窗口一半而永不成立，已删除）
+        int rx = (int)currentPos.x + RandInt(-patrolRange, patrolRange - 1);
+        int ry = (int)currentPos.y + RandInt(-patrolRange, patrolRange - 1);
 
         // 检查该点是否可通行（true=可行走，与 JPS 回调语义一致）
         if (!AStarGetWall(rx, ry, wPathfinding)) {
@@ -654,11 +705,10 @@ JPSVec2 NPCGOBT::FindRandomWalkablePosition(const glm::vec2& currentPos)
 }
 
 // --- 巡逻（随机坐标 + JPS 寻路） ---
-gobot::Status NPCGOBT::DoPatrol(gobot::Context& ctx)
+gobot::Status NPCGOBT::DoPatrol(gobot::Context&)
 {
-    if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
-        mNPC->GetMovement()->SetMode(MovementMode::Controlled);
-    }
+    // ctx 未使用：感官/世界状态都由本类成员维护
+    EnsureControlled();
 
     glm::vec2 pos = mNPC->GetObjectCollision()->pos;
 
@@ -688,6 +738,7 @@ gobot::Status NPCGOBT::DoPatrol(gobot::Context& ctx)
         // 没找到有效位置 → 降级到方向碰撞巡逻
         if (mPatrolTarget.x == INT_MIN && mPatrolTarget.y == INT_MIN) {
             LOGD("NPCGOBT::DoPatrol() [IDLE] 无法找到巡逻目标，降级到方向碰撞巡逻");
+            mPatrolState = PATROL_FALLBACK;
             return DoPatrolFallback(pos);
         }
 
@@ -697,7 +748,7 @@ gobot::Status NPCGOBT::DoPatrol(gobot::Context& ctx)
             JPSVec2{(int)pos.x, (int)pos.y}, mPatrolTarget, &LPath,
             JPSVec2{wPathfinding->PathfindingDecoratorDeviationX,
                     wPathfinding->PathfindingDecoratorDeviationY});
-        mTime = 0;
+        mPathfindWait = 0.0f;
         mPatrolState = PATROL_PATHFINDING;
         LOGD("NPCGOBT::DoPatrol() [IDLE] JPS寻路已提交 | 起点=(%d,%d) → 目标=(%d,%d)",
              (int)pos.x, (int)pos.y, mPatrolTarget.x, mPatrolTarget.y);
@@ -710,8 +761,19 @@ gobot::Status NPCGOBT::DoPatrol(gobot::Context& ctx)
     case PATROL_PATHFINDING:
     {
         if (!mJPS->GetPathfindingCompleted()) {
+            // ★ 滞留兜底：JPS 对非法目标会提前 return 而不更新完成标志，
+            //   若标志恰好残留为 false，这里会永久等待（NPC 卡死不动）
+            mPathfindWait += FPSTime;
+            if (mPathfindWait > kPathfindTimeout) {
+                mPathfindWait = 0.0f;
+                LOGD("NPCGOBT::DoPatrol() [PATHFINDING] JPS 滞留超时(%.1fs) → 降级方向碰撞巡逻",
+                     kPathfindTimeout);
+                mPatrolState = PATROL_FALLBACK;
+                return DoPatrolFallback(pos);
+            }
             return gobot::Status::Running;
         }
+        mPathfindWait = 0.0f;
 
         if (!LPath.empty()) {
             // 路径找到！开始移动
@@ -730,6 +792,7 @@ gobot::Status NPCGOBT::DoPatrol(gobot::Context& ctx)
             // 连续失败 3 次 → 降级到方向碰撞巡逻
             mPatrolFailedCount = 0;
             LOGD("NPCGOBT::DoPatrol() [PATHFINDING] 连续3次寻路失败，降级到方向碰撞巡逻");
+            mPatrolState = PATROL_FALLBACK;
             return DoPatrolFallback(pos);
         }
 
@@ -743,9 +806,9 @@ gobot::Status NPCGOBT::DoPatrol(gobot::Context& ctx)
     // ====================================================================
     case PATROL_MOVING:
     {
-        // 安全检查：目标距离太远（goal 切换导致旧状态残留）→ 重新选取
+        // 安全检查：路径空/目标超出 JPS 窗口（goal 切换或传送导致旧状态残留）→ 重新选取
         glm::vec2 toTarget = glm::vec2{(float)mPatrolTarget.x - pos.x, (float)mPatrolTarget.y - pos.y};
-        if (LPath.empty() || glm::length(toTarget) > mRange * 1.5f) {
+        if (LPath.empty() || glm::length(toTarget) > (float)mRange) {
             mPatrolState = PATROL_IDLE;
             LOGD("NPCGOBT::DoPatrol() [MOVING] 路径/目标异常，重新选取 | 目标距离=%.1f",
                  glm::length(toTarget));
@@ -779,6 +842,14 @@ gobot::Status NPCGOBT::DoPatrol(gobot::Context& ctx)
 
         return gobot::Status::Running;
     }
+
+    // ====================================================================
+    // PATROL_FALLBACK: 方向碰撞巡逻（寻路失败/超时/不可达时的降级）
+    // ★ 降级后由本状态独占，直到 DoPatrolFallback 返回 Success（所有方向堵死）；
+    //   否则会像旧实现那样只跑 1 帧就回到 IDLE，在"寻路↔降级"之间反复横跳。
+    // ====================================================================
+    case PATROL_FALLBACK:
+        return DoPatrolFallback(pos);
     }
 
     return gobot::Status::Running;
@@ -810,7 +881,7 @@ gobot::Status NPCGOBT::DoPatrolFallback(const glm::vec2& pos)
             break;
         }
     }
-    int startIdx = (currentIdx >= 0) ? (currentIdx + 1) % 4 : (rand() % 4);
+    int startIdx = (currentIdx >= 0) ? (currentIdx + 1) % 4 : RandInt(0, 3);
 
     for (int attempt = 0; attempt < 3; ++attempt) {
         int idx = (startIdx + attempt) % 4;
@@ -831,18 +902,17 @@ gobot::Status NPCGOBT::DoPatrolFallback(const glm::vec2& pos)
     }
 
     // 全部堵死 → 返回待机
-    mTime = 0;
     mPatrolEntered = false; // 重置进入标志，下次巡逻时重新初始化
     LOGD("NPCGOBT::DoPatrolFallback() 所有方向堵死 → Success, 返回待机");
     return gobot::Status::Success;
 }
 
 // --- 追击（含最后目击位置调查/搜索） ---
-gobot::Status NPCGOBT::DoChase(gobot::Context& ctx)
+gobot::Status NPCGOBT::DoChase(gobot::Context&)
 {
-    if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
-        mNPC->GetMovement()->SetMode(MovementMode::Controlled);
-    }
+    // ctx 未使用：感官/世界状态都由本类成员维护
+    EnsureControlled();
+    mRepathTimer += FPSTime;   // 重寻路周期计时（原为全局 mTime，会被其他状态归零而互相干扰）
 
     int flags = GetSensoryMessages();
     bool visible = (flags & SensoryMessages_Visible) != 0;
@@ -914,7 +984,7 @@ gobot::Status NPCGOBT::DoChase(gobot::Context& ctx)
             mShootCooldown -= FPSTime;
             if (mShootCooldown <= 0.0f && distToSusp > 0.001f) {
                 mShootCooldown = kSuppressInterval;
-                float fireAngle = base + ((rand() % 1000) / 1000.0f - 0.5f) * 2.0f * kBlindSpread;
+                float fireAngle = base + (Rand01() - 0.5f) * 2.0f * kBlindSpread;
                 glm::vec2 shootPos = pos + PhysicsBlock::vec2angle(
                     glm::vec2{kMuzzleOffset, 0.0f}, fireAngle);
                 LOGD("NPCGOBT::DoChase() 搜索压制射击 → 可疑位置(%d,%d) 开火角=%.3f",
@@ -934,10 +1004,18 @@ gobot::Status NPCGOBT::DoChase(gobot::Context& ctx)
         }
     }
 
-    // 4) JPS 计算中 → 等待
+    // 4) JPS 计算中 → 等待（带滞留超时兜底）
     if (!mJPS->GetPathfindingCompleted()) {
+        mPathfindWait += FPSTime;
+        if (mPathfindWait > kPathfindTimeout) {
+            mPathfindWait = 0.0f;
+            mJpsSubmitted = false;
+            LOGD("NPCGOBT::DoChase() JPS 滞留超时(%.1fs) → Failure, 放弃本次追击", kPathfindTimeout);
+            return gobot::Status::Failure;
+        }
         return gobot::Status::Running;
     }
+    mPathfindWait = 0.0f;
 
     // 5) 空路径死循环检测（已提交但未找到路径）
     if (LPath.empty() && mJpsSubmitted) {
@@ -965,15 +1043,18 @@ gobot::Status NPCGOBT::DoChase(gobot::Context& ctx)
                             (float)LPath.front().y - playerPos.y};
         playerDrifted = glm::length(toPathEnd) > kRepathPlayerDrift;
     }
-    bool needRepath = LPath.empty() || (mTime > mPathfindingCycle) || playerDrifted;
+    bool needRepath = LPath.empty() || (mRepathTimer > mPathfindingCycle) || playerDrifted;
 
     if (needRepath) {
         JPSVec2 target;
-        if (mSuspicious) {
+        if (mSuspicious && !visible) {
+            // ★ 不再"认领即消费"记忆：记忆由自身计时器过期（kSuspiciousMemory=8s）。
+            //   旧实现这里置 mSuspicious=false，于是 ≤1.5s 后的下一次重寻路
+            //   既看不见玩家、又"没有可疑位置"，直接落到 else 分支 return Failure；
+            //   连续 3 次失败就把 FightEnemy 挂起 180 tick（贴脸也不再交战）。
             target = mSuspiciousPos;
-            mSuspicious = false;              // 消费记忆（再次可见时由感官刷新）
-            mInvestigating = !visible;        // 前往"旧目击点"才算调查
-            if (mInvestigating) {
+            mInvestigating = true;            // 前往"最后目击点"才算调查
+            {
                 // 不可见目标：目标点向自己回退一段站立距离，
                 // 避免直接走到玩家脸上（贴脸死角/无绕行空间），
                 // 留出距离后搜索时主动绕圈即可重新获取视线。
@@ -1009,7 +1090,7 @@ gobot::Status NPCGOBT::DoChase(gobot::Context& ctx)
             JPSVec2{wPathfinding->PathfindingDecoratorDeviationX,
                     wPathfinding->PathfindingDecoratorDeviationY});
         mJpsSubmitted = true;
-        mTime = 0;
+        mRepathTimer = 0.0f;
         LOGD("NPCGOBT::DoChase() JPS寻路已提交 | 起点=(%d,%d) → 终点=(%d,%d)",
              (int)pos.x, (int)pos.y, clampedTarget.x, clampedTarget.y);
         return gobot::Status::Running;
@@ -1053,11 +1134,10 @@ gobot::Status NPCGOBT::DoChase(gobot::Context& ctx)
 }
 
 // --- 攻击（距离保持 + 侧向走位 + 距离自适应瞄准误差） ---
-gobot::Status NPCGOBT::DoAttack(gobot::Context& ctx)
+gobot::Status NPCGOBT::DoAttack(gobot::Context&)
 {
-    if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
-        mNPC->GetMovement()->SetMode(MovementMode::Controlled);
-    }
+    // ctx 未使用：感官/世界状态都由本类成员维护
+    EnsureControlled();
 
     int flags = GetSensoryMessages();
     bool visible = (flags & SensoryMessages_Visible) != 0;
@@ -1078,12 +1158,19 @@ gobot::Status NPCGOBT::DoAttack(gobot::Context& ctx)
         return gobot::Status::Failure;
     }
 
-    // 朝向玩家（身体平滑转向）
-    mNPC->GetMovement()->SetLookAngle(wanjiaAngle);
+    // 朝向已知目标（身体平滑转向）：可见 → 实时方位；不可见 → 最后目击方位。
+    // ★ 绝不朝真值转向：看不见时 wanjiaAngle 指的是玩家实时方位（隔墙也知道）
+    const float knownAngle = visible ? wanjiaAngle
+                                     : (mLastKnownValid ? mLastKnownPlayerAngle
+                                                        : mNPC->GetObjectCollision()->angle);
+    mNPC->GetMovement()->SetLookAngle(knownAngle);
 
     glm::vec2 pos = mNPC->GetObjectCollision()->pos;
-    glm::vec2 toPlayer = glm::vec2{Global::GamePlayerX - pos.x, Global::GamePlayerY - pos.y};
-    float dist = mPlayerDistance;
+    // ★ 走位与瞄准同样只依据"已知信息"：可见 → 玩家真值；不可见 → 最后目击位置
+    glm::vec2 knownPos = visible ? glm::vec2{Global::GamePlayerX, Global::GamePlayerY}
+                                 : (mLastKnownValid ? mLastKnownPlayerPos : pos);
+    glm::vec2 toPlayer = knownPos - pos;
+    float dist = glm::length(toPlayer);
     glm::vec2 moveDir = dist > 0.001f ? toPlayer / dist : glm::vec2{1.0f, 0.0f};
 
     if (dist < kIdealAttackDist - 15.0f) {
@@ -1112,16 +1199,16 @@ gobot::Status NPCGOBT::DoAttack(gobot::Context& ctx)
     }
 
     // ============================================================
-    // 射击：朝玩家实时方位（wanjiaAngle）瞄准，不等身体转完
+    // 射击：朝"已知方位"瞄准（可见 → 实时方位；宽限内 → 最后目击方位），不等身体转完
     //  - 炮口沿开火方向偏移 12（>坦克对角半径），任何朝向都不会打中自己
-    //  - 仅看得见时开火（丢失视野宽限内朝最后方位压制）
+    //  - 仅看得见时开火；丢失视野宽限内朝最后目击方位压制（绝不朝玩家实时坐标开火）
     // ============================================================
     mShootCooldown -= FPSTime;
     if (mShootCooldown <= 0.0f) {
         mShootCooldown = mShootInterval;
         float dynamicError = 0.05f + (dist / (float)ChaseRange) * 0.10f;
-        float aimError = ((rand() % 1000) / 1000.0f - 0.5f) * 2.0f * dynamicError;
-        float fireAngle = wanjiaAngle + aimError;
+        float aimError = (Rand01() - 0.5f) * 2.0f * dynamicError;
+        float fireAngle = knownAngle + aimError;
         glm::vec2 shootPos = pos + PhysicsBlock::vec2angle(
             glm::vec2{kMuzzleOffset, 0.0f}, fireAngle);
         LOGD("NPCGOBT::DoAttack() 射击! 距离=%.1f 可见=%s 开火角=%.3f(误差=%.3f)",
@@ -1133,43 +1220,53 @@ gobot::Status NPCGOBT::DoAttack(gobot::Context& ctx)
 }
 
 // --- 受伤恢复（硬直；Effect 将 injury_recovered=true，满足 Survive） ---
-gobot::Status NPCGOBT::DoInjury(gobot::Context& ctx)
+gobot::Status NPCGOBT::DoInjury(gobot::Context&)
 {
+    // 本状态自持计时（原为全局 mTime，被 DoPatrol/DoChase/DoFlee 等归零而互相干扰）
+    mInjuryTimer += FPSTime;
+
     // 新伤害刷新硬直计时（连续受击 → 硬直重新计时）
     if (mNPC->mPixelQueue->GetNumber() > 0) {
-        mTime = 0.0f;
+        mInjuryTimer = 0.0f;
         injuryEntered_ = true;
     }
 
     // 首次进入：重置计时器
     if (!injuryEntered_) {
-        mTime = 0.0f;
+        mInjuryTimer = 0.0f;
         injuryEntered_ = true;
         LOGD("NPCGOBT::DoInjury() 首次进入受伤状态, 计时器重置");
     }
 
-    // 硬直：冻结移动，仍可转向朝向攻击者
+    // 硬直：冻结移动，仍可转向朝向攻击者（不可见时只能朝最后目击方位）
     mNPC->GetMovement()->SetMode(MovementMode::Frozen);
-    mNPC->GetMovement()->SetLookAngle(wanjiaAngle);
+    if ((GetSensoryMessages() & SensoryMessages_Visible) != 0) {
+        mNPC->GetMovement()->SetLookAngle(wanjiaAngle);
+    } else if (mLastKnownValid) {
+        mNPC->GetMovement()->SetLookAngle(mLastKnownPlayerAngle);
+    }
 
     // 1.0s 硬直后恢复
-    if (mTime > 1.0f) {
+    if (mInjuryTimer > 1.0f) {
         injuryEntered_ = false;
-        LOGD("NPCGOBT::DoInjury() 硬直结束(mTime=%.2f>1.0) → Success, 恢复行动", mTime);
+        LOGD("NPCGOBT::DoInjury() 硬直结束(%.2fs>1.0) → Success, 恢复行动", mInjuryTimer);
         return gobot::Status::Success;
     }
     return gobot::Status::Running;
 }
 
 // --- 后撤（SelfPreserve：受伤后与敌人拉开距离） ---
-gobot::Status NPCGOBT::DoFlee(gobot::Context& ctx)
+gobot::Status NPCGOBT::DoFlee(gobot::Context&)
 {
-    if (mNPC->GetMovement()->GetMode() != MovementMode::Ragdoll) {
-        mNPC->GetMovement()->SetMode(MovementMode::Controlled);
-    }
+    // ctx 未使用：感官/世界状态都由本类成员维护
+    EnsureControlled();
 
     glm::vec2 pos = mNPC->GetObjectCollision()->pos;
-    glm::vec2 away{pos.x - Global::GamePlayerX, pos.y - Global::GamePlayerY};
+    // 后撤方向 = 远离"已知目标位置"（可见 → 真值；不可见 → 最后目击位置；都没有 → 保持原方向）
+    glm::vec2 knownPos = (GetSensoryMessages() & SensoryMessages_Visible) != 0
+                             ? glm::vec2{Global::GamePlayerX, Global::GamePlayerY}
+                             : (mLastKnownValid ? mLastKnownPlayerPos : pos);
+    glm::vec2 away{pos.x - knownPos.x, pos.y - knownPos.y};
     float awayLen = glm::length(away);
     glm::vec2 baseDir = awayLen > 0.001f ? away / awayLen : qianjinfang;
 
@@ -1219,12 +1316,37 @@ void NPCGOBT::SetNPC(int x, int y, float angle)
     LOGD("NPCGOBT::SetNPC() 设置NPC位置=(%d,%d) 角度=%.3f", x, y, angle);
     mNPC->GetObjectCollision()->pos = Vec2_{static_cast<FLOAT_>(x), static_cast<FLOAT_>(y)};
     mNPC->GetObjectCollision()->angle = angle;
+
+    // ★ 传送/重生：清空一切绑定"旧位置"的残留状态。
+    //   旧实现只改坐标，旧路径、旧交战状态、旧目击记录都会跟到新位置，
+    //   表现为瞬移后继续沿旧路径行走 / 隔半张地图保持仇恨。
+    ClearPathSafe();
+    mNPC->GetMovement()->SetMoveInput(Vec2_{0.0f, 0.0f});
+    mPathfindWait = 0.0f;
+    mRepathTimer = 0.0f;
+
+    mPatrolState = PATROL_IDLE;
+    mPatrolEntered = false;
+    mPatrolFailedCount = 0;
+    mStandbyEntered = false;
+    injuryEntered_ = false;
+
+    mEngaged = false;
+    mVisibleLatched = false;
+    mInRangeLatched = false;
+    mPlayerLostTime = 0.0f;
+    mSuspicious = false;
+    mSuspiciousTimer = 0.0f;
+    mInvestigating = false;
+    mSearching = false;
+    mLastKnownValid = false;
+    mRecentlyHurtTimer = 0.0f;
+
     mNPC->setGamePlayerMatrix(3, true);
 }
 
 void NPCGOBT::Event(int Frame, float time)
 {
-    mTime += time;
     FPSTime = time;
     mFrameCounter++;
 

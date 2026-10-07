@@ -189,7 +189,15 @@ namespace GAME {
 
 			mCommandBuffer[i]->bindVertexBuffer({ mPixelPosition->getBuffer(), mSequentialIndex->getBuffer() });//获取顶点数据，UV值
 			mCommandBuffer[i]->bindDescriptorSet(wPipeline->getLayout(), mDescriptorSet->getDescriptorSet(i));//获得 模型位置数据， 贴图数据，……
-			mCommandBuffer[i]->draw(Quantity);//获取绘画物体的顶点个数
+
+			if (wPipeline->mQuadExpansionByVertexShader) {
+				//没有几何着色器（CPU 软件设备）：顶点缓冲按实例步进，每个实例画 4 个顶点组成方块
+				mCommandBuffer[i]->draw(4, Quantity);
+			}
+			else {
+				//有几何着色器：每个单元格是一个点，由几何着色器展开成方块
+				mCommandBuffer[i]->draw(Quantity);//获取绘画物体的顶点个数
+			}
 
 			mCommandBuffer[i]->end();
 		}

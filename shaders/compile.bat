@@ -36,11 +36,16 @@ mkdir "%OUTPUT_DIR%" 2>nul
 "%GLSLANG%" -V "%SCRIPT_DIR%SpotShader.vert" -o "%OUTPUT_DIR%/SpotShaderV.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%SpotShader.frag" -o "%OUTPUT_DIR%/SpotShaderF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%SpotNormal.geom" -o "%OUTPUT_DIR%/SpotNormal.spv"
+REM Fallback without geometry shader (CPU software device / SwiftShader): quad expansion in vertex shader
+"%GLSLANG%" -V "%SCRIPT_DIR%SpotShaderQuad.vert" -o "%OUTPUT_DIR%/SpotShaderQuadV.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%DamagePrompt.vert" -o "%OUTPUT_DIR%/DamagePromptV.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%DamagePrompt.frag" -o "%OUTPUT_DIR%/DamagePromptF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagram.vert" -o "%OUTPUT_DIR%/UVDynamicDiagramV.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagram.frag" -o "%OUTPUT_DIR%/UVDynamicDiagramF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagram.geom" -o "%OUTPUT_DIR%/UVDynamicDiagramG.spv"
+REM Fallback without geometry shader (CPU software device / SwiftShader): quad expansion in vertex shader
+"%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagramQuad.vert" -o "%OUTPUT_DIR%/UVDynamicDiagramQuadV.spv"
+"%GLSLANG%" -V "%SCRIPT_DIR%UVDynamicDiagramQuad.frag" -o "%OUTPUT_DIR%/UVDynamicDiagramQuadF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%BlockWorldShader.vert" -o "%OUTPUT_DIR%/BlockWorldShaderV.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%BlockWorldShader.frag" -o "%OUTPUT_DIR%/BlockWorldShaderF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%Background.comp" -o "%OUTPUT_DIR%/Background.spv"
@@ -48,6 +53,8 @@ mkdir "%OUTPUT_DIR%" 2>nul
 "%GLSLANG%" -V "%SCRIPT_DIR%CircleShader.vert" -o "%OUTPUT_DIR%/CircleShaderV.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%CircleShader.frag" -o "%OUTPUT_DIR%/CircleShaderF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%CircleNormal.geom" -o "%OUTPUT_DIR%/CircleNormal.spv"
+REM Fallback without geometry shader (CPU software device / SwiftShader): ring expansion in vertex shader
+"%GLSLANG%" -V "%SCRIPT_DIR%CircleShaderQuad.vert" -o "%OUTPUT_DIR%/CircleShaderQuadV.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%2D_GI.comp" -o "%OUTPUT_DIR%/2D_GI.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%RC_SDF.comp" -o "%OUTPUT_DIR%/RC_SDF.spv"
 "%GLSLANG%" -V "%SCRIPT_DIR%RC_Cascade.comp" -o "%OUTPUT_DIR%/RC_Cascade.spv"

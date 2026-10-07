@@ -193,7 +193,7 @@ namespace GAME {
 		ImGui_ImplAndroid_NewFrame();
 #endif
 		ImGui::NewFrame();
-		//mShaderTexture->CalculationScreen(TOOL::FPStime);
+		mShaderTexture->CalculationScreen(TOOL::FPStime);
 		switch (InterfaceIndexes)
 		{
 		case 0:

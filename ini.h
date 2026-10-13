@@ -459,7 +459,11 @@ namespace inih {
     template <typename T>
     inline void INIReader::InsertEntry(const std::string& section,
         const std::string& name, const T& v) {
-        if (_values[section][name].size() > 0) {
+        //必须用 find 判断键是否存在：空值（如 VulkanDeviceName=）是合法的键，
+        //用 size() 判断会把「值为空」误当成「键不存在」
+        const auto sectionIt = _values.find(section);
+        if (sectionIt != _values.end() &&
+            sectionIt->second.find(name) != sectionIt->second.end()) {
             throw std::runtime_error("duplicate key '" + std::string(name) +
                 "' in section '" + section + "'.");
         }
@@ -470,7 +474,10 @@ namespace inih {
     inline void INIReader::InsertEntry(const std::string& section,
         const std::string& name,
         const std::vector<T>& vs) {
-        if (_values[section][name].size() > 0) {
+        //同 InsertEntry：空值也是已存在的键，必须用 find 判断
+        const auto sectionIt = _values.find(section);
+        if (sectionIt != _values.end() &&
+            sectionIt->second.find(name) != sectionIt->second.end()) {
             throw std::runtime_error("duplicate key '" + std::string(name) +
                 "' in section '" + section + "'.");
         }
@@ -480,7 +487,12 @@ namespace inih {
     template <typename T>
     inline void INIReader::UpdateEntry(const std::string& section,
         const std::string& name, const T& v) {
-        if (!_values[section][name].size()) {
+        //必须用 find 判断键是否存在：值为空（如 VulkanDeviceName=）不代表键不存在。
+        //这正是 Android 黑屏的根因：Info.ini 里 VulkanDeviceName 为空，
+        //被误判成「键不存在」而抛异常，中断 initVulkan。
+        const auto sectionIt = _values.find(section);
+        if (sectionIt == _values.end() ||
+            sectionIt->second.find(name) == sectionIt->second.end()) {
             throw std::runtime_error("key '" + std::string(name) +
                 "' not exist in section '" + section + "'.");
         }
@@ -491,7 +503,10 @@ namespace inih {
     inline void INIReader::UpdateEntry(const std::string& section,
         const std::string& name,
         const std::vector<T>& vs) {
-        if (!_values[section][name].size()) {
+        //同 UpdateEntry：空值也是已存在的键，必须用 find 判断
+        const auto sectionIt = _values.find(section);
+        if (sectionIt == _values.end() ||
+            sectionIt->second.find(name) == sectionIt->second.end()) {
             throw std::runtime_error("key '" + std::string(name) +
                 "' not exist in section '" + section + "'.");
         }
@@ -547,7 +562,10 @@ namespace inih {
     inline int INIReader::ValueHandler(void* user, const char* section,
         const char* name, const char* value) {
         INIReader* reader = (INIReader*)user;
-        if (reader->_values[section][name].size() > 0) {
+        //同 InsertEntry/UpdateEntry：用 find 判断重复，空值也是已存在的键
+        const auto sectionIt = reader->_values.find(section);
+        if (sectionIt != reader->_values.end() &&
+            sectionIt->second.find(name) != sectionIt->second.end()) {
             throw std::runtime_error("duplicate key '" + std::string(name) +
                 "' in section '" + section + "'.");
         }

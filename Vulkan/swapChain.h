@@ -54,7 +54,16 @@ namespace VulKan {
 
 		[[nodiscard]] inline VkImageView getImageView(const int index) const { return mSwapChainImageViews[index]; }
 
-		[[nodiscard]] inline VkImageView getMutiSampleImageView(const int index) const { return mMutiSampleImages[index]->getImageView(); }
+		//设备不支持多重采样时 mMutiSampleImages[index] 为空指针，此处必须返回 VK_NULL_HANDLE，
+		//由调用方（创建 FrameBuffer 时）决定是否把它算进附件数组，否则会直接空指针崩溃。
+		[[nodiscard]] inline VkImageView getMutiSampleImageView(const int index) const {
+			return mMutiSampleImages[index] != nullptr ? mMutiSampleImages[index]->getImageView() : VK_NULL_HANDLE;
+		}
+
+		//是否存在多重采样中间图（即设备是否支持 MSAA）
+		[[nodiscard]] inline bool hasMutiSampleImages() const noexcept {
+			return !mMutiSampleImages.empty() && mMutiSampleImages[0] != nullptr;
+		}
 
 		[[nodiscard]] inline VkImageView getDepthImageView(const int index) const { return mDepthImages[index]->getImageView(); }
 

@@ -25,6 +25,12 @@ namespace VulKan {
 	//添加解决附件参考
 	void SubPass::setResolveAttachmentReference(const VkAttachmentReference& ref) {
 		mResolvedAttachmentReference = ref;
+		mHasResolveAttachment = true;
+	}
+	//取消解决附件参考（无多重采样时使用）
+	void SubPass::clearResolveAttachmentReference() {
+		mResolvedAttachmentReference = VkAttachmentReference{};
+		mHasResolveAttachment = false;
 	}
 	//构建子描述
 	void SubPass::buildSubPassDescription() {
@@ -40,7 +46,7 @@ namespace VulKan {
 		mSubPassDescription.inputAttachmentCount = static_cast<uint32_t>(mInputAttachmentReferences.size());
 		mSubPassDescription.pInputAttachments = mInputAttachmentReferences.data();
 
-		mSubPassDescription.pResolveAttachments = &mResolvedAttachmentReference;
+		mSubPassDescription.pResolveAttachments = mHasResolveAttachment ? &mResolvedAttachmentReference : nullptr;
 
 		mSubPassDescription.pDepthStencilAttachment = mDepthStencilAttachmentReference.layout == VK_IMAGE_LAYOUT_UNDEFINED? nullptr : &mDepthStencilAttachmentReference;
 	}
@@ -48,7 +54,7 @@ namespace VulKan {
 	void SubPass::rebuildSubPassDescriptionPointers() {
 		mSubPassDescription.pColorAttachments = mColorAttachmentReferences.data();
 		mSubPassDescription.pInputAttachments = mInputAttachmentReferences.data();
-		mSubPassDescription.pResolveAttachments = &mResolvedAttachmentReference;
+		mSubPassDescription.pResolveAttachments = mHasResolveAttachment ? &mResolvedAttachmentReference : nullptr;
 		mSubPassDescription.pDepthStencilAttachment = mDepthStencilAttachmentReference.layout == VK_IMAGE_LAYOUT_UNDEFINED ? nullptr : &mDepthStencilAttachmentReference;
 	}
 

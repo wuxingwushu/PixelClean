@@ -25,6 +25,8 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ScrollView
+import android.widget.TextView
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -65,6 +67,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private lateinit var containerLayout: FrameLayout    // 根容器
     private lateinit var surfaceView: SurfaceView        // 原生渲染表面
     private lateinit var controlOverlay: ControlOverlayView  // 触摸控制覆盖层（摇杆+按钮）
+    private var errorView: TextView? = null              // 初始化失败时的原因显示（否则只剩黑屏）
 
     // ------ 游戏模式同步状态 ------
     private val currentGameMode = AtomicInteger(-1)     // 缓存当前游戏模式 ID
@@ -95,6 +98,21 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             handleControlTouch(event)
         }
         containerLayout.addView(controlOverlay, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
+
+        // Step 3.5: 初始化失败提示层（默认隐藏）
+        // 引擎初始化失败时只会留下纯黑画面，用户无从判断原因；这里把原生侧记录的
+        // 真实错误显示出来，避免「黑屏且没有任何信息」。
+        errorView = TextView(this).apply {
+            setBackgroundColor(Color.parseColor("#E6000000"))
+            setTextColor(Color.WHITE)
+            textSize = 12f
+            setPadding(24, 96, 24, 24)
+            visibility = View.GONE
+        }
+        containerLayout.addView(errorView, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
         ))
@@ -509,8 +527,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         // ----- 前置初始化（仅执行一次） -----
         if (!nativeInitialized) {
-            extractAssets()              // 解压资源文件
-            nativeSetFilesDir(filesDir.absolutePath)  // 设置工作目录
+            // 解压资源文件，并把引擎工作目录指向**本次安装**的解压目录
+            val assetDir = extractAssets()
+            nativeSetFilesDir(assetDir.absolutePath)  // 设置工作目录
             nativeInitBeforeSurface()  // 引擎无窗口初始化
             nativeInitialized = true
         }
@@ -524,9 +543,15 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     nativeInitSurface(surface)   // 在独立线程中创建 GPU 上下文
                     surfaceInitialized = true
                     Log.d(TAG, "initSurface thread completed, starting render thread")
+                    // nativeInitSurface 失败不会抛异常给 Kotlin，必须主动查真实状态，
+                    // 否则 Vulkan 初始化失败时只会得到一块永久黑屏。
+                    if (!nativeIsSurfaceInitialized()) {
+                        showInitError("nativeInitSurface 未成功（GPU 上下文未就绪）")
+                    }
                     startRenderThread()          // 初始化完成后启动渲染循环
                 } catch (e: Exception) {
                     Log.e(TAG, "initSurface thread failed", e)
+                    showInitError("initSurface 线程异常: ${e.message}")
                 }
             }, "PixelClean-InitSurface").start()
         } else {
@@ -563,6 +588,44 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         nativeJoystickRelease()
     }
 
+    /**
+     * showInitError - 显示引擎初始化失败的真实原因
+     *
+     * 引擎初始化失败时（Vulkan/交换链/着色器等），native 层只会停止渲染，
+     * 表现为纯黑屏且没有任何提示。本函数把原生侧记录的致命错误取出并显示，
+     * 让「黑屏」变成可诊断的信息。
+     *
+     * @param stage 失败发生的阶段描述（Kotlin 侧已知的上下文）
+     */
+    private fun showInitError(stage: String) {
+        val nativeError = try {
+            nativeGetLastError()
+        } catch (e: Exception) {
+            "(读取原生错误失败: ${e.message})"
+        }
+
+        val message = buildString {
+            append("引擎初始化失败\n\n")
+            append("阶段: ").append(stage).append("\n\n")
+            if (nativeError.isNotEmpty()) {
+                append("原生错误: ").append(nativeError).append("\n\n")
+            }
+            append("完整日志:\n")
+            append("  adb logcat -s PixelCleanNative\n")
+            append("  adb logcat -s PixelCleanVulkan\n")
+            append("文件日志: filesDir/Logs/InitError.txt")
+        }
+
+        Log.e(TAG, "showInitError: $stage | native=$nativeError")
+
+        runOnUiThread {
+            errorView?.apply {
+                text = message
+                visibility = View.VISIBLE
+            }
+        }
+    }
+
     // ========================================================================
     // 资源解压
     // ========================================================================
@@ -572,26 +635,49 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
      *
      * 原因：Android APK 中的 assets 文件无法直接通过文件路径访问，
      * C++ 引擎需要通过文件系统路径读取资源（纹理、模型、配置等）。
-     * 通过检查 filesDir/Info.ini 是否存在来判断是否已解压，避免重复操作。
-     * 使用 synchronized 防止并发解压导致文件冲突。
+     *
+     * 关键：解压目标必须是「本次安装」的独立目录，绝不能复用旧安装的解压结果。
+     * 早期实现用 filesDir/Info.ini 是否存在来判断，导致重新编译安装后
+     * 手机里仍是**第一次安装时**解压的旧 shader / 纹理 —— 新版引擎去加载
+     * 新增的 shader（如 4 个 Quad 回退着色器）时直接抛
+     * "failed to open shader file"，表现就是全黑且无声音。
+     * 现在用 APK 的 lastUpdateTime 作为目录标识：只要重新安装（哪怕 versionCode
+     * 没变）就一定是新目录，必然重新解压，无需人工改版本号。
      */
     @Synchronized
-    private fun extractAssets() {
-        val checkFile = File(filesDir, "Info.ini")
+    private fun extractAssets(): File {
+        // 每次安装都会变的时间戳；用它当目录名可以彻底避免读到旧资源
+        val installStamp = try {
+            packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+        } catch (e: Exception) {
+            Log.w(TAG, "getPackageInfo failed, fallback to versionCode", e)
+            BuildConfig.VERSION_CODE.toLong()
+        }
+        val assetDir = File(filesDir, "assets_$installStamp")
+        val checkFile = File(assetDir, "Info.ini")
+
         if (checkFile.exists() && checkFile.isFile) {
-            Log.d(TAG, "Assets already extracted (Info.ini exists), skipping")
-            return
+            Log.d(TAG, "Assets already extracted to ${assetDir.name}")
+            return assetDir
         }
-        if (checkFile.isDirectory) {
-            checkFile.deleteRecursively()
-        }
-        Log.d(TAG, "Extracting assets to ${filesDir.absolutePath}...")
+
+        Log.d(TAG, "Extracting assets to ${assetDir.absolutePath}...")
         try {
-            copyAssetDir("", filesDir)
+            // 清掉本次安装的残留（上次解压中断）以及所有其它安装留下的目录，避免占用手机存储
+            if (assetDir.exists()) assetDir.deleteRecursively()
+            assetDir.mkdirs()
+            filesDir.listFiles()?.forEach { child ->
+                if (child.isDirectory && child.name.startsWith("assets_") && child.name != assetDir.name) {
+                    Log.d(TAG, "Removing stale asset dir: ${child.name}")
+                    child.deleteRecursively()
+                }
+            }
+            copyAssetDir("", assetDir)
             Log.d(TAG, "Assets extracted successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to extract assets", e)
         }
+        return assetDir
     }
 
     /**
@@ -1143,6 +1229,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private external fun nativeGetGameMode(): Int                             // 获取游戏模式
     private external fun nativeIsInGame(): Boolean                             // 是否在游戏中
     private external fun nativeMouseScroll(delta: Int)                        // 鼠标滚轮
+    private external fun nativeGetLastError(): String                         // 最近一次致命初始化错误
+    private external fun nativeIsSurfaceInitialized(): Boolean                // GPU 上下文是否真正就绪
 
     companion object {
         /**

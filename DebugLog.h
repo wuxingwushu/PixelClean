@@ -1,5 +1,14 @@
 #pragma once
-#define PIXEL_ENABLE_LOG 0
+
+// Android 上 logcat 是免费的诊断通道，而初始化失败的表现是「纯黑屏、无声音、
+// 无任何提示」，用户无从判断原因。因此 Android 侧默认开启日志，把真实的失败
+// 点打到 logcat（tag: PixelClean）。其他平台保持关闭，避免刷屏。
+// 排查结束后如需关闭，把下面的 1 改回 0 即可。
+#if defined(__ANDROID__)
+    #define PIXEL_ENABLE_LOG 1
+#else
+    #define PIXEL_ENABLE_LOG 0
+#endif
 
 #if PIXEL_ENABLE_LOG
 

@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.PathSensitivity
+
 plugins {
     alias(libs.plugins.android.application)
 }
@@ -123,6 +125,12 @@ val compileShaders by tasks.registering(Exec::class) {
     val shaderDir = file("${sourceRoot}/shaders")
     val compileScript = file("${shaderDir}/compile.bat")
     val outputDir = spvOutputDir.get().asFile
+
+    //声明输入，否则 Gradle 只凭 outputs 判定 UP-TO-DATE，
+    //导致 compile.bat 里新增的着色器永远不会被重新编译（曾漏掉 4 个 Quad 回退着色器）
+    inputs.dir(shaderDir).withPropertyName("shaderSources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(compileScript).withPropertyName("compileScript")
 
     outputs.dir(outputDir)
 

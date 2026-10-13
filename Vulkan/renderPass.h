@@ -24,6 +24,9 @@ namespace VulKan {
 		void addInputAttachmentReference(const VkAttachmentReference& ref);
 		void setDepthStencilAttachmentReference(const VkAttachmentReference& ref);
 		void setResolveAttachmentReference(const VkAttachmentReference& ref);
+		//不使用多重采样时，必须彻底取消 Resolve 附件；否则 pResolveAttachments 会指向
+		//一个 0 号附件的残留引用，vkCreateRenderPass 直接失败。
+		void clearResolveAttachmentReference();
 		void buildSubPassDescription();
 
 		void rebuildSubPassDescriptionPointers();
@@ -36,6 +39,7 @@ namespace VulKan {
 		std::vector<VkAttachmentReference> mInputAttachmentReferences{};
 		VkAttachmentReference mDepthStencilAttachmentReference{};
 		VkAttachmentReference mResolvedAttachmentReference{};
+		bool mHasResolveAttachment{ true };
 	};
 
 

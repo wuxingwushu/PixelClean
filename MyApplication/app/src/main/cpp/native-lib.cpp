@@ -14,12 +14,58 @@
 #include "application.h"
 
 #include <unistd.h>
+#include <sys/stat.h>
 #include <cerrno>
 #include <cmath>
 #include <mutex>
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <cstdio>
+#include <string>
+
+// ----------------------------------------------------------------------------
+// PC_NATIVE_LOG - 不受 PIXEL_ENABLE_LOG 影响的诊断通道
+//
+// DebugLog.h 里 PIXEL_ENABLE_LOG 为 0 时，LOGE/LOGW 等全部展开成 ((void)0)，
+// 于是「初始化失败」这一类最关键的信息在 logcat 里完全消失：表现为纯黑屏且
+// 无任何线索。这里直连 __android_log_print，保证错误一定可见。
+// 查看方式：adb logcat -s PixelCleanNative
+// ----------------------------------------------------------------------------
+#if defined(__ANDROID__)
+#include <android/log.h>
+#define PC_NATIVE_TAG "PixelCleanNative"
+#define PC_NATIVE_LOG(...) __android_log_print(ANDROID_LOG_ERROR, PC_NATIVE_TAG, __VA_ARGS__)
+#else
+#define PC_NATIVE_LOG(...) do { fprintf(stderr, "[PixelCleanNative] "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while (0)
+#endif
+
+// 最近一次致命错误，供 Kotlin 侧轮询显示（避免黑屏时用户毫无反馈）。
+static std::string gLastError;
+static std::mutex gLastErrorMutex;
+
+// 把错误同时写进 logcat 和 filesDir/Logs/InitError.txt（工作目录已 chdir 到 filesDir），
+// 这样即使设备无法连 adb，也能在应用私有目录里找到原因。
+static void reportFatalError(const char* stage, const char* detail) {
+    PC_NATIVE_LOG("[%s] %s", stage, detail ? detail : "(null)");
+
+    {
+        std::lock_guard<std::mutex> lock(gLastErrorMutex);
+        gLastError = std::string(stage) + ": " + (detail ? detail : "(null)");
+    }
+
+    FILE* fp = fopen("Logs/InitError.txt", "ab+");
+    if (!fp) {
+        // 早期失败时 InitSpdLog 可能还没建 Logs 目录，这里补建一次再写。
+        ::mkdir("Logs", 0755);
+        fp = fopen("Logs/InitError.txt", "ab+");
+    }
+    if (fp) {
+        fprintf(fp, "[%s] %s\n", stage, detail ? detail : "(null)");
+        fflush(fp);
+        fclose(fp);
+    }
+}
 
 // ----------------------------------------------------------------------------
 // JNI_OnLoad - Java VM 加载原生库时的入口点
@@ -187,8 +233,14 @@ Java_com_pixelclean_MainActivity_nativeInitBeforeSurface(
         LOGI("PixelClean Android native init complete (before surface)");
     } catch (const std::exception& e) {
         LOGE("nativeInitBeforeSurface exception: %s", e.what());
+        reportFatalError("nativeInitBeforeSurface", e.what());
+        gApplication = nullptr;
+        gInitialized = false;
     } catch (...) {
         LOGE("nativeInitBeforeSurface unknown exception");
+        reportFatalError("nativeInitBeforeSurface", "unknown exception");
+        gApplication = nullptr;
+        gInitialized = false;
     }
 }
 
@@ -237,9 +289,11 @@ Java_com_pixelclean_MainActivity_nativeInitSurface(
     try {
         gApplication->initAfterSurface(window);
         gSurfaceInitialized = true;
+        PC_NATIVE_LOG("initAfterSurface SUCCESS (%dx%d)", w, h);
     } catch (const std::exception& e) {
         LOGE("initAfterSurface failed: %s", e.what());
         if (TOOL::Error) TOOL::Error->error(e.what());
+        reportFatalError("initAfterSurface", e.what());
         releaseNativeWindow();
         gSurfaceInitialized = false;
 
@@ -249,6 +303,7 @@ Java_com_pixelclean_MainActivity_nativeInitSurface(
         gInitialized = false;
     } catch (...) {
         LOGE("initAfterSurface failed: unknown exception");
+        reportFatalError("initAfterSurface", "unknown exception");
         releaseNativeWindow();
         gSurfaceInitialized = false;
 
@@ -602,4 +657,35 @@ Java_com_pixelclean_MainActivity_nativeRequestExit(
         gApplication->mWindow->setShouldClose(true);
         LOGD("nativeRequestExit: shouldClose flag set");
     }
+}
+
+// ----------------------------------------------------------------------------
+// nativeGetLastError - 取出最近一次致命初始化错误（供 UI 显示）
+//
+// 初始化失败时引擎只会停在黑屏，用户看不到任何原因。Kotlin 侧轮询本函数即可
+// 把真实原因显示出来。返回空串表示当前没有记录到错误。
+// ----------------------------------------------------------------------------
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_pixelclean_MainActivity_nativeGetLastError(
+    JNIEnv* env,
+    jobject /* this */) {
+
+    std::lock_guard<std::mutex> lock(gLastErrorMutex);
+    return env->NewStringUTF(gLastError.c_str());
+}
+
+// ----------------------------------------------------------------------------
+// nativeIsSurfaceInitialized - 查询 GPU 上下文是否真正初始化成功
+//
+// Kotlin 侧的 surfaceInitialized 变量只代表「线程跑完了」，不代表 Vulkan
+// 初始化成功（nativeInitSurface 失败不会抛给 Kotlin）。轮询本函数才能知道
+// 引擎是否真的可以渲染，从而把失败原因暴露出来而不是静静黑屏。
+// ----------------------------------------------------------------------------
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_pixelclean_MainActivity_nativeIsSurfaceInitialized(
+    JNIEnv* env,
+    jobject /* this */) {
+
+    return (gApplication != nullptr && gSurfaceInitialized && gApplication->isInitialized())
+        ? JNI_TRUE : JNI_FALSE;
 }

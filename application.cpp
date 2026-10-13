@@ -12,6 +12,11 @@
 #define VK_API_VERSION_1_1 VK_MAKE_API_VERSION(0, 1, 1, 0)
 #endif
 
+//instance.cpp 中的致命诊断输出（不受 PIXEL_ENABLE_LOG 影响），在此复用。
+//VulkanDiag 是可变参数函数，转发调用不需要 <cstdarg>。
+namespace VulKan {
+	void VulkanDiag(const char* fmt, ...);
+}
 
 namespace GAME {
 
@@ -150,7 +155,13 @@ namespace GAME {
 		mInstance = new VulKan::Instance(Global::VulKanValidationLayer);//实列化需要的VulKan功能APi
 		if (Global::VulKanValidationLayer && !mInstance->getEnableValidationLayer()) {//如果设备不支持，强制性修改设置信息，关闭验证层
 			Global::VulKanValidationLayer = false;
-			Global::Storage();
+			//回写配置失败（磁盘只读、ini 键缺失等）绝不能中断渲染初始化：
+			//这里曾经因为 Storage() 抛异常导致整个 initVulkan 失败 → 黑屏且无声。
+			try {
+				Global::Storage();
+			} catch (const std::exception& e) {
+				LOGE("initVulkan: Global::Storage() failed (ignored): %s", e.what());
+			}
 		}
 		mWindowSurface = new VulKan::WindowSurface(mInstance, mWindow);//获取你在什么平台运行调用不同的API（比如：Window，Android）
 		mDevice = new VulKan::Device(mInstance, mWindowSurface);//获取电脑的硬件设备，vma内存分配器 也在这里被创建了
@@ -183,11 +194,13 @@ namespace GAME {
 
 		mImGuiLoadFrameBuffers.resize(mSwapChain->getImageCount());
 		for (uint32_t i = 0; i < mSwapChain->getImageCount(); ++i) {
-			std::array<VkImageView, 3> attachments = {
-				mSwapChain->getImageView(i),
-				mSwapChain->getMutiSampleImageView(i),
-				mSwapChain->getDepthImageView(i)
-			};
+			//附件顺序必须与 mImGuiLoadRenderPass 的 attachment 顺序一致
+			std::vector<VkImageView> attachments{};
+			attachments.push_back(mSwapChain->getImageView(i));
+			if (mSwapChain->hasMutiSampleImages()) {
+				attachments.push_back(mSwapChain->getMutiSampleImageView(i));
+			}
+			attachments.push_back(mSwapChain->getDepthImageView(i));
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			framebufferInfo.renderPass = mImGuiLoadRenderPass->getRenderPass();
@@ -284,6 +297,11 @@ namespace GAME {
 		//0：最终输出图片 1：Resolve图片（MutiSample） 2：Depth图片
 
 		//0号位：是SwapChain原来那张图片，是Resolve的目标点，即需要设置到SubPass的Resolve当中
+		//设备可能完全不支持多重采样（framebufferColorSampleCounts 只有 1x，软件渲染器常见），
+		//此时不能再用「MSAA 图 -> Resolve 到交换链图」的结构，否则 MSAA 图为空指针会直接崩溃。
+		const VkSampleCountFlagBits sampleCount = mDevice->getMaxUsableSampleCount();
+		const bool useMSAA = (sampleCount != VK_SAMPLE_COUNT_1_BIT);
+
 		VkAttachmentDescription finalAttachmentDes{};
 		finalAttachmentDes.format = mSwapChain->getFormat();//获取图片格式
 		finalAttachmentDes.samples = VK_SAMPLE_COUNT_1_BIT;//采样
@@ -297,23 +315,28 @@ namespace GAME {
 		mRenderPass->addAttachment(finalAttachmentDes);
 
 		//1号位：被Resolve的图片，即多重采样的源头图片，也即颜色输出的目标图片
+		//只有在设备支持多重采样时才需要这一张中间图；不支持时 0 号位直接充当颜色输出目标。
 		VkAttachmentDescription MutiAttachmentDes{};
-		MutiAttachmentDes.format = mSwapChain->getFormat();
-		MutiAttachmentDes.samples = mDevice->getMaxUsableSampleCount();
-		MutiAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		MutiAttachmentDes.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		MutiAttachmentDes.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		MutiAttachmentDes.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		MutiAttachmentDes.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		MutiAttachmentDes.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		if (useMSAA) {
+			MutiAttachmentDes.format = mSwapChain->getFormat();
+			MutiAttachmentDes.samples = sampleCount;
+			MutiAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			MutiAttachmentDes.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			MutiAttachmentDes.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			MutiAttachmentDes.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			MutiAttachmentDes.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			MutiAttachmentDes.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		mRenderPass->addAttachment(MutiAttachmentDes);
+			mRenderPass->addAttachment(MutiAttachmentDes);
+		}
 
+		//深度附件的索引：有 MSAA 中间图时是 2，否则是 1
+		const uint32_t depthAttachmentIndex = useMSAA ? 2u : 1u;
 
 		//2号位：深度缓存attachment
 		VkAttachmentDescription depthAttachmentDes{};
 		depthAttachmentDes.format = VulKan::Image::findDepthFormat(mDevice);
-		depthAttachmentDes.samples = mDevice->getMaxUsableSampleCount();
+		depthAttachmentDes.samples = sampleCount;
 		depthAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		depthAttachmentDes.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		depthAttachmentDes.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -333,14 +356,22 @@ namespace GAME {
 		mutiAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentReference depthAttachmentRef{};
-		depthAttachmentRef.attachment = 2;
+		depthAttachmentRef.attachment = depthAttachmentIndex;
 		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		//创建子流程
 		VulKan::SubPass subPass{};
-		subPass.addColorAttachmentReference(mutiAttachmentRef);
+		if (useMSAA) {
+			//颜色先写入多重采样图(1)，再由 Resolve 落到交换链图(0)
+			subPass.addColorAttachmentReference(mutiAttachmentRef);
+			subPass.setResolveAttachmentReference(finalAttachmentRef);
+		}
+		else {
+			//没有多重采样：直接渲染到交换链图(0)，且绝不能留下 Resolve 引用
+			subPass.addColorAttachmentReference(finalAttachmentRef);
+			subPass.clearResolveAttachmentReference();
+		}
 		subPass.setDepthStencilAttachmentReference(depthAttachmentRef);
-		subPass.setResolveAttachmentReference(finalAttachmentRef);
 
 		subPass.buildSubPassDescription();
 
@@ -362,8 +393,10 @@ namespace GAME {
 		VkAttachmentDescription imguiFinalAttachmentDes = finalAttachmentDes;
 		imguiFinalAttachmentDes.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		mImGuuiRenderPass->addAttachment(imguiFinalAttachmentDes);
-		MutiAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		mImGuuiRenderPass->addAttachment(MutiAttachmentDes);
+		if (useMSAA) {
+			MutiAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			mImGuuiRenderPass->addAttachment(MutiAttachmentDes);
+		}
 		mImGuuiRenderPass->addAttachment(depthAttachmentDes);
 		mImGuuiRenderPass->addSubPass(subPass);
 		mImGuuiRenderPass->addDependency(dependency);
@@ -374,16 +407,18 @@ namespace GAME {
 		loadFinalAttachmentDes.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		mImGuiLoadRenderPass->addAttachment(loadFinalAttachmentDes);
 
-		VkAttachmentDescription loadMutiAttachmentDes{};
-		loadMutiAttachmentDes.format = mSwapChain->getFormat();
-		loadMutiAttachmentDes.samples = mDevice->getMaxUsableSampleCount();
-		loadMutiAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		loadMutiAttachmentDes.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		loadMutiAttachmentDes.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		loadMutiAttachmentDes.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		loadMutiAttachmentDes.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		loadMutiAttachmentDes.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		mImGuiLoadRenderPass->addAttachment(loadMutiAttachmentDes);
+		if (useMSAA) {
+			VkAttachmentDescription loadMutiAttachmentDes{};
+			loadMutiAttachmentDes.format = mSwapChain->getFormat();
+			loadMutiAttachmentDes.samples = sampleCount;
+			loadMutiAttachmentDes.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			loadMutiAttachmentDes.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			loadMutiAttachmentDes.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			loadMutiAttachmentDes.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			loadMutiAttachmentDes.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			loadMutiAttachmentDes.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			mImGuiLoadRenderPass->addAttachment(loadMutiAttachmentDes);
+		}
 
 		mImGuiLoadRenderPass->addAttachment(depthAttachmentDes);
 		mImGuiLoadRenderPass->addSubPass(subPass);
@@ -418,15 +453,20 @@ namespace GAME {
 		renderBeginInfo.renderArea.offset = { 0, 0 };//画布从哪里开始画
 		renderBeginInfo.renderArea.extent = mSwapChain->getExtent();//画到哪里结束
 
-		//0：final   1：muti   2：depth
+		//clearValues 的个数与顺序必须和 RenderPass 的附件描述严格对应：
+		//支持多重采样时是 0：final 1：muti 2：depth，不支持时是 0：final 1：depth。
+		const bool useMSAA = mSwapChain->hasMutiSampleImages();
+
 		std::vector< VkClearValue> clearColors{};//在使用画布前，用什么颜色清理他，
 		VkClearValue finalClearColor{};
 		finalClearColor.color = { 1.0f, 1.0f, 1.0f, 1.0f };
 		clearColors.push_back(finalClearColor);
 
-		VkClearValue mutiClearColor{};
-		mutiClearColor.color = { 0.0f, 0.0f, 0.0f, 1.0f };
-		clearColors.push_back(mutiClearColor);
+		if (useMSAA) {
+			VkClearValue mutiClearColor{};
+			mutiClearColor.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			clearColors.push_back(mutiClearColor);
+		}
 
 		VkClearValue depthClearColor{};
 		depthClearColor.depthStencil = { 1.0f, 0 };
@@ -472,9 +512,12 @@ namespace GAME {
 			VkClearValue imguiFinalClear{};
 			imguiFinalClear.color = { 0.0f, 0.0f, 0.0f, 1.0f };
 			imguiClearValues.push_back(imguiFinalClear);
-			VkClearValue imguiMutiClear{};
-			imguiMutiClear.color = { 0.0f, 0.0f, 0.0f, 1.0f };
-			imguiClearValues.push_back(imguiMutiClear);
+			//同样必须与 mImGuiLoadRenderPass 的附件个数对应：无多重采样时没有 MSAA 中间图
+			if (mSwapChain->hasMutiSampleImages()) {
+				VkClearValue imguiMutiClear{};
+				imguiMutiClear.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+				imguiClearValues.push_back(imguiMutiClear);
+			}
 			VkClearValue imguiDepthClear{};
 			imguiDepthClear.depthStencil = { 1.0f, 0 };
 			imguiClearValues.push_back(imguiDepthClear);
@@ -568,10 +611,30 @@ namespace GAME {
 #endif
 		vkDeviceWaitIdle(mDevice->getDevice());
 
+		//RenderPass 只依赖交换链格式与采样数，跟分辨率无关。而 ImGui 的管线是在 initImGui 里
+		//针对当时的 VkRenderPass 一次性创建的，如果这里无条件析构重建 RenderPass，
+		//ImGui 就会拿着已经销毁的 VkRenderPass 去绘制 —— 驱动崩溃（表现为画面出不来直接闪退）。
+		//所以只有格式真的变了才重建 RenderPass 与管线。
+		const VkFormat previousFormat = mSwapChain->getFormat();
+		const uint32_t previousImageCount = mSwapChain->getImageCount();
+
 		mSwapChain->~SwapChain();
 		mSwapChain->StructureSwapChain();
 		Global::mWidth = mSwapChain->getExtent().width;
 		Global::mHeight = mSwapChain->getExtent().height;
+
+		const bool formatChanged = (mSwapChain->getFormat() != previousFormat);
+		if (formatChanged) {
+			VulKan::VulkanDiag("[Vulkan] 交换链格式由 %d 变为 %d，重建 RenderPass 与管线\n",
+				(int)previousFormat, (int)mSwapChain->getFormat());
+		}
+		if (mSwapChain->getImageCount() != previousImageCount) {
+			//按 imageCount 分配的 mCommandBuffers / mCameraVPMatricesBuffer / 同步对象不会在这里重建
+			//（它们还被 ParticleWorld 的描述符集引用），一旦数量变化就会出现越界。
+			//正常同一 surface 上 minImageCount 是稳定的，这里只做告警以便真机上能立刻看出来。
+			VulKan::VulkanDiag("[Vulkan] 警告：交换链图像数由 %u 变为 %u，按图分配的资源未重建\n",
+				previousImageCount, mSwapChain->getImageCount());
+		}
 
 		for (auto& fb : mImGuiLoadFrameBuffers) {
 			if (fb != VK_NULL_HANDLE) {
@@ -581,19 +644,25 @@ namespace GAME {
 		}
 		mImGuiLoadFrameBuffers.clear();
 
-		mRenderPass->~RenderPass();
-		mImGuuiRenderPass->~RenderPass();
-		mImGuiLoadRenderPass->~RenderPass();
-		createRenderPass();
+		//RenderPass 只在格式变化时才重建：它只依赖交换链格式与采样数，与分辨率无关。
+		//若无条件析构重建，ImGui 管线（在 initImGui 里针对旧 VkRenderPass 创建）会拿着
+		//已销毁的句柄继续绘制 —— 表现为画面出不来、直接闪退。
+		if (formatChanged) {
+			mRenderPass->~RenderPass();
+			mImGuuiRenderPass->~RenderPass();
+			mImGuiLoadRenderPass->~RenderPass();
+			createRenderPass();
+		}
 		mSwapChain->createFrameBuffers(mRenderPass);
 
 		mImGuiLoadFrameBuffers.resize(mSwapChain->getImageCount());
 		for (uint32_t i = 0; i < mSwapChain->getImageCount(); ++i) {
-			std::array<VkImageView, 3> attachments = {
-				mSwapChain->getImageView(i),
-				mSwapChain->getMutiSampleImageView(i),
-				mSwapChain->getDepthImageView(i)
-			};
+			std::vector<VkImageView> attachments{};
+			attachments.push_back(mSwapChain->getImageView(i));
+			if (mSwapChain->hasMutiSampleImages()) {
+				attachments.push_back(mSwapChain->getMutiSampleImageView(i));
+			}
+			attachments.push_back(mSwapChain->getDepthImageView(i));
 			VkFramebufferCreateInfo fbInfo{};
 			fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			fbInfo.renderPass = mImGuiLoadRenderPass->getRenderPass();
@@ -954,9 +1023,26 @@ namespace GAME {
 
 		//由于驱动程序不一定精准，所以我们还需要用自己的标志位判断
 #if defined(__ANDROID__)
-		if (mWindow->mWindowResized) {
+		//Android 上以前只判 mWindowResized，完全忽略 vkQueuePresentKHR 的返回码，
+		//一旦交换链真正过期（旋转、分辨率变化、surface 重建）就会既不重建也不报错，表现为永久黑屏。
+		//注意：这里**不能**把 VK_SUBOPTIMAL_KHR 当作重建条件。Android 的 preTransform 被强制为
+		//IDENTITY（见 Vulkan/swapChain.cpp），驱动几乎每帧都会返回 SUBOPTIMAL_KHR；而
+		//recreateSwapChain() 会析构并重建交换链与三个 RenderPass，却不会同步重建
+		//mCommandBuffers / mCameraVPMatricesBuffer / mFences 这些按 imageCount 分配的数组，
+		//于是每帧重建会很快越界崩溃（表现为刚出声就闪退）。SUBOPTIMAL 只是「可以显示但非最优」，
+		//直接继续用当前交换链即可。
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || mWindow->mWindowResized) {
 			recreateSwapChain();
 			mWindow->mWindowResized = false;
+		}
+		else if (result == VK_SUBOPTIMAL_KHR) {
+			//图像仍然可用，不重建、不报错，继续呈现
+		}
+		else if (result != VK_SUCCESS) {
+			//不直接抛异常：Android 上抛出去会让整个 Application 被销毁，
+			//画面永久黑屏且没有任何提示；这里标记重建，下一帧自愈。
+			VulKan::VulkanDiag("[Vulkan] vkQueuePresentKHR 返回 %d，标记交换链重建\n", (int)result);
+			mWindow->mWindowResized = true;
 		}
 #else
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || mWindow->mWindowResized) {

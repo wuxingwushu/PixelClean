@@ -178,11 +178,14 @@ namespace VulKan {
 		//创建FrameBuffer
 		mSwapChainFrameBuffers.resize(mImageCount);
 		for (uint32_t i = 0; i < mImageCount; ++i) {
-			std::array<VkImageView, 3> attachments = { 
-				mSwapChainImageViews[i], 
-				mMutiSampleImages[i]->getImageView(),
-				mDepthImages[i]->getImageView() 
-			};
+			//附件顺序必须与 RenderPass 里的 attachment 描述顺序完全一致：
+			//支持多重采样时是 {交换链图, MSAA图, 深度图}，不支持时是 {交换链图, 深度图}。
+			std::vector<VkImageView> attachments{};
+			attachments.push_back(mSwapChainImageViews[i]);
+			if (hasMutiSampleImages()) {
+				attachments.push_back(mMutiSampleImages[i]->getImageView());
+			}
+			attachments.push_back(mDepthImages[i]->getImageView());
 
 			VkFramebufferCreateInfo frameBufferCreateInfo{};
 			frameBufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

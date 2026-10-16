@@ -1,0 +1,200 @@
+#include "PhysicsParticle3D.hpp"
+
+namespace PhysicsBlock3D
+{
+
+	/**
+	 * @brief 构造函数
+	 * @param Pos 粒子的初始位置
+	 * @param Mass 粒子的质量
+	 * @param Friction 摩擦因数
+	 * @details 初始化粒子的位置、质量、质量倒数和摩擦因数
+	 * 如果质量为 FLOAT_MAX，则质量倒数设为 0，表示粒子不可移动
+	 */
+	PhysicsParticle3D::PhysicsParticle3D(Vec3_ Pos, FLOAT_ Mass, FLOAT_ Friction)
+	    : OldPos(Pos), pos(Pos), mass(Mass), friction(Friction)
+	{
+		type = PhysicsObjectEnum::particle;
+		if (mass == FLOAT_MAX || mass <= FLOAT_(0))
+		{
+			invMass = 0;
+		}
+		else
+		{
+			invMass = FLOAT_(1.0) / mass;
+		}
+	}
+
+	/**
+	 * @brief 构造函数（无质量参数）
+	 * @param Pos 粒子的初始位置
+	 * @details 初始化粒子的位置，质量默认为 0
+	 * 此时粒子的质量倒数也为 0，表示粒子不可移动
+	 */
+	PhysicsParticle3D::PhysicsParticle3D(Vec3_ Pos) : OldPos(Pos), pos(Pos)
+	{
+		type = PhysicsObjectEnum::particle;
+	}
+
+	/**
+	 * @brief 析构函数
+	 */
+	PhysicsParticle3D::~PhysicsParticle3D()
+	{
+	}
+
+	/**
+	 * @brief 添加一个受力
+	 * @param Force 要添加的力向量
+	 * @details 如果粒子的质量倒数为 0（不可移动），则不添加力
+	 * 否则将力累加到当前的受力上，并唤醒静止计数（防止休眠吞掉施力）
+	 */
+	void PhysicsParticle3D::AddForce(Vec3_ Force)
+	{
+		if (invMass == 0)
+		{
+			return;
+		}
+		force += Force; // 累计力
+		StaticNum = 0;  // 唤醒：物理世界用 StaticNum>10 跳过静止物体的碰撞，施力后必须清零
+	}
+
+	/**
+	 * @brief 施加质心冲量
+	 * @param impulse 冲量向量
+	 * @details 瞬时改变速度：speed += invMass * impulse（即 Δv = J/m）
+	 * 不可移动粒子（invMass==0，含静态体/运动学体）静默忽略
+	 * 唤醒静止计数，确保后续碰撞检测能感知到本物体的运动
+	 */
+	void PhysicsParticle3D::ApplyImpulse(const Vec3_ &impulse)
+	{
+		if (invMass == 0)
+		{
+			return;
+		}
+		speed += invMass * impulse;
+		StaticNum = 0; // 唤醒
+	}
+
+	/**
+	 * @brief 施加纯角冲量
+	 * @details 粒子不存在转动惯量，调用此函数属于逻辑错误，触发断言
+	 */
+	void PhysicsParticle3D::ApplyTorqueImpulse(const Vec3_ &)
+	{
+		assert(0 && "[Error]: 粒子不存在转动惯量，不能施加角冲量!");
+	}
+
+	/**
+	 * @brief 根据外力和时间更新速度
+	 * @param time 时间差（秒）
+	 * @param Ga 重力加速度向量
+	 * @details 如果粒子的质量倒数为 0（不可移动），则不更新速度
+	 * 否则先应用阻尼（speed *= Define_MinSpoilage3D 模拟阻力衰减），
+	 * 再根据牛顿第二定律更新速度：v = v + t * (g + F/m)
+	 * 最后将累积力重置为零向量
+	 */
+	void PhysicsParticle3D::PhysicsSpeed(FLOAT_ time, Vec3_ Ga)
+	{
+		if (invMass == 0)
+			return;
+#if Define_MinSpoilageBool3D
+		speed *= MinSpoilageFactor(time); // 应用最小损耗系数，模拟阻力（按时间连续衰减，与帧率无关）
+#endif
+		speed += time * (Ga + invMass * force);
+		force = Vec3_(0.0f); // 重置力为零
+	}
+
+	/**
+	 * @brief 根据速度和时间更新位置
+	 * @param time 时间差（秒）
+	 * @param Ga 重力加速度向量
+	 * @details 如果粒子的质量倒数为 0（不可移动），则不更新位置
+	 * 否则：
+	 * 1. 检查粒子是否静止，更新静止次数
+	 * 2. 如果允许更新旧位置，则保存当前位置到旧位置
+	 * 3. 根据速度更新位置：p = p + t * v
+	 * 4. 允许更新旧位置
+	 */
+	void PhysicsParticle3D::PhysicsPos(FLOAT_ time, Vec3_ Ga)
+	{
+		(void)Ga;
+		if (invMass == 0)
+			return;
+
+		// 检查粒子是否静止
+		if (OldPos == pos)
+		{
+			if (StaticNum < 200)
+				++StaticNum; // 增加静止次数
+		}
+		else
+		{
+			StaticNum = 0; // 重置静止次数
+		}
+
+		// 保存当前位置到旧位置
+		if (OldPosUpDataBool)
+		{
+			OldPos = pos;
+		}
+
+		// 更新位置
+		pos += time * speed;
+
+		// 允许更新旧位置
+		OldPosUpDataBool = true;
+	}
+
+#if PhysicsBlock_Serialization3D
+	/**
+	 * @brief 从 JSON 数据构造粒子
+	 * @param data JSON 数据
+	 */
+	PhysicsParticle3D::PhysicsParticle3D(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
+	{
+		type = PhysicsObjectEnum::particle;
+		JsonContrarySerialization(data);
+	}
+
+	/**
+	 * @brief 将粒子状态序列化为 JSON
+	 * @param data 输出的 JSON 数据
+	 */
+	void PhysicsParticle3D::JsonSerialization(nlohmann::json_abi_v3_12_0::basic_json<> &data)
+	{
+		SerializationVec3(data, pos);
+		SerializationVec3(data, OldPos);
+		SerializationVec3(data, speed);
+		SerializationVec3(data, force);
+		data["mass"] = mass;
+		data["friction"] = friction;
+	}
+
+	/**
+	 * @brief 从 JSON 数据反序列化粒子状态
+	 * @param data JSON 数据
+	 */
+	void PhysicsParticle3D::JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
+	{
+		ContrarySerializationVec3(data, pos);
+		ContrarySerializationVec3(data, OldPos);
+		ContrarySerializationVec3(data, speed);
+		ContrarySerializationVec3(data, force);
+		mass = data["mass"];
+
+		// 计算质量倒数
+		if (mass == FLOAT_MAX)
+		{
+			invMass = 0;
+		}
+		else
+		{
+			invMass = FLOAT_(1) / mass;
+		}
+
+		friction = data["friction"];
+	}
+#endif
+
+}

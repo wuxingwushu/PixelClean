@@ -2,6 +2,7 @@
 #include "../DebugLog.h"
 #include "Opcode/OpcodeFunction.h"
 #include "GameMods/BlockWorld/BlockWorld.h"
+#include "GameMods/PhysicsTest3D/PhysicsTest3D.h"
 #include "GameMods/FruitNinja/FruitNinja.h"
 #if defined(__ANDROID__)
 #include <android/native_window.h>
@@ -92,6 +93,9 @@ namespace GAME {
 	case BlockWorld_:
 		GamePtr = new BlockWorld(*this);
 		break;
+	case PhysicsTest3D_:
+		GamePtr = new PhysicsTest3D(*this);
+		break;
 	default:
 		break;
 		}
@@ -129,6 +133,9 @@ namespace GAME {
 		break;
 	case BlockWorld_:
 		delete (BlockWorld*)mGameMods;
+		break;
+	case PhysicsTest3D_:
+		delete (PhysicsTest3D*)mGameMods;
 		break;
 	default:
 			break;

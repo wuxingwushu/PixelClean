@@ -363,7 +363,9 @@ namespace GAME {
 			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			int x = Global::GameMode - 1;
 			if (x < 0) {
-				Global::GameMode = GameModsEnum::Infinite_;
+				// 循环上界取枚举末位（PhysicsTest3D_），否则末尾新模式在
+				// 反向翻页时会被 Infinite_ 截断而永远走不到。
+				Global::GameMode = GameModsEnum::PhysicsTest3D_;
 			}
 			else {
 				Global::GameMode = (GameModsEnum)x;
@@ -380,7 +382,7 @@ namespace GAME {
 		if (ImGui::Button(u8">", ImVec2(arrowBtn, btnH))) {
 			Audio::AudioEngine::Get().GetSpatial().PlaySimple("Tap1", Audio::SimpleSoundType::MP3, false, Global::SoundEffectsVolume);
 			int x = Global::GameMode + 1;
-			if (x > GameModsEnum::Infinite_) {
+			if (x > GameModsEnum::PhysicsTest3D_) {
 				Global::GameMode = (GameModsEnum)0;
 			}
 			else {

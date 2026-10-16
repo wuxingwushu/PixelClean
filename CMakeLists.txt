@@ -90,6 +90,7 @@ endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/PhysicsBlock.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Info.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/PhysicsBlock3D.ini ${CMAKE_CURRENT_BINARY_DIR})# 拷贝 3D 物理辅助显示配置（缺了它 3D 物理测试会以 "ini file not found." 启动失败）
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/launch.vs.json ${PROJECT_SOURCE_DIR}/.vs)# 设置的DLL文件路径
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource ${CMAKE_CURRENT_BINARY_DIR}/Resource)# 数字资源
 
@@ -146,6 +147,7 @@ add_subdirectory(NetworkTCP)
 add_subdirectory(GOBT)
 add_subdirectory(Character)
 add_subdirectory(PhysicsBlock)
+add_subdirectory(PhysicsBlock3D)
 add_subdirectory(Arms)
 add_subdirectory(Opcode)
 add_subdirectory(GameMods)
@@ -153,6 +155,7 @@ add_subdirectory(GameMods/MazeMods)
 add_subdirectory(GameMods/TankTrouble)
 add_subdirectory(GameMods/UnlimitednessMapMods)
 add_subdirectory(GameMods/PhysicsTest)
+add_subdirectory(GameMods/PhysicsTest3D)
 add_subdirectory(GameMods/SoloudTest)
 add_subdirectory(GameMods/RadianceCascades)
 add_subdirectory(GameMods/FruitNinja)
@@ -191,6 +194,7 @@ target_link_libraries(
 	TankTroubleLib
 	UnlimitednessMapModsLib
 	PhysicsBlockLib
+	PhysicsBlock3DLib
 	SoloudTestLib
 	RadianceCascadesLib
 	FruitNinjaLib
@@ -240,6 +244,7 @@ add_custom_command(TARGET PixelClean POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resource $<TARGET_FILE_DIR:PixelClean>/Resource
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/PhysicsBlock.ini $<TARGET_FILE_DIR:PixelClean>/PhysicsBlock.ini
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/Info.ini $<TARGET_FILE_DIR:PixelClean>/Info.ini
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/PhysicsBlock3D.ini $<TARGET_FILE_DIR:PixelClean>/PhysicsBlock3D.ini
 	COMMENT "Copying shaders/Resource/ini next to executable"
 	VERBATIM
 )

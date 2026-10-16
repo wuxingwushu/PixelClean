@@ -19,6 +19,7 @@ enum GameModsEnum
 	WFCTest_,
 	BlockWorld_,
 	Infinite_,
+	PhysicsTest3D_, // 追加在末尾：不改动任何既有枚举的序数值
 };
 
 static const char* GameModsEnumName[] = {
@@ -31,6 +32,7 @@ static const char* GameModsEnumName[] = {
 	u8"WFC测试",
 	u8"Minecraft区块世界",
 	u8"无限",
+	u8"3D物理测试",
 };
 
 inline int GetGameModeStableId(GameModsEnum mode) {
@@ -44,6 +46,7 @@ inline int GetGameModeStableId(GameModsEnum mode) {
 		case WFCTest_:         return 6;
 		case BlockWorld_:       return 7;
 		case Infinite_:         return 200;
+		case PhysicsTest3D_:    return 8;
 	}
 	return -1;
 }
@@ -59,6 +62,7 @@ inline bool GameModsSupportsMultiplayer(GameModsEnum mode) {
 		case WFCTest_:       return false;
 		case BlockWorld_:     return false;
 		case Infinite_:       return false;
+		case PhysicsTest3D_:  return false;
 	}
 	return false;
 }

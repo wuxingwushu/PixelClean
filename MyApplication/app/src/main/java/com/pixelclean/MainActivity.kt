@@ -928,6 +928,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     ButtonSpec("✕", 0, Color.argb(120, 200, 80, 80))     // ESC → 菜单
                 )
             ),
+            GameModeId.PhysicsTest3D to ModeConfig( // 3D 物理测试（触摸拖拽转视角，摇杆飞行）
+                showJoystick = false,               // 相机走触摸拖拽（MouseMove 按住右键语义在移动端由单指拖拽替代）
+                buttons = listOf(
+                    ButtonSpec("/", 1, Color.argb(120, 100, 180, 100)),   // 控制台
+                    ButtonSpec("✕", 0, Color.argb(120, 200, 80, 80))     // ESC → 菜单
+                )
+            ),
             GameModeId.Infinite to ModeConfig(     // 无限模式（需要完整控制）
                 showJoystick = true,
                 buttons = listOf(
@@ -1246,6 +1253,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             const val FruitNinja = 5        // 水果忍者模式
             const val WFCTest = 6           // WFC 测试模式
             const val BlockWorld = 7         // 区块世界模式（Minecraft-like）
+            const val PhysicsTest3D = 8     // 3D 物理引擎测试模式（自由飞行相机）
             const val Infinite = 200        // 无限模式（无尽生存/挑战）
         }
 

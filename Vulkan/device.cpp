@@ -1,4 +1,5 @@
 #include "device.h"
+#include "DeviceSelectionPolicy.h"
 #if defined(_WIN32) || defined(__ANDROID__)
 #define VMA_DEBUG_MARGIN 16
 #if defined(__ANDROID__)
@@ -21,6 +22,32 @@ namespace VulKan {
 }
 
 namespace VulKan {
+
+	//--------------------------------------------------------------------------------------------------
+	// "渲染设备"的选取优先级（独显 > 集显 > CPU 软件渲染）本身放在 DeviceSelectionPolicy.h 里，
+	// 刻意不依赖 Vulkan 头，这样这条产品规则能脱离真实显卡单独验证。这里只做两件事：
+	//   1) 把 Vulkan 的 VkPhysicalDeviceType 映射到这个头文件定义的档位上；
+	//   2) 给候选列表挂上真实的 VkPhysicalDevice 句柄（策略层不认识 Vulkan 句柄）。
+	//--------------------------------------------------------------------------------------------------
+	//这些断言把 DeviceSelectionPolicy.h 里"按整数写的档位映射"钉死在真实的 Vulkan 枚举上。
+	//它们不是形式主义：把枚举值抄错一位（比如以为 CPU 是 0）会让 CPU 设备被归进"未知硬件"档，
+	//整个「独显 > 集显 > CPU 软件渲染」的顺序就静默失效了。这种错**编译期**就能拦住。
+	static_assert(static_cast<int>(VK_PHYSICAL_DEVICE_TYPE_OTHER) == 0, "VkPhysicalDeviceType 取值变了");
+	static_assert(static_cast<int>(VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) == 1, "VkPhysicalDeviceType 取值变了");
+	static_assert(static_cast<int>(VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) == 2, "VkPhysicalDeviceType 取值变了");
+	static_assert(static_cast<int>(VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) == 3, "VkPhysicalDeviceType 取值变了");
+	static_assert(static_cast<int>(VK_PHYSICAL_DEVICE_TYPE_CPU) == 4, "VkPhysicalDeviceType 取值变了");
+
+	//DeviceSelectionPolicy.h 里的档位映射是按 VkPhysicalDeviceType 的数值写的，
+	//上面的 static_assert 保证两边一致；这里再把它包一层，让调用点能用真正的枚举类型。
+	int devicePerformanceTier(VkPhysicalDeviceType deviceType) {
+		return deviceTierFromType(static_cast<int>(deviceType));
+	}
+
+	//候选设备 = 策略层的字段 + 真实的 Vulkan 句柄
+	struct PhysicalDeviceCandidate : DeviceSelectionCandidate {
+		VkPhysicalDevice device = VK_NULL_HANDLE;
+	};
 
 	Device::Device(Instance* instance, WindowSurface* surface) {
 		LOGD("Device::Device()");
@@ -71,26 +98,20 @@ namespace VulKan {
 
 		//注意：rateDevice() 对不满足硬性要求的设备会返回 0，0 分不能等同于"性能差"，
 		//必须结合 isDeviceSuitable() 一起判断，所以这里把两件事分开做。
-		struct Candidate {
-			int score;
-			VkPhysicalDevice device;
-			bool suitable;
-			bool isCpu;
-			std::string name;
-			std::string rejectReason;
-		};
-		std::vector<Candidate> candidates;
+		//候选与排序规则见文件顶部的 PhysicalDeviceCandidate / candidatePrecedes()。
+		std::vector<PhysicalDeviceCandidate> candidates;
 		candidates.reserve(devices.size());
 
 		for (const auto& device : devices) {
-			Candidate c;
+			PhysicalDeviceCandidate c;
 			c.device = device;
-			c.score = rateDevice(device);//获取每一张显卡的评分
+			c.score = rateDevice(device);//同一档位内的优劣（跨档位不比分数，见 devicePerformanceTier）
 			c.suitable = isDeviceSuitable(device);
 			c.rejectReason = c.suitable ? std::string() : describeDeviceRejection(device);
 			VkPhysicalDeviceProperties props;
 			vkGetPhysicalDeviceProperties(device, &props);
 			c.isCpu = (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU);
+			c.tier = devicePerformanceTier(props.deviceType);
 			c.name = props.deviceName;
 			candidates.push_back(std::move(c));
 		}
@@ -116,37 +137,21 @@ namespace VulKan {
 					: (wantLowestScore ? "硬件设备优先，其中评分最低的优先；没有硬件设备时才用 CPU 软件设备"
 						: "硬件设备优先，其中评分最高的优先；没有硬件设备时才用 CPU 软件设备")));
 
-		//可用的设备排前面，再按设置挑"最高性能 / 最低性能 / 指定的那一台"
+		//排序规则见 DeviceSelectionPolicy.h 的 candidatePrecedes()（判据顺序就是优先级）
+		const std::string& wantedName = Global::VulkanDeviceName;
 		std::stable_sort(candidates.begin(), candidates.end(),
-			[wantCpuDevice, wantSpecificDevice, wantLowestScore](const Candidate& a, const Candidate& b) {
-				if (a.suitable != b.suitable) return a.suitable;//可用的排前面
-
-				if (wantCpuDevice) {
-					//CPU 软件渲染：软件设备排最前
-					if (a.isCpu != b.isCpu) return a.isCpu;
-					return a.score > b.score;
-				}
-
-				//其余模式：硬件设备一律排在 CPU 软件设备前面
-				if (a.isCpu != b.isCpu) return b.isCpu;
-
-				if (wantSpecificDevice) {
-					//设置里指定了设备名：匹配的排最前（名字对不上就退化成"最高性能"）
-					const bool aWanted = (a.name == Global::VulkanDeviceName);
-					const bool bWanted = (b.name == Global::VulkanDeviceName);
-					if (aWanted != bWanted) return aWanted;
-				}
-
-				return wantLowestScore ? (a.score < b.score) : (a.score > b.score);
+			[wantCpuDevice, wantSpecificDevice, wantLowestScore, &wantedName](const PhysicalDeviceCandidate& a, const PhysicalDeviceCandidate& b) {
+				return candidatePrecedes(a, b, wantCpuDevice, wantSpecificDevice, wantLowestScore, wantedName);
 			});
 
-		VulkanDiag("[Vulkan] 发现 %zu 个物理设备:\n", candidates.size());
+		VulkanDiag("[Vulkan] 发现 %zu 个物理设备（已按「性能档位 > 分数」排好序，从上到下就是选取优先级）:\n", candidates.size());
 		for (size_t i = 0; i < candidates.size(); i++) {
 			VkPhysicalDeviceProperties props;
 			vkGetPhysicalDeviceProperties(candidates[i].device, &props);
-			VulkanDiag("[Vulkan]   [%zu] %s%s (score=%d, apiVersion=%u.%u.%u, type=%d) -> %s\n",
+			VulkanDiag("[Vulkan]   [%zu] %s%s (档位=%d, score=%d, apiVersion=%u.%u.%u, type=%d) -> %s\n",
 				i, props.deviceName,
 				(wantSpecificDevice && candidates[i].name == Global::VulkanDeviceName) ? " [设置指定]" : "",
+				candidates[i].tier,
 				candidates[i].score,
 				VK_VERSION_MAJOR(props.apiVersion),
 				VK_VERSION_MINOR(props.apiVersion),
@@ -272,14 +277,18 @@ namespace VulKan {
 		VkPhysicalDeviceFeatures deviceFeatures;
 		vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
+		//注意：这里的分数只在"同一性能档位内"用于分优劣（档位由 devicePerformanceTier() 决定，
+		//排序时档位优先）。下面这两项都只是同档位内的次级依据，不能用来跨档位翻盘：
+		//  - 独显 +1000：同档位内大家都是独显，这一项实际抵消；留着只是让"独显分数更高"这个
+		//    直觉在单看某台设备的分数时仍然成立（诊断日志里会打印分数）。
+		//  - 几何着色器 -100000：同档位内优先选支持几何着色器的设备（CPU 软件设备没有它，
+		//    管线会自动回退，所以这不再是硬性要求）。
 		if (deviceProp.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {//是否是独显，
 			score += 1000;
 		}
 
 		score += deviceProp.limits.maxImageDimension2D;
 
-		//几何着色器不再作为硬性要求（CPU 软件设备没有它，管线会自动回退）。
-		//这里只影响排序：同等条件下优先选支持几何着色器的设备。0 分仅表示"能力受限"，不代表设备不可用。
 		if (!deviceFeatures.geometryShader) {
 			score -= 100000;
 		}

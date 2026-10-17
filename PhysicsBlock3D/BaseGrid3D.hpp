@@ -28,7 +28,7 @@
 //   本身会"切角"（斜穿拐角时跳过被擦到的格子），因此斜向薄墙可能漏检。
 //   物理引擎选默认值时以正确性优先，故默认 1（DDA）。
 #ifndef PhysicsBlock_LineTrace3D
-#define PhysicsBlock_LineTrace3D 0
+#define PhysicsBlock_LineTrace3D 1
 #endif
 
 namespace PhysicsBlock3D

@@ -1,5 +1,6 @@
 #include "BaseOutline3D.hpp"
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <tuple>
 #include <vector>
@@ -565,6 +566,241 @@ namespace PhysicsBlock3D
 		}
 		CollisionR = SQRT_(CollisionR);
 		OutlineSize = static_cast<unsigned int>(OutlineSet.size());
+
+		// 轮廓棱（窄相的"棱线段补测"用）：此时 LocalPos 已平移到相对质心，
+		// 网格采样需要把它加回去，故必须传 CentreMass_。
+		BuildEdges(CentreMass_);
+	}
+
+	/**
+	 * @brief 由轮廓点派生轮廓棱集合
+	 */
+	void BaseOutline3D::BuildEdges(const Vec3_ &CentreMass_)
+	{
+		EdgeSet.clear();
+		const size_t total = OutlineSet.size();
+		if (total < 8)
+		{
+			return; // 连两个面片都没有，谈不上棱
+		}
+
+		// ── 1) 面片 → 4 条边
+		//    三种取点模式都是"每个方形面片连续输出 4 个点"（见 BuildOutline）。
+		//    最小模式的 4 个点是按对角极值顺序输出的（Corner 可能是 0,1,3,2），
+		//    必须按 Corner 重排才能得到正确的环序。
+		//    注意：轻量版把面切成条带后，相邻两个面共享的那条几何棱会被两边按
+		//    不同的分段输出（一边长段、一边两个短段），按端点对去重无法合并，
+		//    总长度会偏大。运行期走的是最小版（每面一条四边形），不存在该问题。
+		struct RawEdge
+		{
+			Vec3_ a;
+			Vec3_ b;
+			Vec3_ n;
+			FLOAT_ fric;
+		};
+		std::vector<RawEdge> raw;
+		raw.reserve(total);
+		const size_t kRawLimit = 512; // 完整版大平面的边数上界（运行期走最小版，远达不到）
+
+		size_t i = 0;
+		while (i < total && raw.size() < kRawLimit)
+		{
+			// 三种模式都保证"每个方形面片连续输出 4 个点"，所以一律按 4 点一组切。
+			// 不能按"连续同法线"切：体素只暴露一个面时（例如大立方体某一侧表面上的
+			// 内部体素），相邻体素会各输出 4 点、法线相同，两组合并成 8 点后
+			// 首尾相连就会连出对角线。
+			size_t j = (i + 4 <= total) ? (i + 4) : total;
+			const Vec3_ &nrm = OutlineSet[i].Normal;
+			bool sameNormal = (j - i) == 4;
+			for (size_t k = i + 1; k < j && sameNormal; ++k)
+			{
+				sameNormal = ModulusLength(OutlineSet[k].Normal - nrm) < FLOAT_(1e-6);
+			}
+
+			if (sameNormal)
+			{
+				size_t idx[4] = {i, i + 1, i + 2, i + 3};
+				for (int u = 0; u < 3; ++u)
+				{
+					for (int v = u + 1; v < 4; ++v)
+					{
+						if (OutlineSet[idx[v]].Corner < OutlineSet[idx[u]].Corner)
+						{
+							const size_t t = idx[u];
+							idx[u] = idx[v];
+							idx[v] = t;
+						}
+					}
+				}
+				for (int k = 0; k < 4; ++k)
+				{
+					const OutlinePoint3D &p0 = OutlineSet[idx[k]];
+					const OutlinePoint3D &p1 = OutlineSet[idx[(k + 1) & 3]];
+					RawEdge e;
+					e.a = p0.LocalPos;
+					e.b = p1.LocalPos;
+					e.n = nrm;
+					e.fric = (p0.Friction + p1.Friction) * FLOAT_(0.5f);
+					raw.push_back(e);
+				}
+			}
+			else
+			{
+				// 非标准分组（旧存档等）：退化为相邻点连线
+				for (size_t k = i; k + 1 < j; ++k)
+				{
+					RawEdge e;
+					e.a = OutlineSet[k].LocalPos;
+					e.b = OutlineSet[k + 1].LocalPos;
+					e.n = nrm;
+					e.fric = (OutlineSet[k].Friction + OutlineSet[k + 1].Friction) * FLOAT_(0.5f);
+					raw.push_back(e);
+				}
+			}
+			i = j;
+		}
+
+		// ── 2) 顶点去重：同一几何顶点被相邻 2~3 个面片各输出一次
+		std::map<std::tuple<int, int, int>, unsigned int> vmap;
+		std::vector<Vec3_> vpos;
+
+		auto vertexId = [&](const Vec3_ &p) -> unsigned int {
+			const std::tuple<int, int, int> key(ToInt(p.x * FLOAT_(1024.0f)),
+			                                    ToInt(p.y * FLOAT_(1024.0f)),
+			                                    ToInt(p.z * FLOAT_(1024.0f)));
+			const auto it = vmap.find(key);
+			if (it != vmap.end())
+			{
+				return it->second;
+			}
+			const unsigned int id = static_cast<unsigned int>(vpos.size());
+			vmap.emplace(key, id);
+			vpos.push_back(p);
+			return id;
+		};
+
+		// ── 3) 棱去重 + 折棱判定
+		//    同一条边被两个共面面片共享 → 落在面内部，不是外轮廓；
+		//    被两个不同朝向的面片共享（或只被一个面片输出）→ 折棱，保留。
+		struct EdgeRec
+		{
+			unsigned int u;
+			unsigned int v;
+			Vec3_ n;
+			FLOAT_ fric;
+			unsigned int faces;
+			bool crease;
+		};
+		std::map<std::pair<unsigned int, unsigned int>, size_t> emap;
+		std::vector<EdgeRec> erec;
+		erec.reserve(raw.size());
+
+		for (size_t r = 0; r < raw.size(); ++r)
+		{
+			const unsigned int a = vertexId(raw[r].a);
+			const unsigned int b = vertexId(raw[r].b);
+			if (a == b)
+			{
+				continue;
+			}
+			const std::pair<unsigned int, unsigned int> key(a < b ? a : b, a < b ? b : a);
+			const auto it = emap.find(key);
+			if (it == emap.end())
+			{
+				EdgeRec e;
+				e.u = key.first;
+				e.v = key.second;
+				e.n = raw[r].n;
+				e.fric = raw[r].fric;
+				e.faces = 1;
+				e.crease = false;
+				emap.emplace(key, erec.size());
+				erec.push_back(e);
+			}
+			else
+			{
+				EdgeRec &e = erec[it->second];
+				++e.faces;
+				if (ModulusLength(e.n - raw[r].n) > FLOAT_(0.5))
+				{
+					e.crease = true;
+				}
+			}
+		}
+
+		// ── 4) 表面校验 + 输出
+		//    最小模式的 4 个点只是"切平面上的极值顶点"，连线可能是跨过凹口/空心
+		//    区域的弦。沿边采样，要求每个采样点都恰好落在（实心格 / 空格）的分界
+		//    面上，否则这条弦不在真实表面上，打过去会产生"空中接触"。
+		//    注意：棱本身就落在两个格子的分界面上，切向坐标常常正好是整数；此时
+		//    ToInt 只会取到正侧那一格，若正侧越界/为空就会误判，故边界轴的格子
+		//    两侧都要试。
+		const FLOAT_ kSampleT[4] = {0.13f, 0.37f, 0.63f, 0.87f};
+		const size_t kMaxEdges = 64; // 与窄相的接触点预算同量级，防止大形状边数爆炸
+
+		auto onSurface = [&](const Vec3_ &a, const Vec3_ &b, const Vec3_ &n) -> bool {
+			const IVec3_ ni(static_cast<int>(n.x), static_cast<int>(n.y), static_cast<int>(n.z));
+			const Vec3_ half = Vec3_(ni) * FLOAT_(0.5f);
+			const int axisN = (ni.x != 0) ? 0 : ((ni.y != 0) ? 1 : 2);
+			for (int k = 0; k < 4; ++k)
+			{
+				const Vec3_ sample = a + (b - a) * kSampleT[k] + CentreMass_;
+				const IVec3_ ci0 = ToInt(sample - half); // 法线负侧（应为实心）
+				const IVec3_ co0 = ToInt(sample + half); // 法线正侧（应为空）
+
+				int cand[3][2] = {{0, 0}, {0, 0}, {0, 0}};
+				int cnt[3] = {1, 1, 1};
+				for (int ax = 0; ax < 3; ++ax)
+				{
+					if (ax != axisN &&
+					    std::fabs(sample[ax] - std::round(sample[ax])) < FLOAT_(1e-3))
+					{
+						cand[ax][1] = -1; // 恰在格边界：另一侧的格子也要试
+						cnt[ax] = 2;
+					}
+				}
+
+				bool ok = false;
+				for (int a0 = 0; a0 < cnt[0] && !ok; ++a0)
+				{
+					for (int a1 = 0; a1 < cnt[1] && !ok; ++a1)
+					{
+						for (int a2 = 0; a2 < cnt[2] && !ok; ++a2)
+						{
+							IVec3_ ci = ci0;
+							IVec3_ co = co0;
+							ci.x += cand[0][a0];
+							ci.y += cand[1][a1];
+							ci.z += cand[2][a2];
+							co.x += cand[0][a0];
+							co.y += cand[1][a1];
+							co.z += cand[2][a2];
+							ok = IsSolid(ci.x, ci.y, ci.z) && !IsSolid(co.x, co.y, co.z);
+						}
+					}
+				}
+				if (!ok)
+				{
+					return false;
+				}
+			}
+			return true;
+		};
+
+		EdgeSet.reserve(erec.size());
+		for (size_t e = 0; e < erec.size() && EdgeSet.size() < kMaxEdges; ++e)
+		{
+			const EdgeRec &rec = erec[e];
+			if (rec.faces >= 2 && !rec.crease)
+			{
+				continue; // 共面内部边
+			}
+			if (!onSurface(vpos[rec.u], vpos[rec.v], rec.n))
+			{
+				continue;
+			}
+			EdgeSet.emplace_back(vpos[rec.u], vpos[rec.v], rec.fric);
+		}
 	}
 
 	void BaseOutline3D::UpdateOutline(Vec3_ CentreMass_)
@@ -630,6 +866,22 @@ namespace PhysicsBlock3D
 			arr[i]["VoxelZ"] = OutlineSet[i].Voxel.z;
 			arr[i]["Corner"] = static_cast<int>(OutlineSet[i].Corner);
 		}
+
+		// 轮廓棱同样是派生数据，但反序列化时拿不到 CentreMass（它在 PhysicsShape3D
+		// 里），无法重算网格采样校验，故直接落盘。旧存档没有这一段 → EdgeSet 为空，
+		// 窄相自动跳过棱补测（退化但不崩），下次 UpdateAll 即重建。
+		nlohmann::json_abi_v3_12_0::basic_json<> &earr = data["EdgeSet"];
+		earr = earr.array();
+		for (size_t i = 0; i < EdgeSet.size(); ++i)
+		{
+			earr[i]["Ax"] = EdgeSet[i].A.x;
+			earr[i]["Ay"] = EdgeSet[i].A.y;
+			earr[i]["Az"] = EdgeSet[i].A.z;
+			earr[i]["Bx"] = EdgeSet[i].B.x;
+			earr[i]["By"] = EdgeSet[i].B.y;
+			earr[i]["Bz"] = EdgeSet[i].B.z;
+			earr[i]["Friction"] = EdgeSet[i].Friction;
+		}
 	}
 
 	void BaseOutline3D::JsonContrarySerialization(const nlohmann::json_abi_v3_12_0::basic_json<> &data)
@@ -663,6 +915,24 @@ namespace PhysicsBlock3D
 		}
 		OutlineSize = static_cast<unsigned int>(OutlineSet.size());
 		CollisionR = data.contains("CollisionR") ? (FLOAT_)data["CollisionR"] : 0.0f;
+
+		EdgeSet.clear();
+		if (data.contains("EdgeSet"))
+		{
+			auto earr = data["EdgeSet"];
+			EdgeSet.reserve(earr.size());
+			for (size_t i = 0; i < earr.size(); ++i)
+			{
+				OutlineEdge3D e;
+				e.A = Vec3_(earr[i]["Ax"].get<FLOAT_>(), earr[i]["Ay"].get<FLOAT_>(),
+				            earr[i]["Az"].get<FLOAT_>());
+				e.B = Vec3_(earr[i]["Bx"].get<FLOAT_>(), earr[i]["By"].get<FLOAT_>(),
+				            earr[i]["Bz"].get<FLOAT_>());
+				e.Friction = earr[i].contains("Friction") ? (FLOAT_)earr[i]["Friction"]
+				                                         : (FLOAT_)0.2f;
+				EdgeSet.push_back(e);
+			}
+		}
 	}
 #endif
 

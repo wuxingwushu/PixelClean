@@ -288,6 +288,20 @@ namespace PhysicsBlock3D
 		Dvec3ImGui3D("质心", &Object->CentreMass);
 		Dvec3ImGui3D("几何中心", &Object->CentreShape);
 		ImGui::Text("骨骼点: %u", Object->OutlineSize);
+		ImGui::Text("骨骼棱: %u（棱线段补测用）", (unsigned int)Object->EdgeSet.size());
+		if (ImGui::TreeNode("骨骼棱##edgetree"))
+		{
+			// 棱由 OutlineSet 派生：面片 4 点 → 4 条边，去重后只留折棱
+			// （相邻面片法线不同），并剔除跨越凹口的弦。
+			for (size_t i = 0; i < Object->EdgeSet.size(); ++i)
+			{
+				const Vec3_ A = Object->pos + QuatRotate(Object->rotation, Object->EdgeSet[i].A);
+				const Vec3_ B = Object->pos + QuatRotate(Object->rotation, Object->EdgeSet[i].B);
+				ImGui::TextColored(ImVec4(0.4f, 0.9f, 1.0f, 1.0f), "(%f, %f, %f) → (%f, %f, %f) 摩擦 %.3f",
+								   A.x, A.y, A.z, B.x, B.y, B.z, Object->EdgeSet[i].Friction);
+			}
+			ImGui::TreePop();
+		}
 		if (ImGui::TreeNode("骨骼点##tree"))
 		{
 			// 使用 map 统计每个坐标点出现的次数

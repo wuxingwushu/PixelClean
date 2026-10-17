@@ -72,6 +72,35 @@ namespace PhysicsBlock3D
 	};
 
 	/**
+	 * @brief 三维轮廓棱（两个相邻轮廓顶点的连线）
+	 * @details 顶点射线只能发现"对方的顶点落在我的体素里"这一类接触。两个形状
+	 *          以**棱对棱**相交（例如都绕 Z 轴转 45° 后互卡）时，双方的任何顶点
+	 *          都不在对方内部，射线也都不穿过接触区，窄相一个点都生成不出来
+	 *          → 直接穿模。把每条棱当成线段再打一次对方网格（DDA 本来就吃线段）
+	 *          就能精确拿到入射点与入射面法线，补齐这个拓扑。
+	 *
+	 *          坐标与 OutlinePoint3D::LocalPos 同空间（相对质心，落在局部网格
+	 *          整数点上）；由 BuildEdges 从 OutlineSet 派生，不参与序列化之外
+	 *          的任何独立维护。
+	 */
+	struct OutlineEdge3D
+	{
+		/** @brief 棱起点（局部坐标，相对质心） */
+		Vec3_ A;
+
+		/** @brief 棱终点（局部坐标，相对质心） */
+		Vec3_ B;
+
+		/** @brief 该棱的摩擦因数（两端点体素的均值） */
+		FLOAT_ Friction;
+
+		OutlineEdge3D() : A(0.0f, 0.0f, 0.0f), B(0.0f, 0.0f, 0.0f), Friction(0.2f) {}
+
+		OutlineEdge3D(const Vec3_ &a, const Vec3_ &b, FLOAT_ friction)
+		    : A(a), B(b), Friction(friction) {}
+	};
+
+	/**
 	 * @brief 三维外轮廓类
 	 * @details 继承自 BaseGrid3D，在体素网格上提取表面轮廓。
 	 *
@@ -104,6 +133,13 @@ namespace PhysicsBlock3D
 		 * @brief 轮廓点数量（= OutlineSet.size()，保留 2D 命名便于移植）
 		 */
 		unsigned int OutlineSize = 0;
+
+		/**
+		 * @brief 轮廓棱集合（由 OutlineSet 派生，见 BuildEdges）
+		 * @details 窄相的"棱线段补测"用的就是这里；只保留真正的折棱（相邻两个
+		 *          面片法线不同），共面内部边被丢弃，因此 2×2×2 立方体正好 12 条。
+		 */
+		std::vector<OutlineEdge3D> EdgeSet;
 
 		/**
 		 * @brief 轮廓包围半径（相对质心的最大距离，供宽相快速剔除）
@@ -166,6 +202,7 @@ namespace PhysicsBlock3D
 		void Clear()
 		{
 			OutlineSet.clear();
+			EdgeSet.clear();
 			OutlineSize = 0;
 			CollisionR = 0.0f;
 		}
@@ -179,6 +216,21 @@ namespace PhysicsBlock3D
 		 * @brief 重新计算轮廓包围半径
 		 */
 		void UpdateCollisionR();
+
+		/**
+		 * @brief 由 OutlineSet 派生轮廓棱集合（窄相"棱线段补测"用）
+		 * @param CentreMass_ 质心位置（局部体素坐标）
+		 * @details 三种取点模式（完整/轻量/最小）都是"每个方形面片连续输出 4 个点"，
+		 *          按该 4 点还原面片（最小模式下 4 点不是按 Corner 顺序输出的，
+		 *          需按 Corner 重排），取其 4 条边；再做三件事：
+		 *          1. 顶点去重（同一几何顶点被相邻 2~3 个面片各输出一次）；
+		 *          2. 折棱筛选（同一条边被两个共面面片共享 → 是面内部的边，丢掉）；
+		 *          3. 网格采样校验（最小模式的 4 个点只是支撑极值，连线可能是跨越
+		 *             凹口的弦，必须确认整条边都落在真正的暴露面上，否则会把
+		 *             "空中"当成接触面）。
+		 *          结果对 2×2×2 立方体正好是 12 条棱。
+		 */
+		void BuildEdges(const Vec3_ &CentreMass_);
 
 	private:
 		/**

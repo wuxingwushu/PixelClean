@@ -303,6 +303,237 @@ namespace PhysicsBlock3D
 		return FeatureId(p.Voxel, salt * 4u + static_cast<unsigned int>(p.Corner));
 	}
 
+	/**
+	 * @brief 世界点是否落在形状的实心体素内
+	 * @details 不能用 PhysicsShape3D::DropCollision：它把越界坐标 clamp 到边界，
+	 *          形状外面的点会被当成边界上的实心格（如 (100,0,0) → (1,0,0)）。
+	 */
+	static inline bool PointInsideShape(const Vec3_ &world, PhysicsShape3D *Shape)
+	{
+		const Vec3_ local =
+		    QuatInverseRotate(Shape->rotation, world - Shape->pos) + Shape->CentreMass;
+		const IVec3_ v = ToInt(local);
+		if (!Shape->InBounds(v))
+		{
+			return false;
+		}
+		return Shape->GetCollision(static_cast<unsigned int>(v.x),
+		                           static_cast<unsigned int>(v.y),
+		                           static_cast<unsigned int>(v.z));
+	}
+
+	/**
+	 * @brief 点到线段的距离平方（宽相粗筛用，避免开方）
+	 */
+	static inline FLOAT_ PointSegmentDistanceSq(const Vec3_ &p, const Vec3_ &a, const Vec3_ &b)
+	{
+		const Vec3_ ab = b - a;
+		const FLOAT_ denom = ModulusLength(ab);
+		if (denom <= FLOAT_(1e-12))
+		{
+			return ModulusLength(p - a);
+		}
+		FLOAT_ t = Dot(p - a, ab) / denom;
+		t = (t < FLOAT_(0.0f)) ? FLOAT_(0.0f) : ((t > FLOAT_(1.0f)) ? FLOAT_(1.0f) : t);
+		return ModulusLength(p - (a + ab * t));
+	}
+
+	/**
+	 * @brief 从形状内部的点沿其局部 6 个轴向求"离开实心区"的最短距离
+	 * @param outDir 输出世界系单位方向（指向形状外部）
+	 * @param outDist 输出沿该方向的穿透深度（单位：格）
+	 * @return 该点是否确实落在实心体素内
+	 * @details 棱穿透对方时，DDA 给出的只是**线段穿过的那个面**：水平放置的棱
+	 *          沉进一个平面后会从侧面进入，法线变成水平的，求解器就会把物体
+	 *          横向推开，而不是顶上去。这里在接触点处沿对方体素的 6 个轴向各走
+	 *          到第一个空格，取距离最小的方向 —— 就是该点真正的"最短出路"，
+	 *          对盒体来说恰好是最小平移向量（MTV）的方向。
+	 */
+	static bool MinExitDirection(PhysicsShape3D *Shape, const Vec3_ &world,
+	                             Vec3_ &outDir, FLOAT_ &outDist)
+	{
+		const Vec3_ local =
+		    QuatInverseRotate(Shape->rotation, world - Shape->pos) + Shape->CentreMass;
+		const IVec3_ c0 = ToInt(local);
+		if (!Shape->InBounds(c0) ||
+		    !Shape->GetCollision(static_cast<unsigned int>(c0.x),
+		                         static_cast<unsigned int>(c0.y),
+		                         static_cast<unsigned int>(c0.z)))
+		{
+			return false;
+		}
+
+		int bestAxis = 0;
+		int bestSign = 1;
+		FLOAT_ bestDist = FLOAT_MAX;
+
+		for (int a = 0; a < 3; ++a)
+		{
+			for (int s = -1; s <= 1; s += 2)
+			{
+				IVec3_ c = c0;
+				for (int step = 0; step < 64; ++step)
+				{
+					c[a] += s;
+					if (!Shape->InBounds(c) ||
+					    !Shape->GetCollision(static_cast<unsigned int>(c.x),
+					                         static_cast<unsigned int>(c.y),
+					                         static_cast<unsigned int>(c.z)))
+					{
+						break;
+					}
+				}
+				// 空格格的边界坐标：正向是 c[a]，负向是 c[a]+1
+				const FLOAT_ plane = (s > 0) ? static_cast<FLOAT_>(c[a])
+				                             : static_cast<FLOAT_>(c[a] + 1);
+				const FLOAT_ d = (plane - local[a]) * static_cast<FLOAT_>(s);
+				if (d > 0.0f && d < bestDist)
+				{
+					bestDist = d;
+					bestAxis = a;
+					bestSign = s;
+				}
+			}
+		}
+
+		if (bestDist == FLOAT_MAX)
+		{
+			return false;
+		}
+		Vec3_ l(0.0f, 0.0f, 0.0f);
+		l[bestAxis] = static_cast<FLOAT_>(bestSign);
+		outDir = QuatRotate(Shape->rotation, l);
+		outDist = bestDist;
+		return true;
+	}
+
+	/**
+	 * @brief 两个形状的**世界 AABB** 是否相交（比包围球紧得多）
+	 * @details 棱补测的额外开销只在"宽相通过但实际不相交"的邻居对上才会白付。
+	 *          包围球对 2×2×2 的方块半径给到 1.73（面对距离只有 1），误判很多；
+	 *          这里用 `|R| * 半长` 求紧 AABB，50 flop 就能把绝大多数空邻居挡掉。
+	 */
+	static inline bool ShapeAABBOverlap(PhysicsShape3D *A, PhysicsShape3D *B)
+	{
+		const Vec3_ hA = Vec3_(static_cast<FLOAT_>(A->width), static_cast<FLOAT_>(A->height),
+		                       static_cast<FLOAT_>(A->depth)) * FLOAT_(0.5f);
+		const Vec3_ hB = Vec3_(static_cast<FLOAT_>(B->width), static_cast<FLOAT_>(B->height),
+		                       static_cast<FLOAT_>(B->depth)) * FLOAT_(0.5f);
+
+		const Vec3_ cA = A->pos + QuatRotate(A->rotation, hA - A->CentreMass);
+		const Vec3_ cB = B->pos + QuatRotate(B->rotation, hB - B->CentreMass);
+
+		// 紧 AABB 半长 = |R| * 半长（R 列主序：R[col][row]）
+		auto halfExtent = [](const Quat_ &q, const Vec3_ &h) -> Vec3_ {
+			const glm::mat3 m = glm::mat3_cast(q);
+			const FLOAT_ h3[3] = {h.x, h.y, h.z};
+			FLOAT_ e[3] = {0.0f, 0.0f, 0.0f};
+			for (int row = 0; row < 3; ++row)
+			{
+				for (int col = 0; col < 3; ++col)
+				{
+					e[row] += std::abs(m[col][row]) * h3[col];
+				}
+			}
+			return Vec3_(e[0], e[1], e[2]);
+		};
+
+		const Vec3_ eA = halfExtent(A->rotation, hA);
+		const Vec3_ eB = halfExtent(B->rotation, hB);
+
+		const Vec3_ d = glm::abs(cA - cB);
+		return (d.x <= eA.x + eB.x) && (d.y <= eA.y + eB.y) && (d.z <= eA.z + eB.z);
+	}
+
+	/**
+	 * @brief 棱线段 vs 形状（顶点射线的补测）
+	 * @details 顶点射线只能发现"对方的顶点落在我的体素里"。两个形状以棱对棱
+	 *          相交时（典型：双方棱口相对、都转了 45°），双方的顶点都不在对方
+	 *          内部，从内部种子点射向各自顶点的射线也都不穿过接触区 —— 窄相
+	 *          一个接触点都生成不出来，于是直接穿模。把每条棱当成线段，用同一套
+	 *          DDA 打对方网格，就能命中"棱穿进对方"的那一段。
+	 *
+	 *          接触点取棱上真正落在对方内部的那一点（端点在内就用端点，两端都在
+	 *          外说明棱"穿过"了对方 → 反向再打一次取出口点，用弦的中点）；法线
+	 *          与深度由 MinExitDirection 给出。
+	 *
+	 * @param normalSign -1 = 目标是对方形状，最短出路方向是 B→A，normal 取反
+	 *                   +1 = 目标是自己形状（对调后），最短出路方向即 A→B
+	 * @param salt 热启动特征通道，必须与顶点射线（0/1）和地图射线不同
+	 */
+	static unsigned int CollideEdges(Contact3D *contacts, unsigned int count,
+	                                 const std::vector<OutlineEdge3D> &edges,
+	                                 PhysicsShape3D *Src, PhysicsShape3D *Dst,
+	                                 FLOAT_ normalSign, unsigned int salt)
+	{
+		const FLOAT_ dstR2 = Dst->radius * Dst->radius;
+
+		for (size_t i = 0; i < edges.size() && count < PhysicsContactMaxSize3D; ++i)
+		{
+			const OutlineEdge3D &e = edges[i];
+			const Vec3_ w0 = Src->pos + QuatRotate(Src->rotation, e.A);
+			const Vec3_ w1 = Src->pos + QuatRotate(Src->rotation, e.B);
+
+			// 粗筛：整条棱都在对方包围球外 → 必然不相交
+			if (PointSegmentDistanceSq(Dst->pos, w0, w1) > dstR2)
+			{
+				continue;
+			}
+
+			const CollisionInfoD3D info = Dst->PsDDADetection(w0, w1);
+			if (!info.Collision)
+			{
+				continue;
+			}
+
+			// 接触点：棱上落在对方内部的位置
+			const bool in0 = PointInsideShape(w0, Dst);
+			const bool in1 = PointInsideShape(w1, Dst);
+			Vec3_ position = info.pos;
+			if (in0)
+			{
+				position = w0;
+			}
+			else if (in1)
+			{
+				position = w1;
+			}
+			else
+			{
+				// 两端都在外：棱自入射点穿入、从另一侧穿出 → 用弦的中点
+				const CollisionInfoD3D rev = Dst->PsDDADetection(w1, w0);
+				if (rev.Collision)
+				{
+					position = (info.pos + rev.pos) * FLOAT_(0.5f);
+				}
+			}
+
+			Vec3_ n = IncidentFaceNormal(info.Direction, w1 - w0);
+			FLOAT_ depth = 0.0f;
+			Vec3_ exitDir;
+			FLOAT_ exitDist = 0.0f;
+			if (MinExitDirection(Dst, position, exitDir, exitDist))
+			{
+				n = exitDir;
+				depth = exitDist;
+			}
+			else
+			{
+				// 兜底：接触点舍入到空格时退回到入射面法线
+				const FLOAT_ d0 = std::abs(Dot(w0 - info.pos, n));
+				const FLOAT_ d1 = std::abs(Dot(w1 - info.pos, n));
+				depth = (d0 > d1) ? d0 : d1;
+			}
+
+			const Vec3_ normal = n * normalSign; // 由 object1(A) 指向 object2(B)
+			const Vec3_ mid = (e.A + e.B) * FLOAT_(0.5f);
+			count = PushContact(contacts, count, position, normal, -depth,
+			                    SQRT_(info.Friction * e.Friction),
+			                    FeatureId(ToInt(mid * FLOAT_(8.0f)), salt * 4u));
+		}
+		return count;
+	}
+
 	// =========================================================================
 	// 窄相实现
 	// =========================================================================
@@ -388,6 +619,20 @@ namespace PhysicsBlock3D
 
 			count = PushContact(contacts, count, info.pos, normal, separation, friction,
 			                    OutlineFeatureId(p, 1));
+		}
+
+		// ===== 第三/四轮：棱线段补测（仅在顶点采样撑不起流形时） =====
+		// 四个顶点射线给出的是"顶点是否落在对方体内"，棱对棱相交时双方都没有
+		// 顶点在对方内部 → 0 接触 → 穿模。棱补测用同一套 DDA 打线段，能精确
+		// 命中棱穿透对方的入射面。
+		// 只在接触点 < 4（流形撑不开）时补测：静止堆叠的面-面接触本来就有 4~8 点，
+		// 完全不走这条路，稳态开销为 0；边缘/斜插等退化构型才付这份钱。
+		// 再加一道紧 AABB 粗筛：宽相是包围球，2×2×2 的方块半径 1.73 而面对距离只有
+		// 1，纯靠它会放进来大量"实际没碰到"的邻居对，那些对同样会走这里。
+		if (count < 4 && ShapeAABBOverlap(ShapeA, ShapeB))
+		{
+			count = CollideEdges(contacts, count, ShapeA->EdgeSet, ShapeA, ShapeB, -1.0f, 2u);
+			count = CollideEdges(contacts, count, ShapeB->EdgeSet, ShapeB, ShapeA, 1.0f, 3u);
 		}
 
 		ReduceManifold(contacts, count);

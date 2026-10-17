@@ -175,7 +175,19 @@ namespace GAME
 		//     物体，此时 `PhysicsFormworkPtr / GridEditShape / DragObject /
 		//     mLastCreated / mPickObject / RightClickObjectPtr` 全部变成
 		//     悬垂指针。所以第一步必须先把这些缓存指针清空。
-		InterFace->SetInterFaceBool(); // 与 2D 相同的"收起交互面"收尾
+		// 注意：**不要**在这里调用 InterFace->SetInterFaceBool()。
+		// 该函数只是把 InterFaceBool 取反（Interface.h:66-68），而 InterFaceBool
+		// 同时决定 application.cpp 主循环走哪条分支：
+		//   true  → InterFace 分支（只画界面，不碰 mGameMods）
+		//   false → 游戏分支（createCommandBuffers 会在 application.cpp:545 调
+		//           mGameMods->GameCommandBuffers(i)，且 mainLoop 会在 :827 调
+		//           mGameMods->GameLoop()）
+		// 从"返回主页"删除本模式时，本析构是在 InterFace 分支里被调用的；若在此
+		// 把 InterFaceBool 从 true 翻成 false，同一帧后面的 Render() 就会改走游戏
+		// 分支，而此时 DeleteGame() 已把 mGameMods 置空 → 空指针解引用
+		// （实测崩溃：0xC0000005，偏移 0x82b3b = application.cpp:545）。
+		// 2D 的 PhysicsTest 析构（GameMods/PhysicsTest/PhysicsTest.cpp:51-61）也
+		// 没有这一步，界面收起由 InterFace 自己的状态机负责。
 		PhysicsFormworkPtr = nullptr;
 		GridEditShape = nullptr;
 		DragObject = nullptr;

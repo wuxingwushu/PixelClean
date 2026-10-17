@@ -241,13 +241,12 @@ namespace PhysicsBlock3D
 		*myPhysicsWorld = new PhysicsWorld3D(Vec3_(0.0f, -9.8f, 0.0f), false);
 		(*myPhysicsWorld)->SetMapFormwork(BuildBoxMap3D(32, 12));
 
-		// 与 2D 原版同参数：±0.1 微错位、无初始旋转 —— 塔能压实静止。
-		// （曾试过 ±0.3+±6°：物理没错但塔先压实再整体塌散，600 帧才收敛，
-		//  作为"堆叠"演示不如稳定塔直观）
+		// 与 2D 原版同参数：±0.1 微错位、无初始旋转、底块贴着地面（不悬空下落）。
+		// 地面顶面在 y=-15，2×2×2 的体素原点取 -15 时质心在 -14，底面正好贴地。
 		for (int j = 0; j < 10; ++j)
 		{
 			PhysicsShape3D *box = MakeSolidShape3D(
-			    Vec3_(Random(-0.1f, 0.1f), -10.0f + j * 2.1f, Random(-0.1f, 0.1f)), 2, 2, 2);
+			    Vec3_(Random(-0.1f, 0.1f), -15.0f + j * 2.1f, Random(-0.1f, 0.1f)), 2, 2, 2);
 			(*myPhysicsWorld)->AddObject(box);
 		}
 

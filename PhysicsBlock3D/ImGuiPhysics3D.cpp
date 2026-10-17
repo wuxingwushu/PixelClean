@@ -291,9 +291,11 @@ namespace PhysicsBlock3D
 		if (ImGui::TreeNode("骨骼点##tree"))
 		{
 			// 使用 map 统计每个坐标点出现的次数
-			// （3D 的轮廓点结构为 OutlinePoint3D{LocalPos,Normal,Friction,SeedPos,Voxel}，
+			// （3D 的轮廓点结构为 OutlinePoint3D{LocalPos,Normal,Friction,SeedPos,Voxel,Corner}，
 			//  替代 2D 的三条平行裸数组 OutlineSet/MaxOutlineCentreMass/FrictionSet。
-			//  这里按世界坐标 LocalPos 去重，与 2D 按 (x,y) 去重语义一致。）
+			//  LocalPos 是方形面的顶点而非面中心，相邻面会共享同一条边上的顶点，
+			//  因此按世界坐标去重仍能看出哪些顶点被多个面共用。）
+
 			std::map<std::tuple<FLOAT_, FLOAT_, FLOAT_>, int> pointCount;
 
 			for (size_t i = 0; i < Object->OutlineSet.size(); ++i)
@@ -309,10 +311,12 @@ namespace PhysicsBlock3D
 					color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // 红色
 				}
 
-				ImGui::TextColored(color, "(%f, %f, %f) 法线(%.2f, %.2f, %.2f) 摩擦 %.3f",
+				ImGui::TextColored(color, "(%f, %f, %f) 法线(%.2f, %.2f, %.2f) 摩擦 %.3f 体素(%d, %d, %d) 角%d",
 								   World.x, World.y, World.z,
 								   Object->OutlineSet[i].Normal.x, Object->OutlineSet[i].Normal.y, Object->OutlineSet[i].Normal.z,
-								   Object->OutlineSet[i].Friction);
+								   Object->OutlineSet[i].Friction,
+								   Object->OutlineSet[i].Voxel.x, Object->OutlineSet[i].Voxel.y, Object->OutlineSet[i].Voxel.z,
+								   (int)Object->OutlineSet[i].Corner);
 			}
 
 			ImGui::TreePop();

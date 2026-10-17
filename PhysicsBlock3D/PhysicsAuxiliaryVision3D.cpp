@@ -514,7 +514,10 @@ namespace PhysicsBlock3D
 			return;
 		av->ClearStaticLine();
 
-		const glm::vec4 color = {0, 1, 0, 1};
+		// 地形颜色：灰色（与面模式的地形面颜色 `kTerrainFaceColor3D` 保持一致，
+		// 见 GameMods/PhysicsTest3D/PhysicsFaceRenderer3D.cpp）。
+		// 这样"地形=灰、物体=绿"在「线」和「面」两种模式下都一样。
+		const glm::vec4 color = {0.75f, 0.75f, 0.75f, 1.0f};
 		const Quat_ noRotation = IdentityQuat();
 
 		if (mMapFormwork->FMGetType() == PhysicsObjectEnum::_MapDynamic)

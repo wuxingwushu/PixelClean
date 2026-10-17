@@ -1018,14 +1018,31 @@ namespace PhysicsBlock3D
         XT_Fun(1, 1, nullptr);
 #endif
 
-        // 无参 PreStep + 一轮冲量
+        // 无参 PreStep + 迭代冲量
         for (auto i : CollideGroupVector)
         {
             i->PreStep();
         }
-        for (auto kv : CollideGroupVector)
+        // 与 2D（PhysicsWorld.cpp:742-756）一致：顺序冲量迭代 ApplyImpulseSize 次。
+        // 只解一轮时堆叠中下层拿不到上层真实反作用力，塔会持续抖动/被弹开。
+        // 迭代方向逐轮交替：顺序 Gauss-Seidel 里排在后面的接触总是最后被修正，
+        // 固定顺序会在对称的支撑面上留下净力矩（方块塔会缓慢倾斜）。
+        for (unsigned int it3D = 0; it3D < ApplyImpulseSize; ++it3D)
         {
-            kv->ApplyImpulse();
+            if ((it3D & 1u) == 0u)
+            {
+                for (auto kv : CollideGroupVector)
+                {
+                    kv->ApplyImpulse();
+                }
+            }
+            else
+            {
+                for (auto kv = CollideGroupVector.rbegin(); kv != CollideGroupVector.rend(); ++kv)
+                {
+                    (*kv)->ApplyImpulse();
+                }
+            }
         }
 
         // 重建网格树

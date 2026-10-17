@@ -11,6 +11,16 @@ namespace PhysicsBlock3D
 	static const FLOAT_ k_allowedPenetration3D = FLOAT_(0.01);
 
 	/**
+	 * @brief 位置修正速度上限（m/s）
+	 *
+	 * 离散碰撞检测下单步穿透可以很深（从 10 m 高落下的方块一步就压进地面 0.17），
+	 * 此时 ias = 0.5 * inv_dt * 穿透量 会算出十几米每秒的分离速度，
+	 * 求解器会把"压进去"变成"弹出去"，撞得越狠弹得越高，堆叠的塔永远压不实。
+	 * 这里给修正速度封顶：深穿透改为分几帧缓慢推出。
+	 */
+	static const FLOAT_ k_maxBiasVAL3D = FLOAT_(0.2f);
+
+	/**
 	 * @brief 接触点热启动：按特征 ID 继承上一帧的累积冲量
 	 * @details 2D 用 `w_side` 作为「上一帧 contacts 数组下标」，要求窄相
 	 *          返回顺序与上一帧完全一致——一旦流形点数量或顺序变化就会错配。
@@ -135,6 +145,7 @@ namespace PhysicsBlock3D
 			// ── 位置修正偏差 ──
 			c->bias = -k_biasFactorVAL3D * inv_dt *
 			          std::min(FLOAT_(0.0), c->separation + k_allowedPenetration3D);
+			c->bias = std::min(c->bias, k_maxBiasVAL3D);
 
 			// ── 应用上一帧累积的冲量（热启动）──
 			const Vec3_ P = c->Pn * c->normal + c->Pt1 * c->tangent1 + c->Pt2 * c->tangent2;
@@ -277,6 +288,7 @@ namespace PhysicsBlock3D
 
 			c->bias = -k_biasFactorVAL3D * inv_dt *
 			          std::min(FLOAT_(0.0), c->separation + k_allowedPenetration3D);
+			c->bias = std::min(c->bias, k_maxBiasVAL3D);
 
 			const Vec3_ P = c->Pn * c->normal + c->Pt1 * c->tangent1 + c->Pt2 * c->tangent2;
 
@@ -411,6 +423,7 @@ namespace PhysicsBlock3D
 
 			c->bias = -k_biasFactorVAL3D * inv_dt *
 			          std::min(FLOAT_(0.0), c->separation + k_allowedPenetration3D);
+			c->bias = std::min(c->bias, k_maxBiasVAL3D);
 
 			const Vec3_ P = c->Pn * c->normal + c->Pt1 * c->tangent1 + c->Pt2 * c->tangent2;
 			object1->speed -= object1->invMass * P;
@@ -507,6 +520,7 @@ namespace PhysicsBlock3D
 
 			c->bias = -k_biasFactorVAL3D * inv_dt *
 			          std::min(FLOAT_(0.0), c->separation + k_allowedPenetration3D);
+			c->bias = std::min(c->bias, k_maxBiasVAL3D);
 
 			const Vec3_ P = c->Pn * c->normal + c->Pt1 * c->tangent1 + c->Pt2 * c->tangent2;
 			object1->speed -= object1->invMass * P;

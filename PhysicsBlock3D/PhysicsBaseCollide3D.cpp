@@ -31,6 +31,12 @@ namespace PhysicsBlock3D
 
 		/**
 		 * @brief 带容量保护的接触点写入
+		 * @details 方形面的同一个顶点会被相邻 2~3 个面各自输出一次，
+		 *          于是同一个接触点会重复 2~3 次。重复点进入流形后：
+		 *          1) ReduceManifold 的"最远点采样"可能保留同一个角的 2 份、
+		 *             却丢掉另一个角，流形支撑不对称 → 每帧注入净力矩；
+		 *          2) 热启动时同一位置有多条冲量，支撑力被重复累加。
+		 *          因此写入前按位置去重，同一位置只保留第一次出现的接触。
 		 */
 		inline unsigned int PushContact(Contact3D *contacts, unsigned int count,
 		                                const Vec3_ &position, const Vec3_ &normal,
@@ -40,6 +46,14 @@ namespace PhysicsBlock3D
 			if (count >= PhysicsContactMaxSize3D)
 			{
 				return count;
+			}
+			for (unsigned int i = 0; i < count; ++i)
+			{
+				const Vec3_ d = contacts[i].position - position;
+				if (Dot(d, d) < 1.0e-6f)
+				{
+					return count;
+				}
 			}
 			Contact3D &c = contacts[count];
 			c.position = position;
@@ -266,18 +280,48 @@ namespace PhysicsBlock3D
 
 	unsigned char FeatureId(IVec3_ voxel, unsigned int faceIndex)
 	{
-		// 空间哈希（Knuth 乘法散列），压缩到 [0, PhysicsContactMaxSize3D)
+		// 空间哈希（Knuth 乘法散列）。原先取模 PhysicsContactMaxSize3D（只有 32 个桶），
+		// 而一个形状就有 24 个轮廓点、每轮接触十几个：热启动按 w_side 匹配时，不同面的
+		// 接触会撞进同一个桶、互相继承冲量并注入力矩。改为保留低 8 位（256 个桶）。
 		unsigned int h = static_cast<unsigned int>(voxel.x) * 73856093u;
 		h ^= static_cast<unsigned int>(voxel.y) * 19349663u;
 		h ^= static_cast<unsigned int>(voxel.z) * 83492791u;
 		h ^= faceIndex * 2654435761u;
 		h ^= h >> 13;
-		return static_cast<unsigned char>(h % PhysicsContactMaxSize3D);
+		return static_cast<unsigned char>(h & 0xFFu);
+	}
+
+	/**
+	 * @brief 轮廓点的热启动特征 ID
+	 * @details 现在同一个体素、同一个面方向上有 4 个顶点，必须把顶点序号也
+	 *          并入散列：否则 4 个角点共享同一个 FeatureId，热启动时
+	 *          会互相顶替（4 个点抢同一条旧冲量）。
+	 * @param salt 窄相内部的通道编号（各 Collide 重载 / 各轮次互不相同）
+	 */
+	static inline unsigned char OutlineFeatureId(const OutlinePoint3D &p, unsigned int salt)
+	{
+		return FeatureId(p.Voxel, salt * 4u + static_cast<unsigned int>(p.Corner));
 	}
 
 	// =========================================================================
 	// 窄相实现
 	// =========================================================================
+
+	/**
+	 * @brief 轮廓点的射线终点（从顶点朝所属面的面心内缩）
+	 * @details 轮廓点取的是方形面的顶点，相邻方块对齐时，上方的顶点恰好落在
+	 *          下方体素网格的棱/角上：DDA 的 slab 求交在两轴同时命中（平局），
+	 *          命中面会在顶面与侧面之间摇摆，法线变成水平 → 侧向冲量 → 塔被推倒。
+	 *          把终点从顶点朝该面的面心收 0.02 格（仍在同一个 1×1 面内），
+	 *          命中面就是唯一的，接触点也仍构成对称的支撑多边形。
+	 * @param p 轮廓点（LocalPos 已相对质心）
+	 * @param centreMass 形状质心（局部网格坐标），用于把体素坐标换算到同一空间
+	 */
+	static inline Vec3_ OutlineRayTarget(const OutlinePoint3D &p, const Vec3_ &centreMass, FLOAT_ inset = 0.02f)
+	{
+		const Vec3_ faceCentre = Vec3_(p.Voxel) + Vec3_(0.5f) + p.Normal * 0.5f - centreMass;
+		return p.LocalPos + (faceCentre - p.LocalPos) * inset;
+	}
 
 	/**
 	 * @brief 形状 vs 形状
@@ -295,12 +339,17 @@ namespace PhysicsBlock3D
 		{
 			const OutlinePoint3D &p = ShapeA->OutlineSet[i];
 
-			const Vec3_ dropLocal = p.LocalPos;
-			const Vec3_ dropPos = ShapeA->pos + QuatRotate(ShapeA->rotation, dropLocal);
-
 			const Vec3_ seedWorld = ShapeA->OldPos + QuatRotate(ShapeA->rotation, p.SeedPos);
 
-			const CollisionInfoD3D info = ShapeB->PsDDADetection(seedWorld, dropPos);
+			// 角点优先；方块横向错位时角点会悬空，射线落空 → 退到面中心再打一次，
+			// 否则一个面只剩 3 个接触点，支撑多边形失稳会把塔推倒。
+			Vec3_ dropPos = ShapeA->pos + QuatRotate(ShapeA->rotation, OutlineRayTarget(p, ShapeA->CentreMass));
+			CollisionInfoD3D info = ShapeB->PsDDADetection(seedWorld, dropPos);
+			if (!info.Collision)
+			{
+				dropPos = ShapeA->pos + QuatRotate(ShapeA->rotation, OutlineRayTarget(p, ShapeA->CentreMass, 0.5f));
+				info = ShapeB->PsDDADetection(seedWorld, dropPos);
+			}
 			if (!info.Collision) continue;
 
 			const Vec3_ rayDir = dropPos - seedWorld;
@@ -311,7 +360,7 @@ namespace PhysicsBlock3D
 			const FLOAT_ friction = SQRT_(info.Friction * p.Friction);
 
 			count = PushContact(contacts, count, info.pos, normal, separation, friction,
-			                    FeatureId(p.Voxel, 0));
+			                    OutlineFeatureId(p, 0));
 		}
 
 		// ===== 第二轮：ShapeB 轮廓面 → ShapeA =====
@@ -319,10 +368,15 @@ namespace PhysicsBlock3D
 		{
 			const OutlinePoint3D &p = ShapeB->OutlineSet[i];
 
-			const Vec3_ dropPos = ShapeB->pos + QuatRotate(ShapeB->rotation, p.LocalPos);
 			const Vec3_ seedWorld = ShapeB->OldPos + QuatRotate(ShapeB->rotation, p.SeedPos);
 
-			const CollisionInfoD3D info = ShapeA->PsDDADetection(seedWorld, dropPos);
+			Vec3_ dropPos = ShapeB->pos + QuatRotate(ShapeB->rotation, OutlineRayTarget(p, ShapeB->CentreMass));
+			CollisionInfoD3D info = ShapeA->PsDDADetection(seedWorld, dropPos);
+			if (!info.Collision)
+			{
+				dropPos = ShapeB->pos + QuatRotate(ShapeB->rotation, OutlineRayTarget(p, ShapeB->CentreMass, 0.5f));
+				info = ShapeA->PsDDADetection(seedWorld, dropPos);
+			}
 			if (!info.Collision) continue;
 
 			const Vec3_ rayDir = dropPos - seedWorld;
@@ -333,7 +387,7 @@ namespace PhysicsBlock3D
 			const FLOAT_ friction = SQRT_(info.Friction * p.Friction);
 
 			count = PushContact(contacts, count, info.pos, normal, separation, friction,
-			                    FeatureId(p.Voxel, 1));
+			                    OutlineFeatureId(p, 1));
 		}
 
 		ReduceManifold(contacts, count);
@@ -393,10 +447,15 @@ namespace PhysicsBlock3D
 		{
 			const OutlinePoint3D &p = Shape->OutlineSet[i];
 
-			const Vec3_ dropPos = Shape->pos + QuatRotate(Shape->rotation, p.LocalPos);
 			const Vec3_ seedWorld = Shape->OldPos + QuatRotate(Shape->rotation, p.SeedPos);
 
-			const CollisionInfoD3D info = Map->FMDDADetection(seedWorld, dropPos);
+			Vec3_ dropPos = Shape->pos + QuatRotate(Shape->rotation, OutlineRayTarget(p, Shape->CentreMass));
+			CollisionInfoD3D info = Map->FMDDADetection(seedWorld, dropPos);
+			if (!info.Collision)
+			{
+				dropPos = Shape->pos + QuatRotate(Shape->rotation, OutlineRayTarget(p, Shape->CentreMass, 0.5f));
+				info = Map->FMDDADetection(seedWorld, dropPos);
+			}
 			if (!info.Collision) continue;
 
 			const Vec3_ rayDir = dropPos - seedWorld;
@@ -407,7 +466,7 @@ namespace PhysicsBlock3D
 			const FLOAT_ friction = SQRT_(info.Friction * p.Friction);
 
 			count = PushContact(contacts, count, info.pos, normal, separation, friction,
-			                    FeatureId(p.Voxel, 2));
+			                    OutlineFeatureId(p, 2));
 		}
 
 		// ===== 第二轮：地形最小轮廓 → 形状（反向射线）=====
@@ -667,7 +726,7 @@ namespace PhysicsBlock3D
 			const Vec3_ position = Circle->pos + normal * Circle->radius;
 
 			count = PushContact(contacts, count, position, normal, separation, friction,
-			                    FeatureId(p.Voxel, 10));
+			                    OutlineFeatureId(p, 10));
 		}
 
 		ReduceManifold(contacts, count);
@@ -739,7 +798,7 @@ namespace PhysicsBlock3D
 			const Vec3_ position = closest + normal * Line->Thickness;
 
 			count = PushContact(contacts, count, position, normal, separation, friction,
-			                    FeatureId(p.Voxel, 12));
+			                    OutlineFeatureId(p, 12));
 		}
 
 		ReduceManifold(contacts, count);

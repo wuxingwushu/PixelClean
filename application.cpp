@@ -542,7 +542,9 @@ namespace GAME {
 				renderBeginInfo.renderPass = mRenderPass->getRenderPass();
 				mCommandBuffers[i]->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-				mGameMods->GameCommandBuffers(i);
+				if (mGameMods != nullptr) {
+					mGameMods->GameCommandBuffers(i);
+				}
 
 				if (!ThreadCommandBufferS.empty()) {
 					vkCmdExecuteCommands(mCommandBuffers[i]->getCommandBuffer(), ThreadCommandBufferS.size(), ThreadCommandBufferS.data());
@@ -568,7 +570,9 @@ namespace GAME {
 
 		mCommandBuffers[i]->beginRenderPass(renderBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);//关于画布信息  !!!这个只有主指令才有
 
-		mGameMods->GameCommandBuffers(i);
+		if (mGameMods != nullptr) {
+			mGameMods->GameCommandBuffers(i);
+		}
 
 		if (Global::MonitorCompatibleMode) {
 			ThreadCommandBufferS.push_back(InterFace->GetCommandBuffer(i, InheritanceInfo));
@@ -824,6 +828,13 @@ namespace GAME {
 
 	void Application::GameLoop() {
 		
+		// mGameMods 可能为 nullptr（GetGame 的 default 分支、或 DeleteGame 之后）。
+		// mainLoop 的游戏分支是无条件调用本函数的，所以必须在这里兜底，否则
+		// 虚调用会以 0xC0000005 崩溃。
+		if (mGameMods == nullptr) {
+			return;
+		}
+
 		mGameMods->GameLoop(mCurrentFrame);
 
 		int winwidth, winheight;

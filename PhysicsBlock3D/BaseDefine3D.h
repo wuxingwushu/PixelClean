@@ -42,7 +42,7 @@ namespace PhysicsBlock3D
 }
 #endif
 
-#define PhysicsContactMaxSize3D 20 // 每对物体之间的最大碰撞点数量
+#define PhysicsContactMaxSize3D 32 // 每对物体之间的最大碰撞点数量（≥ 一个形状的轮廓点数 24）
 
 // 3D 流形上限：face-clipped 流形最多 4 个接触点（比 2D 的 20 点遍历截断更紧）
 #define PhysicsContactManifoldMaxSize3D 4

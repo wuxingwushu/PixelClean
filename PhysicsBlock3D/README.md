@@ -158,7 +158,7 @@ graph TD
 | 文件 | 说明 |
 |---|---|
 | `BaseGrid3D.hpp/.cpp` | 体素网格基类 + **三维 DDA（Amanatides-Woo）** |
-| `BaseOutline3D.hpp/.cpp` | 表面轮廓点集（`OutlinePoint3D`：位置/法线/摩擦/射线种子/体素） |
+| `BaseOutline3D.hpp/.cpp` | 表面轮廓点集（`OutlinePoint3D`：位置/法线/摩擦/射线种子/体素/角序号；位置取**方形面的顶点**而非面中心） |
 | `GridSearch3D.hpp` | **八叉树**网格搜索（哈希格表 + 层基 8 + 64 位 Morton3D） |
 
 ### 地图

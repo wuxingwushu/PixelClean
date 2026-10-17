@@ -31,10 +31,10 @@ namespace
 
 	/**
 	 * @brief 地形面的颜色
-	 * @details 与线框地形一致（`PhysicsAuxiliaryVision3D.cpp` 的
-	 *          `RenderMapOutline3D` 里那个 `color`）——保持"线/面切换时颜色不变"。
+	 * @details 灰色（0.75）——与物体的绿色区分开，且黑底上明暗面层次清楚
+	 *          （片元着色器会再乘 0.35~1.0 的光照系数）。
 	 */
-	const glm::vec4 kTerrainFaceColor3D = { 0.0f, 1.0f, 0.0f, 1.0f };
+	const glm::vec4 kTerrainFaceColor3D = { 0.75f, 0.75f, 0.75f, 1.0f };
 }
 
 PhysicsFaceRenderer3D::PhysicsFaceRenderer3D(GAME::Configuration *wConfig)
